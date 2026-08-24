@@ -15,7 +15,7 @@ body:
   - type: textarea
     id: scope
     attributes:
-      label: Scope
+      label: 목표 범위
       description: 변경할 책임, 경계, 모듈을 적어 주세요.
     validations:
       required: true
@@ -31,7 +31,7 @@ body:
   - type: textarea
     id: acceptance
     attributes:
-      label: Acceptance Criteria
+      label: 완료 조건
       description: 테스트와 검증을 포함한 완료 조건을 적어 주세요.
       placeholder: |
         - [ ] 기존 동작을 검증하는 테스트가 통과한다.
@@ -42,7 +42,7 @@ body:
   - type: textarea
     id: out_of_scope
     attributes:
-      label: Out of Scope
+      label: 제외 범위
       description: 기능 추가 등 이번 리팩터링과 분리할 작업을 적어 주세요.
 
   - type: textarea
