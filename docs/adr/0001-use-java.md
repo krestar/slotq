@@ -13,8 +13,8 @@ SlotQ의 초기 복잡성은 언어 자체보다 예약 상태 전이, 수용량
 
 - Backend 기본 언어로 **Java 21 LTS**를 사용합니다.
 - Spring Boot의 정확한 버전은 이 ADR에서 미래 버전을 추정해 고정하지 않습니다. Backend scaffold를 만드는 시점에 공식 지원 중인 **GA patch**를 확인하고 build에 고정합니다.
-- 저장소에는 **Maven Wrapper**를 포함하고, 로컬과 CI는 wrapper를 동일한 진입점으로 사용합니다.
-- scaffold PR은 선택한 JDK, Spring Boot, Maven Wrapper 버전과 지원 근거를 함께 기록합니다.
+- 저장소에는 **Gradle Wrapper**를 포함하고, 로컬과 CI는 wrapper를 동일한 진입점으로 사용합니다.
+- scaffold PR은 선택한 JDK, Spring Boot, Gradle Wrapper 버전과 지원 근거를 함께 기록합니다.
 
 ## 대안 검토
 
@@ -36,13 +36,19 @@ Kotlin은 null safety, 간결한 문법, data/sealed class, Java 상호운용성
 
 새 언어 기능만을 이유로 초기 baseline을 높이지 않습니다. Java 21은 필요한 언어 기능과 Spring 생태계 호환성을 제공하는 안정적인 LTS 기준입니다. 향후 JDK 변경은 지원 기간, 의존성 호환성, 운영 환경과 측정된 이점을 근거로 별도 ADR에서 다룹니다.
 
-### Gradle
+### Maven Wrapper
 
-Gradle도 유효한 선택이지만, 초기에는 Maven의 명시적인 lifecycle과 작은 설정 면적이 더 적합합니다. Maven Wrapper로 build tool 버전과 실행 경로를 통일하고, build 최적화 요구가 실제로 생기기 전에는 추가 DSL과 plugin 선택을 만들지 않습니다.
+Maven도 명시적인 lifecycle과 넓은 Spring 예제를 제공하므로 기술적으로 충분한
+선택입니다. 현재 Backend build 기준은 Gradle Wrapper 하나로 고정합니다.
+
+이 선택은 Architecture 우위에 대한 주장이 아닙니다. Wrapper로 version과 실행 경로를
+통일하고 복잡한 multi-project build나 convention plugin은 실제 필요가 생기기 전까지
+추가하지 않습니다.
 
 ## 결과
 
 - 하나의 언어 관례와 Spring/JPA 기본 경로에 집중할 수 있습니다.
+- Gradle Wrapper를 Backend build와 CI의 단일 진입점으로 사용합니다.
 - Java의 장황함은 작은 class, 명확한 책임 분리와 필요한 경우 record·sealed type 같은 Java 21 기능으로 관리합니다.
 - Kotlin source나 Kotlin 전용 build plugin을 부분적으로 추가하지 않습니다. 도입이 필요하면 경계와 migration 비용을 포함한 새 ADR을 작성합니다.
 - Spring Boot 버전은 scaffold 시점의 공식 지원 상태를 확인해야 하므로, scaffold 전까지는 아직 확정되지 않습니다.
@@ -63,4 +69,4 @@ Gradle도 유효한 선택이지만, 초기에는 Maven의 명시적인 lifecycl
 - [Spring Boot System Requirements](https://docs.spring.io/spring-boot/system-requirements.html)
 - [Spring Boot Kotlin Support](https://docs.spring.io/spring-boot/reference/features/kotlin.html)
 - [Kotlin No-arg compiler plugin](https://kotlinlang.org/docs/no-arg-plugin.html)
-- [Apache Maven Wrapper](https://maven.apache.org/wrapper/)
+- [Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html)
