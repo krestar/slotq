@@ -15,7 +15,7 @@ body:
   - type: textarea
     id: scope
     attributes:
-      label: Scope
+      label: 목표 범위
       description: 이번 Issue에서 구현할 범위를 적어 주세요.
       placeholder: |
         - ...
@@ -26,7 +26,7 @@ body:
   - type: textarea
     id: acceptance
     attributes:
-      label: Acceptance Criteria
+      label: 완료 조건
       description: 테스트 가능한 완료 조건을 적어 주세요.
       placeholder: |
         - [ ] ...
@@ -37,7 +37,7 @@ body:
   - type: textarea
     id: out_of_scope
     attributes:
-      label: Out of Scope
+      label: 제외 범위
       description: 이번 작업에서 일부러 하지 않는 것을 적어 범위 팽창을 막습니다.
 
   - type: textarea
