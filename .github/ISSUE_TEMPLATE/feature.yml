@@ -1,0 +1,53 @@
+name: 기능
+
+description: 새로운 사용자 기능 또는 플랫폼 기능을 제안합니다.
+title: "[Feature] "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 목적 / 배경
+      description: 어떤 문제를 해결하려는지 먼저 적어 주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 목표 범위
+      description: 이번 Issue에서 구현할 범위를 적어 주세요.
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 조건
+      description: 테스트 가능한 완료 조건을 적어 주세요.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: 제외 범위
+      description: 이번 작업에서 일부러 하지 않는 것을 적어 범위 팽창을 막습니다.
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: 제약 / 설계 고려사항
+      description: 정합성, 동시성, 멱등성, 보안, AI 책임 경계 등 관련 제약을 적어 주세요.
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 참고사항
+      description: 관련 Issue, ADR, 문서, 실험 계획 등이 있다면 적어 주세요.
