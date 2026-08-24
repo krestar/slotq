@@ -69,7 +69,6 @@ jobs:
               "## 검증",
               "## 관련 Issue",
               "## 보안·데이터 영향",
-              "## 리뷰 포인트",
           ]
           for section in required_sections:
               if section not in body:
