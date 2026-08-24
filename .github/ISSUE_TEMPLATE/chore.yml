@@ -1,0 +1,44 @@
+name: 유지보수 / 개발환경
+
+description: CI, 문서, 빌드, 개발환경 등 제품 기능 외 작업을 기록합니다.
+title: "[Chore] "
+labels: ["type:chore"]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 목적 / 배경
+      description: 왜 이 작업이 필요한지 적어 주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: 이번 Issue에서 변경할 범위를 적어 주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: 작업 완료를 확인할 수 있는 조건을 적어 주세요.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of Scope
+      description: 이번 작업에서 제외할 사항이 있다면 적어 주세요.
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 참고사항
+      description: 관련 Issue, 문서, 로그 등 필요한 정보만 적어 주세요.
