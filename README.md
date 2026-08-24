@@ -92,10 +92,10 @@ Distributed Lock
 
 ```mermaid
 stateDiagram-v2
-    [*] --> REQUESTED
-    REQUESTED --> HELD
+    [*] --> HELD
     HELD --> CONFIRMED
     HELD --> EXPIRED
+    HELD --> CANCELLED
     CONFIRMED --> CHECKED_IN
     CONFIRMED --> CANCELLED
     CONFIRMED --> NO_SHOW
@@ -107,6 +107,8 @@ stateDiagram-v2
 ```
 
 잘못된 상태 전이는 애플리케이션 외부가 아니라 **도메인 자체에서 차단**하는 것을 목표로 합니다.
+
+MVP에서는 실제 비동기 승인 절차가 없는 `REQUESTED`를 영속 상태로 두지 않습니다. 결제나 수동 승인처럼 독립된 비즈니스 수명이 생길 때 명시적인 전이와 함께 다시 검토합니다.
 
 ---
 
@@ -227,19 +229,22 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 
 ## Technology Direction
 
-기술 스택은 개발 과정의 요구사항과 실험 결과에 따라 확정합니다.
+초기 Backend 기준선은 다음과 같습니다. 정확한 framework patch는 scaffold 시점의 지원 중인 GA release로 고정합니다.
 
-| Area | Candidates |
-| --- | --- |
-| Backend | Java / Kotlin, Spring Boot, Spring Data JPA |
-| Persistence | MySQL |
-| Cache | Redis |
-| Messaging | Apache Kafka |
-| Observability | Prometheus, Grafana |
-| Infrastructure | Docker, Kubernetes |
-| AI Platform | LLM APIs / Self-hosted Models, RAG, MCP, Model Routing, Agent Evaluation |
+| Area | Baseline | Decision |
+| --- | --- | --- |
+| Backend | Java 21 LTS, Spring Boot, Spring MVC, Spring Data JPA | **Selected** |
+| Frontend | React, TypeScript, Vite 기반 thin SPA | **Selected** |
+| Build | Maven Wrapper | **Selected** |
+| Persistence | MySQL 8.4 LTS, Flyway | **Selected** |
+| Test | JUnit, Testcontainers MySQL | **Selected** |
+| Cache | Redis | 필요성과 측정 결과가 생길 때 검토 |
+| Messaging | Transactional Outbox와 DB relay는 유력 후보, Apache Kafka는 후속 후보 | M3의 유실·중복 실험과 대안 비교 후 선택 |
+| Observability | Spring Boot Actuator, Micrometer 기반부터 시작 | M5에서 구체화 |
+| Infrastructure | 로컬 container 환경부터 시작 | Kubernetes는 운영상 필요가 생길 때 검토 |
+| AI Platform | MCP, RAG, Model Routing, Agent Runtime, Evaluation | M6 이후 단계적 도입 |
 
-**모든 기술을 사용하는 것이 목표가 아닙니다.** 사용하지 않는 편이 더 적절하다면 그것 또한 기술적 결정으로 기록합니다.
+Java, Modular Monolith, React·TypeScript·Vite 선택 근거는 [ADR Register](docs/adr/README.md)에 기록합니다. Frontend는 Product API의 권위 있는 규칙을 복제하지 않고 Customer와 Venue 운영의 핵심 흐름을 브라우저에서 검증하는 얇은 Client로 유지합니다. **모든 후보 기술을 사용하는 것이 목표가 아닙니다.** 사용하지 않는 편이 더 적절하다면 그것 또한 기술적 결정으로 기록합니다.
 
 ---
 
@@ -249,39 +254,41 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 flowchart LR
     M0[M0 Foundation] --> M1[M1 Reservation Core]
     M1 --> M2[M2 Concurrency & Consistency]
-    M2 --> M3[M3 Event-driven Waitlist]
-    M3 --> M4[M4 Reliability & Observability]
-    M4 --> M5[M5 AI Platform]
-    M5 --> M6[M6 Evaluation & Production Hardening]
+    M2 --> M3[M3 Reliable Event Foundation]
+    M3 --> M4[M4 Waitlist Promotion]
+    M4 --> M5[M5 Reliability & Observability]
+    M5 --> M6[M6 AI Access & Knowledge]
+    M6 --> M7[M7 Model Router & Agent Runtime]
+    M7 --> M8[M8 Evaluation & Production Hardening]
 ```
 
 | Milestone | Goal |
 | --- | --- |
-| **M0** | 프로젝트 기반과 핵심 도메인 경계 정의 |
-| **M1** | 예약·수용량·상태 전이의 기본 모델 구현 |
+| **M0** | 프로젝트 기반, 핵심 도메인 경계, Backend·Frontend scaffold 구축 |
+| **M1** | 예약·수용량·상태 전이 API와 Customer·Venue 핵심 UI 구현 |
 | **M2** | 동시 예약과 데이터 정합성 검증 |
-| **M3** | 이벤트 기반 대기열과 멱등 처리 |
-| **M4** | 장애 복구, 관측 가능성, 성능 실험 |
-| **M5** | MCP, RAG, Model Routing 기반 AI Platform |
-| **M6** | Agent Evaluation과 Production Hardening |
+| **M3** | 유실·중복·재시도에 강한 event delivery 기반 구축 |
+| **M4** | 대기 등록, offer 승급, 수락·만료 흐름 구현 |
+| **M5** | 장애 복구, 관측 가능성, 성능 기준선 구축 |
+| **M6** | MCP Gateway와 비정형 지식 RAG 기반 구축 |
+| **M7** | Model Router와 제한된 Agent Runtime 구축 |
+| **M8** | Product·AI 평가와 Production Hardening |
 
-세부 Milestone과 Issue는 설계 과정에서 단계적으로 구체화합니다.
+M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분리해 각 단계의 완료 조건을 독립적으로 검증할 수 있게 했습니다. 세부 완료 기준과 Issue 의존 관계는 [Roadmap](docs/roadmap.md)에 기록합니다.
 
 ---
 
 ## Engineering Records
 
-중요한 기술적 의사결정과 실험은 다음 구조로 기록할 예정입니다.
+중요한 기술적 의사결정과 실험은 다음 문서에서 관리합니다.
 
-```text
-docs/
-├── adr/
-├── architecture/
-├── experiments/
-└── troubleshooting/
-```
+- [Product Scope](docs/product-scope.md)
+- [Domain Model](docs/architecture/domain-model.md)
+- [Roadmap](docs/roadmap.md)
+- [ADR Register](docs/adr/README.md)
+- [Experiment Plans](docs/experiments/README.md)
 
-예정된 주요 기록 주제:
+구현과 측정을 거쳐 추가할 주요 기록 주제:
 
 - 동시성 제어 방식 비교
 - Reservation invariant와 상태 전이 설계
@@ -299,7 +306,7 @@ docs/
 
 > **Planning**
 
-현재 SlotQ는 초기 설계 단계입니다. 핵심 도메인과 invariant를 먼저 정의한 뒤 Milestone 단위로 구현을 진행합니다.
+현재 SlotQ는 **M0 Foundation** 단계입니다. [SlotQ Roadmap](https://github.com/users/krestar/projects/3)에서 선행 관계가 충족된 소수 Issue만 Ready로 관리합니다.
 
 ---
 
