@@ -96,14 +96,21 @@ Capacity-consuming 상태는 만료되지 않은 HELD, CONFIRMED, CHECKED_IN이�
 
 최초 matrix는 작게 시작하고 결과가 포화 지점을 보여 줄 때 확장한다.
 
-| 축 | 초기 값 |
+MVP correctness matrix는 Restaurant의 배타적 Table 모델과 일치시킨다.
+
+| 축 | MVP 초기 값 |
 | --- | --- |
-| Slot capacity | 1, 10, 100 |
+| Resource model | 배타적 `Table × Slot` |
+| Slot capacity | 1 |
 | Concurrent client | 2, 10, 50 |
-| Request quantity | 모두 1, 혼합 quantity |
-| Contention | 하나의 hotspot Slot, 여러 비경합 Slot control |
-| Initial state | empty, 일부 HELD, 일부 CONFIRMED |
+| Request quantity | 모두 1 |
+| Contention | 하나의 hotspot Table Slot, 여러 비경합 Table Slot control |
+| Initial state | empty, HELD, CONFIRMED |
 | Run type | warm-up, correctness 반복, fixed-operation performance |
+
+Capacity 10·100과 혼합 quantity는 pooled capacity가 실제 Product 범위에 들어온 뒤 여는
+별도 model stress scenario다. MVP 결과와 같은 표에 섞지 않으며, 이 선택적 결과를 현재
+Restaurant 모델이나 production 규모의 처리 능력으로 해석하지 않는다.
 
 - 요청은 barrier에서 동시에 시작한다.
 - correctness run은 동일 matrix와 seed로 반복한다.

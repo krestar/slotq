@@ -117,6 +117,10 @@ API-first는 UI가 없다는 뜻이 아니다. Product API가 독립적인 권�
 - 하나의 적합한 Table을 선택할 수 있지만 좌석 배치를 최적화하지 않는다.
 - Table 결합·분할, 회전 시간 최적화, Walk-in 배치, Overbooking은 MVP에서 제외한다.
 
+따라서 MVP의 동시성 주장은 배타적인 `Table × Slot`의 double booking을 막는 범위에서
+검증한다. `Capacity`, `AllocationQuantity` 같은 일반화된 이름은 향후 pooled capacity를
+수용할 모델 경계일 뿐, 현재 여러 좌석을 공유하는 capacity 운영을 구현했다는 뜻이 아니다.
+
 Core Model은 Restaurant 이름을 모든 Module에 고정하지 않고 `Venue`, `Resource`,
 `Slot`, `Allocation`을 사용한다. 이를 통해 다른 Venue 유형으로 확장할 여지는
 남기되, 지금 그 유형의 규칙이나 화면을 구현하지 않는다.

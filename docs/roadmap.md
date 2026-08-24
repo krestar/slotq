@@ -49,7 +49,7 @@ Status의 의미는 다음과 같다.
 
 - #3과 #4는 main에 병합되어 Done이다.
 - 선행 조건이 충족된 #5와 #18 두 개만 Ready이다.
-- #6부터 #17, #19, #20은 Backlog를 유지한다.
+- #6부터 #17, #19, #20, #23은 Backlog를 유지한다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -62,8 +62,9 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #4 [Chore] main 브랜치 보호 규칙 구성
 - #5 [Chore] 백엔드 최소 scaffold 구축
 - #6 [Chore] MySQL 로컬 개발 및 schema migration 기반 구성
-- #7 [Chore] 애플리케이션 빌드·테스트 CI 추가
+- #7 [Chore] 백엔드 빌드·테스트 CI 추가
 - #18 [Chore] Frontend React·TypeScript·Vite scaffold 구축
+- #23 [Chore] Frontend 빌드·테스트 CI 추가
 
 ### M1
 
@@ -83,8 +84,8 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #16 [Feature] 예약 동시성 제어 전략 비교 및 적용
 - #17 [Feature] HOLD 생성 command idempotency 보장
 
-#18, #19, #20의 Project Area는 Frontend이다. 아직 실제 Issue가 없는 후속 UI work
-package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
+#18, #19, #20의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는 후속
+UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
 
 ### Priority
 
@@ -92,8 +93,9 @@ package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 �
 | --- | --- | --- |
 | #3, #5, #6 | P1 | 다음 구현을 여는 설계·개발 기반이다. |
 | #4 | P2 | 중요한 repository 운영 강화지만 Product 개발 자체를 차단하지 않는다. |
-| #7 | P2 | 두 application scaffold와 database 기반 뒤에 적용할 검증 자동화다. |
+| #7 | P2 | #5 직후 후속 Backend 변경을 보호하는 검증 자동화다. |
 | #18 | P2 | thin SPA 기반이지만 backend domain 구현 순서를 차단하지 않는다. |
+| #23 | P2 | #18 직후 Frontend 검증을 독립적으로 자동화한다. |
 | #8, #9, #10, #11, #13, #14 | P1 | Reservation Core의 핵심 기능 또는 직접 선행 작업이다. |
 | #12 | P2 | 중요한 read use case지만 쓰기 흐름의 선행 기반과 구분한다. |
 | #19, #20 | P2 | 핵심 Product API 이후 구현하는 thin 사용자 흐름이다. |
@@ -106,13 +108,15 @@ package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 �
 
 ## Dependency graph
 
-    M0: #3 + #4 Done ──> #5 ──> #6 ──┐
-        #3 Done ──> #18 ──────────────┴──> #7
+    M0: #3 + #4 Done ──> #5 ──> #7 Backend CI ──> #6
+        #3 Done ──> #18 ──> #23 Frontend CI
+        #6 + #23 ──> M0 complete
 
-    M1: #7 ──> #8 ──> #9 ──> #10 ──> #11 ──> #12 ──> #13 ──> #14
-        #14 + #18 ──> #19
-        #14 + #18 ──> #20
-        #19 + #20 ──> M1 complete
+    M1: #6 ──> #8 ──> #9 ──> #10 ──┬──> #11 ──> #13 ──> #14
+                                      └──> #12
+        #12 + #14 + #23 ──> #19
+        #14 + #23 ──> #20
+        #12 + #19 + #20 ──> M1 complete
 
     M2: #13 ──> #15 ──> #16
         #13 ──> #17
@@ -159,10 +163,28 @@ package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 �
                                                v
                                   M8-WP2 Production hardening
 
-#5와 #18은 #3 완료 후 병렬로 착수할 수 있다. #7은 #6과 #18이 모두 끝난 뒤 시작한다.
-#19와 #20은 #14와 #18이 모두 완료된 뒤 병렬로 착수한다. #15와 #17은 #13 완료 후
-병렬로 착수할 수 있고 #16은 #15의 공통 실험 하네스를 선행으로 사용한다. M2-WP1과
-M2-WP2는 각각의 선행 조건이 충족된 뒤 구체 Issue로 전환한다.
+#5와 #18은 #3 완료 후 병렬로 착수할 수 있다. #5가 끝나면 #7 Backend CI를 먼저 추가하고
+그 성공 run을 확인한 뒤 #6 Database 기반을 시작한다. #18이 끝나면 #23 Frontend CI를
+독립적으로 추가한다. #10 이후에는 Command 흐름 #11과 Query 흐름 #12가 갈라지며,
+Availability 완료는 HOLD 생성의 기술적 선행 조건이 아니다. #19는 #12와 #14를 모두
+사용하고 #20은 #14를 사용한다. 두 UI는 #23의 검증 기반을 선행한다.
+
+#15와 #17은 #13 완료 후 병렬로 착수할 수 있고 #16은 #15의 공통 실험 하네스를 선행으로
+사용한다. M2-WP1과 M2-WP2는 각각의 선행 조건이 충족된 뒤 구체 Issue로 전환한다.
+
+## Release checkpoint
+
+Milestone을 다시 나누지 않고 다음 누적 성공 지점을 둔다.
+
+| Checkpoint | 선행 완료 | 남겨야 할 검증 가능한 결과 |
+| --- | --- | --- |
+| `v0.1 Consistency Baseline` | M0~M2 | 실제 MySQL을 사용하는 예약 흐름, 동시성 비교와 idempotency 근거 |
+| `v0.2 Product Backend` | M0~M5 | Waitlist, event failure recovery, 관측 가능성과 운영 runbook |
+| `v1.0 SlotQ Platform` | M0~M8 | Product와 AI Platform의 통합 경계, 평가와 release 기준 |
+
+Checkpoint는 완료되지 않은 Milestone을 완료로 보이게 하거나 scope를 건너뛰는 수단이
+아니다. 각 시점에 clean environment 재현 절차, test report, ADR과 측정 원자료를 묶어
+실행 가능한 상태를 보존한다.
 
 ## M0 Foundation
 
@@ -173,7 +195,7 @@ Product 범위, Actor 권한, source of truth, 도메인 용어와 초기 기술
 
 ### 완료 기준
 
-- #3부터 #7까지와 #18이 모두 Done이다.
+- #3부터 #7까지, #18, #23이 모두 Done이다.
 - MVP 포함·제외 범위와 Customer, Venue Owner·Manager, Staff, AI Agent의 권한 경계가
   문서화되어 있다.
 - backend 언어, Modular Monolith, 초기 Context 의존 방향의 결정과 재검토 조건이
@@ -182,8 +204,10 @@ Product 범위, Actor 권한, source of truth, 도메인 용어와 초기 기술
   성공한다.
 - thin SPA가 browser에서 기동되고 최소 render smoke test가 성공한다.
 - 빈 MySQL database에 schema migration을 적용하고 통합 smoke test를 실행할 수 있다.
-- backend와 frontend scaffold의 실제 test/build 명령을 PR과 main push에서 실행하는
-  CI가 성공한다.
+- #5 직후 backend 실제 test/build 명령을 실행하는 #7 CI가 성공하며, #6의 통합 테스트도
+  같은 Gradle verification lifecycle에서 실행된다.
+- #18 직후 frontend 실제 typecheck/test/build 명령을 실행하는 #23 CI가 독립적으로
+  성공한다.
 - main branch 보호 규칙이 적용되어 직접 push와 검증되지 않은 병합을 제한한다.
 
 ### 선행 Milestone
@@ -238,7 +262,7 @@ SPA 흐름을 추가한다.
 - HOLD 생성·조회·확정·취소·만료와 운영 상태 전이가 통합 테스트로 검증된다.
 - 순차 요청에서 capacity를 초과하는 Reservation은 생성되지 않는다.
 - 시간 의존 로직은 주입된 Clock으로 sleep 없이 재현된다.
-- #14까지의 API contract가 확정된 뒤 Customer UI에서 availability 조회, HOLD 생성,
+- #12와 #14의 API contract가 확정된 뒤 Customer UI에서 availability 조회, HOLD 생성,
   확정·취소와 현재 상태 확인이 가능하다.
 - Venue UI에서 예약 목록과 허용된 운영 상태 전이를 실행할 수 있다.
 - 두 UI는 loading, empty, business conflict와 server error 상태를 구분해 표현한다.
@@ -264,7 +288,8 @@ M0 Foundation.
 - aggregate가 상태 전이와 invariant를 책임지고 controller나 JPA callback에 규칙을
   흩뜨리지 않는다.
 - availability는 cache나 검색 index가 아닌 Product DB에서 계산한다.
-- UI 구현은 #14의 API contract를 선행으로 사용하고 contract 변경을 명시적으로 검증한다.
+- Customer UI는 #12와 #14, Venue UI는 #14의 API contract를 선행으로 사용하고 contract
+  변경을 명시적으로 검증한다.
 - server state와 화면 상태를 분리하되, 현재 흐름에 필요하지 않은 복잡한 client state
   framework는 추가하지 않는다.
 - tenant와 Actor context가 Customer·Venue 화면과 API 요청에서 혼동되지 않게 한다.
@@ -384,6 +409,17 @@ M2 Concurrency & Consistency.
 - Waitlist promotion business flow.
 - Kafka 선도입.
 - 외부 notification provider 완성.
+
+### M3 종료 후 일정·범위 재평가
+
+M3 결과를 기준으로 남은 일정, 실제 구현 완성도와 M4·M5 작업량을 재평가한다.
+
+- 시간이 충분하면 계획된 M4와 M5 범위를 그대로 진행한다.
+- 일정 제약이 커지면 실제 notification provider, 추가 dashboard, 선택적 Adapter 같은
+  비핵심 범위를 줄인다.
+- M4의 Waitlist 등록·Offer 핵심 흐름과 M5의 재시작 복구·최소 log/metric Gate는
+  축소 대상이 아니다.
+- 위 최소 Gate가 완료되지 않은 상태에서 M6 AI 구현으로 이동하지 않는다.
 
 ## M4 Waitlist Promotion
 
@@ -600,9 +636,9 @@ M7 Model Router & Agent Runtime.
 | AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M2 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. Outbox도 M3 대안 비교 전에는 확정하지 않는다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 6개, M1 9개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. |
-| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20은 P2로 구분한다. |
+| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 7개, M1 9개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. Backend와 Frontend CI만 실제 검증 시점이 달라 분리한다. |
+| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23은 P2로 구분한다. |
 | Ready와 Backlog가 dependency를 반영하는가? | #3과 #4 완료 뒤 #5와 #18만 Ready이며 다른 Issue는 모든 선행 조건이 끝날 때까지 Backlog다. |
-| 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록하고 동시성·messaging 선택은 실험 전 확정하지 않는다. |
+| 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, 강화된 capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

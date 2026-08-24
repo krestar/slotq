@@ -72,6 +72,10 @@ confirmed reservations <= capacity
 
 동일한 마지막 자원을 여러 사용자가 동시에 예약하더라도 이 invariant가 깨지지 않아야 합니다.
 
+Restaurant MVP의 최소 경합 단위는 capacity가 1인 배타적 `Table × Slot`입니다. 따라서
+초기 동시성 검증은 동일 Table의 double booking 방지가 중심이며, 일반화된 Capacity
+모델을 사용한다는 사실만으로 pooled capacity나 대규모 처리 능력을 주장하지 않습니다.
+
 구현 과정에서는 특정 동시성 제어 기술을 미리 정답으로 두지 않고, 필요에 따라 다음 전략을 비교하고 측정합니다.
 
 ```text
@@ -235,7 +239,7 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 | --- | --- | --- |
 | Backend | Java 21 LTS, Spring Boot, Spring MVC, Spring Data JPA | **Selected** |
 | Frontend | React, TypeScript, Vite 기반 thin SPA | **Selected** |
-| Build | Maven Wrapper | **Selected** |
+| Build | Gradle Wrapper | **Selected** |
 | Persistence | MySQL 8.4 LTS, Flyway | **Selected** |
 | Test | JUnit, Testcontainers MySQL | **Selected** |
 | Cache | Redis | 필요성과 측정 결과가 생길 때 검토 |
@@ -244,7 +248,7 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 | Infrastructure | 로컬 container 환경부터 시작 | Kubernetes는 운영상 필요가 생길 때 검토 |
 | AI Platform | MCP, RAG, Model Routing, Agent Runtime, Evaluation | M6 이후 단계적 도입 |
 
-Java, Modular Monolith, React·TypeScript·Vite 선택 근거는 [ADR Register](docs/adr/README.md)에 기록합니다. Frontend는 Product API의 권위 있는 규칙을 복제하지 않고 Customer와 Venue 운영의 핵심 흐름을 브라우저에서 검증하는 얇은 Client로 유지합니다. **모든 후보 기술을 사용하는 것이 목표가 아닙니다.** 사용하지 않는 편이 더 적절하다면 그것 또한 기술적 결정으로 기록합니다.
+Java, Gradle Wrapper, Modular Monolith, React·TypeScript·Vite 선택 근거는 [ADR Register](docs/adr/README.md)에 기록합니다. Gradle Wrapper는 local과 CI의 version 및 실행 진입점을 통일하며, 복잡한 build 최적화는 실제 필요가 생길 때만 검토합니다. Frontend는 Product API의 권위 있는 규칙을 복제하지 않고 Customer와 Venue 운영의 핵심 흐름을 브라우저에서 검증하는 얇은 Client로 유지합니다. **모든 후보 기술을 사용하는 것이 목표가 아닙니다.** 사용하지 않는 편이 더 적절하다면 그것 또한 기술적 결정으로 기록합니다.
 
 ---
 
@@ -274,7 +278,12 @@ flowchart LR
 | **M7** | Model Router와 제한된 Agent Runtime 구축 |
 | **M8** | Product·AI 평가와 Production Hardening |
 
-M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분리해 각 단계의 완료 조건을 독립적으로 검증할 수 있게 했습니다. 세부 완료 기준과 Issue 의존 관계는 [Roadmap](docs/roadmap.md)에 기록합니다.
+중간에 검증 가능한 결과를 남기기 위해 M2 완료를 `v0.1 Consistency Baseline`, M5 완료를
+`v0.2 Product Backend`, M8 완료를 `v1.0 SlotQ Platform` release checkpoint로 둡니다.
+각 checkpoint는 Milestone 완료 조건을 대체하거나 미완료 작업을 완료로 간주하는 장치가
+아닙니다.
+
+M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분리해 각 단계의 완료 조건을 독립적으로 검증할 수 있게 했습니다. M3 종료 시 남은 일정과 범위를 재평가하되, M4의 Waitlist 핵심 흐름과 M5의 최소 복구·관측 Gate를 건너뛰고 AI 구현으로 이동하지 않습니다. 세부 완료 기준과 Issue 의존 관계는 [Roadmap](docs/roadmap.md)에 기록합니다.
 
 ---
 
