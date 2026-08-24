@@ -15,7 +15,7 @@ body:
   - type: textarea
     id: scope
     attributes:
-      label: Scope
+      label: 목표 범위
       description: 이번 Issue에서 변경할 범위를 적어 주세요.
     validations:
       required: true
@@ -23,7 +23,7 @@ body:
   - type: textarea
     id: acceptance
     attributes:
-      label: Acceptance Criteria
+      label: 완료 조건
       description: 작업 완료를 확인할 수 있는 조건을 적어 주세요.
       placeholder: |
         - [ ] ...
@@ -34,7 +34,7 @@ body:
   - type: textarea
     id: out_of_scope
     attributes:
-      label: Out of Scope
+      label: 제외 범위
       description: 이번 작업에서 제외할 사항이 있다면 적어 주세요.
 
   - type: textarea
