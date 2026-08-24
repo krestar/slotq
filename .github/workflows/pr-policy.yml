@@ -1,0 +1,88 @@
+name: PR Policy
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slotq-pr-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: PR policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate PR title, branch and body
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD: ${{ github.event.pull_request.head.ref }}
+          PR_ACTOR: ${{ github.actor }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          actor = os.environ.get("PR_ACTOR", "")
+          title = os.environ.get("PR_TITLE", "")
+          body = os.environ.get("PR_BODY", "")
+          head = os.environ.get("PR_HEAD", "")
+
+          if actor == "dependabot[bot]":
+              print("Dependabot PR: repository title/body policy validation skipped.")
+              sys.exit(0)
+
+          errors = []
+
+          title_pattern = re.compile(
+              r"^(feat|fix|refactor|test|docs|chore|build|ci|perf)\([a-z0-9][a-z0-9._-]*\): .+$"
+          )
+          if not title_pattern.match(title):
+              errors.append(
+                  "PR 제목은 'type(scope): 한글 제목' 형식이어야 합니다. "
+                  "예: feat(reservation): 예약 HOLD 기능 추가"
+              )
+          elif not re.search(r"[가-힣]", title):
+              errors.append("PR 제목의 설명 부분에는 자연스러운 한국어를 포함해 주세요.")
+
+          branch_pattern = re.compile(
+              r"^(feat|fix|refactor|test|docs|chore|build|ci|perf)/[a-z0-9][a-z0-9._-]*$"
+          )
+          if not branch_pattern.match(head):
+              errors.append(
+                  "브랜치 이름은 '<type>/<purpose>' 형식이어야 합니다. "
+                  "예: feat/reservation-hold"
+              )
+
+          required_sections = [
+              "## 왜 필요한가요?",
+              "## 변경 내용",
+              "## 검증",
+              "## 관련 Issue",
+              "## 보안·데이터 영향",
+              "## 리뷰 포인트",
+          ]
+          for section in required_sections:
+              if section not in body:
+                  errors.append(f"PR 본문에 필수 섹션이 없습니다: {section}")
+
+          if "Closes #" not in body and "Fixes #" not in body:
+              errors.append("PR 본문에서 관련 Issue를 'Closes #번호' 또는 'Fixes #번호'로 연결해 주세요.")
+
+          if errors:
+              print("PR policy validation failed:\n")
+              for error in errors:
+                  print(f"- {error}")
+              sys.exit(1)
+
+          print("PR policy validation passed.")
+          PY
