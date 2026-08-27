@@ -74,11 +74,12 @@ scope는 변경 책임이 드러나는 실제 영역을 사용합니다. 제목 
 
 ## 로컬 검증
 
-Backend 개발에는 JDK 21이 필요합니다. 별도의 Gradle 설치 없이 저장소의 Gradle Wrapper를 사용합니다.
+Backend 개발에는 JDK 21이 필요합니다. 별도의 Gradle 설치 없이 `backend/`의 Gradle Wrapper를 사용합니다.
 
 Windows PowerShell:
 
 ```powershell
+Set-Location backend
 .\gradlew.bat test
 .\gradlew.bat clean build
 java -jar build\libs\slotq-0.0.1-SNAPSHOT.jar
@@ -87,6 +88,7 @@ java -jar build\libs\slotq-0.0.1-SNAPSHOT.jar
 macOS/Linux:
 
 ```bash
+cd backend
 ./gradlew test
 ./gradlew clean build
 java -jar build/libs/slotq-0.0.1-SNAPSHOT.jar
