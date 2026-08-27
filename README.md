@@ -237,7 +237,7 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 
 | Area | Baseline | Decision |
 | --- | --- | --- |
-| Backend | Java 21 LTS, Spring Boot, Spring MVC, Spring Data JPA | **Selected** |
+| Backend | Java 25 LTS, Spring Boot, Spring MVC, Spring Data JPA | **Selected** |
 | Frontend | React, TypeScript, Vite 기반 thin SPA | **Selected** |
 | Build | Gradle Wrapper | **Selected** |
 | Persistence | MySQL 8.4 LTS, Flyway | **Selected** |
@@ -269,11 +269,20 @@ dependency manifest, build output과 test는 해당 경계 안에서 관리합�
 
 Backend는 다음과 같이 검증합니다.
 
+로컬 build에는 Gradle이 탐지할 수 있는 JDK 25가 필요합니다. 로컬 JDK vendor는
+고정하지 않으며 시스템의 기본 `JAVA_HOME`과 `PATH`를 JDK 25로 변경할 필요는 없습니다.
+CI는 Temurin JDK 25를 사용합니다. 설치된 toolchain은 `./gradlew javaToolchains`로
+확인할 수 있습니다.
+
 ```bash
 cd backend
 ./gradlew test
 ./gradlew clean build
 ```
+
+Windows PowerShell에서는 `./gradlew` 대신 `.\gradlew.bat`를 사용합니다. 생성된 실행
+artifact는 `backend/build/libs/slotq-0.0.1-SNAPSHOT.jar`이며 JDK 25의 `java -jar`로
+기동할 수 있습니다.
 
 ---
 

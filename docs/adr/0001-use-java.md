@@ -1,7 +1,8 @@
 # ADR-0001: Backend 언어로 Java 사용
 
-- 상태: `Accepted`
+- 상태: `Superseded`
 - 결정일: 2026-08-25
+- 대체: [ADR-0004](0004-use-java-25.md)
 
 ## 맥락
 
