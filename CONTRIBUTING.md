@@ -74,9 +74,25 @@ scope는 변경 책임이 드러나는 실제 영역을 사용합니다. 제목 
 
 ## 로컬 검증
 
-현재 저장소는 초기 설계 단계로 애플리케이션 build system이 아직 확정되지 않았습니다.
+Backend 개발에는 JDK 21이 필요합니다. 별도의 Gradle 설치 없이 저장소의 Gradle Wrapper를 사용합니다.
 
-실제 Backend/Frontend scaffold가 추가되는 시점에 이 문서와 CI에 동일한 test/lint/build 명령을 함께 추가합니다. 존재하지 않는 명령을 문서에 미리 고정하지 않습니다.
+Windows PowerShell:
+
+```powershell
+.\gradlew.bat test
+.\gradlew.bat clean build
+java -jar build\libs\slotq-0.0.1-SNAPSHOT.jar
+```
+
+macOS/Linux:
+
+```bash
+./gradlew test
+./gradlew clean build
+java -jar build/libs/slotq-0.0.1-SNAPSHOT.jar
+```
+
+Backend 기준선은 Java 21 LTS, Spring Boot 4.1.1 GA, Gradle Wrapper 9.7.1입니다. Spring Boot 4.1.1은 Java 21과 Gradle 9.x를 공식 지원하며, Wrapper로 로컬과 CI의 Gradle 버전 및 실행 진입점을 통일합니다.
 
 ## Engineering Principles
 
