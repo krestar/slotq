@@ -96,6 +96,18 @@ java -jar build/libs/slotq-0.0.1-SNAPSHOT.jar
 
 Backend 기준선은 Java 21 LTS, Spring Boot 4.1.1 GA, Gradle Wrapper 9.7.1입니다. Spring Boot 4.1.1은 Java 21과 Gradle 9.x를 공식 지원하며, Wrapper로 로컬과 CI의 Gradle 버전 및 실행 진입점을 통일합니다.
 
+Frontend 개발에는 Node.js 24 LTS와 npm 11이 필요합니다.
+
+```powershell
+Set-Location frontend
+npm ci
+npm run typecheck
+npm test
+npm run build
+```
+
+Frontend의 runtime 기준, 환경 변수와 접근성 기준은 `frontend/README.md`에서 관리합니다.
+
 ## Engineering Principles
 
 - Product Backend를 먼저 완성하고 AI Platform을 그 위에 확장합니다.
