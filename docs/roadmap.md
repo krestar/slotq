@@ -47,9 +47,9 @@ Status의 의미는 다음과 같다.
 
 현재 상태는 다음과 같다.
 
-- #3, #4, #5와 #28은 main에 병합되어 Done이다.
-- 선행 조건이 충족된 #7과 #18만 Ready이다.
-- #6, #8부터 #17, #19, #20, #23은 Backlog를 유지한다.
+- #3, #4, #5, #18과 #28은 main에 병합되어 Done이다.
+- 선행 조건이 충족된 #7과 #23만 Ready이다.
+- #6, #8부터 #17, #19와 #20은 Backlog를 유지한다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -640,7 +640,7 @@ M7 Model Router & Agent Runtime.
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
 | Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 8개, M1 9개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. Backend와 Frontend CI만 실제 검증 시점이 달라 분리한다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | #28 완료 뒤 #7과 #18만 Ready이며 다른 Issue는 모든 선행 조건이 끝날 때까지 Backlog다. |
+| Ready와 Backlog가 dependency를 반영하는가? | #18 완료 뒤 #7과 #23만 Ready이며 다른 Issue는 모든 선행 조건이 끝날 때까지 Backlog다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, 강화된 capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |
