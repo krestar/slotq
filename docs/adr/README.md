@@ -20,9 +20,10 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 
 | ADR | 제목 | 상태 |
 | --- | --- | --- |
-| [0001](0001-use-java.md) | Backend 언어로 Java 사용 | `Accepted` |
+| [0001](0001-use-java.md) | Backend 언어로 Java 사용 | `Superseded` |
 | [0002](0002-start-with-modular-monolith.md) | 단일 배포형 Modular Monolith로 시작 | `Accepted` |
 | [0003](0003-use-react-typescript-vite.md) | Thin SPA에 React, TypeScript, Vite 사용 | `Accepted` |
+| [0004](0004-use-java-25.md) | Java 25 LTS를 Backend 기준선으로 사용 | `Accepted` |
 
 ## 후보 등록부
 
