@@ -1,6 +1,11 @@
 .gradle/
 build/
 
+### Local environment ###
+/.env
+/.env.local
+/.env.*.local
+
 ### Frontend ###
 node_modules/
 dist/

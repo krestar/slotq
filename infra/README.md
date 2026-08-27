@@ -33,7 +33,7 @@ $env:SPRING_PROFILES_ACTIVE = "local"
 .\gradlew.bat bootRun
 ```
 
-포트나 database, 사용자 정보를 변경해야 할 때는 `SLOTQ_MYSQL_PORT`, `SLOTQ_MYSQL_DATABASE`, `SLOTQ_MYSQL_USER`, `SLOTQ_MYSQL_PASSWORD` 환경 변수를 사용한다. 실제 credential과 Secret은 파일에 commit하지 않는다.
+포함된 Compose 설정은 `SLOTQ_MYSQL_PORT`만 받아 database `slotq`, 사용자 `root`, 빈 비밀번호로 실행한다. 별도로 구성한 MySQL에 Backend를 연결할 때는 `SLOTQ_MYSQL_DATABASE`, `SLOTQ_MYSQL_USER`, `SLOTQ_MYSQL_PASSWORD` 환경 변수를 사용한다. 실제 credential과 Secret은 파일에 commit하지 않는다. 저장소 root의 `.env`, `.env.local`, `.env.*.local` 파일은 Git에서 제외된다.
 
 Flyway migration은 Infrastructure가 아니라 이를 사용하는 Backend가 `backend/src/main/resources/db/migration/`에서 소유한다. 빈 database에서 Backend가 시작되면 migration이 자동 적용된다.
 
@@ -43,4 +43,4 @@ Flyway migration은 Infrastructure가 아니라 이를 사용하는 Backend가 `
 docker compose -f infra/compose.mysql.yml down -v
 ```
 
-제거 후 같은 `up -d --wait` 명령으로 다시 구성할 수 있다. Testcontainers 기반 Backend test는 별도의 로컬 database 상태를 사용하지 않고 격리된 MySQL 8.4 container에서 migration을 검증한다.
+제거 후 같은 `up -d --wait` 명령으로 다시 구성할 수 있다. Testcontainers 기반 Backend test는 별도의 로컬 database 상태를 사용하지 않고 격리된 MySQL 8.4 container에서 migration을 검증한다. 따라서 Backend test를 실행할 때도 Docker daemon이 실행 중이어야 한다.
