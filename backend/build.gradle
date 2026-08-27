@@ -19,9 +19,16 @@ repositories {
 dependencies {
     implementation platform('org.springframework.boot:spring-boot-dependencies:4.1.1')
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'org.flywaydb:flyway-mysql'
 
     testImplementation platform('org.springframework.boot:spring-boot-dependencies:4.1.1')
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-mysql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
