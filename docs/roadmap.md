@@ -1,8 +1,8 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 Planning 단계이며, M0의 실제 application scaffold가 추가되기 전에는
-존재하지 않는 build 명령이나 Product 기능을 전제로 하지 않는다.
+현재 저장소는 M0 Foundation 단계이며, 존재하지 않는 Product 기능이나 검증 명령을
+전제로 하지 않는다.
 
 ## 계획 원칙
 
@@ -47,9 +47,9 @@ Status의 의미는 다음과 같다.
 
 현재 상태는 다음과 같다.
 
-- #3과 #4는 main에 병합되어 Done이다.
-- 선행 조건이 충족된 #5와 #18 두 개만 Ready이다.
-- #6부터 #17, #19, #20, #23은 Backlog를 유지한다.
+- #3, #4, #5와 #28은 main에 병합되어 Done이다.
+- 선행 조건이 충족된 #7과 #18만 Ready이다.
+- #6, #8부터 #17, #19, #20, #23은 Backlog를 유지한다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -61,6 +61,7 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #3 [Chore] 제품 범위와 설계 기준선 문서화
 - #4 [Chore] main 브랜치 보호 규칙 구성
 - #5 [Chore] 백엔드 최소 scaffold 구축
+- #28 [Refactor] Product monorepo 최상위 경계 정리
 - #6 [Chore] MySQL 로컬 개발 및 schema migration 기반 구성
 - #7 [Chore] 백엔드 빌드·테스트 CI 추가
 - #18 [Chore] Frontend React·TypeScript·Vite scaffold 구축
@@ -91,9 +92,9 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
 
 | Issue | Priority | 판단 |
 | --- | --- | --- |
-| #3, #5, #6 | P1 | 다음 구현을 여는 설계·개발 기반이다. |
+| #3, #5, #6, #28 | P1 | 다음 구현을 여는 설계·개발 기반이다. |
 | #4 | P2 | 중요한 repository 운영 강화지만 Product 개발 자체를 차단하지 않는다. |
-| #7 | P2 | #5 직후 후속 Backend 변경을 보호하는 검증 자동화다. |
+| #7 | P2 | #28 직후 후속 Backend 변경을 보호하는 검증 자동화다. |
 | #18 | P2 | thin SPA 기반이지만 backend domain 구현 순서를 차단하지 않는다. |
 | #23 | P2 | #18 직후 Frontend 검증을 독립적으로 자동화한다. |
 | #8, #9, #10, #11, #13, #14 | P1 | Reservation Core의 핵심 기능 또는 직접 선행 작업이다. |
@@ -108,8 +109,8 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
 
 ## Dependency graph
 
-    M0: #3 + #4 Done ──> #5 ──> #7 Backend CI ──> #6
-        #3 Done ──> #18 ──> #23 Frontend CI
+    M0: #3 + #4 Done ──> #5 ──> #28 Repository Layout ──> #7 Backend CI ──> #6
+                                      └───────────────> #18 ──> #23 Frontend CI
         #6 + #23 ──> M0 complete
 
     M1: #6 ──> #8 ──> #9 ──> #10 ──┬──> #11 ──> #13 ──> #14
@@ -163,9 +164,10 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
                                                v
                                   M8-WP2 Production hardening
 
-#5와 #18은 #3 완료 후 병렬로 착수할 수 있다. #5가 끝나면 #7 Backend CI를 먼저 추가하고
-그 성공 run을 확인한 뒤 #6 Database 기반을 시작한다. #18이 끝나면 #23 Frontend CI를
-독립적으로 추가한다. #10 이후에는 Command 흐름 #11과 Query 흐름 #12가 갈라지며,
+#5 완료 뒤 #28에서 Backend, Frontend와 Infrastructure의 최상위 경계를 먼저 고정한다.
+#28이 끝나면 #7 Backend CI와 #18 Frontend scaffold를 병렬로 진행할 수 있다. #7의 성공
+run을 확인한 뒤 #6 Database 기반을 시작하고, #18이 끝나면 #23 Frontend CI를 독립적으로
+추가한다. #10 이후에는 Command 흐름 #11과 Query 흐름 #12가 갈라지며,
 Availability 완료는 HOLD 생성의 기술적 선행 조건이 아니다. #19는 #12와 #14를 모두
 사용하고 #20은 #14를 사용한다. 두 UI는 #23의 검증 기반을 선행한다.
 
@@ -195,7 +197,7 @@ Product 범위, Actor 권한, source of truth, 도메인 용어와 초기 기술
 
 ### 완료 기준
 
-- #3부터 #7까지, #18, #23이 모두 Done이다.
+- #3부터 #7까지, #18, #23과 #28이 모두 Done이다.
 - MVP 포함·제외 범위와 Customer, Venue Owner·Manager, Staff, AI Agent의 권한 경계가
   문서화되어 있다.
 - backend 언어, Modular Monolith, 초기 Context 의존 방향의 결정과 재검토 조건이
@@ -204,7 +206,7 @@ Product 범위, Actor 권한, source of truth, 도메인 용어와 초기 기술
   성공한다.
 - thin SPA가 browser에서 기동되고 최소 render smoke test가 성공한다.
 - 빈 MySQL database에 schema migration을 적용하고 통합 smoke test를 실행할 수 있다.
-- #5 직후 backend 실제 test/build 명령을 실행하는 #7 CI가 성공하며, #6의 통합 테스트도
+- #28 직후 backend 실제 test/build 명령을 실행하는 #7 CI가 성공하며, #6의 통합 테스트도
   같은 Gradle verification lifecycle에서 실행된다.
 - #18 직후 frontend 실제 typecheck/test/build 명령을 실행하는 #23 CI가 독립적으로
   성공한다.
@@ -636,9 +638,9 @@ M7 Model Router & Agent Runtime.
 | AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M2 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. Outbox도 M3 대안 비교 전에는 확정하지 않는다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 7개, M1 9개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. Backend와 Frontend CI만 실제 검증 시점이 달라 분리한다. |
+| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 8개, M1 9개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. Backend와 Frontend CI만 실제 검증 시점이 달라 분리한다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | #3과 #4 완료 뒤 #5와 #18만 Ready이며 다른 Issue는 모든 선행 조건이 끝날 때까지 Backlog다. |
+| Ready와 Backlog가 dependency를 반영하는가? | #28 완료 뒤 #7과 #18만 Ready이며 다른 Issue는 모든 선행 조건이 끝날 때까지 Backlog다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, 강화된 capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

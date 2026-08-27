@@ -250,6 +250,31 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 
 Java, Gradle Wrapper, Modular Monolith, React·TypeScript·Vite 선택 근거는 [ADR Register](docs/adr/README.md)에 기록합니다. Gradle Wrapper는 local과 CI의 version 및 실행 진입점을 통일하며, 복잡한 build 최적화는 실제 필요가 생길 때만 검토합니다. Frontend는 Product API의 권위 있는 규칙을 복제하지 않고 Customer와 Venue 운영의 핵심 흐름을 브라우저에서 검증하는 얇은 Client로 유지합니다. **모든 후보 기술을 사용하는 것이 목표가 아닙니다.** 사용하지 않는 편이 더 적절하다면 그것 또한 기술적 결정으로 기록합니다.
 
+### Repository Layout
+
+```text
+slotq/
+├── backend/     Spring Boot Product Backend와 Gradle build 경계
+├── frontend/    React·TypeScript·Vite thin SPA 경계
+├── infra/       로컬·운영 Infrastructure 설정
+├── docs/        Architecture, ADR, Roadmap과 실험 기록
+└── .github/     Issue, PR과 CI 정책
+```
+
+Root는 저장소 전체의 문서와 공통 개발 진입점만 소유합니다. 각 애플리케이션의 source,
+dependency manifest, build output과 test는 해당 경계 안에서 관리합니다. MySQL 실행 설정은
+`infra/`에 두되 Flyway schema migration은 schema를 사용하는 Backend가
+`backend/src/main/resources/db/migration/`에서 소유합니다. 자세한 기준은
+[Repository Layout](docs/architecture/repository-layout.md)에 기록합니다.
+
+Backend는 다음과 같이 검증합니다.
+
+```bash
+cd backend
+./gradlew test
+./gradlew clean build
+```
+
 ---
 
 ## Roadmap
