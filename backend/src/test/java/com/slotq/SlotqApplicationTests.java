@@ -11,6 +11,8 @@ import java.time.ZoneOffset;
 import java.time.zone.ZoneRulesException;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 
 import com.slotq.tenancy.application.TenantUseCase;
 import com.slotq.tenancy.domain.Tenant;
@@ -219,6 +221,37 @@ class SlotqApplicationTests {
         assertThat(previousContract.expiresAt()).isEqualTo(NOW.plusSeconds(10 * 60L));
         assertThat(previousContract.cancelAllowedUntil()).isEqualTo(NOW);
         assertThat(previousContract.noShowEligibleAt()).isEqualTo(NOW.plusSeconds(75 * 60L));
+    }
+
+    @Test
+    void concurrentPolicyUpdatesKeepVenueVersionMonotonic() throws Exception {
+        Tenant tenant = tenantUseCase.createTenant();
+        Venue venue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
+            tenant.id(), "UTC", WeeklyOperatingHours.closedAllWeek(),
+            new BookingPolicyTerms(30, 5, 0, 0)
+        ));
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> {
+                start.await();
+                return venueUseCase.updateBookingPolicy(new VenueConfigurationUseCase.UpdateBookingPolicy(
+                    tenant.id(), venue.id(), new BookingPolicyTerms(30, 10, 0, 0)
+                ));
+            });
+            var second = executor.submit(() -> {
+                start.await();
+                return venueUseCase.updateBookingPolicy(new VenueConfigurationUseCase.UpdateBookingPolicy(
+                    tenant.id(), venue.id(), new BookingPolicyTerms(30, 15, 0, 0)
+                ));
+            });
+
+            start.countDown();
+            assertThat(new long[] {first.get().version(), second.get().version()})
+                .containsExactlyInAnyOrder(2L, 3L);
+        }
+
+        assertThat(venueUseCase.getVenue(tenant.id(), venue.id()).currentPolicy().version()).isEqualTo(3);
     }
 
     private WeeklyOperatingHours hours(DayOfWeek day, String opensAt, String closesAt) {
