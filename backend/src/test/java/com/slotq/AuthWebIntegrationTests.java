@@ -201,6 +201,10 @@ class AuthWebIntegrationTests {
             .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/v1/venues"))
             .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/venues/{venueId}", UUID.randomUUID()))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/venues/{venueId}/availability", UUID.randomUUID()))
+            .andExpect(status().isNotFound());
 
         mockMvc.perform(options("/__test/customer")
                 .header("Origin", "http://localhost:5173")

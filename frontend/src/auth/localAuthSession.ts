@@ -1,6 +1,7 @@
 export interface LocalAuthSession {
   initialize(): Promise<void>
   accessToken(): string | undefined
+  invalidate(): void
 }
 
 interface LocalAuthSessionOptions {
@@ -24,8 +25,9 @@ export function createLocalAuthSession({
   const selectedFixture = fixtureKey?.trim()
   let inMemoryAccessToken: string | undefined
   let initialization: Promise<void> | undefined
+  let sessionGeneration = 0
 
-  async function bootstrap(): Promise<void> {
+  async function bootstrap(generation: number): Promise<void> {
     if (!selectedFixture) {
       return
     }
@@ -51,16 +53,35 @@ export function createLocalAuthSession({
     ) {
       throw new Error('Local auth session response is invalid.')
     }
-    inMemoryAccessToken = payload.accessToken
+    if (generation === sessionGeneration) {
+      inMemoryAccessToken = payload.accessToken
+    }
   }
 
   return {
     initialize() {
-      initialization ??= bootstrap()
+      if (!initialization) {
+        const generation = sessionGeneration
+        const bootstrapAttempt = bootstrap(generation)
+        initialization = bootstrapAttempt
+        void bootstrapAttempt.catch(() => {
+          if (initialization === bootstrapAttempt) {
+            initialization = undefined
+          }
+          if (generation === sessionGeneration) {
+            inMemoryAccessToken = undefined
+          }
+        })
+      }
       return initialization
     },
     accessToken() {
       return inMemoryAccessToken
+    },
+    invalidate() {
+      sessionGeneration += 1
+      initialization = undefined
+      inMemoryAccessToken = undefined
     },
   }
 }

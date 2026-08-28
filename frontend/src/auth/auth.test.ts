@@ -4,9 +4,10 @@ import { createLocalAuthSession } from './localAuthSession'
 
 const runtimeToken = 'runtime-only-token-with-at-least-thirty-two-characters'
 
-function response(body: object, ok = true): Response {
+function response(body: object, status = 200): Response {
   return {
-    ok,
+    ok: status >= 200 && status < 300,
+    status,
     json: vi.fn().mockResolvedValue(body),
   } as unknown as Response
 }
@@ -99,6 +100,46 @@ describe('local auth session and API client', () => {
 
     expect(fetchImplementation).toHaveBeenCalledTimes(2)
     expect(first.accessToken()).not.toBe(reloaded.accessToken())
+  })
+
+  it('invalidates a rejected process credential without replaying the mutation', async () => {
+    const restartedToken = `${runtimeToken}-after-restart`
+    const bootstrapFetch = vi.fn()
+      .mockResolvedValueOnce(response({ accessToken: runtimeToken, tokenType: 'Bearer' }))
+      .mockResolvedValueOnce(response({ accessToken: restartedToken, tokenType: 'Bearer' }))
+    const apiFetch = vi.fn()
+      .mockResolvedValueOnce(response({}, 401))
+      .mockResolvedValueOnce(response({}, 201))
+    const session = createLocalAuthSession({
+      apiBaseUrl: 'http://localhost:8080',
+      fixtureKey: 'customer-a',
+      fetchImplementation: bootstrapFetch,
+    })
+    const request = createApiClient({
+      apiBaseUrl: 'http://localhost:8080',
+      authSession: session,
+      fetchImplementation: apiFetch,
+    })
+    const mutation = {
+      access: 'protected' as const,
+      method: 'POST',
+      body: JSON.stringify({ slotInventoryId: 'slot-a', partySize: 2 }),
+    }
+
+    const rejected = await request('/api/v1/venues/venue-a/reservations/holds', mutation)
+
+    expect(rejected.status).toBe(401)
+    expect(apiFetch).toHaveBeenCalledTimes(1)
+    expect(bootstrapFetch).toHaveBeenCalledTimes(1)
+    expect(session.accessToken()).toBeUndefined()
+
+    const explicitRetry = await request('/api/v1/venues/venue-a/reservations/holds', mutation)
+
+    expect(explicitRetry.status).toBe(201)
+    expect(apiFetch).toHaveBeenCalledTimes(2)
+    expect(bootstrapFetch).toHaveBeenCalledTimes(2)
+    const secondRequest = apiFetch.mock.calls[1]?.[1] as RequestInit
+    expect(new Headers(secondRequest.headers).get('Authorization')).toBe(`Bearer ${restartedToken}`)
   })
 
   it('refuses absolute or protocol-relative paths before attaching a credential', async () => {

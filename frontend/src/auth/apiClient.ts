@@ -38,9 +38,13 @@ export function createApiClient({
       headers.set('Authorization', `Bearer ${accessToken}`)
     }
 
-    return fetchImplementation(requestUrl, {
+    const response = await fetchImplementation(requestUrl, {
       ...requestInit,
       headers,
     })
+    if (access === 'protected' && response.status === 401) {
+      authSession.invalidate()
+    }
+    return response
   }
 }

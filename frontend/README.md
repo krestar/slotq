@@ -52,7 +52,9 @@ Product Backend가 소유하고 Frontend에는 공개 가능한 URL과 식별자
 `VITE_LOCAL_AUTH_FIXTURE`는 local Vite 실행에서만 사용하는 공개 fixture 선택자다. Browser는
 시작할 때 Backend의 runtime bootstrap으로 process-bound credential을 받고 JavaScript memory에만
 보관한다. token은 URL, log, localStorage, sessionStorage, IndexedDB, cookie, `.env` 또는 build
-artifact에 저장하지 않는다. production build는 이 fixture 설정이나 dev bootstrap에 의존하지 않는다.
+artifact에 저장하지 않는다. 보호 API가 `401`을 반환하면 기존 credential만 폐기하고 요청 자체는
+재전송하지 않는다. 이후 사용자가 발생시킨 다음 보호 요청에서 runtime bootstrap을 다시 수행한다.
+production build는 이 fixture 설정이나 dev bootstrap에 의존하지 않는다.
 
 ## Accessibility baseline
 

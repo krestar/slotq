@@ -9,6 +9,7 @@ const localFixtureKey = import.meta.env.DEV
 const productionSession: LocalAuthSession = {
   initialize: async () => undefined,
   accessToken: () => undefined,
+  invalidate: () => undefined,
 }
 
 export const localAuthSession = import.meta.env.DEV

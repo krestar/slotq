@@ -44,7 +44,6 @@ class SecurityConfiguration {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.POST, "/__dev/auth/session").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/venues").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/venues/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/venues/*/availability").permitAll()
                 .anyRequest().authenticated()
             )
