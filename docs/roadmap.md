@@ -1,8 +1,8 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 M0 Foundation 단계이며, 존재하지 않는 Product 기능이나 검증 명령을
-전제로 하지 않는다.
+현재 저장소는 M0 Foundation을 완료하고 M1 Reservation Core를 시작하는 단계이며,
+존재하지 않는 Product 기능이나 검증 명령을 전제로 하지 않는다.
 
 ## 계획 원칙
 
@@ -47,9 +47,9 @@ Status의 의미는 다음과 같다.
 
 현재 상태는 다음과 같다.
 
-- #3, #4, #5, #18과 #28은 main에 병합되어 Done이다.
-- 선행 조건이 충족된 #7과 #23만 Ready이다.
-- #6, #8부터 #17, #19와 #20은 Backlog를 유지한다.
+- #3, #4, #5, #6, #7, #18, #23과 #28은 main에 병합되어 Done이다.
+- M0가 완료되어 선행 조건이 충족된 #8이 Ready이다.
+- #9부터 #17, #19, #20과 #38은 각 dependency가 충족될 때까지 Backlog를 유지한다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -78,6 +78,7 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #14 [Feature] Reservation 상태 전이 명령 구현
 - #19 [Feature] Customer 예약 핵심 흐름 UI 구현
 - #20 [Feature] Venue 운영 핵심 흐름 UI 구현
+- #38 [Feature] Venue 운영용 Backend 조회·관리 API 구현
 
 ### M2 선행 작업
 
@@ -97,7 +98,7 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
 | #7 | P2 | #28 직후 후속 Backend 변경을 보호하는 검증 자동화다. |
 | #18 | P2 | thin SPA 기반이지만 backend domain 구현 순서를 차단하지 않는다. |
 | #23 | P2 | #18 직후 Frontend 검증을 독립적으로 자동화한다. |
-| #8, #9, #10, #11, #13, #14 | P1 | Reservation Core의 핵심 기능 또는 직접 선행 작업이다. |
+| #8, #9, #10, #11, #13, #14, #38 | P1 | Reservation Core의 핵심 기능 또는 직접 선행 작업이다. |
 | #12 | P2 | 중요한 read use case지만 쓰기 흐름의 선행 기반과 구분한다. |
 | #19, #20 | P2 | 핵심 Product API 이후 구현하는 thin 사용자 흐름이다. |
 | #15, #16 | P1 | 동시성 전략을 선택하고 invariant를 보장하기 위한 핵심 선행·구현이다. |
@@ -113,11 +114,12 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
                                       └───────────────> #18 ──> #23 Frontend CI
         #6 + #23 ──> M0 complete
 
-    M1: #6 ──> #8 ──> #9 ──> #10 ──┬──> #11 ──> #13 ──> #14
-                                      └──> #12
+    M1: #6 ──> #8 ──> #9 ──> #10 ──> #11 ──> #13
+                                                ├──> #12
+                                                └──> #14 ──> #38
         #12 + #14 + #23 ──> #19
-        #14 + #23 ──> #20
-        #12 + #19 + #20 ──> M1 complete
+        #38 + #23 ──> #20
+        #19 + #20 ──> M1 complete
 
     M2: #13 ──> #15 ──> #16
         #13 ──> #17
@@ -164,12 +166,11 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
                                                v
                                   M8-WP2 Production hardening
 
-#5 완료 뒤 #28에서 Backend, Frontend와 Infrastructure의 최상위 경계를 먼저 고정한다.
-#28이 끝나면 #7 Backend CI와 #18 Frontend scaffold를 병렬로 진행할 수 있다. #7의 성공
-run을 확인한 뒤 #6 Database 기반을 시작하고, #18이 끝나면 #23 Frontend CI를 독립적으로
-추가한다. #10 이후에는 Command 흐름 #11과 Query 흐름 #12가 갈라지며,
-Availability 완료는 HOLD 생성의 기술적 선행 조건이 아니다. #19는 #12와 #14를 모두
-사용하고 #20은 #14를 사용한다. 두 UI는 #23의 검증 기반을 선행한다.
+M0 Foundation은 #6과 #23까지 main에 병합되어 완료됐다. M1은 #8부터 순차로 Tenant,
+권한 경계, Resource/Slot, Reservation domain과 persistence를 확정한다. #13 완료 뒤에는
+Availability #12와 상태 전이 #14를 병렬로 진행할 수 있고, #14 완료 뒤 Venue 운영용
+Backend 조회·관리 API #38을 구현한다. Customer UI #19는 #12와 #14를, Venue UI #20은
+#38을 선행으로 사용하며 두 UI는 #23의 Frontend 검증 기반을 공유한다.
 
 #15와 #17은 #13 완료 후 병렬로 착수할 수 있고 #16은 #15의 공통 실험 하네스를 선행으로
 사용한다. M2-WP1과 M2-WP2는 각각의 선행 조건이 충족된 뒤 구체 Issue로 전환한다.
@@ -255,7 +256,7 @@ SPA 흐름을 추가한다.
 
 ### 완료 기준
 
-- #8부터 #14까지와 #19, #20이 모두 Done이다.
+- #8부터 #14까지, #19, #20과 #38이 모두 Done이다.
 - Tenant, Venue, Policy, Resource와 Slot Capacity가 저장되고 tenant-scoped로만
   조회·변경된다.
 - 다른 tenant 식별자를 사용한 read/write가 데이터 노출이나 변경으로 이어지지 않는다.
@@ -266,7 +267,8 @@ SPA 흐름을 추가한다.
 - 시간 의존 로직은 주입된 Clock으로 sleep 없이 재현된다.
 - #12와 #14의 API contract가 확정된 뒤 Customer UI에서 availability 조회, HOLD 생성,
   확정·취소와 현재 상태 확인이 가능하다.
-- Venue UI에서 예약 목록과 허용된 운영 상태 전이를 실행할 수 있다.
+- #38과 #14의 API contract가 확정된 뒤 Venue UI에서 Venue 설정, 예약 목록과 허용된 운영
+  상태 전이를 실행할 수 있다.
 - 두 UI는 loading, empty, business conflict와 server error 상태를 구분해 표현한다.
 - capacity와 상태 전이 판단은 UI가 복제하지 않고 Product API 결과를 따른다.
 
@@ -290,8 +292,8 @@ M0 Foundation.
 - aggregate가 상태 전이와 invariant를 책임지고 controller나 JPA callback에 규칙을
   흩뜨리지 않는다.
 - availability는 cache나 검색 index가 아닌 Product DB에서 계산한다.
-- Customer UI는 #12와 #14, Venue UI는 #14의 API contract를 선행으로 사용하고 contract
-  변경을 명시적으로 검증한다.
+- Customer UI는 #12와 #14, Venue UI는 #38과 #14의 API contract를 선행으로 사용하고
+  contract 변경을 명시적으로 검증한다.
 - server state와 화면 상태를 분리하되, 현재 흐름에 필요하지 않은 복잡한 client state
   framework는 추가하지 않는다.
 - tenant와 Actor context가 Customer·Venue 화면과 API 요청에서 혼동되지 않게 한다.
@@ -638,9 +640,9 @@ M7 Model Router & Agent Runtime.
 | AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M2 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. Outbox도 M3 대안 비교 전에는 확정하지 않는다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 8개, M1 9개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. Backend와 Frontend CI만 실제 검증 시점이 달라 분리한다. |
+| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 8개, M1 10개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. Backend와 Frontend CI만 실제 검증 시점이 달라 분리한다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | #18 완료 뒤 #7과 #23만 Ready이며 다른 Issue는 모든 선행 조건이 끝날 때까지 Backlog다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0 완료 뒤 #8만 Ready이며 다른 M1·M2 Issue는 각 dependency가 끝날 때까지 Backlog다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, 강화된 capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |
