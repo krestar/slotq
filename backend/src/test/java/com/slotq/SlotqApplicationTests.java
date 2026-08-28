@@ -14,6 +14,14 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 
+import com.slotq.auth.application.AccessControlProvisioning;
+import com.slotq.auth.application.AccessDeniedException;
+import com.slotq.auth.application.AuthorizationUseCase;
+import com.slotq.auth.application.ReservationAccessTarget;
+import com.slotq.auth.application.ResourceNotFoundException;
+import com.slotq.auth.domain.AuthenticatedPrincipal;
+import com.slotq.auth.domain.PrincipalId;
+import com.slotq.auth.domain.TenantRole;
 import com.slotq.tenancy.application.TenantUseCase;
 import com.slotq.tenancy.domain.Tenant;
 import com.slotq.tenancy.domain.TenantStatus;
@@ -68,10 +76,16 @@ class SlotqApplicationTests {
     @Autowired
     VenueConfigurationUseCase venueUseCase;
 
+    @Autowired
+    AccessControlProvisioning accessControlProvisioning;
+
+    @Autowired
+    AuthorizationUseCase authorizationUseCase;
+
     @Test
     void emptyMySqlAppliesMigrationsAndValidatesJpaMappings() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("2");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("3");
 
         String characterSet = jdbcTemplate.queryForObject(
             "SELECT DEFAULT_CHARACTER_SET_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE()",
@@ -84,6 +98,96 @@ class SlotqApplicationTests {
 
         assertThat(characterSet).isEqualTo("utf8mb4");
         assertThat(collation).isEqualTo("utf8mb4_0900_ai_ci");
+    }
+
+    @Test
+    void resolvesSamePrincipalOwnerManagerAndStaffMembershipsAtEachTargetBoundary() {
+        PrincipalId principalId = PrincipalId.newId();
+        accessControlProvisioning.registerPrincipal(principalId);
+
+        Tenant ownerTenant = tenantUseCase.createTenant();
+        Venue ownerVenue = venue(ownerTenant);
+        Venue secondOwnerVenue = venue(ownerTenant);
+        accessControlProvisioning.assignMembership(principalId, ownerTenant.id(), TenantRole.OWNER);
+
+        Tenant managerTenant = tenantUseCase.createTenant();
+        Venue managedVenue = venue(managerTenant);
+        Venue unassignedManagerVenue = venue(managerTenant);
+        accessControlProvisioning.assignMembership(principalId, managerTenant.id(), TenantRole.MANAGER);
+        accessControlProvisioning.grantVenue(
+            principalId, managerTenant.id(), TenantRole.MANAGER, managedVenue.id()
+        );
+
+        Tenant staffTenant = tenantUseCase.createTenant();
+        Venue staffedVenue = venue(staffTenant);
+        accessControlProvisioning.assignMembership(principalId, staffTenant.id(), TenantRole.STAFF);
+        accessControlProvisioning.grantVenue(principalId, staffTenant.id(), TenantRole.STAFF, staffedVenue.id());
+
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(principalId);
+        assertThat(authorizationUseCase.requireVenueAccess(principal, ownerVenue.id()).role())
+            .isEqualTo(TenantRole.OWNER);
+        assertThat(authorizationUseCase.requireVenueAccess(principal, ownerVenue.id()).venueGrants())
+            .containsExactlyInAnyOrder(ownerVenue.id(), secondOwnerVenue.id());
+        assertThat(authorizationUseCase.requireVenueConfigurationAccess(principal, managedVenue.id()).role())
+            .isEqualTo(TenantRole.MANAGER);
+        assertThat(authorizationUseCase.requireVenueAccess(principal, staffedVenue.id()).role())
+            .isEqualTo(TenantRole.STAFF);
+
+        assertThatThrownBy(() -> authorizationUseCase.requireVenueAccess(principal, unassignedManagerVenue.id()))
+            .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> authorizationUseCase.requireVenueConfigurationAccess(principal, staffedVenue.id()))
+            .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void reservationOwnershipAllowsOnlyStoredCustomerOrScopedOperator() {
+        Tenant tenant = tenantUseCase.createTenant();
+        Venue venue = venue(tenant);
+        PrincipalId customer = PrincipalId.newId();
+        PrincipalId otherCustomer = PrincipalId.newId();
+        PrincipalId operator = PrincipalId.newId();
+        accessControlProvisioning.registerPrincipal(customer);
+        accessControlProvisioning.registerPrincipal(otherCustomer);
+        accessControlProvisioning.registerPrincipal(operator);
+        accessControlProvisioning.assignMembership(operator, tenant.id(), TenantRole.MANAGER);
+        accessControlProvisioning.grantVenue(operator, tenant.id(), TenantRole.MANAGER, venue.id());
+        ReservationAccessTarget target = new ReservationAccessTarget(tenant.id(), venue.id(), customer);
+
+        assertThat(authorizationUseCase.authorizeReservationRead(new AuthenticatedPrincipal(customer), target)
+            .isCustomer()).isTrue();
+        assertThat(authorizationUseCase.authorizeReservationRead(new AuthenticatedPrincipal(operator), target)
+            .operator().role()).isEqualTo(TenantRole.MANAGER);
+        assertThatThrownBy(() -> authorizationUseCase.authorizeReservationRead(
+            new AuthenticatedPrincipal(otherCustomer), target
+        )).isInstanceOf(ResourceNotFoundException.class);
+
+        Tenant otherTenant = tenantUseCase.createTenant();
+        assertThatThrownBy(() -> authorizationUseCase.authorizeReservationRead(
+            new AuthenticatedPrincipal(operator),
+            new ReservationAccessTarget(otherTenant.id(), venue.id(), customer)
+        )).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void databaseRejectsCrossTenantAndRoleForgedVenueGrants() {
+        Tenant tenant = tenantUseCase.createTenant();
+        Tenant otherTenant = tenantUseCase.createTenant();
+        Venue venue = venue(tenant);
+        Venue otherVenue = venue(otherTenant);
+        PrincipalId principal = PrincipalId.newId();
+        accessControlProvisioning.registerPrincipal(principal);
+        accessControlProvisioning.assignMembership(principal, tenant.id(), TenantRole.MANAGER);
+
+        assertThatThrownBy(() -> accessControlProvisioning.grantVenue(
+            principal, tenant.id(), TenantRole.MANAGER, otherVenue.id()
+        )).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> accessControlProvisioning.grantVenue(
+            principal, tenant.id(), TenantRole.STAFF, venue.id()
+        )).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbcTemplate.update(
+            "INSERT INTO venue_grants (tenant_id, principal_id, role, venue_id) VALUES (?, ?, 'OWNER', ?)",
+            bytes(tenant.id().value()), bytes(principal.value()), bytes(venue.id().value())
+        )).isInstanceOf(DataAccessException.class);
     }
 
     @Test
@@ -257,6 +361,12 @@ class SlotqApplicationTests {
     private WeeklyOperatingHours hours(DayOfWeek day, String opensAt, String closesAt) {
         return new WeeklyOperatingHours(Map.of(
             day, new DailyOperatingHours(LocalTime.parse(opensAt), LocalTime.parse(closesAt))
+        ));
+    }
+
+    private Venue venue(Tenant tenant) {
+        return venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
+            tenant.id(), "UTC", WeeklyOperatingHours.closedAllWeek(), new BookingPolicyTerms(30, 5, 0, 0)
         ));
     }
 

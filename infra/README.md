@@ -37,6 +37,13 @@ $env:SPRING_PROFILES_ACTIVE = "local"
 
 Flyway migration은 Infrastructure가 아니라 이를 사용하는 Backend가 `backend/src/main/resources/db/migration/`에서 소유한다. 빈 database에서 Backend가 시작되면 migration이 자동 적용된다.
 
+`local` profile은 `slotq.auth.dev-bootstrap-enabled=true`와 Browser CORS 기본 Origin
+`http://localhost:5173`을 적용한다. Backend는 시작할 때 공개 fixtureKey(`customer-a`,
+`tenant-a-owner`, `tenant-a-manager`, `tenant-a-staff`)용 Principal·membership·VenueGrant fixture를
+DB에 준비하지만 Bearer credential은 process memory에서만 무작위로 만든다. Backend를 다시
+시작하면 기존 credential은 무효가 된다. production profile에서 dev bootstrap을 활성화하거나
+wildcard CORS Origin을 설정하면 startup이 실패한다.
+
 환경과 volume을 제거하려면 다음 명령을 사용한다.
 
 ```bash
