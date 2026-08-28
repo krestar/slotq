@@ -166,16 +166,23 @@ confirmed reservations <= capacity
 ```
 
 이 규칙만으로는 확정 전 capacity를 예약하는 HOLD를 보호할 수 없다. 더 강한 invariant는
-다음과 같다.
+현재 서버 시각에서 실제 capacity를 소비하는 effective Allocation을 기준으로 정의한다.
 
 ```text
-각 SlotInventory에 대해:
-    sum(active CapacityAllocation.units) <= SlotInventory.capacity
+각 SlotInventory와 now에 대해:
+    sum(effective capacity-consuming CapacityAllocation.units) <= SlotInventory.capacity
 ```
 
-`HELD`, `CONFIRMED`, `CHECKED_IN` Reservation의 Allocation은 활성 상태다.
-`EXPIRED`, `CANCELLED`, `NO_SHOW`, `COMPLETED` Reservation의 Allocation은 활성 상태가
-아니다. Product Charter의 규칙은 이 강한 invariant의 결과로 보장된다.
+`CONFIRMED`, `CHECKED_IN` Reservation과 `expiresAt > now`인 `HELD` Reservation만
+capacity를 소비한다. stored state가 `HELD`이고 Allocation release가 아직 materialize되지
+않았더라도 `expiresAt <= now`이면 effective state는 `EXPIRED`이고 capacity를 소비하지
+않는다. 따라서 만료 시각의 논리적 capacity 해제와 Reservation/Allocation row에
+`EXPIRED`/release를 기록하는 물리 materialization 시점은 다를 수 있다.
+
+`EXPIRED`, `CANCELLED`, `NO_SHOW`, `COMPLETED` Reservation은 capacity를 소비하지 않는다.
+Product Charter의 규칙은 이 effective invariant의 결과로 보장된다. M1의 read와 capacity
+query는 이 predicate를 사용하고, due HOLD의 stored state와 Allocation release는 허용된
+mutation command 또는 내부 expire command에서 같은 transaction으로 materialize한다.
 
 Restaurant MVP에서 하나의 Table과 고정 Slot 조합은 capacity `1`을 가지며, 인원수는
 별도 적합성 규칙으로 검사한다.
