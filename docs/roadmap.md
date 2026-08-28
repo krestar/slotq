@@ -115,8 +115,8 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
         #6 + #23 ──> M0 complete
 
     M1: #6 ──> #8 ──> #9 ──> #10 ──> #11 ──> #13
-                                                ├──> #12
-                                                └──> #14 ──> #38
+                   ↑                            ├──> #12
+             #18 Done                           └──> #14 ──> #38
         #12 + #14 + #23 ──> #19
         #38 + #23 ──> #20
         #19 + #20 ──> M1 complete
@@ -167,7 +167,8 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
                                   M8-WP2 Production hardening
 
 M0 Foundation은 #6과 #23까지 main에 병합되어 완료됐다. M1은 #8부터 순차로 Tenant,
-권한 경계, Resource/Slot, Reservation domain과 persistence를 확정한다. #13 완료 뒤에는
+권한 경계, Resource/Slot, Reservation domain과 persistence를 확정한다. #9는 #8과 이미
+완료된 Frontend scaffold #18을 함께 선행으로 사용한다. #13 완료 뒤에는
 Availability #12와 상태 전이 #14를 병렬로 진행할 수 있고, #14 완료 뒤 Venue 운영용
 Backend 조회·관리 API #38을 구현한다. Customer UI #19는 #12와 #14를, Venue UI #20은
 #38을 선행으로 사용하며 두 UI는 #23의 Frontend 검증 기반을 공유한다.
