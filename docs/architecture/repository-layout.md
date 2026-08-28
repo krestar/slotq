@@ -46,3 +46,6 @@ Flyway migration은 Infrastructure 설정이 아니라 Product Backend의 databa
 따라서 migration은 `backend/src/main/resources/db/migration/`에서 Backend source와 함께
 versioning하고 test한다. 향후 독립 service가 별도 schema를 소유하게 되면 해당 service가
 자신의 migration을 소유한다.
+
+Migration의 호환성 및 rollback 기준은
+[Database Migration Compatibility](database-migrations.md)에 기록한다.
