@@ -61,10 +61,7 @@ class SlotInventoryService implements SlotInventoryUseCase {
 
         OffsetDateTime input = parseOffsetTimestamp(command.startsAt());
         validateVenueOffset(input, venue);
-        LocalDateTime localStart = input.toInstant().atZone(venue.timezone()).toLocalDateTime();
         int durationMinutes = venue.currentPolicy().terms().slotDurationMinutes();
-        validateOperatingHoursAndGrid(localStart, durationMinutes, venue);
-
         SlotInventory slot = SlotInventory.create(
             SlotInventoryId.newId(),
             command.tenantId(),
@@ -74,6 +71,7 @@ class SlotInventoryService implements SlotInventoryUseCase {
             durationMinutes,
             venue.currentPolicy().version()
         );
+        validateOperatingHoursAndGrid(slot, durationMinutes, venue);
         if (slotRepository.overlaps(
             command.tenantId(), command.venueId(), command.resourceId(), slot.startsAt(), slot.endsAt()
         )) {
@@ -121,12 +119,17 @@ class SlotInventoryService implements SlotInventoryUseCase {
         }
     }
 
-    private void validateOperatingHoursAndGrid(LocalDateTime localStart, int durationMinutes, Venue venue) {
+    private void validateOperatingHoursAndGrid(
+        SlotInventory slot,
+        int durationMinutes,
+        Venue venue
+    ) {
+        LocalDateTime localStart = slot.startsAt().atZone(venue.timezone()).toLocalDateTime();
+        LocalDateTime localEnd = slot.endsAt().atZone(venue.timezone()).toLocalDateTime();
         DailyOperatingHours hours = venue.operatingHours().hoursOn(localStart.getDayOfWeek())
             .orElseThrow(() -> new IllegalArgumentException("Slot must start on an open Venue day"));
         LocalDateTime opensAt = localStart.toLocalDate().atTime(hours.opensAt());
         LocalDateTime closesAt = localStart.toLocalDate().atTime(hours.closesAt());
-        LocalDateTime localEnd = localStart.plusMinutes(durationMinutes);
         if (localStart.isBefore(opensAt) || localEnd.isAfter(closesAt)) {
             throw new IllegalArgumentException("Slot must fit within Venue operating hours");
         }

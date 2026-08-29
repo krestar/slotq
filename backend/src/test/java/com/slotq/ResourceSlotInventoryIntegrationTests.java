@@ -273,6 +273,41 @@ class ResourceSlotInventoryIntegrationTests {
     }
 
     @Test
+    void rejectsSlotWhoseActualEndCrossesSpringForwardClosingTime() {
+        Tenant tenant = tenantUseCase.createTenant();
+        Venue venue = venue(
+            tenant, "America/New_York", DayOfWeek.SUNDAY, "00:30", "03:00", 60
+        );
+        Resource resource = resourceUseCase.createResource(
+            new ResourceUseCase.CreateResource(tenant.id(), venue.id(), "Spring-forward table", 2)
+        );
+
+        assertThatThrownBy(() -> slotUseCase.createSlot(new SlotInventoryUseCase.CreateSlot(
+            tenant.id(), venue.id(), resource.id(), "2026-03-08T01:30:00-05:00"
+        ))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void allowsSlotWhoseActualEndFitsWithinFallBackOperatingHours() {
+        Tenant tenant = tenantUseCase.createTenant();
+        Venue venue = venue(
+            tenant, "America/New_York", DayOfWeek.SUNDAY, "00:30", "02:00", 60
+        );
+        Resource resource = resourceUseCase.createResource(
+            new ResourceUseCase.CreateResource(tenant.id(), venue.id(), "Fall-back table", 2)
+        );
+
+        SlotInventory slot = slotUseCase.createSlot(new SlotInventoryUseCase.CreateSlot(
+            tenant.id(), venue.id(), resource.id(), "2026-11-01T01:30:00-04:00"
+        ));
+
+        assertThat(slot.startsAt()).isEqualTo(Instant.parse("2026-11-01T05:30:00Z"));
+        assertThat(slot.endsAt()).isEqualTo(Instant.parse("2026-11-01T06:30:00Z"));
+        assertThat(slot.endsAt().atZone(venue.timezone()).toOffsetDateTime().toString())
+            .isEqualTo("2026-11-01T01:30-05:00");
+    }
+
+    @Test
     void databaseRejectsCapacityOtherThanOneInvalidRangeAndDuplicateStart() {
         Tenant tenant = tenantUseCase.createTenant();
         Venue venue = venue(tenant, "UTC", DayOfWeek.SATURDAY, "09:00", "12:00", 30);
