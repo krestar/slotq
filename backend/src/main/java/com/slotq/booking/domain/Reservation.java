@@ -74,6 +74,51 @@ public final class Reservation {
         );
     }
 
+    private Reservation(
+        ReservationId id,
+        TenantId tenantId,
+        VenueId venueId,
+        ResourceId resourceId,
+        SlotInventoryId slotInventoryId,
+        PrincipalId customerPrincipalId,
+        PartySize partySize,
+        ReservationState state,
+        long appliedPolicyVersion,
+        Instant startsAt,
+        Instant expiresAt,
+        Instant cancelAllowedUntil,
+        Instant noShowEligibleAt,
+        CapacityAllocation allocation
+    ) {
+        this.id = Objects.requireNonNull(id, "id must not be null");
+        this.tenantId = Objects.requireNonNull(tenantId, "tenantId must not be null");
+        this.venueId = Objects.requireNonNull(venueId, "venueId must not be null");
+        this.resourceId = Objects.requireNonNull(resourceId, "resourceId must not be null");
+        this.slotInventoryId = Objects.requireNonNull(slotInventoryId, "slotInventoryId must not be null");
+        this.customerPrincipalId = Objects.requireNonNull(
+            customerPrincipalId,
+            "customerPrincipalId must not be null"
+        );
+        this.partySize = Objects.requireNonNull(partySize, "partySize must not be null");
+        this.state = Objects.requireNonNull(state, "state must not be null");
+        if (appliedPolicyVersion <= 0) {
+            throw new IllegalArgumentException("appliedPolicyVersion must be positive");
+        }
+        this.appliedPolicyVersion = appliedPolicyVersion;
+        this.startsAt = Objects.requireNonNull(startsAt, "startsAt must not be null");
+        this.expiresAt = Objects.requireNonNull(expiresAt, "expiresAt must not be null");
+        this.cancelAllowedUntil = Objects.requireNonNull(
+            cancelAllowedUntil,
+            "cancelAllowedUntil must not be null"
+        );
+        this.noShowEligibleAt = Objects.requireNonNull(noShowEligibleAt, "noShowEligibleAt must not be null");
+        this.allocation = Objects.requireNonNull(allocation, "allocation must not be null");
+
+        validateStoredDeadlines();
+        validateAllocationIdentity();
+        validateStoredState();
+    }
+
     public static Reservation hold(
         ReservationId id,
         CapacityAllocationId allocationId,
@@ -97,6 +142,40 @@ public final class Reservation {
             partySize,
             deadlines,
             clock
+        );
+    }
+
+    public static Reservation reconstitute(
+        ReservationId id,
+        TenantId tenantId,
+        VenueId venueId,
+        ResourceId resourceId,
+        SlotInventoryId slotInventoryId,
+        PrincipalId customerPrincipalId,
+        PartySize partySize,
+        ReservationState state,
+        long appliedPolicyVersion,
+        Instant startsAt,
+        Instant expiresAt,
+        Instant cancelAllowedUntil,
+        Instant noShowEligibleAt,
+        CapacityAllocation allocation
+    ) {
+        return new Reservation(
+            id,
+            tenantId,
+            venueId,
+            resourceId,
+            slotInventoryId,
+            customerPrincipalId,
+            partySize,
+            state,
+            appliedPolicyVersion,
+            startsAt,
+            expiresAt,
+            cancelAllowedUntil,
+            noShowEligibleAt,
+            allocation
         );
     }
 
@@ -210,6 +289,38 @@ public final class Reservation {
         }
         if (deadlines.noShowEligibleAt().isBefore(slotInventory.startsAt())) {
             throw new IllegalArgumentException("noShowEligibleAt must be no earlier than startsAt");
+        }
+    }
+
+    private void validateStoredDeadlines() {
+        if (expiresAt.isAfter(startsAt)) {
+            throw new IllegalArgumentException("expiresAt must be no later than startsAt");
+        }
+        if (cancelAllowedUntil.isAfter(startsAt)) {
+            throw new IllegalArgumentException("cancelAllowedUntil must be no later than startsAt");
+        }
+        if (noShowEligibleAt.isBefore(startsAt)) {
+            throw new IllegalArgumentException("noShowEligibleAt must be no earlier than startsAt");
+        }
+    }
+
+    private void validateAllocationIdentity() {
+        if (!allocation.reservationId().equals(id)
+            || !allocation.tenantId().equals(tenantId)
+            || !allocation.venueId().equals(venueId)
+            || !allocation.resourceId().equals(resourceId)
+            || !allocation.slotInventoryId().equals(slotInventoryId)) {
+            throw new IllegalArgumentException("Reservation and CapacityAllocation identities must match");
+        }
+    }
+
+    private void validateStoredState() {
+        boolean shouldBeActive = switch (state) {
+            case HELD, CONFIRMED, CHECKED_IN -> true;
+            case EXPIRED, CANCELLED, NO_SHOW, COMPLETED -> false;
+        };
+        if (allocation.active() != shouldBeActive) {
+            throw new IllegalArgumentException("Reservation state and CapacityAllocation status must match");
         }
     }
 
