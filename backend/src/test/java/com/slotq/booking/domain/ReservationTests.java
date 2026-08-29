@@ -190,7 +190,6 @@ class ReservationTests {
             fixture.resource(), wrongResourceSlot, fixture.deadlines(), new PartySize(4)
         )).isInstanceOf(IllegalArgumentException.class);
 
-        PolicyDeadlines wrongVersion = deadlines(4, EXPIRES_AT, CANCEL_ALLOWED_UNTIL, NO_SHOW_ELIGIBLE_AT);
         PolicyDeadlines expired = deadlines(3, CREATED_AT, CANCEL_ALLOWED_UNTIL, NO_SHOW_ELIGIBLE_AT);
         PolicyDeadlines expiryAfterStart = deadlines(
             3, STARTS_AT.plusSeconds(1), CANCEL_ALLOWED_UNTIL, NO_SHOW_ELIGIBLE_AT
@@ -202,7 +201,7 @@ class ReservationTests {
             3, EXPIRES_AT, CANCEL_ALLOWED_UNTIL, STARTS_AT.minusSeconds(1)
         );
 
-        Stream.of(wrongVersion, expired, expiryAfterStart, cancellationAfterStart, noShowBeforeStart)
+        Stream.of(expired, expiryAfterStart, cancellationAfterStart, noShowBeforeStart)
             .forEach(invalid -> assertThatThrownBy(() -> fixture.hold(
                 fixture.resource(), fixture.slot(), invalid, new PartySize(4)
             )).isInstanceOf(IllegalArgumentException.class));
@@ -213,6 +212,27 @@ class ReservationTests {
             fixture.resource(), fixture.slot(), null, new PartySize(4), fixture.deadlines(), at(CREATED_AT)
         )).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new PartySize(0)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void preservesReservationPolicyVersionIndependentOfSlotCreationPolicyVersion() {
+        Fixture fixture = fixture();
+        SlotInventory policyVersionOneSlot = new SlotInventory(
+            fixture.slot().id(), fixture.tenantId(), fixture.venueId(), fixture.resource().id(),
+            STARTS_AT, STARTS_AT.plusSeconds(1800), 1, 1
+        );
+        PolicyDeadlines policyVersionTwoDeadlines = deadlines(
+            2, EXPIRES_AT, CANCEL_ALLOWED_UNTIL, NO_SHOW_ELIGIBLE_AT
+        );
+
+        Reservation reservation = fixture.hold(
+            fixture.resource(), policyVersionOneSlot, policyVersionTwoDeadlines, new PartySize(4)
+        );
+
+        assertThat(policyVersionOneSlot.appliedPolicyVersion()).isEqualTo(1);
+        assertThat(reservation.appliedPolicyVersion()).isEqualTo(2);
+        assertThat(reservation.state()).isEqualTo(ReservationState.HELD);
+        assertThat(reservation.allocation().active()).isTrue();
     }
 
     private static Stream<TransitionCase> allowedTransitions() {

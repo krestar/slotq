@@ -202,9 +202,6 @@ public final class Reservation {
     }
 
     private void validatePolicy(SlotInventory slotInventory, PolicyDeadlines deadlines, Instant now) {
-        if (deadlines.appliedPolicyVersion() != slotInventory.appliedPolicyVersion()) {
-            throw new IllegalArgumentException("Policy version must match SlotInventory");
-        }
         if (!deadlines.expiresAt().isAfter(now) || deadlines.expiresAt().isAfter(slotInventory.startsAt())) {
             throw new IllegalArgumentException("expiresAt must be after now and no later than startsAt");
         }
