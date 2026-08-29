@@ -85,7 +85,7 @@ class SlotqApplicationTests {
     @Test
     void emptyMySqlAppliesMigrationsAndValidatesJpaMappings() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("3");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("4");
 
         String characterSet = jdbcTemplate.queryForObject(
             "SELECT DEFAULT_CHARACTER_SET_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE()",
