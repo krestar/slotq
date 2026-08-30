@@ -347,9 +347,11 @@ M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분�
 
 ## Project Status
 
-> **Planning**
+> **M1 Reservation Core — In Progress**
 
-현재 SlotQ는 **M0 Foundation** 단계입니다. [SlotQ Roadmap](https://github.com/users/krestar/projects/3)에서 선행 관계가 충족된 소수 Issue만 Ready로 관리합니다.
+M0 Foundation은 완료됐고, M1 Backend core는 Reservation HOLD 생성·조회(#13)까지 main에 반영되었습니다. 현재 #14 Reservation 상태 전이, #50 Venue name 기반, #45 Frontend 디자인 기반이 Ready이며, #12·#38·#19·#20은 각 선행 관계가 충족되는 순서대로 진행합니다. M2 선행 작업인 #15와 #17도 #13 완료로 Ready지만 M1 Product 흐름을 우선해 진행합니다.
+
+상세한 Done/Ready/Backlog와 dependency는 [Roadmap](docs/roadmap.md)에서 관리합니다.
 
 ---
 
