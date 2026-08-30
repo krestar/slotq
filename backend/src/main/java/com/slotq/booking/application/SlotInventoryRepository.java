@@ -1,6 +1,7 @@
 package com.slotq.booking.application;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.slotq.booking.domain.SlotInventory;
@@ -21,6 +22,8 @@ public interface SlotInventoryRepository {
     );
 
     Optional<SlotInventory> find(VenueId venueId, SlotInventoryId slotInventoryId);
+
+    List<SlotInventory> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt);
 
     boolean overlaps(
         TenantId tenantId,

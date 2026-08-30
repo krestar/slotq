@@ -1,6 +1,7 @@
 package com.slotq.booking.application;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.slotq.booking.domain.Reservation;
@@ -15,6 +16,8 @@ public interface ReservationRepository {
     void save(Reservation reservation);
 
     Optional<Reservation> find(VenueId venueId, ReservationId reservationId);
+
+    List<Reservation> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt);
 
     /**
      * Returns whether the slot has an active unit whose effective Reservation state consumes capacity.

@@ -4,6 +4,8 @@ import com.slotq.auth.domain.ActorContext;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.PrincipalId;
 import com.slotq.venue.domain.VenueId;
+import java.util.List;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +53,12 @@ public class AuthorizationUseCase {
     }
 
     @Transactional(readOnly = true)
+    public List<ActorContext> discoverVenueAccess(AuthenticatedPrincipal principal) {
+        Objects.requireNonNull(principal, "principal must not be null");
+        return repository.findActorsForPrincipalScopeDiscovery(principal.principalId());
+    }
+
+    @Transactional(readOnly = true)
     public void authorizeReservationCommand(
         AuthenticatedPrincipal principal,
         ReservationAccessTarget target,
@@ -66,15 +74,20 @@ public class AuthorizationUseCase {
         if (!actor.tenantId().equals(target.tenantId())) {
             throw new ResourceNotFoundException();
         }
-        boolean allowed = switch (actor.role()) {
+        if (!isOperatorReservationActionAllowed(actor, action)) {
+            throw new AccessDeniedException();
+        }
+    }
+
+    public boolean isOperatorReservationActionAllowed(ActorContext actor, ReservationAction action) {
+        Objects.requireNonNull(actor, "actor must not be null");
+        Objects.requireNonNull(action, "action must not be null");
+        return switch (actor.role()) {
             case OWNER, MANAGER -> action != ReservationAction.CONFIRM;
             case STAFF -> action == ReservationAction.CHECK_IN
                 || action == ReservationAction.NO_SHOW
                 || action == ReservationAction.COMPLETE;
         };
-        if (!allowed) {
-            throw new AccessDeniedException();
-        }
     }
 
     public record ReservationAccess(PrincipalId customerPrincipalId, ActorContext operator) {

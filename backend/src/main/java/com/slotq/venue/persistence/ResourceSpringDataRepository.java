@@ -1,5 +1,6 @@
 package com.slotq.venue.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 interface ResourceSpringDataRepository extends JpaRepository<ResourceJpaEntity, UUID> {
 
     Optional<ResourceJpaEntity> findByTenantIdAndVenueIdAndId(UUID tenantId, UUID venueId, UUID id);
+
+    List<ResourceJpaEntity> findAllByTenantIdAndVenueIdOrderByNameAscIdAsc(UUID tenantId, UUID venueId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

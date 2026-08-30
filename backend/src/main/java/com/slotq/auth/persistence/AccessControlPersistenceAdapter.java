@@ -56,6 +56,26 @@ class AccessControlPersistenceAdapter implements AccessControlRepository {
     }
 
     @Override
+    public List<ActorContext> findActorsForPrincipalScopeDiscovery(PrincipalId principalId) {
+        return jdbcTemplate.query(
+            "SELECT tenant_id, role FROM tenant_memberships "
+                + "WHERE principal_id = ? ORDER BY tenant_id",
+            (resultSet, rowNumber) -> new MembershipRow(
+                uuid(resultSet.getBytes("tenant_id")),
+                TenantRole.valueOf(resultSet.getString("role"))
+            ),
+            bytes(principalId.value())
+        ).stream().map(membership -> new ActorContext(
+            principalId,
+            new TenantId(membership.tenantId()),
+            membership.role(),
+            Set.copyOf(membership.role() == TenantRole.OWNER
+                ? findAllTenantVenues(membership.tenantId())
+                : findGrantedVenues(principalId, membership.tenantId()))
+        )).toList();
+    }
+
+    @Override
     public Optional<ActorContext> findActorForVenue(PrincipalId principalId, VenueId verifiedTargetVenueId) {
         List<MembershipRow> memberships = jdbcTemplate.query(
             "SELECT membership.tenant_id, membership.role "

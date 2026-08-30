@@ -1,6 +1,7 @@
 package com.slotq.booking.persistence;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.slotq.booking.application.SlotInventoryRepository;
@@ -50,6 +51,19 @@ class SlotInventoryPersistenceAdapter implements SlotInventoryRepository {
     public Optional<SlotInventory> find(VenueId venueId, SlotInventoryId slotInventoryId) {
         return repository.findByVenueIdAndId(venueId.value(), slotInventoryId.value())
             .map(this::toDomain);
+    }
+
+    @Override
+    public List<SlotInventory> findAll(
+        TenantId tenantId,
+        VenueId venueId,
+        Instant startsAt,
+        Instant endsAt
+    ) {
+        return repository
+            .findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(
+                tenantId.value(), venueId.value(), startsAt, endsAt
+            ).stream().map(this::toDomain).toList();
     }
 
     @Override

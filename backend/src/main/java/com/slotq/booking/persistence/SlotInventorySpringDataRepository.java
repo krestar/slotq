@@ -23,6 +23,13 @@ interface SlotInventorySpringDataRepository extends JpaRepository<SlotInventoryJ
         UUID id
     );
 
+    List<SlotInventoryJpaEntity> findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(
+        UUID tenantId,
+        UUID venueId,
+        Instant startsAt,
+        Instant endsAt
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         select slot from SlotInventoryJpaEntity slot

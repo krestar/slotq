@@ -1,6 +1,7 @@
 package com.slotq.booking.persistence;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.slotq.auth.domain.PrincipalId;
@@ -41,6 +42,18 @@ class ReservationPersistenceAdapter implements ReservationRepository {
                 .findByTenantIdAndVenueIdAndReservationId(
                     entity.tenantId(), entity.venueId(), entity.id()
                 ).orElseThrow(() -> new IllegalStateException("Reservation allocation is missing"))));
+    }
+
+    @Override
+    public List<Reservation> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt) {
+        return reservationRepository
+            .findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(
+                tenantId.value(), venueId.value(), startsAt, endsAt
+            ).stream().map(entity -> toDomain(entity, allocationRepository
+                .findByTenantIdAndVenueIdAndReservationId(
+                    entity.tenantId(), entity.venueId(), entity.id()
+                ).orElseThrow(() -> new IllegalStateException("Reservation allocation is missing"))))
+            .toList();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.slotq.auth.application;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.slotq.auth.domain.ActorContext;
@@ -15,6 +16,8 @@ public interface AccessControlRepository {
     void saveMembership(PrincipalId principalId, TenantId tenantId, TenantRole role);
 
     void saveVenueGrant(PrincipalId principalId, TenantId tenantId, TenantRole role, VenueId venueId);
+
+    List<ActorContext> findActorsForPrincipalScopeDiscovery(PrincipalId principalId);
 
     Optional<ActorContext> findActorForVenue(PrincipalId principalId, VenueId verifiedTargetVenueId);
 }

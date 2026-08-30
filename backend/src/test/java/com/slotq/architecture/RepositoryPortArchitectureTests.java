@@ -121,6 +121,12 @@ class RepositoryPortArchitectureTests {
         for (Method method : AccessControlRepository.class.getDeclaredMethods()) {
             boolean valid = method.getName().equals("registerPrincipal")
                 ? hasParameter(method, PrincipalId.class) && method.getParameterCount() == 1
+                : method.getName().equals("findActorsForPrincipalScopeDiscovery")
+                    ? hasParameter(method, PrincipalId.class)
+                        && method.getParameterCount() == 1
+                        && method.getGenericReturnType().getTypeName().equals(
+                            "java.util.List<com.slotq.auth.domain.ActorContext>"
+                        )
                 : hasParameter(method, PrincipalId.class)
                     && (hasParameter(method, TenantId.class) || hasParameter(method, VenueId.class));
             if (!valid) {
@@ -129,7 +135,7 @@ class RepositoryPortArchitectureTests {
         }
 
         assertThat(violations)
-            .as("access-control persistence must combine PrincipalId with its stored target scope")
+            .as("access-control persistence must use a target scope or the named self-scope discovery contract")
             .isEmpty();
     }
 
