@@ -1,8 +1,9 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 M0 Foundation을 완료하고 M1 Reservation Core를 시작하는 단계이며,
-존재하지 않는 Product 기능이나 검증 명령을 전제로 하지 않는다.
+현재 저장소는 M0 Foundation을 완료하고 M1 Reservation Core를 진행하는 단계이며,
+Reservation HOLD 생성·조회까지 main에 반영되어 있다. 존재하지 않는 Product 기능이나
+검증 명령을 전제로 하지 않는다.
 
 ## 계획 원칙
 
@@ -45,11 +46,14 @@ Status의 의미는 다음과 같다.
 - In Review: PR이 열려 review 또는 CI를 기다리는 작업.
 - Done: main에 병합된 작업.
 
-현재 상태는 다음과 같다.
+현재 main 기준 상태는 다음과 같다.
 
-- #3, #4, #5, #6, #7, #18, #23과 #28은 main에 병합되어 Done이다.
-- M0가 완료되어 선행 조건이 충족된 #8이 Ready이다.
-- #9부터 #17, #19, #20과 #38은 각 dependency가 충족될 때까지 Backlog를 유지한다.
+- Done: #3, #4, #5, #6, #7, #8, #9, #10, #11, #13, #18, #23, #28, #48, #49.
+- M1 Ready: #14, #45, #50.
+- M1 Backlog: #12는 #50, #38은 #14 + #50, #19는 #12 + #14 + #45,
+  #20은 #38 + #45 완료를 기다린다. #19와 #20의 공통 #23 선행은 이미 Done이다.
+- M2 선행 Ready: #15, #17.
+- M2 선행 Backlog: #16은 #15 완료를 기다린다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -73,12 +77,16 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #9 [Feature] tenant 데이터 격리 경계 적용
 - #10 [Feature] Resource와 Slot Capacity 모델 구현
 - #11 [Feature] Reservation aggregate와 상태 전이 규칙 구현
-- #12 [Feature] slot 예약 가능 수량 조회 구현
+- #48 [Refactor] Reservation aggregate 영속 복원 경로 추가
+- #49 [Bug] Repository port architecture test의 main port 누락 수정
 - #13 [Feature] Reservation HOLD 생성·조회 구현
+- #50 [Feature] Venue name 저장·변경 기반 추가
+- #12 [Feature] slot 예약 가능 수량 조회 구현
 - #14 [Feature] Reservation 상태 전이 명령 구현
+- #38 [Feature] Venue 운영용 Backend 조회·관리 API 구현
+- #45 [Chore] Frontend 디자인 기반 정립
 - #19 [Feature] Customer 예약 핵심 흐름 UI 구현
 - #20 [Feature] Venue 운영 핵심 흐름 UI 구현
-- #38 [Feature] Venue 운영용 Backend 조회·관리 API 구현
 
 ### M2 선행 작업
 
@@ -86,8 +94,8 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #16 [Feature] 예약 동시성 제어 전략 비교 및 적용
 - #17 [Feature] HOLD 생성 command idempotency 보장
 
-#18, #19, #20의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는 후속
-UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
+#18, #19, #20과 #45의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는
+후속 UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
 
 ### Priority
 
@@ -98,9 +106,9 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
 | #7 | P2 | #28 직후 후속 Backend 변경을 보호하는 검증 자동화다. |
 | #18 | P2 | thin SPA 기반이지만 backend domain 구현 순서를 차단하지 않는다. |
 | #23 | P2 | #18 직후 Frontend 검증을 독립적으로 자동화한다. |
-| #8, #9, #10, #11, #13, #14, #38 | P1 | Reservation Core의 핵심 기능 또는 직접 선행 작업이다. |
+| #8, #9, #10, #11, #13, #14, #38, #48, #49, #50 | P1 | Reservation Core의 핵심 기능 또는 직접 선행·보정 작업이다. |
 | #12 | P2 | 중요한 read use case지만 쓰기 흐름의 선행 기반과 구분한다. |
-| #19, #20 | P2 | 핵심 Product API 이후 구현하는 thin 사용자 흐름이다. |
+| #19, #20, #45 | P2 | 핵심 Product API 이후 UI와 공통 Frontend 기반을 완성하는 작업이다. |
 | #15, #16 | P1 | 동시성 전략을 선택하고 invariant를 보장하기 위한 핵심 선행·구현이다. |
 | #17 | P2 | 중요한 reliability 기능이지만 동시성 전략 적용을 직접 차단하지 않는다. |
 
@@ -114,11 +122,19 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
                                       └───────────────> #18 ──> #23 Frontend CI
         #6 + #23 ──> M0 complete
 
-    M1: #6 ──> #8 ──> #9 ──> #10 ──> #11 ──> #13
-                   ↑                            ├──> #12
-             #18 Done                           └──> #14 ──> #38
-        #12 + #14 + #23 ──> #19
-        #38 + #23 ──> #20
+    M1 Backend core:
+        #6 ──> #8 ──> #9 ──> #10 ──> #11
+                    │                     ├──> #48 ──┐
+                    └────────> #49 ────────────────┤
+        #11 + #48 + #49 ──> #13                 │
+        #13 + #50 ──> #12                       │
+        #13 ──> #14                             │
+        #14 + #50 ──> #38                       │
+
+    M1 Frontend:
+        #18 + #23 ──> #45
+        #12 + #14 + #23 + #45 ──> #19
+        #38 + #23 + #45 ──> #20
         #19 + #20 ──> M1 complete
 
     M2: #13 ──> #15 ──> #16
@@ -166,15 +182,24 @@ UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만
                                                v
                                   M8-WP2 Production hardening
 
-M0 Foundation은 #6과 #23까지 main에 병합되어 완료됐다. M1은 #8부터 순차로 Tenant,
-권한 경계, Resource/Slot, Reservation domain과 persistence를 확정한다. #9는 #8과 이미
-완료된 Frontend scaffold #18을 함께 선행으로 사용한다. #13 완료 뒤에는
-Availability #12와 상태 전이 #14를 병렬로 진행할 수 있고, #14 완료 뒤 Venue 운영용
-Backend 조회·관리 API #38을 구현한다. Customer UI #19는 #12와 #14를, Venue UI #20은
-#38을 선행으로 사용하며 두 UI는 #23의 Frontend 검증 기반을 공유한다.
+M0 Foundation은 #6과 #23까지 main에 병합되어 완료됐다. M1 Backend core는 #8부터 #11,
+그리고 corrective #48/#49를 거쳐 #13 HOLD 생성·조회까지 Done이다. #50은 #13과 독립적인
+Venue Configuration 작업으로 현재 Ready이며, 완료되면 #12 Availability를 연다. #14도
+#13 완료로 Ready이고, #14 + #50이 끝나면 #38 Venue 운영 Backend를 시작할 수 있다.
 
-#15와 #17은 #13 완료 후 병렬로 착수할 수 있고 #16은 #15의 공통 실험 하네스를 선행으로
-사용한다. M2-WP1과 M2-WP2는 각각의 선행 조건이 충족된 뒤 구체 Issue로 전환한다.
+Frontend에서는 #18과 #23이 Done이라 #45 디자인 기반이 Ready다. Customer UI #19는
+#12 + #14 + #45, Venue UI #20은 #38 + #45를 기다리며 #23 공통 선행은 이미 충족됐다.
+따라서 M1 완료는 #19와 #20이 모두 Done일 때 판단한다.
+
+M2 선행 작업에서는 #15와 #17이 #13 완료로 Ready이고 #16은 #15의 공통 실험 하네스를
+선행으로 사용한다. #15 workload는 실제 Product와 같은 Table × Slot capacity=1,
+Allocation unit=1을 사용한다. #16 correctness는 raw active Allocation row 수가 아니라
+동일 `verificationNow`의 effective capacity-consuming units로 판단하며 stale concurrent
+write와 `RESERVATION_STATE_CONFLICT`의 실제 발생 조건도 이 단계에서 정의한다. #17의
+idempotency namespace는 tenant + authenticated customerPrincipalId + key이고, 동일 command
+재시도는 같은 Reservation identity와 Location을 재사용하면서 body는 retry 시점의 current
+effective representation을 반환한다. M2-WP1과 M2-WP2는 각각의 선행 조건이 충족된 뒤
+구체 Issue로 전환한다.
 
 ## Release checkpoint
 
@@ -257,7 +282,7 @@ SPA 흐름을 추가한다.
 
 ### 완료 기준
 
-- #8부터 #14까지, #19, #20과 #38이 모두 Done이다.
+- #8부터 #14까지, #19, #20, #38, #45, #48, #49와 #50이 모두 Done이다.
 - Tenant, Venue, Policy, Resource와 Slot Capacity가 저장되고 tenant-scoped로만
   조회·변경된다.
 - 다른 tenant 식별자를 사용한 read/write가 데이터 노출이나 변경으로 이어지지 않는다.
@@ -270,16 +295,20 @@ SPA 흐름을 추가한다.
   확정·취소와 현재 상태 확인이 가능하다.
 - #38과 #14의 API contract가 확정된 뒤 Venue UI에서 Venue 설정, 예약 목록과 허용된 운영
   상태 전이를 실행할 수 있다.
+- #19와 #20은 #45의 공통 Frontend token·접근성 baseline을 재사용한다.
 - 두 UI는 loading, empty, business conflict와 server error 상태를 구분해 표현한다.
 - capacity와 상태 전이 판단은 UI가 복제하지 않고 Product API 결과를 따른다.
 
-기본 capacity invariant는 다음과 같이 정의한다.
+M1 Restaurant Product의 capacity invariant는 현재 서버 시각의 effective Allocation을
+기준으로 정의한다.
 
-    sum(quantity of capacity-consuming reservations) <= slot capacity
+    각 Table × Slot과 now에 대해:
+        sum(effective capacity-consuming CapacityAllocation.units) <= 1
 
-Capacity를 소비하는 상태는 만료되지 않은 HELD, CONFIRMED, CHECKED_IN이다.
-REQUESTED는 비즈니스 수명이 필요한 것으로 확인되기 전까지 영속 상태가 아니라 command
-처리 단계로 본다.
+Allocation unit은 1이며 CONFIRMED, CHECKED_IN과 `expiresAt > now`인 HELD만 capacity를
+소비한다. stored HELD + active Allocation이라도 `expiresAt <= now`이면 effective state는
+EXPIRED이고 capacity를 소비하지 않는다. REQUESTED는 비즈니스 수명이 필요한 것으로
+확인되기 전까지 영속 상태가 아니라 command 처리 단계로 본다.
 
 ### 선행 Milestone
 
@@ -287,14 +316,16 @@ M0 Foundation.
 
 ### 핵심 기술 과제
 
-- MVP Capacity는 Resource와 discrete Slot에 귀속된 양의 정수 수량으로 제한한다.
+- Restaurant MVP의 Table × Slot capacity와 Reservation Allocation unit은 각각 1로
+  고정하고 partySize는 Resource seatingCapacity 적합성으로 검사한다.
 - Venue timezone의 입력과 UTC 저장 경계를 명확히 한다.
 - tenant context가 application과 persistence 경계를 모두 통과하도록 한다.
 - aggregate가 상태 전이와 invariant를 책임지고 controller나 JPA callback에 규칙을
   흩뜨리지 않는다.
-- availability는 cache나 검색 index가 아닌 Product DB에서 계산한다.
+- availability는 cache나 검색 index가 아닌 Product DB의 effective occupancy에서 계산한다.
 - Customer UI는 #12와 #14, Venue UI는 #38과 #14의 API contract를 선행으로 사용하고
   contract 변경을 명시적으로 검증한다.
+- Customer와 Venue UI는 #45에서 정한 공통 Frontend token과 접근성 기준을 사용한다.
 - server state와 화면 상태를 분리하되, 현재 흐름에 필요하지 않은 복잡한 client state
   framework는 추가하지 않는다.
 - tenant와 Actor context가 Customer·Venue 화면과 API 요청에서 혼동되지 않게 한다.
@@ -320,19 +351,29 @@ M0 Foundation.
 
 ### 목표
 
-동시 HOLD 요청에서도 capacity invariant를 지키고, HOLD 만료·확정 경합과 command
-idempotency를 해결하며 Customer UI의 안전한 retry 계약을 정의한다.
+동시 HOLD 요청에서도 effective capacity invariant를 지키고, HOLD 만료·확정 경합과
+Customer-bound command idempotency를 해결하며 Customer UI의 안전한 retry 계약을
+정의한다.
 
 ### 완료 기준
 
 - #15부터 #17까지 모두 Done이다.
 - M2-WP1의 HOLD 만료·확정 경합 검증이 완료되어 있다.
-- 같은 Resource와 Slot에 동시 요청을 반복해도 capacity-consuming quantity가 capacity를
-  넘지 않는다.
+- #15의 동시성 workload는 Product와 동일한 Table × Slot capacity=1, Allocation unit=1을
+  사용한다.
+- 같은 Resource와 Slot에 동시 요청을 반복해도 동일 `verificationNow`에서 effective
+  capacity-consuming Allocation units가 1을 넘지 않는다.
 - Optimistic Lock과 Pessimistic Lock을 동일 workload로 비교하고 선택 근거를 ADR에
   기록한다.
-- 동일 tenant, idempotency key, payload의 재전송은 하나의 HOLD 결과만 만든다.
-- 같은 key와 다른 payload는 conflict로 처리된다.
+- 선택한 전략이 stale concurrent write를 감지하는 실제 조건과
+  `RESERVATION_STATE_CONFLICT` business conflict mapping을 정의·검증한다.
+- 동일 tenant, authenticated customerPrincipalId, idempotency key와 fingerprint의 재전송은
+  하나의 HOLD command identity만 만들고 다른 fingerprint는 conflict로 처리한다.
+- 다른 Customer와 다른 tenant는 같은 key 문자열을 독립적으로 사용할 수 있다.
+- commit 후 response 유실 뒤 retry도 같은 Reservation identity와 Location을 재사용하고
+  새 Reservation/Allocation을 만들지 않는다.
+- retry response body는 최초 serialized body가 아니라 retry 시점의 current effective
+  representation을 반환한다.
 - confirm과 expiry가 경합해도 하나의 합법적인 최종 상태만 남는다.
 - 같은 사용자 의도의 HOLD 재시도는 Customer UI가 같은 idempotency key를 재사용하고,
   새 의도는 새 key를 사용한다.
@@ -347,8 +388,12 @@ M1 Reservation Core.
 - transaction과 lock의 최소 범위.
 - bounded retry, backoff와 retry exhaustion 계약.
 - business conflict와 timeout·5xx의 분리.
-- idempotency key의 tenant scope, request fingerprint, 보존 기간과 cleanup.
-- 자동 만료 worker와 confirm command 사이의 원자적 상태 전이.
+- correctness 검증에서 raw active Allocation row 수와 동일 `verificationNow`의 effective
+  occupancy를 구분한다.
+- idempotency namespace `tenantId + authenticated customerPrincipalId + idempotencyKey`,
+  request fingerprint, 보존 기간과 cleanup.
+- fingerprint는 최소 path venueId, slotInventoryId, partySize를 포함한다.
+- #14의 순차 lifecycle과 #16의 동시성 전략을 결합해 confirm/expiry race를 검증한다.
 - client에서 같은 사용자 의도와 새 사용자 의도를 구분하고 retriable failure에서 key를
   안정적으로 재사용하는 계약.
 
@@ -357,6 +402,7 @@ M1 Reservation Core.
 - 재현 가능한 concurrency runner와 원자료.
 - 전략별 correctness·latency·throughput·lock wait 비교 보고서.
 - 선택 전략 ADR과 CI용 invariant 통합 test.
+- due stored HELD를 포함한 effective occupancy와 raw active row diagnostic 대조 기록.
 - duplicate request 및 confirm-expire race test.
 - Customer UI retry와 double-click contract test.
 
@@ -641,9 +687,9 @@ M7 Model Router & Agent Runtime.
 | AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M2 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. Outbox도 M3 대안 비교 전에는 확정하지 않는다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 8개, M1 10개, M2 선행 3개로 제한하고 먼 단계는 work package로 남긴다. Backend와 Frontend CI만 실제 검증 시점이 달라 분리한다. |
-| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M0 완료 뒤 #8만 Ready이며 다른 M1·M2 Issue는 각 dependency가 끝날 때까지 Backlog다. |
+| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 8개, M1 core 10개에 corrective/supporting #45·#48·#49·#50을 더하고 M2 선행 3개로 관리한다. 먼 단계는 work package로 남긴다. |
+| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45는 P2로 구분한다. |
+| Ready와 Backlog가 dependency를 반영하는가? | 현재 #14·#45·#50과 M2 선행 #15·#17이 Ready이며, #12·#16·#19·#20·#38은 각 dependency가 끝날 때까지 Backlog다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
-| README Product Charter와 충돌하는가? | Product First, 강화된 capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
+| README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |
