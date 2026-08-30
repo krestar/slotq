@@ -19,6 +19,13 @@ public interface ReservationUseCase {
         AuthenticatedPrincipal principal
     );
 
+    ReservationDetails transition(
+        VenueId venueId,
+        ReservationId reservationId,
+        AuthenticatedPrincipal principal,
+        ReservationCommand command
+    );
+
     record CreateHold(
         VenueId venueId,
         SlotInventoryId slotInventoryId,

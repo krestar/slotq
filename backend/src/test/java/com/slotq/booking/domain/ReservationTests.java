@@ -270,6 +270,8 @@ class ReservationTests {
                 reservation -> reservation.confirm(at(EXPIRES_AT.minusNanos(1))), ReservationState.CONFIRMED, true),
             new BoundaryCase("confirm at expiresAt", reservation -> { },
                 reservation -> reservation.confirm(at(EXPIRES_AT)), ReservationState.CONFIRMED, false),
+            new BoundaryCase("confirm after expiresAt", reservation -> { },
+                reservation -> reservation.confirm(at(EXPIRES_AT.plusNanos(1))), ReservationState.CONFIRMED, false),
             new BoundaryCase("expire before expiresAt", reservation -> { },
                 reservation -> reservation.expire(at(EXPIRES_AT.minusNanos(1))), ReservationState.EXPIRED, false),
             new BoundaryCase("expire at expiresAt", reservation -> { },
@@ -278,6 +280,8 @@ class ReservationTests {
                 reservation -> reservation.cancel(at(CANCEL_ALLOWED_UNTIL.minusNanos(1))), ReservationState.CANCELLED, true),
             new BoundaryCase("cancel at cancelAllowedUntil", ReservationTests::confirm,
                 reservation -> reservation.cancel(at(CANCEL_ALLOWED_UNTIL)), ReservationState.CANCELLED, false),
+            new BoundaryCase("cancel after cancelAllowedUntil", ReservationTests::confirm,
+                reservation -> reservation.cancel(at(CANCEL_ALLOWED_UNTIL.plusNanos(1))), ReservationState.CANCELLED, false),
             new BoundaryCase("check-in before startsAt", ReservationTests::confirm,
                 reservation -> reservation.checkIn(at(STARTS_AT.minusNanos(1))), ReservationState.CHECKED_IN, false),
             new BoundaryCase("check-in at startsAt", ReservationTests::confirm,
@@ -286,10 +290,14 @@ class ReservationTests {
                 reservation -> reservation.checkIn(at(NO_SHOW_ELIGIBLE_AT.minusNanos(1))), ReservationState.CHECKED_IN, true),
             new BoundaryCase("check-in at noShowEligibleAt", ReservationTests::confirm,
                 reservation -> reservation.checkIn(at(NO_SHOW_ELIGIBLE_AT)), ReservationState.CHECKED_IN, false),
+            new BoundaryCase("check-in after noShowEligibleAt", ReservationTests::confirm,
+                reservation -> reservation.checkIn(at(NO_SHOW_ELIGIBLE_AT.plusNanos(1))), ReservationState.CHECKED_IN, false),
             new BoundaryCase("no-show before noShowEligibleAt", ReservationTests::confirm,
                 reservation -> reservation.markNoShow(at(NO_SHOW_ELIGIBLE_AT.minusNanos(1))), ReservationState.NO_SHOW, false),
             new BoundaryCase("no-show at noShowEligibleAt", ReservationTests::confirm,
-                reservation -> reservation.markNoShow(at(NO_SHOW_ELIGIBLE_AT)), ReservationState.NO_SHOW, true)
+                reservation -> reservation.markNoShow(at(NO_SHOW_ELIGIBLE_AT)), ReservationState.NO_SHOW, true),
+            new BoundaryCase("no-show after noShowEligibleAt", ReservationTests::confirm,
+                reservation -> reservation.markNoShow(at(NO_SHOW_ELIGIBLE_AT.plusNanos(1))), ReservationState.NO_SHOW, true)
         );
     }
 

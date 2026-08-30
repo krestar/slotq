@@ -50,6 +50,33 @@ public class AuthorizationUseCase {
         return ReservationAccess.operator(actor);
     }
 
+    @Transactional(readOnly = true)
+    public void authorizeReservationCommand(
+        AuthenticatedPrincipal principal,
+        ReservationAccessTarget target,
+        ReservationAction action
+    ) {
+        if (principal.principalId().equals(target.customerPrincipalId())) {
+            if (action != ReservationAction.CONFIRM && action != ReservationAction.CANCEL) {
+                throw new AccessDeniedException();
+            }
+            return;
+        }
+        ActorContext actor = requireVenueAccess(principal, target.venueId());
+        if (!actor.tenantId().equals(target.tenantId())) {
+            throw new ResourceNotFoundException();
+        }
+        boolean allowed = switch (actor.role()) {
+            case OWNER, MANAGER -> action != ReservationAction.CONFIRM;
+            case STAFF -> action == ReservationAction.CHECK_IN
+                || action == ReservationAction.NO_SHOW
+                || action == ReservationAction.COMPLETE;
+        };
+        if (!allowed) {
+            throw new AccessDeniedException();
+        }
+    }
+
     public record ReservationAccess(PrincipalId customerPrincipalId, ActorContext operator) {
         public ReservationAccess {
             if ((customerPrincipalId == null) == (operator == null)) {
