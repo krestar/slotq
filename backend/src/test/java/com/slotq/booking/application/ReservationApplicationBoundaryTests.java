@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.PrincipalId;
+import com.slotq.auth.domain.SystemPrincipal;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,5 +18,15 @@ class ReservationApplicationBoundaryTests {
             .map(RecordComponent::getType))
             .contains(AuthenticatedPrincipal.class)
             .doesNotContain(PrincipalId.class);
+    }
+
+    @Test
+    void internalExpiryRequiresSystemPrincipal() throws NoSuchMethodException {
+        assertThat(ReservationExpiryUseCase.class.getMethod(
+            "expire",
+            com.slotq.venue.domain.VenueId.class,
+            com.slotq.booking.domain.ReservationId.class,
+            SystemPrincipal.class
+        )).isNotNull();
     }
 }

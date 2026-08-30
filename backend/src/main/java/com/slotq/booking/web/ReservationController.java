@@ -7,6 +7,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.booking.application.ReservationUseCase;
+import com.slotq.booking.application.ReservationCommand;
 import com.slotq.booking.domain.Reservation;
 import com.slotq.booking.domain.ReservationId;
 import com.slotq.booking.domain.SlotInventoryId;
@@ -66,6 +67,54 @@ class ReservationController {
         return ResponseEntity.ok()
             .cacheControl(CacheControl.noStore())
             .body(response(details));
+    }
+
+    @PostMapping("/{reservationId}/confirm")
+    ResponseEntity<ReservationResponse> confirm(
+        @PathVariable UUID venueId, @PathVariable UUID reservationId,
+        @AuthenticationPrincipal AuthenticatedPrincipal principal
+    ) {
+        return transition(venueId, reservationId, principal, ReservationCommand.CONFIRM);
+    }
+
+    @PostMapping("/{reservationId}/cancel")
+    ResponseEntity<ReservationResponse> cancel(
+        @PathVariable UUID venueId, @PathVariable UUID reservationId,
+        @AuthenticationPrincipal AuthenticatedPrincipal principal
+    ) {
+        return transition(venueId, reservationId, principal, ReservationCommand.CANCEL);
+    }
+
+    @PostMapping("/{reservationId}/check-in")
+    ResponseEntity<ReservationResponse> checkIn(
+        @PathVariable UUID venueId, @PathVariable UUID reservationId,
+        @AuthenticationPrincipal AuthenticatedPrincipal principal
+    ) {
+        return transition(venueId, reservationId, principal, ReservationCommand.CHECK_IN);
+    }
+
+    @PostMapping("/{reservationId}/no-show")
+    ResponseEntity<ReservationResponse> noShow(
+        @PathVariable UUID venueId, @PathVariable UUID reservationId,
+        @AuthenticationPrincipal AuthenticatedPrincipal principal
+    ) {
+        return transition(venueId, reservationId, principal, ReservationCommand.NO_SHOW);
+    }
+
+    @PostMapping("/{reservationId}/complete")
+    ResponseEntity<ReservationResponse> complete(
+        @PathVariable UUID venueId, @PathVariable UUID reservationId,
+        @AuthenticationPrincipal AuthenticatedPrincipal principal
+    ) {
+        return transition(venueId, reservationId, principal, ReservationCommand.COMPLETE);
+    }
+
+    private ResponseEntity<ReservationResponse> transition(
+        UUID venueId, UUID reservationId, AuthenticatedPrincipal principal, ReservationCommand command
+    ) {
+        return ResponseEntity.ok(response(reservationUseCase.transition(
+            new VenueId(venueId), new ReservationId(reservationId), principal, command
+        )));
     }
 
     private ReservationResponse response(ReservationUseCase.ReservationDetails details) {

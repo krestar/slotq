@@ -9,6 +9,7 @@ import com.slotq.auth.application.AuthorizationUseCase;
 import com.slotq.auth.application.ReservationAccessTarget;
 import com.slotq.auth.application.ResourceNotFoundException;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
+import com.slotq.auth.domain.SystemPrincipal;
 import com.slotq.booking.domain.CapacityAllocationId;
 import com.slotq.booking.domain.PartySize;
 import com.slotq.booking.domain.Reservation;
@@ -28,8 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
-class ReservationService implements ReservationUseCase {
+class ReservationService implements ReservationUseCase, ReservationExpiryUseCase {
 
     private final ReservationRepository reservationRepository;
     private final SlotInventoryRepository slotRepository;
@@ -37,6 +37,7 @@ class ReservationService implements ReservationUseCase {
     private final VenueRepository venueRepository;
     private final ResourceRepository resourceRepository;
     private final AuthorizationUseCase authorizationUseCase;
+    private final ReservationCommandExecutor commandExecutor;
     private final Clock clock;
 
     ReservationService(ReservationRepository reservationRepository,
@@ -45,6 +46,7 @@ class ReservationService implements ReservationUseCase {
                        VenueRepository venueRepository,
                        ResourceRepository resourceRepository,
                        AuthorizationUseCase authorizationUseCase,
+                       ReservationCommandExecutor commandExecutor,
                        Clock clock) {
         this.reservationRepository = reservationRepository;
         this.slotRepository = slotRepository;
@@ -52,10 +54,12 @@ class ReservationService implements ReservationUseCase {
         this.venueRepository = venueRepository;
         this.resourceRepository = resourceRepository;
         this.authorizationUseCase = authorizationUseCase;
+        this.commandExecutor = commandExecutor;
         this.clock = clock;
     }
 
     @Override
+    @Transactional
     public ReservationDetails createHold(CreateHold command) {
         Objects.requireNonNull(command, "command must not be null");
         AuthenticatedPrincipal principal = Objects.requireNonNull(
@@ -111,6 +115,41 @@ class ReservationService implements ReservationUseCase {
             .orElseThrow(ResourceNotFoundException::new);
         Clock readClock = Clock.fixed(clock.instant(), ZoneOffset.UTC);
         return new ReservationDetails(reservation, slot.endsAt(), reservation.effectiveState(readClock));
+    }
+
+    @Override
+    public ReservationDetails transition(VenueId venueId, ReservationId reservationId,
+                                         AuthenticatedPrincipal principal,
+                                         ReservationCommand command) {
+        Objects.requireNonNull(principal, "principal must not be null");
+        Objects.requireNonNull(command, "command must not be null");
+        Reservation reservation = reservationRepository.find(venueId, reservationId)
+            .orElseThrow(ResourceNotFoundException::new);
+        authorizationUseCase.authorizeReservationCommand(
+            principal,
+            new ReservationAccessTarget(
+                reservation.tenantId(), reservation.venueId(), reservation.customerPrincipalId()
+            ),
+            command
+        );
+
+        ReservationCommandExecutor.CommandResult result = commandExecutor.execute(
+            venueId, reservationId, command, clock.instant()
+        );
+        if (result.expired()) {
+            if (command == ReservationCommand.CONFIRM || command == ReservationCommand.CANCEL) {
+                throw new HoldExpiredException();
+            }
+            throw new ReservationTransitionNotAllowedException();
+        }
+        return result.details();
+    }
+
+    @Override
+    public ReservationDetails expire(VenueId venueId, ReservationId reservationId,
+                                     SystemPrincipal principal) {
+        Objects.requireNonNull(principal, "principal must not be null");
+        return commandExecutor.expire(venueId, reservationId, clock.instant());
     }
 
     private void validateBookingAllowed(Tenant tenant, Venue venue, Resource resource,
