@@ -17,6 +17,7 @@ import com.slotq.auth.application.AccessControlProvisioning;
 import com.slotq.auth.application.AccessDeniedException;
 import com.slotq.auth.application.AuthorizationUseCase;
 import com.slotq.auth.application.ReservationAccessTarget;
+import com.slotq.auth.application.ReservationAction;
 import com.slotq.auth.application.ResourceNotFoundException;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.PrincipalId;
@@ -126,20 +127,20 @@ class ReservationTransitionIntegrationTests {
             fixture.tenant().id(), fixture.venue().id(), CUSTOMER_A
         );
 
-        assertAllowed(CUSTOMER_A, target, ReservationCommand.CONFIRM, ReservationCommand.CANCEL);
-        assertDenied(CUSTOMER_A, target, ReservationCommand.CHECK_IN,
-            ReservationCommand.NO_SHOW, ReservationCommand.COMPLETE);
-        assertDenied(OWNER, target, ReservationCommand.CONFIRM);
-        assertAllowed(OWNER, target, ReservationCommand.CANCEL, ReservationCommand.CHECK_IN,
-            ReservationCommand.NO_SHOW, ReservationCommand.COMPLETE);
-        assertDenied(MANAGER, target, ReservationCommand.CONFIRM);
-        assertAllowed(MANAGER, target, ReservationCommand.CANCEL, ReservationCommand.CHECK_IN,
-            ReservationCommand.NO_SHOW, ReservationCommand.COMPLETE);
-        assertDenied(STAFF, target, ReservationCommand.CONFIRM, ReservationCommand.CANCEL);
-        assertAllowed(STAFF, target, ReservationCommand.CHECK_IN,
-            ReservationCommand.NO_SHOW, ReservationCommand.COMPLETE);
+        assertAllowed(CUSTOMER_A, target, ReservationAction.CONFIRM, ReservationAction.CANCEL);
+        assertDenied(CUSTOMER_A, target, ReservationAction.CHECK_IN,
+            ReservationAction.NO_SHOW, ReservationAction.COMPLETE);
+        assertDenied(OWNER, target, ReservationAction.CONFIRM);
+        assertAllowed(OWNER, target, ReservationAction.CANCEL, ReservationAction.CHECK_IN,
+            ReservationAction.NO_SHOW, ReservationAction.COMPLETE);
+        assertDenied(MANAGER, target, ReservationAction.CONFIRM);
+        assertAllowed(MANAGER, target, ReservationAction.CANCEL, ReservationAction.CHECK_IN,
+            ReservationAction.NO_SHOW, ReservationAction.COMPLETE);
+        assertDenied(STAFF, target, ReservationAction.CONFIRM, ReservationAction.CANCEL);
+        assertAllowed(STAFF, target, ReservationAction.CHECK_IN,
+            ReservationAction.NO_SHOW, ReservationAction.COMPLETE);
         assertThatThrownBy(() -> authorizationUseCase.authorizeReservationCommand(
-            new AuthenticatedPrincipal(CUSTOMER_B), target, ReservationCommand.CONFIRM
+            new AuthenticatedPrincipal(CUSTOMER_B), target, ReservationAction.CONFIRM
         )).isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -317,19 +318,19 @@ class ReservationTransitionIntegrationTests {
     }
 
     private void assertAllowed(PrincipalId principal, ReservationAccessTarget target,
-                               ReservationCommand... commands) {
-        for (ReservationCommand command : commands) {
+                               ReservationAction... actions) {
+        for (ReservationAction action : actions) {
             assertThatCode(() -> authorizationUseCase.authorizeReservationCommand(
-                new AuthenticatedPrincipal(principal), target, command
+                new AuthenticatedPrincipal(principal), target, action
             )).doesNotThrowAnyException();
         }
     }
 
     private void assertDenied(PrincipalId principal, ReservationAccessTarget target,
-                              ReservationCommand... commands) {
-        for (ReservationCommand command : commands) {
+                              ReservationAction... actions) {
+        for (ReservationAction action : actions) {
             assertThatThrownBy(() -> authorizationUseCase.authorizeReservationCommand(
-                new AuthenticatedPrincipal(principal), target, command
+                new AuthenticatedPrincipal(principal), target, action
             )).isInstanceOf(AccessDeniedException.class);
         }
     }

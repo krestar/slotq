@@ -3,7 +3,6 @@ package com.slotq.auth.application;
 import com.slotq.auth.domain.ActorContext;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.PrincipalId;
-import com.slotq.booking.application.ReservationCommand;
 import com.slotq.venue.domain.VenueId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,10 +54,10 @@ public class AuthorizationUseCase {
     public void authorizeReservationCommand(
         AuthenticatedPrincipal principal,
         ReservationAccessTarget target,
-        ReservationCommand command
+        ReservationAction action
     ) {
         if (principal.principalId().equals(target.customerPrincipalId())) {
-            if (command != ReservationCommand.CONFIRM && command != ReservationCommand.CANCEL) {
+            if (action != ReservationAction.CONFIRM && action != ReservationAction.CANCEL) {
                 throw new AccessDeniedException();
             }
             return;
@@ -68,10 +67,10 @@ public class AuthorizationUseCase {
             throw new ResourceNotFoundException();
         }
         boolean allowed = switch (actor.role()) {
-            case OWNER, MANAGER -> command != ReservationCommand.CONFIRM;
-            case STAFF -> command == ReservationCommand.CHECK_IN
-                || command == ReservationCommand.NO_SHOW
-                || command == ReservationCommand.COMPLETE;
+            case OWNER, MANAGER -> action != ReservationAction.CONFIRM;
+            case STAFF -> action == ReservationAction.CHECK_IN
+                || action == ReservationAction.NO_SHOW
+                || action == ReservationAction.COMPLETE;
         };
         if (!allowed) {
             throw new AccessDeniedException();

@@ -7,6 +7,7 @@ import java.util.Objects;
 
 import com.slotq.auth.application.AuthorizationUseCase;
 import com.slotq.auth.application.ReservationAccessTarget;
+import com.slotq.auth.application.ReservationAction;
 import com.slotq.auth.application.ResourceNotFoundException;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.SystemPrincipal;
@@ -130,7 +131,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
             new ReservationAccessTarget(
                 reservation.tenantId(), reservation.venueId(), reservation.customerPrincipalId()
             ),
-            command
+            authorizationAction(command)
         );
 
         ReservationCommandExecutor.CommandResult result = commandExecutor.execute(
@@ -143,6 +144,16 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
             throw new ReservationTransitionNotAllowedException();
         }
         return result.details();
+    }
+
+    private ReservationAction authorizationAction(ReservationCommand command) {
+        return switch (command) {
+            case CONFIRM -> ReservationAction.CONFIRM;
+            case CANCEL -> ReservationAction.CANCEL;
+            case CHECK_IN -> ReservationAction.CHECK_IN;
+            case NO_SHOW -> ReservationAction.NO_SHOW;
+            case COMPLETE -> ReservationAction.COMPLETE;
+        };
     }
 
     @Override
