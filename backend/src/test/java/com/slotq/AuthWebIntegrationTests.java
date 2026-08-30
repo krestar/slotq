@@ -106,10 +106,12 @@ class AuthWebIntegrationTests {
     void configureStoredManagerScope() {
         Tenant tenant = tenantUseCase.createTenant();
         managedVenue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "UTC", WeeklyOperatingHours.closedAllWeek(), new BookingPolicyTerms(30, 5, 0, 0)
+            tenant.id(), "Managed Venue", "UTC", WeeklyOperatingHours.closedAllWeek(),
+            new BookingPolicyTerms(30, 5, 0, 0)
         ));
         unassignedVenue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "UTC", WeeklyOperatingHours.closedAllWeek(), new BookingPolicyTerms(30, 5, 0, 0)
+            tenant.id(), "Unassigned Venue", "UTC", WeeklyOperatingHours.closedAllWeek(),
+            new BookingPolicyTerms(30, 5, 0, 0)
         ));
         accessControlProvisioning.registerPrincipal(MANAGER_PRINCIPAL);
         accessControlProvisioning.registerPrincipal(STAFF_PRINCIPAL);

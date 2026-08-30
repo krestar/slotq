@@ -55,7 +55,7 @@ class VenuePersistenceAdapter implements VenueRepository {
     public void updateConfiguration(Venue venue) {
         VenueJpaEntity entity = venueRepository.findByTenantIdAndId(venue.tenantId().value(), venue.id().value())
             .orElseThrow();
-        entity.update(venue.status(), venue.timezone().getId());
+        entity.update(venue.name(), venue.status(), venue.timezone().getId());
         venueRepository.save(entity);
         hoursRepository.deleteForVenue(venue.tenantId().value(), venue.id().value());
         hoursRepository.saveAll(toHoursEntities(venue));
@@ -70,6 +70,7 @@ class VenuePersistenceAdapter implements VenueRepository {
         return new VenueJpaEntity(
             venue.id().value(),
             venue.tenantId().value(),
+            venue.name(),
             venue.status(),
             venue.timezone().getId()
         );
@@ -105,6 +106,7 @@ class VenuePersistenceAdapter implements VenueRepository {
         return new Venue(
             new VenueId(entity.id()),
             new TenantId(entity.tenantId()),
+            entity.name(),
             entity.status(),
             ZoneId.of(entity.timezone()),
             new WeeklyOperatingHours(openDays),

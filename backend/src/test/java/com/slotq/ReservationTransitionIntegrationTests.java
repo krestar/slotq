@@ -370,7 +370,7 @@ class ReservationTransitionIntegrationTests {
         clock.set(BASE_NOW);
         Tenant tenant = tenantUseCase.createTenant();
         Venue venue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "UTC",
+            tenant.id(), "Reservation Venue", "UTC",
             new WeeklyOperatingHours(Map.of(DayOfWeek.SUNDAY,
                 new DailyOperatingHours(LocalTime.of(9, 0), LocalTime.of(13, 0)))),
             new BookingPolicyTerms(30, 5, 20, 10)

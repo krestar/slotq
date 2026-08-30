@@ -1,0 +1,12 @@
+ALTER TABLE venues
+    ADD COLUMN name VARCHAR(100) NULL AFTER tenant_id;
+
+UPDATE venues
+SET name = CONCAT('Venue ', LOWER(HEX(id)))
+WHERE name IS NULL OR CHAR_LENGTH(TRIM(name)) = 0;
+
+ALTER TABLE venues
+    MODIFY COLUMN name VARCHAR(100) NOT NULL;
+
+ALTER TABLE venues
+    ADD CONSTRAINT chk_venues_name CHECK (CHAR_LENGTH(TRIM(name)) > 0);

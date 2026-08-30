@@ -25,6 +25,7 @@ public interface VenueConfigurationUseCase {
 
     record CreateVenue(
         TenantId tenantId,
+        String name,
         String timezone,
         WeeklyOperatingHours operatingHours,
         BookingPolicyTerms initialPolicy
@@ -34,6 +35,7 @@ public interface VenueConfigurationUseCase {
     record UpdateVenue(
         TenantId tenantId,
         VenueId venueId,
+        String name,
         VenueStatus status,
         String timezone,
         WeeklyOperatingHours operatingHours

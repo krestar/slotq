@@ -54,8 +54,9 @@ class DevAuthFixtureDataInitializer implements ApplicationRunner {
             bytes(TENANT_A.value())
         );
         jdbcTemplate.update(
-            "INSERT IGNORE INTO venues (id, tenant_id, status, timezone) VALUES (?, ?, 'ACTIVE', 'UTC')",
-            bytes(venueId.value()), bytes(TENANT_A.value())
+            "INSERT IGNORE INTO venues (id, tenant_id, name, status, timezone) "
+                + "VALUES (?, ?, ?, 'ACTIVE', 'UTC')",
+            bytes(venueId.value()), bytes(TENANT_A.value()), "Fixture " + venueId.value()
         );
         jdbcTemplate.update(
             "INSERT IGNORE INTO booking_policies "
