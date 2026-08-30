@@ -47,6 +47,12 @@ class SlotInventoryPersistenceAdapter implements SlotInventoryRepository {
     }
 
     @Override
+    public Optional<SlotInventory> find(VenueId venueId, SlotInventoryId slotInventoryId) {
+        return repository.findByVenueIdAndId(venueId.value(), slotInventoryId.value())
+            .map(this::toDomain);
+    }
+
+    @Override
     public boolean overlaps(
         TenantId tenantId,
         VenueId venueId,

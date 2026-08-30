@@ -3,6 +3,7 @@ package com.slotq.auth.web;
 import java.util.List;
 
 import com.slotq.config.SlotqCorsProperties;
+import com.slotq.web.ProductApiSecurityProblemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -31,7 +32,8 @@ class SecurityConfiguration {
     @Bean
     SecurityFilterChain securityFilterChain(
         HttpSecurity http,
-        BearerCredentialAuthenticationFilter bearerFilter
+        BearerCredentialAuthenticationFilter bearerFilter,
+        ProductApiSecurityProblemWriter problemWriter
     ) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
@@ -48,8 +50,8 @@ class SecurityConfiguration {
                 .anyRequest().authenticated()
             )
             .exceptionHandling(errors -> errors
-                .authenticationEntryPoint((request, response, exception) -> response.sendError(401))
-                .accessDeniedHandler((request, response, exception) -> response.sendError(403))
+                .authenticationEntryPoint(problemWriter::authenticationRequired)
+                .accessDeniedHandler(problemWriter::accessDenied)
             )
             .build();
     }

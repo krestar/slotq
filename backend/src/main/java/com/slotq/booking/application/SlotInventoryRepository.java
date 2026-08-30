@@ -20,6 +20,8 @@ public interface SlotInventoryRepository {
         SlotInventoryId slotInventoryId
     );
 
+    Optional<SlotInventory> find(VenueId venueId, SlotInventoryId slotInventoryId);
+
     boolean overlaps(
         TenantId tenantId,
         VenueId venueId,

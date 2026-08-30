@@ -14,7 +14,7 @@ public interface ReservationRepository {
 
     void save(Reservation reservation);
 
-    Optional<Reservation> find(TenantId tenantId, VenueId venueId, ReservationId reservationId);
+    Optional<Reservation> find(VenueId venueId, ReservationId reservationId);
 
     /**
      * Returns whether the slot has an active unit whose effective Reservation state consumes capacity.
