@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.slotq.availability.application.AvailabilityValidationException;
 import com.slotq.auth.application.AccessDeniedException;
 import com.slotq.auth.application.ResourceNotFoundException;
 import com.slotq.booking.application.ProductApiException;
@@ -49,6 +50,18 @@ class ProductApiExceptionHandler {
     @ExceptionHandler(ManagementValidationException.class)
     ResponseEntity<ApiProblem> managementValidation(
         ManagementValidationException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.validation(
+            "One or more request fields are invalid.",
+            request.getRequestURI(),
+            exception.fieldErrors()
+        ));
+    }
+
+    @ExceptionHandler(AvailabilityValidationException.class)
+    ResponseEntity<ApiProblem> availabilityValidation(
+        AvailabilityValidationException exception,
         HttpServletRequest request
     ) {
         return problem(ApiProblem.validation(
