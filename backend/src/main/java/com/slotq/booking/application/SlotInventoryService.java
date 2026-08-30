@@ -56,7 +56,7 @@ class SlotInventoryService implements SlotInventoryUseCase {
             command.tenantId(), command.venueId(), command.resourceId()
         ).orElseThrow(() -> new NoSuchElementException("Resource not found in tenant and venue scope"));
         if (resource.status() != ResourceStatus.ACTIVE) {
-            throw new IllegalStateException("Cannot create a Slot for an INACTIVE Resource");
+            throw new SlotInventoryNotAllowedException();
         }
 
         OffsetDateTime input = parseOffsetTimestamp(command.startsAt());
@@ -75,7 +75,7 @@ class SlotInventoryService implements SlotInventoryUseCase {
         if (slotRepository.overlaps(
             command.tenantId(), command.venueId(), command.resourceId(), slot.startsAt(), slot.endsAt()
         )) {
-            throw new IllegalArgumentException("Slot overlaps an existing Slot for this Resource");
+            throw new SlotInventoryConflictException();
         }
         slotRepository.save(slot);
         return slot;

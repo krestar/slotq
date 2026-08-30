@@ -7,7 +7,11 @@ import java.util.NoSuchElementException;
 import com.slotq.auth.application.AccessDeniedException;
 import com.slotq.auth.application.ResourceNotFoundException;
 import com.slotq.booking.application.ProductApiException;
+import com.slotq.booking.application.SlotInventoryConflictException;
+import com.slotq.booking.application.SlotInventoryNotAllowedException;
+import com.slotq.management.application.ManagementValidationException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -32,10 +36,46 @@ class ProductApiExceptionHandler {
             request.getRequestURI(), Map.copyOf(fieldErrors)));
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    @ExceptionHandler({
+        HttpMessageNotReadableException.class,
+        MethodArgumentTypeMismatchException.class,
+        MissingServletRequestParameterException.class
+    })
     ResponseEntity<ApiProblem> malformedRequest(Exception exception, HttpServletRequest request) {
         return problem(ApiProblem.validation("The request format is invalid.",
             request.getRequestURI(), Map.of()));
+    }
+
+    @ExceptionHandler(ManagementValidationException.class)
+    ResponseEntity<ApiProblem> managementValidation(
+        ManagementValidationException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.validation(
+            "One or more request fields are invalid.",
+            request.getRequestURI(),
+            exception.fieldErrors()
+        ));
+    }
+
+    @ExceptionHandler(SlotInventoryConflictException.class)
+    ResponseEntity<ApiProblem> slotConflict(
+        SlotInventoryConflictException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.of(409, "Slot inventory conflict",
+            "The requested slot overlaps an existing slot.", request.getRequestURI(),
+            "SLOT_INVENTORY_CONFLICT"));
+    }
+
+    @ExceptionHandler(SlotInventoryNotAllowedException.class)
+    ResponseEntity<ApiProblem> slotNotAllowed(
+        SlotInventoryNotAllowedException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.of(409, "Slot inventory not allowed",
+            "A slot cannot be created for the selected resource.", request.getRequestURI(),
+            "SLOT_INVENTORY_NOT_ALLOWED"));
     }
 
     @ExceptionHandler({ResourceNotFoundException.class, NoSuchElementException.class,

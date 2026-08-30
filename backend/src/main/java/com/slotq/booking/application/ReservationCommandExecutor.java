@@ -18,11 +18,14 @@ class ReservationCommandExecutor {
 
     private final ReservationRepository reservationRepository;
     private final SlotInventoryRepository slotRepository;
+    private final ReservationTransitionPolicy transitionPolicy;
 
     ReservationCommandExecutor(ReservationRepository reservationRepository,
-                               SlotInventoryRepository slotRepository) {
+                               SlotInventoryRepository slotRepository,
+                               ReservationTransitionPolicy transitionPolicy) {
         this.reservationRepository = reservationRepository;
         this.slotRepository = slotRepository;
+        this.transitionPolicy = transitionPolicy;
     }
 
     @Transactional
@@ -66,47 +69,13 @@ class ReservationCommandExecutor {
 
     private void validateAndApply(Reservation reservation, ReservationCommand command,
                                   Clock commandClock, Instant now) {
+        transitionPolicy.requireAllowed(reservation, command, now);
         switch (command) {
-            case CONFIRM -> {
-                requireState(reservation, ReservationState.HELD);
-                reservation.confirm(commandClock);
-            }
-            case CANCEL -> {
-                if (reservation.state() != ReservationState.HELD
-                    && reservation.state() != ReservationState.CONFIRMED) {
-                    throw new ReservationTransitionNotAllowedException();
-                }
-                if (reservation.state() == ReservationState.CONFIRMED
-                    && !now.isBefore(reservation.cancelAllowedUntil())) {
-                    throw new CancellationWindowClosedException();
-                }
-                reservation.cancel(commandClock);
-            }
-            case CHECK_IN -> {
-                requireState(reservation, ReservationState.CONFIRMED);
-                if (now.isBefore(reservation.startsAt())
-                    || !now.isBefore(reservation.noShowEligibleAt())) {
-                    throw new ReservationTransitionNotAllowedException();
-                }
-                reservation.checkIn(commandClock);
-            }
-            case NO_SHOW -> {
-                requireState(reservation, ReservationState.CONFIRMED);
-                if (now.isBefore(reservation.noShowEligibleAt())) {
-                    throw new ReservationTransitionNotAllowedException();
-                }
-                reservation.markNoShow(commandClock);
-            }
-            case COMPLETE -> {
-                requireState(reservation, ReservationState.CHECKED_IN);
-                reservation.complete();
-            }
-        }
-    }
-
-    private void requireState(Reservation reservation, ReservationState required) {
-        if (reservation.state() != required) {
-            throw new ReservationTransitionNotAllowedException();
+            case CONFIRM -> reservation.confirm(commandClock);
+            case CANCEL -> reservation.cancel(commandClock);
+            case CHECK_IN -> reservation.checkIn(commandClock);
+            case NO_SHOW -> reservation.markNoShow(commandClock);
+            case COMPLETE -> reservation.complete();
         }
     }
 

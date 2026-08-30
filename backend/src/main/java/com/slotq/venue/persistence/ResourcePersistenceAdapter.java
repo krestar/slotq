@@ -1,5 +1,6 @@
 package com.slotq.venue.persistence;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.slotq.tenancy.domain.TenantId;
@@ -28,6 +29,13 @@ class ResourcePersistenceAdapter implements ResourceRepository {
         return repository.findByTenantIdAndVenueIdAndId(
             tenantId.value(), venueId.value(), resourceId.value()
         ).map(this::toDomain);
+    }
+
+    @Override
+    public List<Resource> findAll(TenantId tenantId, VenueId venueId) {
+        return repository.findAllByTenantIdAndVenueIdOrderByNameAscIdAsc(
+            tenantId.value(), venueId.value()
+        ).stream().map(this::toDomain).toList();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.slotq.booking.persistence;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,6 +12,13 @@ import org.springframework.data.repository.query.Param;
 interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEntity, UUID> {
 
     Optional<ReservationJpaEntity> findByVenueIdAndId(UUID venueId, UUID id);
+
+    List<ReservationJpaEntity> findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(
+        UUID tenantId,
+        UUID venueId,
+        Instant startsAt,
+        Instant endsAt
+    );
 
     @Query("""
         select count(reservation) from ReservationJpaEntity reservation, CapacityAllocationJpaEntity allocation
