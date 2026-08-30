@@ -12,6 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.slotq.availability.application.PublicVenueQuery;
 import com.slotq.auth.application.AccessControlRepository;
 import com.slotq.auth.domain.PrincipalId;
 import com.slotq.auth.domain.TenantRole;
@@ -137,6 +138,21 @@ class RepositoryPortArchitectureTests {
         assertThat(violations)
             .as("access-control persistence must use a target scope or the named self-scope discovery contract")
             .isEmpty();
+    }
+
+    @Test
+    void publicVenueDiscoveryIsAnExplicitNarrowReadModel() throws Exception {
+        assertThat(PublicVenueQuery.class.isInterface()).isTrue();
+        assertThat(PublicVenueQuery.class.getDeclaredMethods())
+            .extracting(Method::getName)
+            .containsExactlyInAnyOrder("findAllActive", "findActive");
+        assertThat(PublicVenueQuery.PublicVenue.class.getRecordComponents())
+            .extracting(component -> component.getType().getName())
+            .containsExactly(
+                TenantId.class.getName(), VenueId.class.getName(),
+                String.class.getName(), java.time.ZoneId.class.getName()
+            );
+        assertThat(PublicVenueQuery.class.getSimpleName()).doesNotEndWith("Repository");
     }
 
     @Test

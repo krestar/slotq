@@ -27,6 +27,10 @@ interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEn
           and reservation.venueId = :venueId
           and reservation.resourceId = :resourceId
           and reservation.slotInventoryId = :slotInventoryId
+          and allocation.tenantId = :tenantId
+          and allocation.venueId = :venueId
+          and allocation.resourceId = :resourceId
+          and allocation.slotInventoryId = :slotInventoryId
           and allocation.active = true
           and (reservation.state in (com.slotq.booking.domain.ReservationState.CONFIRMED,
                                      com.slotq.booking.domain.ReservationState.CHECKED_IN)
