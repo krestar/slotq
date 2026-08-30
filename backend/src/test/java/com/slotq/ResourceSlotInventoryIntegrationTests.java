@@ -361,6 +361,7 @@ class ResourceSlotInventoryIntegrationTests {
     ) {
         return venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
             tenant.id(),
+            "Resource Venue",
             timezone,
             new WeeklyOperatingHours(Map.of(
                 day, new DailyOperatingHours(LocalTime.parse(opensAt), LocalTime.parse(closesAt))

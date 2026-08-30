@@ -85,7 +85,7 @@ class SlotqApplicationTests {
     @Test
     void emptyMySqlAppliesMigrationsAndValidatesJpaMappings() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("5");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("6");
 
         String characterSet = jdbcTemplate.queryForObject(
             "SELECT DEFAULT_CHARACTER_SET_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE()",
@@ -198,7 +198,7 @@ class SlotqApplicationTests {
 
         WeeklyOperatingHours initialHours = hours(DayOfWeek.MONDAY, "09:00", "18:00");
         Venue created = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "Asia/Seoul", initialHours, new BookingPolicyTerms(30, 5, 60, 15)
+            tenant.id(), "Seoul Studio", "Asia/Seoul", initialHours, new BookingPolicyTerms(30, 5, 60, 15)
         ));
 
         Venue roundTripped = venueUseCase.getVenue(tenant.id(), created.id());
@@ -206,13 +206,18 @@ class SlotqApplicationTests {
         assertThat(roundTripped.currentPolicy().version()).isEqualTo(1);
 
         Venue updatedVenue = venueUseCase.updateVenue(new VenueConfigurationUseCase.UpdateVenue(
-            tenant.id(), created.id(), VenueStatus.INACTIVE, "America/New_York",
+            tenant.id(), created.id(), "New York Studio", VenueStatus.INACTIVE, "America/New_York",
             hours(DayOfWeek.TUESDAY, "10:00", "17:00")
         ));
+        assertThat(updatedVenue.name()).isEqualTo("New York Studio");
         assertThat(updatedVenue.status()).isEqualTo(VenueStatus.INACTIVE);
         assertThat(updatedVenue.timezone()).isEqualTo(ZoneId.of("America/New_York"));
         assertThat(updatedVenue.operatingHours().hoursOn(DayOfWeek.MONDAY)).isEmpty();
         assertThat(updatedVenue.operatingHours().hoursOn(DayOfWeek.TUESDAY)).isPresent();
+        assertThat(venueUseCase.getVenue(tenant.id(), created.id())).isEqualTo(updatedVenue);
+        assertThatThrownBy(() -> venueUseCase.updateVenue(new VenueConfigurationUseCase.UpdateVenue(
+            tenant.id(), created.id(), " ", VenueStatus.ACTIVE, "UTC", initialHours
+        ))).isInstanceOf(IllegalArgumentException.class);
         assertThat(venueUseCase.getVenue(tenant.id(), created.id())).isEqualTo(updatedVenue);
 
         BookingPolicy versionTwo = venueUseCase.updateBookingPolicy(
@@ -221,7 +226,9 @@ class SlotqApplicationTests {
             )
         );
         assertThat(versionTwo.version()).isEqualTo(2);
-        assertThat(venueUseCase.getVenue(tenant.id(), created.id()).currentPolicy()).isEqualTo(versionTwo);
+        Venue policyUpdatedVenue = venueUseCase.getVenue(tenant.id(), created.id());
+        assertThat(policyUpdatedVenue.name()).isEqualTo("New York Studio");
+        assertThat(policyUpdatedVenue.currentPolicy()).isEqualTo(versionTwo);
         assertThat(jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM booking_policies WHERE tenant_id = ? AND venue_id = ?",
             Long.class, bytes(tenant.id().value()), bytes(created.id().value())
@@ -238,7 +245,8 @@ class SlotqApplicationTests {
         Tenant owner = tenantUseCase.createTenant();
         Tenant other = tenantUseCase.createTenant();
         Venue venue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            owner.id(), "UTC", WeeklyOperatingHours.closedAllWeek(), new BookingPolicyTerms(30, 5, 0, 0)
+            owner.id(), "Owner Venue", "UTC", WeeklyOperatingHours.closedAllWeek(),
+            new BookingPolicyTerms(30, 5, 0, 0)
         ));
 
         assertThatThrownBy(() -> jdbcTemplate.update(
@@ -273,11 +281,19 @@ class SlotqApplicationTests {
         long before = venueCount(tenant);
 
         assertThatThrownBy(() -> venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "Mars/Olympus", WeeklyOperatingHours.closedAllWeek(),
+            tenant.id(), "Invalid Timezone", "Mars/Olympus", WeeklyOperatingHours.closedAllWeek(),
             new BookingPolicyTerms(30, 5, 0, 0)
         ))).isInstanceOf(ZoneRulesException.class);
         assertThatThrownBy(() -> venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "+09:00", WeeklyOperatingHours.closedAllWeek(),
+            tenant.id(), "Invalid Timezone", "+09:00", WeeklyOperatingHours.closedAllWeek(),
+            new BookingPolicyTerms(30, 5, 0, 0)
+        ))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
+            tenant.id(), "   ", "UTC", WeeklyOperatingHours.closedAllWeek(),
+            new BookingPolicyTerms(30, 5, 0, 0)
+        ))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
+            tenant.id(), "V".repeat(101), "UTC", WeeklyOperatingHours.closedAllWeek(),
             new BookingPolicyTerms(30, 5, 0, 0)
         ))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new DailyOperatingHours(LocalTime.NOON, LocalTime.NOON))
@@ -287,7 +303,7 @@ class SlotqApplicationTests {
         assertThatThrownBy(() -> new BookingPolicyTerms(30, 0, -1, -1))
             .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> jdbcTemplate.update(
-            "INSERT INTO venues (id, tenant_id, status, timezone) VALUES (?, ?, 'ACTIVE', NULL)",
+            "INSERT INTO venues (id, tenant_id, name, status, timezone) VALUES (?, ?, 'Venue', 'ACTIVE', NULL)",
             bytes(UUID.randomUUID()), bytes(tenant.id().value())
         )).isInstanceOf(DataIntegrityViolationException.class);
 
@@ -298,7 +314,7 @@ class SlotqApplicationTests {
     void injectedClockCalculatesBoundaryDeadlinesAndPolicySnapshotRemainsStable() {
         Tenant tenant = tenantUseCase.createTenant();
         Venue venue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "UTC", WeeklyOperatingHours.closedAllWeek(),
+            tenant.id(), "Policy Venue", "UTC", WeeklyOperatingHours.closedAllWeek(),
             new BookingPolicyTerms(30, 10, 60, 15)
         ));
         BookingPolicy versionOne = venue.currentPolicy();
@@ -331,7 +347,7 @@ class SlotqApplicationTests {
     void concurrentPolicyUpdatesKeepVenueVersionMonotonic() throws Exception {
         Tenant tenant = tenantUseCase.createTenant();
         Venue venue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "UTC", WeeklyOperatingHours.closedAllWeek(),
+            tenant.id(), "Concurrent Policy Venue", "UTC", WeeklyOperatingHours.closedAllWeek(),
             new BookingPolicyTerms(30, 5, 0, 0)
         ));
         CountDownLatch start = new CountDownLatch(1);
@@ -366,7 +382,8 @@ class SlotqApplicationTests {
 
     private Venue venue(Tenant tenant) {
         return venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "UTC", WeeklyOperatingHours.closedAllWeek(), new BookingPolicyTerms(30, 5, 0, 0)
+            tenant.id(), "Test Venue", "UTC", WeeklyOperatingHours.closedAllWeek(),
+            new BookingPolicyTerms(30, 5, 0, 0)
         ));
     }
 

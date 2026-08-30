@@ -37,6 +37,7 @@ class VenueConfigurationService implements VenueConfigurationUseCase {
         Venue venue = new Venue(
             VenueId.newId(),
             command.tenantId(),
+            command.name(),
             VenueStatus.ACTIVE,
             parseTimezone(command.timezone()),
             command.operatingHours(),
@@ -58,6 +59,7 @@ class VenueConfigurationService implements VenueConfigurationUseCase {
     public Venue updateVenue(UpdateVenue command) {
         Objects.requireNonNull(command, "command must not be null");
         Venue venue = getVenue(command.tenantId(), command.venueId()).withConfiguration(
+            command.name(),
             Objects.requireNonNull(command.status(), "status must not be null"),
             parseTimezone(command.timezone()),
             Objects.requireNonNull(command.operatingHours(), "operatingHours must not be null")

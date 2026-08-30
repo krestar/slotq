@@ -213,7 +213,7 @@ class ReservationHoldIntegrationTests {
 
         Fixture venue = fixture(2, "2026-08-30T11:00:00Z");
         venueUseCase.updateVenue(new VenueConfigurationUseCase.UpdateVenue(
-            venue.tenant().id(), venue.venue().id(), VenueStatus.INACTIVE, "UTC",
+            venue.tenant().id(), venue.venue().id(), venue.venue().name(), VenueStatus.INACTIVE, "UTC",
             venue.venue().operatingHours()
         ));
         assertBookingNotAllowed(venue);
@@ -278,7 +278,7 @@ class ReservationHoldIntegrationTests {
     private Fixture fixture(int seatingCapacity, String startsAt) {
         Tenant tenant = tenantUseCase.createTenant();
         Venue venue = venueUseCase.createVenue(new VenueConfigurationUseCase.CreateVenue(
-            tenant.id(), "UTC",
+            tenant.id(), "Reservation Venue", "UTC",
             new WeeklyOperatingHours(Map.of(DayOfWeek.SUNDAY,
                 new DailyOperatingHours(LocalTime.of(9, 0), LocalTime.of(13, 0)))),
             new BookingPolicyTerms(30, 5, 0, 0)

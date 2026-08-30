@@ -26,6 +26,9 @@ class VenueJpaEntity {
     @Column(name = "tenant_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID tenantId;
 
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     private VenueStatus status;
@@ -36,9 +39,10 @@ class VenueJpaEntity {
     protected VenueJpaEntity() {
     }
 
-    VenueJpaEntity(UUID id, UUID tenantId, VenueStatus status, String timezone) {
+    VenueJpaEntity(UUID id, UUID tenantId, String name, VenueStatus status, String timezone) {
         this.id = id;
         this.tenantId = tenantId;
+        this.name = name;
         this.status = status;
         this.timezone = timezone;
     }
@@ -51,6 +55,10 @@ class VenueJpaEntity {
         return tenantId;
     }
 
+    String name() {
+        return name;
+    }
+
     VenueStatus status() {
         return status;
     }
@@ -59,7 +67,8 @@ class VenueJpaEntity {
         return timezone;
     }
 
-    void update(VenueStatus newStatus, String newTimezone) {
+    void update(String newName, VenueStatus newStatus, String newTimezone) {
+        this.name = newName;
         this.status = newStatus;
         this.timezone = newTimezone;
     }
