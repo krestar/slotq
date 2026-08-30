@@ -14,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 
 interface SlotInventorySpringDataRepository extends JpaRepository<SlotInventoryJpaEntity, UUID> {
 
+    Optional<SlotInventoryJpaEntity> findByVenueIdAndId(UUID venueId, UUID id);
+
     Optional<SlotInventoryJpaEntity> findByTenantIdAndVenueIdAndResourceIdAndId(
         UUID tenantId,
         UUID venueId,
