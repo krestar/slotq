@@ -13,7 +13,6 @@ export function App() {
 
       <main id="main-content" className="app-shell" tabIndex={-1}>
         <section className="intro" aria-labelledby="page-title">
-          <p className="eyebrow">Frontend foundation</p>
           <h1 id="page-title">SlotQ</h1>
           <p className="intro-copy">
             Product API의 실제 사용자 흐름을 검증하기 위한 웹 클라이언트 기반입니다.
