@@ -58,6 +58,10 @@ class ReservationService implements ReservationUseCase {
     @Override
     public ReservationDetails createHold(CreateHold command) {
         Objects.requireNonNull(command, "command must not be null");
+        AuthenticatedPrincipal principal = Objects.requireNonNull(
+            command.principal(),
+            "principal must not be null"
+        );
         Instant now = clock.instant();
         Clock commandClock = Clock.fixed(now, ZoneOffset.UTC);
         SlotInventory slot = slotRepository.find(command.venueId(), command.slotInventoryId())
@@ -82,7 +86,7 @@ class ReservationService implements ReservationUseCase {
 
         Reservation reservation = Reservation.hold(
             ReservationId.newId(), CapacityAllocationId.newId(), slot.tenantId(), slot.venueId(),
-            resource, slot, command.customerPrincipalId(), partySize,
+            resource, slot, principal.principalId(), partySize,
             venue.currentPolicy().applyTo(slot.startsAt(), commandClock), commandClock
         );
         reservationRepository.save(reservation);

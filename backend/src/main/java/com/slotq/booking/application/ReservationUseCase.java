@@ -3,7 +3,6 @@ package com.slotq.booking.application;
 import java.time.Instant;
 
 import com.slotq.auth.domain.AuthenticatedPrincipal;
-import com.slotq.auth.domain.PrincipalId;
 import com.slotq.booking.domain.Reservation;
 import com.slotq.booking.domain.ReservationId;
 import com.slotq.booking.domain.ReservationState;
@@ -23,7 +22,7 @@ public interface ReservationUseCase {
     record CreateHold(
         VenueId venueId,
         SlotInventoryId slotInventoryId,
-        PrincipalId customerPrincipalId,
+        AuthenticatedPrincipal principal,
         int partySize
     ) { }
 

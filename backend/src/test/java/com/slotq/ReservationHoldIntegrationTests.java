@@ -16,6 +16,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.slotq.booking.application.SlotInventoryUseCase;
 import com.slotq.booking.application.ReservationUseCase;
 import com.slotq.booking.domain.SlotInventory;
+import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.PrincipalId;
 import com.slotq.tenancy.application.TenantUseCase;
 import com.slotq.tenancy.domain.Tenant;
@@ -235,7 +236,7 @@ class ReservationHoldIntegrationTests {
         PrincipalId unstoredPrincipal = PrincipalId.newId();
 
         assertThatThrownBy(() -> reservationUseCase.createHold(new ReservationUseCase.CreateHold(
-            fixture.venue().id(), fixture.slot().id(), unstoredPrincipal, 2
+            fixture.venue().id(), fixture.slot().id(), new AuthenticatedPrincipal(unstoredPrincipal), 2
         ))).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
         assertThat(countForSlot("reservations", fixture.slot())).isZero();

@@ -44,7 +44,7 @@ class ReservationController {
             new ReservationUseCase.CreateHold(
                 targetVenueId,
                 new SlotInventoryId(request.slotInventoryId()),
-                principal.principalId(),
+                principal,
                 request.partySize()
             )
         );
