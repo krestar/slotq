@@ -1,7 +1,8 @@
 # SlotQ Frontend
 
 SlotQ Product API의 실제 사용자 흐름을 검증하는 React·TypeScript·Vite 기반 thin SPA다.
-현재는 Product 화면이나 mock 업무 상태 없이 실행·검증 가능한 App shell만 제공한다.
+Customer는 active Venue 선택, Availability 조회, HOLD, confirm/cancel과 최신 Reservation
+재조회를 단계별 guided flow에서 수행한다. Product 상태와 deadline은 Backend 응답만 사용한다.
 
 ## Runtime baseline
 
@@ -55,6 +56,10 @@ Product Backend가 소유하고 Frontend에는 공개 가능한 URL과 식별자
 artifact에 저장하지 않는다. 보호 API가 `401`을 반환하면 기존 credential만 폐기하고 요청 자체는
 재전송하지 않는다. 이후 사용자가 발생시킨 다음 보호 요청에서 runtime bootstrap을 다시 수행한다.
 production build는 이 fixture 설정이나 dev bootstrap에 의존하지 않는다.
+
+Customer mutation은 자동 retry하지 않으며 in-flight 중 같은 action의 중복 submit만 막는다.
+HOLD 응답이 유실되면 Availability를, Reservation command 결과가 불명확하면 Reservation GET을
+사용자가 명시적으로 재조회한다. M1 Frontend는 `Idempotency-Key` 보장을 제공하지 않는다.
 
 ## Accessibility baseline
 

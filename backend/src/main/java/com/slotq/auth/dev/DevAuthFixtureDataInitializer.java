@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnProperty(name = "slotq.auth.dev-bootstrap-enabled", havingValue = "true")
 class DevAuthFixtureDataInitializer implements ApplicationRunner {
 
+    private static final Instant FIXTURE_POLICY_CREATED_AT = Instant.EPOCH.plusSeconds(1);
     static final TenantId TENANT_A = tenant("20000000-0000-0000-0000-000000000001");
     static final VenueId VENUE_A = venue("30000000-0000-0000-0000-000000000001");
     static final VenueId VENUE_A_UNASSIGNED = venue("30000000-0000-0000-0000-000000000002");
@@ -63,7 +64,7 @@ class DevAuthFixtureDataInitializer implements ApplicationRunner {
                 + "(tenant_id, venue_id, policy_version, slot_duration_minutes, hold_duration_minutes, "
                 + "cancellation_cutoff_minutes, no_show_grace_minutes, created_at) "
                 + "VALUES (?, ?, 1, 30, 5, 0, 0, ?)",
-            bytes(TENANT_A.value()), bytes(venueId.value()), Timestamp.from(Instant.EPOCH)
+            bytes(TENANT_A.value()), bytes(venueId.value()), Timestamp.from(FIXTURE_POLICY_CREATED_AT)
         );
     }
 
