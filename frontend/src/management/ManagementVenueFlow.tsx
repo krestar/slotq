@@ -139,6 +139,7 @@ export function ManagementVenueFlow({
   const [mutation, setMutation] = useState<UnknownMutation>()
   const [resultUnknown, setResultUnknown] = useState<ResultUnknown>()
   const [reconcilingUnknown, setReconcilingUnknown] = useState(false)
+  const [reservationReconciliationInFlight, setReservationReconciliationInFlight] = useState(false)
   const [reconciliationError, setReconciliationError] = useState<ManagementApiError>()
   const [reconciledReservation, setReconciledReservation] = useState<ReservationDetails>()
   const [reservationConflict, setReservationConflict] = useState<ReservationCommandContext>()
@@ -460,7 +461,9 @@ export function ManagementVenueFlow({
   const writable = selectedVenue?.configurationWritable === true
   const reservationUnknown = isReservationCommandContext(resultUnknown) ? resultUnknown : undefined
   const reservationTargetPending = reservationUnknown ?? reservationConflict
-  const busy = Boolean(mutation) || Boolean(reservationTargetPending)
+  const busy = Boolean(mutation)
+    || Boolean(reservationTargetPending)
+    || reservationReconciliationInFlight
   const errorFor = (scope: string, field: string) =>
     fieldErrorScope === scope ? fieldErrors[field] : undefined
 
@@ -477,10 +480,12 @@ export function ManagementVenueFlow({
     const presentationContext = { venueId, date, status }
     unknownReconciliationInFlight.current = true
     setReconcilingUnknown(true)
+    setReservationReconciliationInFlight(true)
     setReconciliationError(undefined)
     try {
       const authoritative = await api.getReservation(target.venueId, target.reservationId)
       setReconciledReservation(authoritative)
+      setReservations([])
       onSuccess(authoritative)
       if (presentationContext.venueId && presentationContext.date) {
         await loadReservations(
@@ -494,6 +499,7 @@ export function ManagementVenueFlow({
     } finally {
       unknownReconciliationInFlight.current = false
       setReconcilingUnknown(false)
+      setReservationReconciliationInFlight(false)
     }
   }
 

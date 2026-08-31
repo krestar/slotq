@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ManagementVenueFlow } from './ManagementVenueFlow'
@@ -79,6 +80,17 @@ async function selectVenue(api: ManagementApi, id = ownerVenue.id) {
   await screen.findByRole('option', { name: /Owner Venue|Staff Venue/ })
   fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), { target: { value: id } })
   await screen.findByRole('list', { name: 'Reservation 목록' })
+}
+
+function ManagementFlowWithNavigation({ api }: { api: ManagementApi }) {
+  const [navigationLocked, setNavigationLocked] = useState(false)
+  return (
+    <ManagementVenueFlow
+      api={api}
+      onNavigationLockChange={setNavigationLocked}
+      navigation={<button disabled={navigationLocked}>Customer 예약</button>}
+    />
+  )
 }
 
 describe('Management Venue flow', () => {
@@ -429,10 +441,13 @@ describe('Management Venue flow', () => {
 
   it('keeps a filtered cancel result unknown until the exact target GET succeeds', async () => {
     let resolveExact: ((value: ReservationDetails) => void) | undefined
+    let resolveList: ((value: ManagementReservation[]) => void) | undefined
     const listReservations = vi.fn()
       .mockResolvedValueOnce([reservation])
       .mockResolvedValueOnce([reservation])
-      .mockResolvedValueOnce([])
+      .mockReturnValueOnce(new Promise<ManagementReservation[]>((resolve) => {
+        resolveList = resolve
+      }))
     const getReservation = vi.fn().mockReturnValue(
       new Promise<ReservationDetails>((resolve) => { resolveExact = resolve }),
     )
@@ -443,7 +458,12 @@ describe('Management Venue flow', () => {
         new ManagementMutationResultUnknownError('NETWORK_ERROR'),
       ),
     })
-    await selectVenue(api)
+    render(<ManagementFlowWithNavigation api={api} />)
+    await screen.findByRole('option', { name: /Owner Venue/ })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+      target: { value: ownerVenue.id },
+    })
+    await screen.findByRole('list', { name: 'Reservation 목록' })
     fireEvent.change(screen.getByLabelText('상태', { selector: '#reservation-status' }), {
       target: { value: 'CONFIRMED' },
     })
@@ -474,9 +494,58 @@ describe('Management Venue flow', () => {
     expect(await screen.findByText(/Reservation reservation-a 최신 상태/)).toBeInTheDocument()
     expect(screen.getByText('CANCELLED', { selector: '.notice--state .status-badge' })).toBeInTheDocument()
     await waitFor(() => expect(listReservations).toHaveBeenCalledTimes(3))
+    expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
+    const staleCancel = screen.queryByRole('button', { name: '취소' })
+    if (staleCancel) expect(staleCancel).toBeDisabled()
+    expect(venueSelect).toBeDisabled()
+    expect(dateInput).toBeDisabled()
+    expect(statusSelect).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeDisabled()
+
+    await act(async () => { resolveList?.([]) })
     expect(listReservations).toHaveBeenLastCalledWith(ownerVenue.id, expect.any(String), 'CONFIRMED')
     expect(await screen.findByText('선택한 날짜와 상태의 Reservation이 없습니다.')).toBeInTheDocument()
-    expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
+    expect(venueSelect).toBeEnabled()
+    expect(dateInput).toBeEnabled()
+    expect(statusSelect).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeEnabled()
+  })
+
+  it('does not reactivate stale actions when the post-exact list refresh fails', async () => {
+    const listReservations = vi.fn()
+      .mockResolvedValueOnce([reservation])
+      .mockResolvedValueOnce([reservation])
+      .mockRejectedValueOnce(new ManagementApiError(500, 'INTERNAL_ERROR'))
+    const api = makeApi({
+      listReservations,
+      getReservation: vi.fn().mockResolvedValue(reservationDetails),
+      commandReservation: vi.fn().mockRejectedValue(
+        new ManagementMutationResultUnknownError('NETWORK_ERROR'),
+      ),
+    })
+    render(<ManagementFlowWithNavigation api={api} />)
+    await screen.findByRole('option', { name: /Owner Venue/ })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+      target: { value: ownerVenue.id },
+    })
+    await screen.findByRole('list', { name: 'Reservation 목록' })
+    fireEvent.change(screen.getByLabelText('상태', { selector: '#reservation-status' }), {
+      target: { value: 'CONFIRMED' },
+    })
+    await waitFor(() => expect(listReservations).toHaveBeenCalledTimes(2))
+
+    fireEvent.click(screen.getByRole('button', { name: '취소' }))
+    fireEvent.click(await screen.findByRole('button', { name: '원래 Reservation 다시 조회' }))
+
+    expect(await screen.findByText(/Reservation reservation-a 최신 상태/)).toBeInTheDocument()
+    expect(screen.getByText('CANCELLED', { selector: '.notice--state .status-badge' })).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('INTERNAL_ERROR')
+    const staleCancel = screen.queryByRole('button', { name: '취소' })
+    if (staleCancel) expect(staleCancel).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeEnabled()
+    expect(screen.getByLabelText('Venue-local 날짜')).toBeEnabled()
+    expect(screen.getByLabelText('상태', { selector: '#reservation-status' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeEnabled()
   })
 
   it('keeps the original target unknown when its exact GET fails', async () => {
