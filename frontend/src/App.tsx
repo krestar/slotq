@@ -136,11 +136,13 @@ function AvailabilityCard({
   item,
   timezone,
   selected,
+  disabled,
   onSelect,
 }: {
   item: AvailabilityItem
   timezone: string
   selected: boolean
+  disabled: boolean
   onSelect: () => void
 }) {
   return (
@@ -155,7 +157,7 @@ function AvailabilityCard({
         <p>수용 인원 {item.seatingCapacity}명 · 현재 가능 {item.available}</p>
       </div>
       {item.available > 0 ? (
-        <Button variant={selected ? 'primary' : 'secondary'} onClick={onSelect}>
+        <Button variant={selected ? 'primary' : 'secondary'} onClick={onSelect} disabled={disabled}>
           {selected ? '선택됨' : '이 시간 선택'}
         </Button>
       ) : <span className="availability-unavailable">예약 불가</span>}
@@ -183,6 +185,9 @@ export function App({ api = customerReservationApi }: AppProps) {
   const [reservationReadState, setReservationReadState] = useState<LoadState>('idle')
   const [reservationReadError, setReservationReadError] = useState<CustomerApiError>()
   const [resultUnknown, setResultUnknown] = useState<'hold' | 'transition'>()
+  const availabilityRequestGeneration = useRef(0)
+  const reservationReadGeneration = useRef(0)
+  const reservationReadInFlight = useRef(false)
   const holdInFlight = useRef(false)
   const actionInFlight = useRef(false)
 
@@ -203,6 +208,9 @@ export function App({ api = customerReservationApi }: AppProps) {
   }, [api])
 
   function resetDownstream() {
+    availabilityRequestGeneration.current += 1
+    reservationReadGeneration.current += 1
+    reservationReadInFlight.current = false
     setAvailability(undefined)
     setAvailabilityState('idle')
     setAvailabilityError(undefined)
@@ -212,20 +220,26 @@ export function App({ api = customerReservationApi }: AppProps) {
     setHoldState('idle')
     setActionState('idle')
     setActionError(undefined)
+    setReservationReadState('idle')
     setReservationReadError(undefined)
     setResultUnknown(undefined)
   }
 
   async function loadAvailability(search: SearchInput) {
+    const requestGeneration = availabilityRequestGeneration.current + 1
+    availabilityRequestGeneration.current = requestGeneration
     setAvailabilityState('loading')
     setAvailabilityError(undefined)
     setSelectedSlotId('')
     setResultUnknown(undefined)
     try {
-      setAvailability(await api.getAvailability(search.venueId, search.date, search.partySize))
+      const result = await api.getAvailability(search.venueId, search.date, search.partySize)
+      if (requestGeneration !== availabilityRequestGeneration.current) return
+      setAvailability(result)
       setAvailabilityState('success')
       setLastSearch(search)
     } catch (error) {
+      if (requestGeneration !== availabilityRequestGeneration.current) return
       const normalized = normalizeError(error)
       setAvailability(undefined)
       setAvailabilityError(normalized)
@@ -245,6 +259,7 @@ export function App({ api = customerReservationApi }: AppProps) {
 
   function submitAvailability(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (holdInFlight.current || actionInFlight.current) return
     const nextErrors: Record<string, string> = {}
     const parsedPartySize = Number(partySize)
     if (!venueId) nextErrors.venue = 'Venue를 선택해 주세요.'
@@ -254,20 +269,33 @@ export function App({ api = customerReservationApi }: AppProps) {
     }
     setFormErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
-    setReservation(undefined)
-    setHoldState('idle')
-    setActionError(undefined)
+    resetDownstream()
     void loadAvailability({ venueId, date, partySize: parsedPartySize })
   }
 
   async function createHold() {
-    if (!lastSearch || !selectedSlotId || holdInFlight.current) return
+    if (
+      !lastSearch
+      || !selectedSlotId
+      || holdInFlight.current
+      || actionInFlight.current
+      || reservationReadInFlight.current
+    ) return
+    const command = {
+      venueId: lastSearch.venueId,
+      slotInventoryId: selectedSlotId,
+      partySize: lastSearch.partySize,
+    }
     holdInFlight.current = true
     setHoldState('loading')
     setActionError(undefined)
     setResultUnknown(undefined)
     try {
-      setReservation(await api.createHold(lastSearch.venueId, selectedSlotId, lastSearch.partySize))
+      setReservation(await api.createHold(
+        command.venueId,
+        command.slotInventoryId,
+        command.partySize,
+      ))
       setHoldState('success')
     } catch (error) {
       setHoldState('error')
@@ -279,7 +307,13 @@ export function App({ api = customerReservationApi }: AppProps) {
   }
 
   async function transition(action: ReservationAction) {
-    if (!reservation || actionInFlight.current) return
+    if (
+      !reservation
+      || holdInFlight.current
+      || actionInFlight.current
+      || reservationReadInFlight.current
+    ) return
+    const command = { venueId: reservation.venueId, reservationId: reservation.id }
     actionInFlight.current = true
     setActionState('loading')
     setActionError(undefined)
@@ -287,8 +321,8 @@ export function App({ api = customerReservationApi }: AppProps) {
     setResultUnknown(undefined)
     try {
       const result = action === 'confirm'
-        ? await api.confirmReservation(reservation.venueId, reservation.id)
-        : await api.cancelReservation(reservation.venueId, reservation.id)
+        ? await api.confirmReservation(command.venueId, command.reservationId)
+        : await api.cancelReservation(command.venueId, command.reservationId)
       setReservation(result)
       setActionState('success')
     } catch (error) {
@@ -301,17 +335,33 @@ export function App({ api = customerReservationApi }: AppProps) {
   }
 
   async function refreshReservation() {
-    if (!reservation || reservationReadState === 'loading') return
+    if (
+      !reservation
+      || holdInFlight.current
+      || actionInFlight.current
+      || reservationReadInFlight.current
+    ) return
+    const command = { venueId: reservation.venueId, reservationId: reservation.id }
+    const requestGeneration = reservationReadGeneration.current + 1
+    reservationReadGeneration.current = requestGeneration
+    reservationReadInFlight.current = true
     setReservationReadState('loading')
     setReservationReadError(undefined)
     try {
-      setReservation(await api.getReservation(reservation.venueId, reservation.id))
+      const result = await api.getReservation(command.venueId, command.reservationId)
+      if (requestGeneration !== reservationReadGeneration.current) return
+      setReservation(result)
       setReservationReadState('success')
       setResultUnknown(undefined)
       setActionError(undefined)
     } catch (error) {
+      if (requestGeneration !== reservationReadGeneration.current) return
       setReservationReadState('error')
       setReservationReadError(normalizeError(error))
+    } finally {
+      if (requestGeneration === reservationReadGeneration.current) {
+        reservationReadInFlight.current = false
+      }
     }
   }
 
@@ -319,6 +369,7 @@ export function App({ api = customerReservationApi }: AppProps) {
   const selectedItem = availability?.items.find((item) => item.slotInventoryId === selectedSlotId)
   const canConfirm = reservation?.state === 'HELD'
   const canCancel = reservation?.state === 'HELD' || reservation?.state === 'CONFIRMED'
+  const mutationInFlight = holdState === 'loading' || actionState === 'loading'
 
   return (
     <>
@@ -358,11 +409,12 @@ export function App({ api = customerReservationApi }: AppProps) {
                   <select
                     value={venueId}
                     onChange={(event) => {
+                      if (holdInFlight.current || actionInFlight.current) return
                       setVenueId(event.target.value)
                       setFormErrors((current) => ({ ...current, venue: '' }))
                       resetDownstream()
                     }}
-                    disabled={venueState !== 'success' || venues.length === 0}
+                    disabled={venueState !== 'success' || venues.length === 0 || mutationInFlight}
                   >
                     <option value="">Venue 선택</option>
                     {venues.map((venue) => (
@@ -375,10 +427,12 @@ export function App({ api = customerReservationApi }: AppProps) {
                     type="date"
                     value={date}
                     onChange={(event) => {
+                      if (holdInFlight.current || actionInFlight.current) return
                       setDate(event.target.value)
                       setFormErrors((current) => ({ ...current, date: '' }))
                       resetDownstream()
                     }}
+                    disabled={mutationInFlight}
                   />
                 </FormField>
                 <FormField id="party-size" label="인원" error={formErrors.partySize}>
@@ -389,13 +443,15 @@ export function App({ api = customerReservationApi }: AppProps) {
                     inputMode="numeric"
                     value={partySize}
                     onChange={(event) => {
+                      if (holdInFlight.current || actionInFlight.current) return
                       setPartySize(event.target.value)
                       setFormErrors((current) => ({ ...current, partySize: '' }))
                       resetDownstream()
                     }}
+                    disabled={mutationInFlight}
                   />
                 </FormField>
-                <Button type="submit" disabled={availabilityState === 'loading'}>
+                <Button type="submit" disabled={availabilityState === 'loading' || mutationInFlight}>
                   {availabilityState === 'loading' ? '조회 중…' : '예약 가능 시간 조회'}
                 </Button>
               </form>
@@ -405,7 +461,11 @@ export function App({ api = customerReservationApi }: AppProps) {
                 <div className="stack">
                   <ErrorNotice error={availabilityError} />
                   {lastSearch ? (
-                    <Button variant="secondary" onClick={() => void loadAvailability(lastSearch)}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => void loadAvailability(lastSearch)}
+                      disabled={mutationInFlight}
+                    >
                       같은 조건으로 다시 조회
                     </Button>
                   ) : null}
@@ -432,7 +492,11 @@ export function App({ api = customerReservationApi }: AppProps) {
                       item={item}
                       timezone={availability.timezone}
                       selected={selectedSlotId === item.slotInventoryId}
-                      onSelect={() => setSelectedSlotId(item.slotInventoryId)}
+                      disabled={mutationInFlight}
+                      onSelect={() => {
+                        if (holdInFlight.current || actionInFlight.current) return
+                        setSelectedSlotId(item.slotInventoryId)
+                      }}
                     />
                   ))}
                 </ul>
@@ -441,7 +505,10 @@ export function App({ api = customerReservationApi }: AppProps) {
               {selectedItem && lastSearch ? (
                 <div className="hold-action">
                   <p><strong>{selectedItem.resourceName}</strong> · {lastSearch.partySize}명</p>
-                  <Button onClick={() => void createHold()} disabled={holdState === 'loading'}>
+                  <Button
+                    onClick={() => void createHold()}
+                    disabled={mutationInFlight || reservationReadState === 'loading'}
+                  >
                     {holdState === 'loading' ? 'HOLD 생성 중…' : '이 시간 HOLD'}
                   </Button>
                 </div>
@@ -453,7 +520,11 @@ export function App({ api = customerReservationApi }: AppProps) {
                   <strong>HOLD 생성 결과를 확인할 수 없습니다</strong>
                   <span>Reservation ID를 받지 못했으므로 같은 요청을 자동 재전송하지 않습니다.</span>
                   {lastSearch ? (
-                    <Button variant="secondary" onClick={() => void loadAvailability(lastSearch)}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => void loadAvailability(lastSearch)}
+                      disabled={mutationInFlight}
+                    >
                       Availability 새로고침
                     </Button>
                   ) : null}
@@ -491,10 +562,17 @@ export function App({ api = customerReservationApi }: AppProps) {
                   {(canConfirm || canCancel) ? (
                     <div className="reservation-actions" aria-label="예약 작업">
                       {canConfirm ? (
-                        <Button onClick={() => void transition('confirm')} disabled={actionState === 'loading'}>예약 확정</Button>
+                        <Button
+                          onClick={() => void transition('confirm')}
+                          disabled={mutationInFlight || reservationReadState === 'loading'}
+                        >예약 확정</Button>
                       ) : null}
                       {canCancel ? (
-                        <Button variant="destructive" onClick={() => void transition('cancel')} disabled={actionState === 'loading'}>예약 취소</Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => void transition('cancel')}
+                          disabled={mutationInFlight || reservationReadState === 'loading'}
+                        >예약 취소</Button>
                       ) : null}
                     </div>
                   ) : (
@@ -517,7 +595,7 @@ export function App({ api = customerReservationApi }: AppProps) {
                   <Button
                     variant="secondary"
                     onClick={() => void refreshReservation()}
-                    disabled={reservationReadState === 'loading'}
+                    disabled={reservationReadState === 'loading' || mutationInFlight}
                   >
                     최신 Reservation 상태 조회
                   </Button>

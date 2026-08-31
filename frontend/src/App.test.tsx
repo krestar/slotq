@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import {
@@ -11,6 +11,7 @@ import {
 } from './customer/customerReservationApi'
 
 const venue = { id: 'venue-a', name: '서울 다이닝', timezone: 'Asia/Seoul' }
+const anotherVenue = { id: 'venue-b', name: '부산 다이닝', timezone: 'Asia/Seoul' }
 const slot = {
   slotInventoryId: 'slot-a',
   resourceId: 'resource-a',
@@ -138,6 +139,43 @@ describe('Customer reservation guided flow', () => {
     expect(api.getAvailability).toHaveBeenCalledOnce()
   })
 
+  it.each([
+    {
+      condition: 'Venue',
+      control: () => screen.getByRole('combobox', { name: 'Venue' }),
+      value: anotherVenue.id,
+    },
+    {
+      condition: 'date',
+      control: () => screen.getByLabelText('날짜'),
+      value: '2099-09-02',
+    },
+    {
+      condition: 'partySize',
+      control: () => screen.getByLabelText('인원'),
+      value: '4',
+    },
+  ])('does not restore stale Availability after $condition changes', async ({ control, value }) => {
+    let resolveAvailability: ((value: Availability) => void) | undefined
+    const api = makeApi({
+      listVenues: vi.fn().mockResolvedValue([venue, anotherVenue]),
+      getAvailability: vi.fn().mockReturnValue(
+        new Promise<Availability>((resolve) => { resolveAvailability = resolve }),
+      ),
+    })
+    await searchAvailability(api)
+
+    const input = control() as HTMLInputElement | HTMLSelectElement
+    fireEvent.change(input, { target: { value } })
+    expect(input.value).toBe(value)
+
+    await act(async () => { resolveAvailability?.(availability) })
+
+    expect(screen.queryByRole('list', { name: '예약 가능한 시간' })).not.toBeInTheDocument()
+    expect(screen.getByText('먼저 예약 가능한 시간을 조회해 주세요.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이 시간 HOLD' })).not.toBeInTheDocument()
+  })
+
   it('shows server HELD state and expiresAt, then uses command representations for confirm and cancel', async () => {
     const api = makeApi()
     await createHeldReservation(api)
@@ -167,6 +205,28 @@ describe('Customer reservation guided flow', () => {
     expect(screen.getByRole('status')).toHaveTextContent('서버가 이 예약을 EXPIRED 상태로 반환')
     expect(screen.queryByRole('button', { name: '예약 확정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '예약 취소' })).not.toBeInTheDocument()
+  })
+
+  it('does not restore a Reservation GET response after its search context is reset', async () => {
+    let resolveReservation: ((value: Reservation) => void) | undefined
+    const api = makeApi({
+      getReservation: vi.fn().mockReturnValue(
+        new Promise<Reservation>((resolve) => { resolveReservation = resolve }),
+      ),
+    })
+    await createHeldReservation(api)
+
+    fireEvent.click(screen.getByRole('button', { name: '최신 Reservation 상태 조회' }))
+    expect(screen.getByText('최신 예약 상태를 조회하는 중입니다.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('인원'), { target: { value: '4' } })
+    expect(screen.queryByRole('article', { name: '현재 예약' })).not.toBeInTheDocument()
+
+    await act(async () => { resolveReservation?.({ ...held, state: 'CONFIRMED' }) })
+
+    expect(screen.queryByRole('article', { name: '현재 예약' })).not.toBeInTheDocument()
+    expect(screen.getByText('HOLD를 생성하면 서버가 반환한 예약 상태가 여기에 표시됩니다.'))
+      .toBeInTheDocument()
   })
 
   it.each<ProductErrorCode>([
@@ -253,9 +313,38 @@ describe('Customer reservation guided flow', () => {
     fireEvent.click(confirm)
 
     expect(confirm).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
+    expect(screen.getByLabelText('날짜')).toBeDisabled()
+    expect(screen.getByLabelText('인원')).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('인원'), { target: { value: '4' } })
     expect(confirmReservation).toHaveBeenCalledOnce()
     resolveConfirm?.({ ...held, state: 'CONFIRMED' })
     await waitFor(() => expect(screen.getByText('CONFIRMED')).toBeInTheDocument())
+    expect(screen.getByLabelText('인원')).toHaveValue(2)
+  })
+
+  it('keeps the reservation context immutable while cancel is in flight', async () => {
+    let resolveCancel: ((value: Reservation) => void) | undefined
+    const cancelReservation = vi.fn().mockReturnValue(
+      new Promise<Reservation>((resolve) => { resolveCancel = resolve }),
+    )
+    const api = makeApi({ cancelReservation })
+    await createHeldReservation(api)
+
+    const cancel = screen.getByRole('button', { name: '예약 취소' })
+    fireEvent.click(cancel)
+    fireEvent.click(cancel)
+
+    expect(cancel).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+      target: { value: anotherVenue.id },
+    })
+    expect(cancelReservation).toHaveBeenCalledOnce()
+
+    resolveCancel?.({ ...held, state: 'CANCELLED' })
+    expect(await screen.findByText('CANCELLED')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Venue' })).toHaveValue(venue.id)
   })
 
   it('blocks duplicate HOLD submit while creation is in flight', async () => {
@@ -272,8 +361,15 @@ describe('Customer reservation guided flow', () => {
     fireEvent.click(holdButton)
 
     expect(holdButton).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
+    expect(screen.getByLabelText('날짜')).toBeDisabled()
+    expect(screen.getByLabelText('인원')).toBeDisabled()
+    expect(screen.getByRole('button', { name: '예약 가능 시간 조회' })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('인원'), { target: { value: '4' } })
     expect(createHold).toHaveBeenCalledOnce()
     resolveHold?.(held)
     expect(await screen.findByRole('article', { name: '현재 예약' })).toBeInTheDocument()
+    expect(createHold).toHaveBeenCalledWith(venue.id, slot.slotInventoryId, 2)
+    expect(screen.getByLabelText('인원')).toHaveValue(2)
   })
 })
