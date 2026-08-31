@@ -108,8 +108,26 @@ textarea {
 }
 
 .site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
   padding-block: var(--space-5);
   border-bottom: var(--border-width-default) solid var(--color-border);
+}
+
+.surface-navigation,
+.filter-row,
+.section-heading,
+.resource-form,
+.slot-create-form {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.surface-navigation {
+  flex-wrap: wrap;
 }
 
 .brand {
@@ -387,6 +405,152 @@ h1 {
   line-height: var(--line-height-sm);
 }
 
+.management-shell {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.management-section,
+.configuration-panel {
+  padding: var(--space-5);
+  border: var(--border-width-default) solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+.management-section h2,
+.configuration-panel h3 {
+  margin: 0;
+}
+
+.venue-selector {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.venue-selector .form-field {
+  max-width: 32rem;
+}
+
+.venue-timezone,
+.section-heading p,
+.muted {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+
+.section-heading {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.filter-row {
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+
+.reservation-list,
+.resource-list,
+.slot-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reservation-row,
+.resource-list > li {
+  padding: var(--space-4);
+  border: var(--border-width-default) solid var(--color-border);
+  border-radius: var(--radius-default);
+}
+
+.reservation-scan {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) auto minmax(10rem, 1fr) auto minmax(12rem, 1.4fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.reservation-row .reservation-actions {
+  margin-top: var(--space-3);
+}
+
+.configuration-section {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.configuration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.configuration-panel {
+  border-radius: var(--radius-default);
+}
+
+.compact-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.policy-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.policy-form .button {
+  justify-self: start;
+}
+
+.read-only-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.read-only-details dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.read-only-details dd {
+  margin: var(--space-1) 0 0;
+}
+
+.resource-form,
+.slot-create-form {
+  flex-wrap: wrap;
+}
+
+.resource-form .form-field,
+.slot-create-form .form-field {
+  flex: 1 1 12rem;
+}
+
+.create-form,
+.slot-create-form {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-width-default) solid var(--color-border);
+}
+
+.slot-list li {
+  padding-block: var(--space-2);
+  border-bottom: var(--border-width-default) solid var(--color-border);
+}
+
+.management-mutation-notice {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
 .control--default {
   min-height: var(--control-height-default);
 }
@@ -549,6 +713,12 @@ h1 {
   .search-form .button {
     width: 100%;
   }
+
+  .reservation-scan,
+  .configuration-grid,
+  .policy-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 36rem) {
@@ -570,5 +740,14 @@ h1 {
 
   .reservation-summary {
     grid-template-columns: 1fr;
+  }
+
+  .site-header,
+  .filter-row,
+  .section-heading,
+  .resource-form,
+  .slot-create-form {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
