@@ -83,39 +83,46 @@ class ManagementService implements ManagementUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Venue> getVenues(AuthenticatedPrincipal principal) {
+    public List<VenueItem> getVenues(AuthenticatedPrincipal principal) {
         return authorization.discoverVenueAccess(principal).stream()
             .flatMap(actor -> actor.venueGrants().stream()
-                .map(venueId -> venueUseCase.getVenue(actor.tenantId(), venueId)))
-            .sorted(Comparator.comparing((Venue venue) -> venue.tenantId().value())
-                .thenComparing(venue -> venue.id().value()))
+                .map(venueId -> new VenueItem(
+                    venueUseCase.getVenue(actor.tenantId(), venueId),
+                    actor.canManageConfiguration()
+                )))
+            .sorted(Comparator.comparing((VenueItem item) -> item.venue().tenantId().value())
+                .thenComparing(item -> item.venue().id().value()))
             .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Venue getVenue(AuthenticatedPrincipal principal, VenueId venueId) {
+    public VenueItem getVenue(AuthenticatedPrincipal principal, VenueId venueId) {
         ActorContext actor = authorization.requireVenueAccess(principal, venueId);
-        return venueUseCase.getVenue(actor.tenantId(), venueId);
+        return new VenueItem(
+            venueUseCase.getVenue(actor.tenantId(), venueId),
+            actor.canManageConfiguration()
+        );
     }
 
     @Override
     @Transactional
-    public Venue patchVenue(AuthenticatedPrincipal principal, VenueId venueId, PatchVenue patch) {
+    public VenueItem patchVenue(AuthenticatedPrincipal principal, VenueId venueId, PatchVenue patch) {
         ActorContext actor = authorization.requireVenueConfigurationAccess(principal, venueId);
         Venue current = venueUseCase.getVenue(actor.tenantId(), venueId);
         validateVenuePatch(patch, current);
         String name = patch.name().supplied() ? patch.name().value().strip() : current.name();
         VenueStatus status = patch.status().supplied() ? patch.status().value() : current.status();
-        return venueUseCase.updateVenue(new VenueConfigurationUseCase.UpdateVenue(
+        Venue updated = venueUseCase.updateVenue(new VenueConfigurationUseCase.UpdateVenue(
             actor.tenantId(), venueId, name, status, current.timezone().getId(), current.operatingHours()
         ));
+        return new VenueItem(updated, actor.canManageConfiguration());
     }
 
     @Override
     @Transactional(readOnly = true)
     public BookingPolicy getPolicy(AuthenticatedPrincipal principal, VenueId venueId) {
-        return getVenue(principal, venueId).currentPolicy();
+        return getVenue(principal, venueId).venue().currentPolicy();
     }
 
     @Override

@@ -20,11 +20,11 @@ import com.slotq.venue.domain.VenueStatus;
 
 public interface ManagementUseCase {
 
-    List<Venue> getVenues(AuthenticatedPrincipal principal);
+    List<VenueItem> getVenues(AuthenticatedPrincipal principal);
 
-    Venue getVenue(AuthenticatedPrincipal principal, VenueId venueId);
+    VenueItem getVenue(AuthenticatedPrincipal principal, VenueId venueId);
 
-    Venue patchVenue(AuthenticatedPrincipal principal, VenueId venueId, PatchVenue patch);
+    VenueItem patchVenue(AuthenticatedPrincipal principal, VenueId venueId, PatchVenue patch);
 
     BookingPolicy getPolicy(AuthenticatedPrincipal principal, VenueId venueId);
 
@@ -81,6 +81,8 @@ public interface ManagementUseCase {
     ) { }
 
     record CreateSlotInventory(ResourceId resourceId, String startsAt) { }
+
+    record VenueItem(Venue venue, boolean configurationWritable) { }
 
     record ReservationItem(
         Reservation reservation,
