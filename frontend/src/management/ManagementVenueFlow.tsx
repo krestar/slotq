@@ -30,6 +30,11 @@ type LoadState = 'idle' | 'loading' | 'success' | 'error'
 type ConfigurationMutation = 'venue' | 'policy' | 'resource-create' | 'resource-patch' | 'slot-create'
 type UnknownMutation = ConfigurationMutation | 'reservation-command'
 
+function affectsConfigurationRead(kind: UnknownMutation): boolean {
+  return kind === 'venue' || kind === 'policy'
+    || kind === 'resource-create' || kind === 'resource-patch'
+}
+
 const reservationStates: ReservationState[] = [
   'HELD', 'CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'NO_SHOW', 'EXPIRED',
 ]
@@ -115,13 +120,26 @@ export function ManagementVenueFlow({
   const [reservationError, setReservationError] = useState<ManagementApiError>()
   const [mutation, setMutation] = useState<UnknownMutation>()
   const [resultUnknown, setResultUnknown] = useState<UnknownMutation>()
+  const [reconcilingUnknown, setReconcilingUnknown] = useState(false)
   const [mutationError, setMutationError] = useState<ManagementApiError>()
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [fieldErrorScope, setFieldErrorScope] = useState('')
-  const venueGeneration = useRef(0)
+  const configurationGeneration = useRef(0)
   const slotGeneration = useRef(0)
   const reservationGeneration = useRef(0)
+  const resultUnknownGeneration = useRef(0)
   const mutationInFlight = useRef(false)
+  const unknownReconciliationInFlight = useRef(false)
+
+  function clearResultUnknown() {
+    resultUnknownGeneration.current += 1
+    setResultUnknown(undefined)
+  }
+
+  function markResultUnknown(kind: UnknownMutation) {
+    resultUnknownGeneration.current += 1
+    setResultUnknown(kind)
+  }
 
   async function loadVenues() {
     setVenueListState('loading')
@@ -138,39 +156,47 @@ export function ManagementVenueFlow({
 
   useEffect(() => { void loadVenues() }, [api])
 
-  async function loadConfiguration(targetVenueId: string, generation: number) {
+  async function loadConfiguration(targetVenueId: string): Promise<boolean> {
+    const generation = configurationGeneration.current + 1
+    configurationGeneration.current = generation
     setConfigurationState('loading')
     setConfigurationError(undefined)
     try {
       const [nextDetail, nextPolicy, nextResources] = await Promise.all([
         api.getVenue(targetVenueId), api.getPolicy(targetVenueId), api.listResources(targetVenueId),
       ])
-      if (generation !== venueGeneration.current) return
+      if (generation !== configurationGeneration.current) return false
       setDetail(nextDetail)
       setPolicy(nextPolicy)
       setResources(nextResources)
+      setVenues((current) => current.map((item) =>
+        item.id === nextDetail.id ? nextDetail : item))
       setConfigurationState('success')
+      return true
     } catch (error) {
-      if (generation !== venueGeneration.current) return
+      if (generation !== configurationGeneration.current) return false
       setConfigurationError(normalizeError(error))
       setConfigurationState('error')
+      return false
     }
   }
 
-  async function loadSlots(targetVenueId: string, targetDate: string) {
+  async function loadSlots(targetVenueId: string, targetDate: string): Promise<boolean> {
     const generation = slotGeneration.current + 1
     slotGeneration.current = generation
     setSlotState('loading')
     setSlotError(undefined)
     try {
       const result = await api.listSlots(targetVenueId, targetDate)
-      if (generation !== slotGeneration.current) return
+      if (generation !== slotGeneration.current) return false
       setSlots(result)
       setSlotState('success')
+      return true
     } catch (error) {
-      if (generation !== slotGeneration.current) return
+      if (generation !== slotGeneration.current) return false
       setSlotError(normalizeError(error))
       setSlotState('error')
+      return false
     }
   }
 
@@ -178,7 +204,7 @@ export function ManagementVenueFlow({
     targetVenueId: string,
     targetDate: string,
     targetStatus: ReservationState | '',
-  ) {
+  ): Promise<boolean> {
     const generation = reservationGeneration.current + 1
     reservationGeneration.current = generation
     setReservationState('loading')
@@ -187,19 +213,21 @@ export function ManagementVenueFlow({
       const result = await api.listReservations(
         targetVenueId, targetDate, targetStatus || undefined,
       )
-      if (generation !== reservationGeneration.current) return
+      if (generation !== reservationGeneration.current) return false
       setReservations(result)
       setReservationState('success')
+      return true
     } catch (error) {
-      if (generation !== reservationGeneration.current) return
+      if (generation !== reservationGeneration.current) return false
       setReservationError(normalizeError(error))
       setReservationState('error')
+      return false
     }
   }
 
   function selectVenue(nextVenueId: string) {
     if (mutationInFlight.current) return
-    venueGeneration.current += 1
+    configurationGeneration.current += 1
     slotGeneration.current += 1
     reservationGeneration.current += 1
     setVenueId(nextVenueId)
@@ -215,14 +243,13 @@ export function ManagementVenueFlow({
     setSlotError(undefined)
     setReservationError(undefined)
     setMutationError(undefined)
-    setResultUnknown(undefined)
+    clearResultUnknown()
     const selected = venues.find((venue) => venue.id === nextVenueId)
     const nextDate = selected ? venueToday(selected.timezone) : ''
     setDate(nextDate)
     setStatus('')
     if (!selected) return
-    const generation = venueGeneration.current
-    void loadConfiguration(nextVenueId, generation)
+    void loadConfiguration(nextVenueId)
     void loadSlots(nextVenueId, nextDate)
     void loadReservations(nextVenueId, nextDate, '')
   }
@@ -260,15 +287,20 @@ export function ManagementVenueFlow({
     mutationInFlight.current = true
     setMutation(kind)
     setMutationError(undefined)
-    setResultUnknown(undefined)
+    clearResultUnknown()
     setFieldErrors({})
     setFieldErrorScope('')
     try {
       const result = await command()
+      if (affectsConfigurationRead(kind)) configurationGeneration.current += 1
       apply(result)
+      if (affectsConfigurationRead(kind)) {
+        setConfigurationError(undefined)
+        setConfigurationState('success')
+      }
       return result
     } catch (error) {
-      if (error instanceof ManagementMutationResultUnknownError) setResultUnknown(kind)
+      if (error instanceof ManagementMutationResultUnknownError) markResultUnknown(kind)
       else {
         const normalized = normalizeError(error)
         setMutationError(normalized)
@@ -289,6 +321,7 @@ export function ManagementVenueFlow({
     const nextStatus = String(data.get('status')) as ManagementVenue['status']
     if (!name) {
       setFieldErrors({ name: 'Venue 이름을 입력해 주세요.' })
+      setFieldErrorScope('venue')
       return
     }
     const context = { venueId: detail.id }
@@ -351,10 +384,17 @@ export function ManagementVenueFlow({
       startsAt: String(data.get('startsAt') ?? '').trim(),
     }
     const context = { venueId: detail.id, date }
-    void runMutation('slot-create', () => api.createSlot(context.venueId, input), (created) => {
-      if (context.venueId === venueId && context.date === date) setSlots((current) => [...current, created])
-      form.reset()
-    })
+    void (async () => {
+      const result = await runMutation(
+        'slot-create',
+        () => api.createSlot(context.venueId, input),
+        () => form.reset(),
+      )
+      if (!result) return
+      if (context.venueId === venueId && context.date === date) {
+        await loadSlots(context.venueId, context.date)
+      }
+    })()
   }
 
   async function commandReservation(reservation: ManagementReservation, action: ReservationAction) {
@@ -378,17 +418,28 @@ export function ManagementVenueFlow({
   const errorFor = (scope: string, field: string) =>
     fieldErrorScope === scope ? fieldErrors[field] : undefined
 
-  function reconcileUnknown() {
-    if (!venueId) return
-    if (resultUnknown === 'slot-create') {
-      if (date) void loadSlots(venueId, date)
-      return
+  async function reconcileUnknown() {
+    if (!venueId || !resultUnknown || unknownReconciliationInFlight.current) return
+    const unknown = resultUnknown
+    const unknownGeneration = resultUnknownGeneration.current
+    const context = { venueId, date, status }
+    unknownReconciliationInFlight.current = true
+    setReconcilingUnknown(true)
+    try {
+      const reconciled = unknown === 'slot-create'
+        ? Boolean(context.date) && await loadSlots(context.venueId, context.date)
+        : unknown === 'reservation-command'
+          ? Boolean(context.date) && await loadReservations(
+            context.venueId, context.date, context.status,
+          )
+          : await loadConfiguration(context.venueId)
+      if (reconciled && unknownGeneration === resultUnknownGeneration.current) {
+        clearResultUnknown()
+      }
+    } finally {
+      unknownReconciliationInFlight.current = false
+      setReconcilingUnknown(false)
     }
-    if (resultUnknown === 'reservation-command') {
-      if (date) void loadReservations(venueId, date, status)
-      return
-    }
-    void loadConfiguration(venueId, venueGeneration.current)
   }
 
   return (
@@ -472,7 +523,7 @@ export function ManagementVenueFlow({
                   <article className="configuration-panel">
                     <h3>Venue</h3>
                     {writable ? (
-                      <form className="compact-form" onSubmit={submitVenue} noValidate>
+                      <form key={`${detail.id}:${detail.name}:${detail.status}`} className="compact-form" onSubmit={submitVenue} noValidate>
                         <FormField id="venue-name" label="이름" density="compact" error={errorFor('venue', 'name')}><input name="name" defaultValue={detail.name} disabled={busy} /></FormField>
                         <FormField id="venue-status" label="상태" density="compact" error={errorFor('venue', 'status')}><select name="status" defaultValue={detail.status} disabled={busy}><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></FormField>
                         <Button density="compact" type="submit" disabled={busy}>{mutation === 'venue' ? '저장 중…' : 'Venue 저장'}</Button>
@@ -482,7 +533,7 @@ export function ManagementVenueFlow({
                   <article className="configuration-panel">
                     <h3>Policy v{policy.version}</h3>
                     {writable ? (
-                      <form className="compact-form policy-form" onSubmit={submitPolicy} noValidate>
+                      <form key={`${detail.id}:${policy.version}:${policy.slotDurationMinutes}:${policy.holdDurationMinutes}:${policy.cancellationCutoffMinutes}:${policy.noShowGraceMinutes}`} className="compact-form policy-form" onSubmit={submitPolicy} noValidate>
                         {(['slotDurationMinutes', 'holdDurationMinutes', 'cancellationCutoffMinutes', 'noShowGraceMinutes'] as const).map((field) => <FormField key={field} id={`policy-${field}`} label={field} density="compact" error={errorFor('policy', field)}><input name={field} type="number" min={field.includes('Duration') ? 1 : 0} defaultValue={policy[field]} disabled={busy} /></FormField>)}
                         <Button density="compact" type="submit" disabled={busy}>{mutation === 'policy' ? '저장 중…' : 'Policy 전체 저장'}</Button>
                       </form>
@@ -497,7 +548,7 @@ export function ManagementVenueFlow({
                   {resources.length === 0 ? <p className="notice notice--empty" role="status">Resource가 없습니다.</p> : null}
                   <ul className="resource-list">
                     {resources.map((resource) => <li key={resource.id}>
-                      {writable ? <form className="resource-form" onSubmit={(event) => submitResourcePatch(event, resource)}>
+                      {writable ? <form key={`${resource.id}:${resource.name}:${resource.seatingCapacity}:${resource.status}`} className="resource-form" onSubmit={(event) => submitResourcePatch(event, resource)}>
                         <FormField id={`resource-name-${resource.id}`} label="이름" density="compact" error={errorFor(`resource-patch:${resource.id}`, 'name')}><input name="name" defaultValue={resource.name} disabled={busy} /></FormField>
                         <FormField id={`resource-seats-${resource.id}`} label="좌석 수" density="compact" error={errorFor(`resource-patch:${resource.id}`, 'seatingCapacity')}><input name="seatingCapacity" type="number" min="1" defaultValue={resource.seatingCapacity} disabled={busy} /></FormField>
                         <FormField id={`resource-status-${resource.id}`} label="상태" density="compact" error={errorFor(`resource-patch:${resource.id}`, 'status')}><select name="status" defaultValue={resource.status} disabled={busy}><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></FormField>
@@ -529,8 +580,8 @@ export function ManagementVenueFlow({
           </>
         ) : <p className="step-placeholder">서버가 반환한 Venue 중 하나를 선택해 주세요.</p>}
 
-        {mutationError ? <div className="management-mutation-notice"><ErrorNotice error={mutationError} />{venueId && date ? <Button density="compact" variant="secondary" onClick={() => { void loadConfiguration(venueId, venueGeneration.current); void loadSlots(venueId, date); void loadReservations(venueId, date, status) }}>관련 데이터 다시 조회</Button> : null}</div> : null}
-        {resultUnknown ? <div className="notice notice--unknown" role="alert"><strong>작업 결과를 확인할 수 없습니다</strong><span>성공이나 실패를 추정하지 않고 자동 재전송하지 않았습니다. 관련 목록을 다시 조회해 확인해 주세요.</span><code>RESULT_UNKNOWN</code><Button density="compact" variant="secondary" onClick={reconcileUnknown}>관련 데이터 다시 조회</Button></div> : null}
+        {mutationError ? <div className="management-mutation-notice"><ErrorNotice error={mutationError} />{venueId && date ? <Button density="compact" variant="secondary" onClick={() => { void loadConfiguration(venueId); void loadSlots(venueId, date); void loadReservations(venueId, date, status) }}>관련 데이터 다시 조회</Button> : null}</div> : null}
+        {resultUnknown ? <div className="notice notice--unknown" role="alert"><strong>작업 결과를 확인할 수 없습니다</strong><span>성공이나 실패를 추정하지 않고 자동 재전송하지 않았습니다. 관련 목록을 다시 조회해 확인해 주세요.</span><code>RESULT_UNKNOWN</code><Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileUnknown()}>{reconcilingUnknown ? '조회 중…' : '관련 데이터 다시 조회'}</Button></div> : null}
       </main>
       <footer className="site-footer"><small>Server scope and allowedActions are the source of truth.</small></footer>
     </>

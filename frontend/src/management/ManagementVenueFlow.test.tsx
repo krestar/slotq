@@ -253,6 +253,30 @@ describe('Management Venue flow', () => {
     expect(screen.queryByText('CANCELLED', { selector: '.status-badge' })).not.toBeInTheDocument()
   })
 
+  it('does not let a pending same-Venue configuration read overwrite a later Policy mutation', async () => {
+    let resolveOldPolicy: ((value: typeof policy) => void) | undefined
+    const updatedPolicy = { ...policy, version: 4, slotDurationMinutes: 45 }
+    const getPolicy = vi.fn()
+      .mockResolvedValueOnce(policy)
+      .mockReturnValueOnce(new Promise((resolve) => { resolveOldPolicy = resolve }))
+    const putPolicy = vi.fn()
+      .mockRejectedValueOnce(new ManagementMutationResultUnknownError('NETWORK_ERROR'))
+      .mockResolvedValueOnce(updatedPolicy)
+    const api = makeApi({ getPolicy, putPolicy })
+    await selectVenue(api)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Policy 전체 저장' }))
+    expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
+    await waitFor(() => expect(getPolicy).toHaveBeenCalledTimes(2))
+
+    fireEvent.change(screen.getByLabelText('slotDurationMinutes'), { target: { value: '45' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Policy 전체 저장' }))
+    expect(await screen.findByRole('heading', { level: 3, name: 'Policy v4' })).toBeInTheDocument()
+    await act(async () => { resolveOldPolicy?.(policy) })
+    expect(screen.getByRole('heading', { level: 3, name: 'Policy v4' })).toBeInTheDocument()
+  })
+
   it('connects server validation field errors to native controls', async () => {
     const api = makeApi({
       patchVenue: vi.fn().mockRejectedValue(
@@ -262,6 +286,19 @@ describe('Management Venue flow', () => {
     await selectVenue(api)
     fireEvent.click(screen.getByRole('button', { name: 'Venue 저장' }))
     const input = await screen.findByLabelText('이름', { selector: '#venue-name' })
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAttribute('aria-describedby', 'venue-name-error')
+  })
+
+  it('connects client blank Venue validation without sending a request', async () => {
+    const api = makeApi()
+    await selectVenue(api)
+    const input = screen.getByLabelText('이름', { selector: '#venue-name' })
+    fireEvent.change(input, { target: { value: '   ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Venue 저장' }))
+
+    expect(api.patchVenue).not.toHaveBeenCalled()
+    expect(await screen.findByText('Venue 이름을 입력해 주세요.')).toBeInTheDocument()
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input).toHaveAttribute('aria-describedby', 'venue-name-error')
   })
@@ -295,6 +332,115 @@ describe('Management Venue flow', () => {
     expect(unknownApi.createResource).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
     await waitFor(() => expect(unknownApi.listResources).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument())
+  })
+
+  it('keeps result unknown after failed reconciliation', async () => {
+    const listResources = vi.fn()
+      .mockResolvedValueOnce([resource])
+      .mockRejectedValueOnce(new ManagementApiError(500, 'INTERNAL_ERROR'))
+    const api = makeApi({
+      listResources,
+      createResource: vi.fn().mockRejectedValue(
+        new ManagementMutationResultUnknownError('NETWORK_ERROR'),
+      ),
+    })
+    await selectVenue(api)
+    fireEvent.change(screen.getByLabelText('새 TABLE 이름'), { target: { value: 'Unknown' } })
+    fireEvent.change(screen.getByLabelText('좌석 수', { selector: '#new-resource-seats' }), { target: { value: '4' } })
+    fireEvent.click(screen.getByRole('button', { name: 'TABLE Resource 추가' }))
+    expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
+    expect(await screen.findByText('INTERNAL_ERROR')).toBeInTheDocument()
+    expect(screen.getByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+  })
+
+  it('reconciles an unknown Venue PATCH in both selector and detail', async () => {
+    const reconciledVenue = { ...ownerVenue, name: 'Reconciled Venue', status: 'INACTIVE' as const }
+    const api = makeApi({
+      getVenue: vi.fn().mockResolvedValueOnce(ownerVenue).mockResolvedValueOnce(reconciledVenue),
+      patchVenue: vi.fn().mockRejectedValue(
+        new ManagementMutationResultUnknownError('NETWORK_ERROR'),
+      ),
+    })
+    await selectVenue(api)
+    fireEvent.change(screen.getByLabelText('이름', { selector: '#venue-name' }), {
+      target: { value: 'Possibly saved' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Venue 저장' }))
+    expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
+    expect(await screen.findByRole('option', { name: /Reconciled Venue/ })).toBeInTheDocument()
+    expect(screen.getByLabelText('이름', { selector: '#venue-name' })).toHaveValue('Reconciled Venue')
+    expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
+  })
+
+  it('clears result unknown only after successful Slot and Reservation reconciliation', async () => {
+    const slotApi = makeApi({
+      listSlots: vi.fn().mockResolvedValue([slot]),
+      createSlot: vi.fn().mockRejectedValue(
+        new ManagementMutationResultUnknownError('NETWORK_ERROR'),
+      ),
+    })
+    await selectVenue(slotApi)
+    fireEvent.change(screen.getByLabelText('Resource', { selector: '#slot-resource' }), {
+      target: { value: resource.id },
+    })
+    fireEvent.change(screen.getByLabelText('startsAt (RFC3339 offset)'), {
+      target: { value: '2099-08-31T18:00:00+09:00' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Slot 생성' }))
+    expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
+    await waitFor(() => expect(slotApi.listSlots).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument())
+
+    cleanup()
+    const listReservations = vi.fn()
+      .mockResolvedValueOnce([reservation])
+      .mockResolvedValueOnce([{ ...reservation, state: 'CHECKED_IN', allowedActions: ['complete'] }])
+    const reservationApi = makeApi({
+      listReservations,
+      commandReservation: vi.fn().mockRejectedValue(
+        new ManagementMutationResultUnknownError('NETWORK_ERROR'),
+      ),
+    })
+    await selectVenue(reservationApi)
+    fireEvent.click(screen.getByRole('button', { name: '체크인' }))
+    expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
+    expect(await screen.findByRole('button', { name: '완료' })).toBeInTheDocument()
+    expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
+  })
+
+  it('re-fetches the selected date after Slot creation instead of appending another date', async () => {
+    const otherDateSlot = {
+      ...slot,
+      id: 'slot-other-date',
+      startsAt: '2099-09-01T18:00:00+09:00',
+      endsAt: '2099-09-01T18:30:00+09:00',
+    }
+    const listSlots = vi.fn().mockResolvedValue([slot])
+    const api = makeApi({
+      listSlots,
+      createSlot: vi.fn().mockResolvedValue(otherDateSlot),
+    })
+    await selectVenue(api)
+    fireEvent.change(screen.getByLabelText('Venue-local 날짜'), { target: { value: '2099-08-31' } })
+    await waitFor(() => expect(listSlots).toHaveBeenCalledTimes(2))
+    fireEvent.change(screen.getByLabelText('Resource', { selector: '#slot-resource' }), {
+      target: { value: resource.id },
+    })
+    fireEvent.change(screen.getByLabelText('startsAt (RFC3339 offset)'), {
+      target: { value: otherDateSlot.startsAt },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Slot 생성' }))
+
+    await waitFor(() => expect(listSlots).toHaveBeenCalledTimes(3))
+    expect(listSlots).toHaveBeenLastCalledWith(ownerVenue.id, '2099-08-31')
+    expect(document.querySelector(`time[datetime="${otherDateSlot.startsAt}"]`)).not.toBeInTheDocument()
   })
 
   it.each([
