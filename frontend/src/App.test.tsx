@@ -9,6 +9,7 @@ import {
   type ProductErrorCode,
   type Reservation,
 } from './customer/customerReservationApi'
+import type { ManagementApi } from './management/managementApi'
 
 const venue = { id: 'venue-a', name: '서울 다이닝', timezone: 'Asia/Seoul' }
 const anotherVenue = { id: 'venue-b', name: '부산 다이닝', timezone: 'Asia/Seoul' }
@@ -280,6 +281,9 @@ describe('Customer reservation guided flow', () => {
     expect(alert).toHaveTextContent('Reservation ID를 받지 못했으므로 같은 요청을 자동 재전송하지 않습니다')
     expect(screen.getByRole('button', { name: 'Availability 새로고침' })).toBeInTheDocument()
     expect(api.createHold).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Availability 새로고침' }))
+    await waitFor(() => expect(api.getAvailability).toHaveBeenCalledTimes(2))
+    expect(api.createHold).toHaveBeenCalledOnce()
   })
 
   it('marks a timeout/5xx command result unknown and reconciles with explicit Reservation GET', async () => {
@@ -321,6 +325,79 @@ describe('Customer reservation guided flow', () => {
     resolveConfirm?.({ ...held, state: 'CONFIRMED' })
     await waitFor(() => expect(screen.getByText('CONFIRMED')).toBeInTheDocument())
     expect(screen.getByLabelText('인원')).toHaveValue(2)
+  })
+
+  it.each([
+    ['예약 확정', 'confirmReservation', 'CONFIRMED'],
+    ['예약 취소', 'cancelReservation', 'CANCELLED'],
+  ] as const)(
+    'blocks App surface navigation while %s is in flight',
+    async (buttonName, method, resolvedState) => {
+      let resolveCommand: ((value: Reservation) => void) | undefined
+      const command = vi.fn().mockReturnValue(
+        new Promise<Reservation>((resolve) => { resolveCommand = resolve }),
+      )
+      const api = makeApi({ [method]: command })
+      await createHeldReservation(api)
+
+      fireEvent.click(screen.getByRole('button', { name: buttonName }))
+      const managementNavigation = screen.getByRole('button', { name: 'Venue 운영' })
+      expect(managementNavigation).toBeDisabled()
+      fireEvent.click(managementNavigation)
+      expect(screen.getByRole('heading', { level: 1, name: '예약하기' })).toBeInTheDocument()
+      expect(command).toHaveBeenCalledOnce()
+
+      resolveCommand?.({ ...held, state: resolvedState })
+      await waitFor(() => expect(managementNavigation).toBeEnabled())
+    },
+  )
+
+  it('preserves known result-unknown identity until exact GET, then restores navigation', async () => {
+    const api = makeApi({
+      listVenues: vi.fn().mockResolvedValue([venue, anotherVenue]),
+      confirmReservation: vi.fn().mockRejectedValue(
+        new MutationResultUnknownError('INTERNAL_ERROR'),
+      ),
+      getReservation: vi.fn().mockResolvedValue({ ...held, state: 'CONFIRMED' }),
+    })
+    const managementApi = {
+      listVenues: vi.fn().mockResolvedValue([]),
+    } as unknown as ManagementApi
+    render(<App api={api} managementApi={managementApi} />)
+    await screen.findByRole('option', { name: /서울 다이닝/ })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+      target: { value: venue.id },
+    })
+    fireEvent.change(screen.getByLabelText('날짜'), { target: { value: '2099-09-01' } })
+    fireEvent.change(screen.getByLabelText('인원'), { target: { value: '2' } })
+    fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 조회' }))
+    fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    await screen.findByRole('article', { name: '현재 예약' })
+    fireEvent.click(screen.getByRole('button', { name: '예약 확정' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('성공이나 실패를 추정하지 않습니다')
+    const venueSelect = screen.getByRole('combobox', { name: 'Venue' })
+    const dateInput = screen.getByLabelText('날짜')
+    const partySizeInput = screen.getByLabelText('인원')
+    const managementNavigation = screen.getByRole('button', { name: 'Venue 운영' })
+    expect(venueSelect).toBeDisabled()
+    expect(dateInput).toBeDisabled()
+    expect(partySizeInput).toBeDisabled()
+    expect(managementNavigation).toBeDisabled()
+    fireEvent.change(venueSelect, { target: { value: anotherVenue.id } })
+    fireEvent.change(dateInput, { target: { value: '2099-09-02' } })
+    fireEvent.change(partySizeInput, { target: { value: '4' } })
+    expect(venueSelect).toHaveValue(venue.id)
+    expect(dateInput).toHaveValue('2099-09-01')
+    expect(partySizeInput).toHaveValue(2)
+
+    fireEvent.click(screen.getByRole('button', { name: '최신 Reservation 상태 조회' }))
+    expect(await screen.findByText('CONFIRMED')).toBeInTheDocument()
+    expect(api.getReservation).toHaveBeenCalledWith(venue.id, held.id)
+    await waitFor(() => expect(managementNavigation).toBeEnabled())
+    fireEvent.click(managementNavigation)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Venue 운영' })).toBeInTheDocument()
   })
 
   it('keeps the reservation context immutable while cancel is in flight', async () => {

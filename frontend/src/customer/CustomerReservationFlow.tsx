@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Button, FormField, StatusBadge } from '../components'
 import {
   CustomerApiError,
@@ -15,6 +15,7 @@ import {
 export interface CustomerReservationFlowProps {
   api?: CustomerReservationApi
   navigation?: ReactNode
+  onNavigationLockChange?: (locked: boolean) => void
 }
 
 interface SearchInput {
@@ -169,6 +170,7 @@ function AvailabilityCard({
 export function CustomerReservationFlow({
   api = customerReservationApi,
   navigation,
+  onNavigationLockChange,
 }: CustomerReservationFlowProps) {
   const [venues, setVenues] = useState<VenueSummary[]>([])
   const [venueState, setVenueState] = useState<LoadState>('loading')
@@ -263,7 +265,7 @@ export function CustomerReservationFlow({
 
   function submitAvailability(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (holdInFlight.current || actionInFlight.current) return
+    if (holdInFlight.current || actionInFlight.current || resultUnknown === 'transition') return
     const nextErrors: Record<string, string> = {}
     const parsedPartySize = Number(partySize)
     if (!venueId) nextErrors.venue = 'Venue를 선택해 주세요.'
@@ -284,6 +286,7 @@ export function CustomerReservationFlow({
       || holdInFlight.current
       || actionInFlight.current
       || reservationReadInFlight.current
+      || resultUnknown === 'transition'
     ) return
     const command = {
       venueId: lastSearch.venueId,
@@ -316,6 +319,7 @@ export function CustomerReservationFlow({
       || holdInFlight.current
       || actionInFlight.current
       || reservationReadInFlight.current
+      || resultUnknown === 'transition'
     ) return
     const command = { venueId: reservation.venueId, reservationId: reservation.id }
     actionInFlight.current = true
@@ -374,6 +378,13 @@ export function CustomerReservationFlow({
   const canConfirm = reservation?.state === 'HELD'
   const canCancel = reservation?.state === 'HELD' || reservation?.state === 'CONFIRMED'
   const mutationInFlight = holdState === 'loading' || actionState === 'loading'
+  const knownReservationUnresolved = resultUnknown === 'transition'
+  const contextLocked = mutationInFlight || knownReservationUnresolved
+
+  useLayoutEffect(() => {
+    onNavigationLockChange?.(contextLocked)
+    return () => onNavigationLockChange?.(false)
+  }, [contextLocked, onNavigationLockChange])
 
   return (
     <>
@@ -416,12 +427,12 @@ export function CustomerReservationFlow({
                   <select
                     value={venueId}
                     onChange={(event) => {
-                      if (holdInFlight.current || actionInFlight.current) return
+                      if (holdInFlight.current || actionInFlight.current || knownReservationUnresolved) return
                       setVenueId(event.target.value)
                       setFormErrors((current) => ({ ...current, venue: '' }))
                       resetDownstream()
                     }}
-                    disabled={venueState !== 'success' || venues.length === 0 || mutationInFlight}
+                    disabled={venueState !== 'success' || venues.length === 0 || contextLocked}
                   >
                     <option value="">Venue 선택</option>
                     {venues.map((venue) => (
@@ -434,12 +445,12 @@ export function CustomerReservationFlow({
                     type="date"
                     value={date}
                     onChange={(event) => {
-                      if (holdInFlight.current || actionInFlight.current) return
+                      if (holdInFlight.current || actionInFlight.current || knownReservationUnresolved) return
                       setDate(event.target.value)
                       setFormErrors((current) => ({ ...current, date: '' }))
                       resetDownstream()
                     }}
-                    disabled={mutationInFlight}
+                    disabled={contextLocked}
                   />
                 </FormField>
                 <FormField id="party-size" label="인원" error={formErrors.partySize}>
@@ -450,15 +461,15 @@ export function CustomerReservationFlow({
                     inputMode="numeric"
                     value={partySize}
                     onChange={(event) => {
-                      if (holdInFlight.current || actionInFlight.current) return
+                      if (holdInFlight.current || actionInFlight.current || knownReservationUnresolved) return
                       setPartySize(event.target.value)
                       setFormErrors((current) => ({ ...current, partySize: '' }))
                       resetDownstream()
                     }}
-                    disabled={mutationInFlight}
+                    disabled={contextLocked}
                   />
                 </FormField>
-                <Button type="submit" disabled={availabilityState === 'loading' || mutationInFlight}>
+                <Button type="submit" disabled={availabilityState === 'loading' || contextLocked}>
                   {availabilityState === 'loading' ? '조회 중…' : '예약 가능 시간 조회'}
                 </Button>
               </form>
@@ -471,7 +482,7 @@ export function CustomerReservationFlow({
                     <Button
                       variant="secondary"
                       onClick={() => void loadAvailability(lastSearch)}
-                      disabled={mutationInFlight}
+                      disabled={contextLocked}
                     >
                       같은 조건으로 다시 조회
                     </Button>
@@ -499,7 +510,7 @@ export function CustomerReservationFlow({
                       item={item}
                       timezone={availability.timezone}
                       selected={selectedSlotId === item.slotInventoryId}
-                      disabled={mutationInFlight}
+                      disabled={contextLocked}
                       onSelect={() => {
                         if (holdInFlight.current || actionInFlight.current) return
                         setSelectedSlotId(item.slotInventoryId)
@@ -514,7 +525,7 @@ export function CustomerReservationFlow({
                   <p><strong>{selectedItem.resourceName}</strong> · {lastSearch.partySize}명</p>
                   <Button
                     onClick={() => void createHold()}
-                    disabled={mutationInFlight || reservationReadState === 'loading'}
+                    disabled={contextLocked || reservationReadState === 'loading'}
                   >
                     {holdState === 'loading' ? 'HOLD 생성 중…' : '이 시간 HOLD'}
                   </Button>
@@ -571,14 +582,14 @@ export function CustomerReservationFlow({
                       {canConfirm ? (
                         <Button
                           onClick={() => void transition('confirm')}
-                          disabled={mutationInFlight || reservationReadState === 'loading'}
+                          disabled={contextLocked || reservationReadState === 'loading'}
                         >예약 확정</Button>
                       ) : null}
                       {canCancel ? (
                         <Button
                           variant="destructive"
                           onClick={() => void transition('cancel')}
-                          disabled={mutationInFlight || reservationReadState === 'loading'}
+                          disabled={contextLocked || reservationReadState === 'loading'}
                         >예약 취소</Button>
                       ) : null}
                     </div>

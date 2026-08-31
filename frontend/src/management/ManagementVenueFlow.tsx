@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -17,6 +18,7 @@ import {
   type ManagementVenue,
   type Policy,
   type ReservationAction,
+  type ReservationDetails,
   type ReservationState,
   type SlotInventory,
 } from './managementApi'
@@ -24,11 +26,26 @@ import {
 export interface ManagementVenueFlowProps {
   api?: ManagementApi
   navigation?: ReactNode
+  onNavigationLockChange?: (locked: boolean) => void
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
 type ConfigurationMutation = 'venue' | 'policy' | 'resource-create' | 'resource-patch' | 'slot-create'
 type UnknownMutation = ConfigurationMutation | 'reservation-command'
+interface ReservationCommandContext {
+  kind: 'reservation-command'
+  venueId: string
+  reservationId: string
+  date: string
+  status: ReservationState | ''
+}
+type ResultUnknown = ConfigurationMutation | ReservationCommandContext
+
+function isReservationCommandContext(
+  value: ResultUnknown | undefined,
+): value is ReservationCommandContext {
+  return typeof value === 'object' && value.kind === 'reservation-command'
+}
 
 function affectsConfigurationRead(kind: UnknownMutation): boolean {
   return kind === 'venue' || kind === 'policy'
@@ -100,6 +117,7 @@ const actionLabel: Record<ReservationAction, string> = {
 export function ManagementVenueFlow({
   api = managementApi,
   navigation,
+  onNavigationLockChange,
 }: ManagementVenueFlowProps) {
   const [venues, setVenues] = useState<ManagementVenue[]>([])
   const [venueListState, setVenueListState] = useState<LoadState>('loading')
@@ -119,8 +137,12 @@ export function ManagementVenueFlow({
   const [slotError, setSlotError] = useState<ManagementApiError>()
   const [reservationError, setReservationError] = useState<ManagementApiError>()
   const [mutation, setMutation] = useState<UnknownMutation>()
-  const [resultUnknown, setResultUnknown] = useState<UnknownMutation>()
+  const [resultUnknown, setResultUnknown] = useState<ResultUnknown>()
   const [reconcilingUnknown, setReconcilingUnknown] = useState(false)
+  const [reservationReconciliationInFlight, setReservationReconciliationInFlight] = useState(false)
+  const [reconciliationError, setReconciliationError] = useState<ManagementApiError>()
+  const [reconciledReservation, setReconciledReservation] = useState<ReservationDetails>()
+  const [reservationConflict, setReservationConflict] = useState<ReservationCommandContext>()
   const [mutationError, setMutationError] = useState<ManagementApiError>()
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [fieldErrorScope, setFieldErrorScope] = useState('')
@@ -134,11 +156,14 @@ export function ManagementVenueFlow({
   function clearResultUnknown() {
     resultUnknownGeneration.current += 1
     setResultUnknown(undefined)
+    setReconciliationError(undefined)
   }
 
-  function markResultUnknown(kind: UnknownMutation) {
+  function markResultUnknown(result: ResultUnknown) {
     resultUnknownGeneration.current += 1
-    setResultUnknown(kind)
+    setResultUnknown(result)
+    setReconciliationError(undefined)
+    setReconciledReservation(undefined)
   }
 
   async function loadVenues() {
@@ -226,7 +251,7 @@ export function ManagementVenueFlow({
   }
 
   function selectVenue(nextVenueId: string) {
-    if (mutationInFlight.current) return
+    if (mutationInFlight.current || isReservationCommandContext(resultUnknown) || reservationConflict) return
     configurationGeneration.current += 1
     slotGeneration.current += 1
     reservationGeneration.current += 1
@@ -243,6 +268,7 @@ export function ManagementVenueFlow({
     setSlotError(undefined)
     setReservationError(undefined)
     setMutationError(undefined)
+    setReconciledReservation(undefined)
     clearResultUnknown()
     const selected = venues.find((venue) => venue.id === nextVenueId)
     const nextDate = selected ? venueToday(selected.timezone) : ''
@@ -255,10 +281,11 @@ export function ManagementVenueFlow({
   }
 
   function changeDate(nextDate: string) {
-    if (mutationInFlight.current) return
+    if (mutationInFlight.current || isReservationCommandContext(resultUnknown) || reservationConflict) return
     slotGeneration.current += 1
     reservationGeneration.current += 1
     setDate(nextDate)
+    setReconciledReservation(undefined)
     setSlots([])
     setReservations([])
     setSlotState(nextDate ? 'loading' : 'idle')
@@ -270,9 +297,10 @@ export function ManagementVenueFlow({
   }
 
   function changeStatus(nextStatus: ReservationState | '') {
-    if (mutationInFlight.current) return
+    if (mutationInFlight.current || isReservationCommandContext(resultUnknown) || reservationConflict) return
     reservationGeneration.current += 1
     setStatus(nextStatus)
+    setReconciledReservation(undefined)
     setReservations([])
     if (venueId && date) void loadReservations(venueId, date, nextStatus)
   }
@@ -282,11 +310,15 @@ export function ManagementVenueFlow({
     command: () => Promise<T>,
     apply: (result: T) => void,
     errorScope: string = kind,
+    reservationTarget?: ReservationCommandContext,
   ): Promise<T | undefined> {
-    if (mutationInFlight.current) return
+    if (mutationInFlight.current || isReservationCommandContext(resultUnknown) || reservationConflict) return
     mutationInFlight.current = true
     setMutation(kind)
     setMutationError(undefined)
+    setReservationConflict(undefined)
+    setReconciliationError(undefined)
+    setReconciledReservation(undefined)
     clearResultUnknown()
     setFieldErrors({})
     setFieldErrorScope('')
@@ -300,10 +332,16 @@ export function ManagementVenueFlow({
       }
       return result
     } catch (error) {
-      if (error instanceof ManagementMutationResultUnknownError) markResultUnknown(kind)
+      if (error instanceof ManagementMutationResultUnknownError) {
+        if (reservationTarget) markResultUnknown(reservationTarget)
+        else if (kind !== 'reservation-command') markResultUnknown(kind)
+      }
       else {
         const normalized = normalizeError(error)
         setMutationError(normalized)
+        if (reservationTarget && normalized.status === 409) {
+          setReservationConflict(reservationTarget)
+        }
         setFieldErrors(normalized.fieldErrors)
         setFieldErrorScope(errorScope)
       }
@@ -399,12 +437,19 @@ export function ManagementVenueFlow({
 
   async function commandReservation(reservation: ManagementReservation, action: ReservationAction) {
     if (!detail) return
-    const context = { venueId: detail.id, date, status, reservationId: reservation.id }
+    const context: ReservationCommandContext = {
+      kind: 'reservation-command',
+      venueId: detail.id,
+      date,
+      status,
+      reservationId: reservation.id,
+    }
     reservationGeneration.current += 1
     const result = await runMutation('reservation-command', () => api.commandReservation(
       context.venueId, context.reservationId, action,
     ), (updated) => setReservations((current) => current.map((item) =>
-      item.id === updated.id ? { ...item, ...updated, allowedActions: [] } : item)))
+      item.id === updated.id ? { ...item, ...updated, allowedActions: [] } : item)),
+    'reservation-command', context)
     if (!result) return
     if (context.venueId === venueId && context.date === date && context.status === status) {
       await loadReservations(context.venueId, context.date, context.status)
@@ -414,25 +459,68 @@ export function ManagementVenueFlow({
   const selectedVenue = detail ?? venues.find((venue) => venue.id === venueId)
   const resourceNames = new Map(resources.map((resource) => [resource.id, resource.name]))
   const writable = selectedVenue?.configurationWritable === true
+  const reservationUnknown = isReservationCommandContext(resultUnknown) ? resultUnknown : undefined
+  const reservationTargetPending = reservationUnknown ?? reservationConflict
   const busy = Boolean(mutation)
+    || Boolean(reservationTargetPending)
+    || reservationReconciliationInFlight
   const errorFor = (scope: string, field: string) =>
     fieldErrorScope === scope ? fieldErrors[field] : undefined
 
+  useLayoutEffect(() => {
+    onNavigationLockChange?.(busy)
+    return () => onNavigationLockChange?.(false)
+  }, [busy, onNavigationLockChange])
+
+  async function readReservationTarget(
+    target: ReservationCommandContext,
+    onSuccess: (reservation: ReservationDetails) => void,
+  ) {
+    if (unknownReconciliationInFlight.current) return
+    const presentationContext = { venueId, date, status }
+    unknownReconciliationInFlight.current = true
+    setReconcilingUnknown(true)
+    setReservationReconciliationInFlight(true)
+    setReconciliationError(undefined)
+    try {
+      const authoritative = await api.getReservation(target.venueId, target.reservationId)
+      setReconciledReservation(authoritative)
+      setReservations([])
+      onSuccess(authoritative)
+      if (presentationContext.venueId && presentationContext.date) {
+        await loadReservations(
+          presentationContext.venueId,
+          presentationContext.date,
+          presentationContext.status,
+        )
+      }
+    } catch (error) {
+      setReconciliationError(normalizeError(error))
+    } finally {
+      unknownReconciliationInFlight.current = false
+      setReconcilingUnknown(false)
+      setReservationReconciliationInFlight(false)
+    }
+  }
+
   async function reconcileUnknown() {
-    if (!venueId || !resultUnknown || unknownReconciliationInFlight.current) return
+    if (!resultUnknown || unknownReconciliationInFlight.current) return
     const unknown = resultUnknown
     const unknownGeneration = resultUnknownGeneration.current
+    if (isReservationCommandContext(unknown)) {
+      await readReservationTarget(unknown, () => {
+        if (unknownGeneration === resultUnknownGeneration.current) clearResultUnknown()
+      })
+      return
+    }
+    if (!venueId) return
     const context = { venueId, date, status }
     unknownReconciliationInFlight.current = true
     setReconcilingUnknown(true)
     try {
       const reconciled = unknown === 'slot-create'
         ? Boolean(context.date) && await loadSlots(context.venueId, context.date)
-        : unknown === 'reservation-command'
-          ? Boolean(context.date) && await loadReservations(
-            context.venueId, context.date, context.status,
-          )
-          : await loadConfiguration(context.venueId)
+        : await loadConfiguration(context.venueId)
       if (reconciled && unknownGeneration === resultUnknownGeneration.current) {
         clearResultUnknown()
       }
@@ -440,6 +528,14 @@ export function ManagementVenueFlow({
       unknownReconciliationInFlight.current = false
       setReconcilingUnknown(false)
     }
+  }
+
+  async function reconcileConflict() {
+    if (!reservationConflict) return
+    await readReservationTarget(reservationConflict, () => {
+      setMutationError(undefined)
+      setReservationConflict(undefined)
+    })
   }
 
   return (
@@ -580,8 +676,10 @@ export function ManagementVenueFlow({
           </>
         ) : <p className="step-placeholder">서버가 반환한 Venue 중 하나를 선택해 주세요.</p>}
 
-        {mutationError ? <div className="management-mutation-notice"><ErrorNotice error={mutationError} />{venueId && date ? <Button density="compact" variant="secondary" onClick={() => { void loadConfiguration(venueId); void loadSlots(venueId, date); void loadReservations(venueId, date, status) }}>관련 데이터 다시 조회</Button> : null}</div> : null}
-        {resultUnknown ? <div className="notice notice--unknown" role="alert"><strong>작업 결과를 확인할 수 없습니다</strong><span>성공이나 실패를 추정하지 않고 자동 재전송하지 않았습니다. 관련 목록을 다시 조회해 확인해 주세요.</span><code>RESULT_UNKNOWN</code><Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileUnknown()}>{reconcilingUnknown ? '조회 중…' : '관련 데이터 다시 조회'}</Button></div> : null}
+        {mutationError ? <div className="management-mutation-notice"><ErrorNotice error={mutationError} />{reservationConflict ? <Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileConflict()}>{reconcilingUnknown ? '조회 중…' : '원래 Reservation 다시 조회'}</Button> : venueId && date ? <Button density="compact" variant="secondary" onClick={() => { void loadConfiguration(venueId); void loadSlots(venueId, date); void loadReservations(venueId, date, status) }}>관련 데이터 다시 조회</Button> : null}</div> : null}
+        {resultUnknown ? <div className="notice notice--unknown" role="alert"><strong>작업 결과를 확인할 수 없습니다</strong><span>{reservationUnknown ? '원래 Reservation을 직접 조회하기 전에는 결과를 확정하지 않습니다.' : '성공이나 실패를 추정하지 않고 자동 재전송하지 않았습니다. 관련 목록을 다시 조회해 확인해 주세요.'}</span><code>RESULT_UNKNOWN</code><Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileUnknown()}>{reconcilingUnknown ? '조회 중…' : reservationUnknown ? '원래 Reservation 다시 조회' : '관련 데이터 다시 조회'}</Button></div> : null}
+        {reconciliationError ? <div className="management-mutation-notice"><ErrorNotice error={reconciliationError} /><span>원래 Reservation의 결과는 아직 확정하지 않았습니다.</span></div> : null}
+        {reconciledReservation ? <div className="notice notice--state" role="status"><strong>Reservation {reconciledReservation.id} 최신 상태</strong><StatusBadge status={reconciledReservation.state} /><span>서버의 exact Reservation 응답으로 확인했습니다.</span></div> : null}
       </main>
       <footer className="site-footer"><small>Server scope and allowedActions are the source of truth.</small></footer>
     </>
