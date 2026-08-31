@@ -7,6 +7,7 @@ import {
   type ManagementApi,
   type ManagementReservation,
   type ManagementVenue,
+  type ReservationDetails,
 } from './managementApi'
 
 const ownerVenue: ManagementVenue = {
@@ -35,6 +36,21 @@ const reservation: ManagementReservation = {
   expiresAt: '2099-08-31T08:55:00Z', customerReference: 'customer-a',
   allowedActions: ['cancel', 'check-in'],
 }
+const reservationDetails: ReservationDetails = {
+  id: reservation.id,
+  venueId: ownerVenue.id,
+  resourceId: reservation.resourceId,
+  slotInventoryId: reservation.slotInventoryId,
+  state: 'CANCELLED',
+  partySize: reservation.partySize,
+  allocationQuantity: 1,
+  startsAt: reservation.startsAt,
+  endsAt: reservation.endsAt,
+  expiresAt: reservation.expiresAt,
+  cancelAllowedUntil: '2099-08-31T08:30:00Z',
+  noShowEligibleAt: '2099-08-31T09:15:00Z',
+  appliedPolicyVersion: 3,
+}
 
 function makeApi(overrides: Partial<ManagementApi> = {}): ManagementApi {
   return {
@@ -49,6 +65,7 @@ function makeApi(overrides: Partial<ManagementApi> = {}): ManagementApi {
     listSlots: vi.fn().mockResolvedValue([slot]),
     createSlot: vi.fn().mockResolvedValue({ ...slot, id: 'slot-new' }),
     listReservations: vi.fn().mockResolvedValue([reservation]),
+    getReservation: vi.fn().mockResolvedValue(reservationDetails),
     commandReservation: vi.fn().mockResolvedValue({
       id: reservation.id, state: 'CHECKED_IN', startsAt: reservation.startsAt,
       endsAt: reservation.endsAt, expiresAt: reservation.expiresAt, partySize: 2,
@@ -169,8 +186,14 @@ describe('Management Venue flow', () => {
     expect(await screen.findByRole('button', { name: '완료' })).toBeInTheDocument()
   })
 
-  it('offers explicit reconciliation after business conflict without inventing state', async () => {
+  it('reads the original Reservation after a business conflict and refreshes server allowedActions', async () => {
+    const checkedIn = { ...reservation, state: 'CHECKED_IN' as const, allowedActions: ['complete' as const] }
+    const listReservations = vi.fn()
+      .mockResolvedValueOnce([reservation])
+      .mockResolvedValueOnce([checkedIn])
     const api = makeApi({
+      listReservations,
+      getReservation: vi.fn().mockResolvedValue({ ...reservationDetails, state: 'CHECKED_IN' }),
       commandReservation: vi.fn().mockRejectedValue(
         new ManagementApiError(409, 'RESERVATION_TRANSITION_NOT_ALLOWED'),
       ),
@@ -180,7 +203,12 @@ describe('Management Venue flow', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('RESERVATION_TRANSITION_NOT_ALLOWED')
     expect(screen.getByText('CONFIRMED', { selector: '.status-badge' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '관련 데이터 다시 조회' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '원래 Reservation 다시 조회' }))
+
+    expect(await screen.findByText(/Reservation reservation-a 최신 상태/)).toBeInTheDocument()
+    expect(api.getReservation).toHaveBeenCalledWith(ownerVenue.id, reservation.id)
+    expect(await screen.findByRole('button', { name: '완료' })).toBeInTheDocument()
+    expect(listReservations).toHaveBeenCalledTimes(2)
   })
 
   it('does not let a pending old Venue or date read overwrite the new context', async () => {
@@ -377,7 +405,7 @@ describe('Management Venue flow', () => {
     expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
   })
 
-  it('clears result unknown only after successful Slot and Reservation reconciliation', async () => {
+  it('clears result unknown only after successful Slot reconciliation', async () => {
     const slotApi = makeApi({
       listSlots: vi.fn().mockResolvedValue([slot]),
       createSlot: vi.fn().mockRejectedValue(
@@ -397,22 +425,76 @@ describe('Management Venue flow', () => {
     await waitFor(() => expect(slotApi.listSlots).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument())
 
-    cleanup()
+  })
+
+  it('keeps a filtered cancel result unknown until the exact target GET succeeds', async () => {
+    let resolveExact: ((value: ReservationDetails) => void) | undefined
     const listReservations = vi.fn()
       .mockResolvedValueOnce([reservation])
-      .mockResolvedValueOnce([{ ...reservation, state: 'CHECKED_IN', allowedActions: ['complete'] }])
-    const reservationApi = makeApi({
+      .mockResolvedValueOnce([reservation])
+      .mockResolvedValueOnce([])
+    const getReservation = vi.fn().mockReturnValue(
+      new Promise<ReservationDetails>((resolve) => { resolveExact = resolve }),
+    )
+    const api = makeApi({
       listReservations,
+      getReservation,
       commandReservation: vi.fn().mockRejectedValue(
         new ManagementMutationResultUnknownError('NETWORK_ERROR'),
       ),
     })
-    await selectVenue(reservationApi)
-    fireEvent.click(screen.getByRole('button', { name: '체크인' }))
+    await selectVenue(api)
+    fireEvent.change(screen.getByLabelText('상태', { selector: '#reservation-status' }), {
+      target: { value: 'CONFIRMED' },
+    })
+    await waitFor(() => expect(listReservations).toHaveBeenCalledTimes(2))
+
+    fireEvent.click(screen.getByRole('button', { name: '취소' }))
     expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
-    expect(await screen.findByRole('button', { name: '완료' })).toBeInTheDocument()
+    const venueSelect = screen.getByRole('combobox', { name: 'Venue' })
+    const dateInput = screen.getByLabelText('Venue-local 날짜')
+    const statusSelect = screen.getByLabelText('상태', { selector: '#reservation-status' })
+    const originalDate = (dateInput as HTMLInputElement).value
+    expect(venueSelect).toBeDisabled()
+    expect(dateInput).toBeDisabled()
+    expect(statusSelect).toBeDisabled()
+    fireEvent.change(venueSelect, { target: { value: '' } })
+    fireEvent.change(dateInput, { target: { value: '2099-09-01' } })
+    fireEvent.change(statusSelect, { target: { value: 'CANCELLED' } })
+    expect(venueSelect).toHaveValue(ownerVenue.id)
+    expect(dateInput).toHaveValue(originalDate)
+    expect(statusSelect).toHaveValue('CONFIRMED')
+
+    fireEvent.click(screen.getByRole('button', { name: '원래 Reservation 다시 조회' }))
+    await waitFor(() => expect(getReservation).toHaveBeenCalledWith(ownerVenue.id, reservation.id))
+    expect(listReservations).toHaveBeenCalledTimes(2)
+    expect(screen.getByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+
+    await act(async () => { resolveExact?.(reservationDetails) })
+    expect(await screen.findByText(/Reservation reservation-a 최신 상태/)).toBeInTheDocument()
+    expect(screen.getByText('CANCELLED', { selector: '.notice--state .status-badge' })).toBeInTheDocument()
+    await waitFor(() => expect(listReservations).toHaveBeenCalledTimes(3))
+    expect(listReservations).toHaveBeenLastCalledWith(ownerVenue.id, expect.any(String), 'CONFIRMED')
+    expect(await screen.findByText('선택한 날짜와 상태의 Reservation이 없습니다.')).toBeInTheDocument()
     expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
+  })
+
+  it('keeps the original target unknown when its exact GET fails', async () => {
+    const getReservation = vi.fn().mockRejectedValue(new ManagementApiError(500, 'INTERNAL_ERROR'))
+    const api = makeApi({
+      getReservation,
+      commandReservation: vi.fn().mockRejectedValue(
+        new ManagementMutationResultUnknownError('INTERNAL_ERROR'),
+      ),
+    })
+    await selectVenue(api)
+    fireEvent.click(screen.getByRole('button', { name: '취소' }))
+    fireEvent.click(await screen.findByRole('button', { name: '원래 Reservation 다시 조회' }))
+
+    expect(await screen.findByText('원래 Reservation의 결과는 아직 확정하지 않았습니다.')).toBeInTheDocument()
+    expect(screen.getByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
+    expect(getReservation).toHaveBeenCalledWith(ownerVenue.id, reservation.id)
+    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
   })
 
   it('re-fetches the selected date after Slot creation instead of appending another date', async () => {

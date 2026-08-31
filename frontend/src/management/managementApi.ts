@@ -68,6 +68,16 @@ export interface ReservationCommandRepresentation {
   partySize: number
 }
 
+export interface ReservationDetails extends ReservationCommandRepresentation {
+  venueId: string
+  resourceId: string
+  slotInventoryId: string
+  allocationQuantity: number
+  cancelAllowedUntil: string
+  noShowEligibleAt: string
+  appliedPolicyVersion: number
+}
+
 export type ManagementErrorCode =
   | 'VALIDATION_FAILED' | 'AUTHENTICATION_REQUIRED' | 'ACCESS_DENIED'
   | 'RESOURCE_NOT_FOUND' | 'INTERNAL_ERROR' | 'SLOT_INVENTORY_CONFLICT'
@@ -111,6 +121,7 @@ export interface ManagementApi {
   listSlots(venueId: string, date: string): Promise<SlotInventory[]>
   createSlot(venueId: string, input: { resourceId: string; startsAt: string }): Promise<SlotInventory>
   listReservations(venueId: string, date: string, status?: ReservationState): Promise<ManagementReservation[]>
+  getReservation(venueId: string, reservationId: string): Promise<ReservationDetails>
   commandReservation(
     venueId: string,
     reservationId: string,
@@ -235,6 +246,11 @@ export function createManagementApi(request: ApiRequest): ManagementApi {
         access: 'protected', cache: 'no-store',
       })
     },
+    getReservation: (venueId, reservationId) => requestJson(
+      request,
+      `/api/v1/venues/${encodeURIComponent(venueId)}/reservations/${encodeURIComponent(reservationId)}`,
+      { access: 'protected', cache: 'no-store' },
+    ),
     commandReservation: (venueId, reservationId, action) => requestJson(
       request,
       `/api/v1/venues/${encodeURIComponent(venueId)}/reservations/${encodeURIComponent(reservationId)}/${action}`,

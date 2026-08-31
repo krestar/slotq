@@ -32,6 +32,7 @@ describe('management API contract', () => {
       resourceId: 'resource/a', startsAt: '2026-08-31T18:00:00+09:00',
     })
     await api.listReservations('venue/a', '2026-08-31', 'CONFIRMED')
+    await api.getReservation('venue/a', 'reservation/a')
     await api.commandReservation('venue/a', 'reservation/a', 'check-in')
 
     expect(request.mock.calls.every(([, options]) => options.access === 'protected')).toBe(true)
@@ -47,8 +48,12 @@ describe('management API contract', () => {
       '/api/v1/management/venues/venue%2Fa/slot-inventories?date=2026-08-31',
       '/api/v1/management/venues/venue%2Fa/slot-inventories',
       '/api/v1/management/venues/venue%2Fa/reservations?date=2026-08-31&status=CONFIRMED',
+      '/api/v1/venues/venue%2Fa/reservations/reservation%2Fa',
       '/api/v1/venues/venue%2Fa/reservations/reservation%2Fa/check-in',
     ])
+    expect(request.mock.calls[11][1]).toMatchObject({
+      access: 'protected', cache: 'no-store',
+    })
     expect(JSON.parse(request.mock.calls[2][1].body)).toEqual({ name: 'Renamed', status: 'INACTIVE' })
     expect(JSON.parse(request.mock.calls[4][1].body)).toEqual({
       slotDurationMinutes: 30,
