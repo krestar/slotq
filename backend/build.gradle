@@ -39,3 +39,17 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.register('concurrencyBaseline', JavaExec) {
+    group = 'verification'
+    description = 'Runs the MySQL 8.4 Product HOLD concurrency baseline.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.concurrency.ConcurrencyBaselineRunner'
+
+    ['clients', 'iterations', 'seed', 'partySize', 'holdDuration', 'timeout', 'output'].each { key ->
+        if (project.hasProperty(key)) {
+            systemProperty "slotq.baseline.${key}", project.property(key)
+        }
+    }
+    systemProperty 'slotq.baseline.gradleVersion', gradle.gradleVersion
+}

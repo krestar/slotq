@@ -63,6 +63,9 @@ Measured가 아닌 문서에는 전략 우열이나 목표 달성 수치를 결�
 
 ## Reservation concurrency
 
+현재 Product HOLD의 naive check-then-write 측정 절차와 JSON 계약은
+[Product HOLD concurrency baseline](concurrency-baseline.md)에 기록한다.
+
 ### 질문
 
 - 동시에 마지막 capacity를 요청해도 invariant가 유지되는가?
