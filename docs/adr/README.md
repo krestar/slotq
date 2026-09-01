@@ -24,6 +24,7 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | [0002](0002-start-with-modular-monolith.md) | 단일 배포형 Modular Monolith로 시작 | `Accepted` |
 | [0003](0003-use-react-typescript-vite.md) | Thin SPA에 React, TypeScript, Vite 사용 | `Accepted` |
 | [0004](0004-use-java-25.md) | Java 25 LTS를 Backend 기준선으로 사용 | `Accepted` |
+| [0005](0005-use-mysql-hold-idempotency-record.md) | MySQL reliability record로 HOLD command idempotency 보장 | `Accepted` |
 
 ## 후보 등록부
 
@@ -35,7 +36,6 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | --- | --- | --- |
 | Reservation 상태 모델 | `Proposed` | Reservation Core 구현 전에 허용 상태, 전이, 종료 상태와 거부 규칙을 정의합니다. |
 | Capacity 모델 | `Proposed` | 예약 생성 구현 전에 시간 구간, Resource, 수량 중 무엇이 수용량의 기준인지와 핵심 invariant의 트랜잭션 경계를 정합니다. |
-| 요청·명령 Idempotency | `Proposed` | 변경 API 구현 전에 idempotency key의 범위, 저장 기간, 동일 키·다른 payload 처리와 응답 재현 규칙을 정합니다. |
 | Multi-tenancy 격리 | `Proposed` | tenant 데이터를 저장하기 전에 tenant 식별·전파 방식, 데이터 접근 경계와 권한 검증 위치를 정합니다. |
 
 ### 증거가 생긴 뒤 결정할 항목
