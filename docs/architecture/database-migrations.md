@@ -21,3 +21,18 @@ Flyway production migration을 되돌리는 undo migration은 제공하지 않�
 네 table과 그 안의 Tenant/Venue/Policy 데이터를 삭제해야 하는 비가역적 변경이므로,
 배포 후 문제는 백업 복원 또는 더 높은 version의 forward-fix migration으로 처리한다.
 Production 적용 전에는 database backup과 복원 가능성을 확인한다.
+
+## V7 HOLD Idempotency Reliability State
+
+`V7__create_hold_idempotency.sql`은 기존 Product table을 변경하지 않고
+`hold_idempotency_records`를 추가하는 additive migration이다. Primary key는
+`(tenant_id, customer_principal_id, idempotency_key)`이며 key는 255자 ASCII binary
+collation으로 대소문자와 byte 값을 그대로 구분한다. `venue_id`, `slot_inventory_id`,
+`party_size`는 semantic request fingerprint이고 completed row는 최초 `reservation_id`를
+참조한다.
+
+Reservation, CapacityAllocation과 reliability row는 같은 MySQL transaction에서 함께
+commit 또는 rollback한다. cleanup index `(state, completed_at)`는 retention이 지난
+`COMPLETED` row의 bounded delete만 지원하며 `IN_PROGRESS` row는 cleanup 대상이 아니다.
+V7 rollback은 idempotency replay 이력을 잃으므로 production에서는 table을 drop하지 않고
+더 높은 version의 forward-fix migration으로 처리한다.

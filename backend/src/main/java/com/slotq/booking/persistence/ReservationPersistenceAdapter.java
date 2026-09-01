@@ -45,6 +45,15 @@ class ReservationPersistenceAdapter implements ReservationRepository {
     }
 
     @Override
+    public Optional<Reservation> findCurrent(VenueId venueId, ReservationId reservationId) {
+        return reservationRepository.findCurrentByVenueIdAndId(venueId.value(), reservationId.value())
+            .map(entity -> toDomain(entity, allocationRepository
+                .findCurrentByTenantIdAndVenueIdAndReservationId(
+                    entity.tenantId(), entity.venueId(), entity.id()
+                ).orElseThrow(() -> new IllegalStateException("Reservation allocation is missing"))));
+    }
+
+    @Override
     public List<Reservation> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt) {
         return reservationRepository
             .findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(

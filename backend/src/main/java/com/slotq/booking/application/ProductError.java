@@ -6,6 +6,8 @@ public enum ProductError {
         "The selected resource cannot accommodate the requested party size."),
     BOOKING_NOT_ALLOWED("Booking not allowed",
         "A reservation cannot be created for the selected slot."),
+    IDEMPOTENCY_KEY_REUSED("Idempotency key reused",
+        "The idempotency key was already used for a different HOLD request."),
     HOLD_EXPIRED("Hold expired", "The reservation hold has expired."),
     CANCELLATION_WINDOW_CLOSED("Cancellation window closed",
         "The reservation can no longer be cancelled."),

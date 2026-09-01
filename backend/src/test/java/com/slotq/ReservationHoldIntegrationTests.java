@@ -8,13 +8,21 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.jayway.jsonpath.JsonPath;
-import com.slotq.booking.application.SlotInventoryUseCase;
+import com.slotq.booking.application.HoldIdempotencyCleanup;
 import com.slotq.booking.application.ReservationUseCase;
+import com.slotq.booking.application.SlotInventoryUseCase;
 import com.slotq.booking.domain.SlotInventory;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.PrincipalId;
@@ -43,6 +51,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -69,7 +78,8 @@ class ReservationHoldIntegrationTests {
     @Container
     @ServiceConnection
     static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
-        .withDatabaseName("slotq");
+        .withDatabaseName("slotq")
+        .withCommand("--log-bin-trust-function-creators=1");
 
     @Autowired MockMvc mockMvc;
     @Autowired TenantUseCase tenantUseCase;
@@ -77,6 +87,7 @@ class ReservationHoldIntegrationTests {
     @Autowired ResourceUseCase resourceUseCase;
     @Autowired SlotInventoryUseCase slotUseCase;
     @Autowired ReservationUseCase reservationUseCase;
+    @Autowired HoldIdempotencyCleanup idempotencyCleanup;
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired MutableClock clock;
 
@@ -121,6 +132,227 @@ class ReservationHoldIntegrationTests {
             "SELECT applied_policy_version FROM slot_inventories WHERE id = ?", Long.class,
             bytes(fixture.slot().id().value())
         )).isEqualTo(1L);
+    }
+
+    @Test
+    void replaysSameKeyAndLocationWithCurrentEffectiveRepresentation() throws Exception {
+        Fixture fixture = fixture(4, "2026-08-30T11:00:00Z");
+        String key = "response-loss-retry";
+
+        MvcResult first = postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.state").value("HELD"))
+            .andReturn();
+        String reservationId = JsonPath.read(first.getResponse().getContentAsString(), "$.id");
+        String location = first.getResponse().getHeader("Location");
+
+        mockMvc.perform(post("/api/v1/venues/{venueId}/reservations/holds", fixture.venue().id().value())
+                .header("Authorization", "Bearer " + customerA)
+                .header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\n  \"partySize\": 2,\n  \"slotInventoryId\": \""
+                    + fixture.slot().id().value() + "\"\n}"))
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", location))
+            .andExpect(jsonPath("$.id").value(reservationId))
+            .andExpect(jsonPath("$.state").value("HELD"));
+
+        clock.set(BASE_NOW.plus(Duration.ofMinutes(6)));
+        postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", location))
+            .andExpect(jsonPath("$.id").value(reservationId))
+            .andExpect(jsonPath("$.state").value("EXPIRED"));
+
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(1);
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isEqualTo(1);
+        assertThat(countIdempotency(key)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+            SELECT state FROM hold_idempotency_records WHERE idempotency_key = ?
+            """, String.class, key)).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void serializesConcurrentSameKeyRequestsToOneReservationAndAllocation() throws Exception {
+        Fixture fixture = fixture(4, "2026-08-30T11:00:00Z");
+        String key = "concurrent-retry";
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            var request = (java.util.concurrent.Callable<MvcResult>) () -> {
+                ready.countDown();
+                if (!start.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Concurrent HOLD start timed out");
+                }
+                return postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+                    .andExpect(status().isCreated())
+                    .andReturn();
+            };
+            Future<MvcResult> first = executor.submit(request);
+            Future<MvcResult> second = executor.submit(request);
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<MvcResult> responses = List.of(
+                first.get(15, TimeUnit.SECONDS),
+                second.get(15, TimeUnit.SECONDS)
+            );
+            assertThat(new java.util.HashSet<>(List.of(
+                JsonPath.<String>read(responses.get(0).getResponse().getContentAsString(), "$.id"),
+                JsonPath.<String>read(responses.get(1).getResponse().getContentAsString(), "$.id")
+            ))).hasSize(1);
+            assertThat(new java.util.HashSet<>(List.of(
+                responses.get(0).getResponse().getHeader("Location"),
+                responses.get(1).getResponse().getHeader("Location")
+            ))).hasSize(1);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(1);
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isEqualTo(1);
+        assertThat(countIdempotency(key)).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsSameKeyWithDifferentFingerprintWithoutNewSideEffects() throws Exception {
+        Fixture fixture = fixture(4, "2026-08-30T11:00:00Z");
+        String key = "fingerprint-conflict";
+        postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated());
+
+        postHold(fixture.venue(), fixture.slot(), 3, customerA, key)
+            .andExpect(status().isConflict())
+            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.code").value("IDEMPOTENCY_KEY_REUSED"));
+
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(1);
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isEqualTo(1);
+        assertThat(countIdempotency(key)).isEqualTo(1);
+    }
+
+    @Test
+    void scopesTheSameKeyIndependentlyByCustomerAndTenant() throws Exception {
+        Fixture first = fixture(4, "2026-08-30T11:00:00Z");
+        SlotInventory secondSlot = slotUseCase.createSlot(new SlotInventoryUseCase.CreateSlot(
+            first.tenant().id(), first.venue().id(), first.resource().id(), "2026-08-30T12:00:00Z"
+        ));
+        Fixture otherTenant = fixture(4, "2026-08-30T11:00:00Z");
+        String key = "shared-scope-key";
+
+        MvcResult firstCustomer = postHold(first.venue(), first.slot(), 2, customerA, key)
+            .andExpect(status().isCreated()).andReturn();
+        MvcResult secondCustomer = postHold(first.venue(), secondSlot, 2, customerB, key)
+            .andExpect(status().isCreated()).andReturn();
+        MvcResult secondTenant = postHold(otherTenant.venue(), otherTenant.slot(), 2, customerA, key)
+            .andExpect(status().isCreated()).andReturn();
+
+        Set<String> ids = Set.of(
+            JsonPath.read(firstCustomer.getResponse().getContentAsString(), "$.id"),
+            JsonPath.read(secondCustomer.getResponse().getContentAsString(), "$.id"),
+            JsonPath.read(secondTenant.getResponse().getContentAsString(), "$.id")
+        );
+        assertThat(ids).hasSize(3);
+        assertThat(countIdempotency(key)).isEqualTo(3);
+    }
+
+    @Test
+    void invalidKeysHaveNoSideEffectsAndMissingKeyKeepsOneShotBehavior() throws Exception {
+        Fixture fixture = fixture(4, "2026-08-30T11:00:00Z");
+
+        for (String invalidKey : List.of(" ", "k".repeat(256))) {
+            postHold(fixture.venue(), fixture.slot(), 2, customerA, invalidKey)
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.fieldErrors['Idempotency-Key']").exists());
+        }
+        assertThat(countForSlot("reservations", fixture.slot())).isZero();
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isZero();
+        assertThat(countIdempotency(" ")).isZero();
+        assertThat(countIdempotency("k".repeat(256))).isZero();
+
+        postHold(fixture.venue(), fixture.slot(), 2, customerA).andExpect(status().isCreated());
+        postHold(fixture.venue(), fixture.slot(), 2, customerA)
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("CAPACITY_UNAVAILABLE"));
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(1);
+        assertThat(countIdempotency(" ")).isZero();
+        assertThat(countIdempotency("k".repeat(256))).isZero();
+    }
+
+    @Test
+    void rollsBackReliabilityStateWithReservationAndAllowsTheSameKeyRetry() throws Exception {
+        Fixture fixture = fixture(4, "2026-08-30T11:00:00Z");
+        String key = "rollback-retry";
+        jdbcTemplate.execute("DROP TRIGGER IF EXISTS test_fail_hold_allocation");
+        jdbcTemplate.execute("""
+            CREATE TRIGGER test_fail_hold_allocation
+            BEFORE INSERT ON capacity_allocations
+            FOR EACH ROW
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'forced allocation failure'
+            """);
+        try {
+            postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+        } finally {
+            jdbcTemplate.execute("DROP TRIGGER IF EXISTS test_fail_hold_allocation");
+        }
+
+        assertThat(countForSlot("reservations", fixture.slot())).isZero();
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isZero();
+        assertThat(countIdempotency(key)).isZero();
+
+        postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated());
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(1);
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isEqualTo(1);
+        assertThat(countIdempotency(key)).isEqualTo(1);
+    }
+
+    @Test
+    void enforcesRetentionBoundaryAndCleanupNeverDeletesInProgressRows() throws Exception {
+        Fixture fixture = fixture(4, "2026-09-06T11:00:00Z");
+        String key = "retention-boundary";
+        MvcResult first = postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated()).andReturn();
+        String firstId = JsonPath.read(first.getResponse().getContentAsString(), "$.id");
+
+        clock.set(BASE_NOW.plus(Duration.ofHours(24)).minusNanos(1_000));
+        postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(firstId))
+            .andExpect(jsonPath("$.state").value("EXPIRED"));
+
+        clock.set(BASE_NOW.plus(Duration.ofHours(24)));
+        MvcResult freshCommand = postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated()).andReturn();
+        String secondId = JsonPath.read(freshCommand.getResponse().getContentAsString(), "$.id");
+        assertThat(secondId).isNotEqualTo(firstId);
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(2);
+        assertThat(countIdempotency(key)).isEqualTo(1);
+
+        jdbcTemplate.update("""
+            INSERT INTO hold_idempotency_records (
+                tenant_id, customer_principal_id, idempotency_key,
+                venue_id, slot_inventory_id, party_size, state, started_at
+            )
+            SELECT tenant_id, customer_principal_id, 'in-progress-retention',
+                   venue_id, slot_inventory_id, party_size, 'IN_PROGRESS', ?
+              FROM hold_idempotency_records
+             WHERE idempotency_key = ?
+            """, java.sql.Timestamp.from(BASE_NOW), key);
+
+        clock.set(BASE_NOW.plus(Duration.ofHours(48)));
+        assertThat(idempotencyCleanup.cleanupExpired()).isGreaterThanOrEqualTo(1);
+        assertThat(countIdempotency(key)).isZero();
+        assertThat(countIdempotency("in-progress-retention")).isEqualTo(1);
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(2);
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isEqualTo(2);
     }
 
     @Test
@@ -268,11 +500,21 @@ class ReservationHoldIntegrationTests {
     private org.springframework.test.web.servlet.ResultActions postHold(
         Venue venue, SlotInventory slot, int partySize, String token
     ) throws Exception {
-        return mockMvc.perform(post("/api/v1/venues/{venueId}/reservations/holds", venue.id().value())
+        return postHold(venue, slot, partySize, token, null);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postHold(
+        Venue venue, SlotInventory slot, int partySize, String token, String idempotencyKey
+    ) throws Exception {
+        var request = post("/api/v1/venues/{venueId}/reservations/holds", venue.id().value())
             .header("Authorization", "Bearer " + token)
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"slotInventoryId\":\"" + slot.id().value()
-                + "\",\"partySize\":" + partySize + "}"));
+                + "\",\"partySize\":" + partySize + "}");
+        if (idempotencyKey != null) {
+            request.header("Idempotency-Key", idempotencyKey);
+        }
+        return mockMvc.perform(request);
     }
 
     private Fixture fixture(int seatingCapacity, String startsAt) {
@@ -312,6 +554,13 @@ class ReservationHoldIntegrationTests {
         return jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM " + table + " WHERE slot_inventory_id = ?",
             Long.class, bytes(slot.id().value())
+        );
+    }
+
+    private long countIdempotency(String key) {
+        return jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM hold_idempotency_records WHERE idempotency_key = ?",
+            Long.class, key
         );
     }
 

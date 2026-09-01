@@ -18,11 +18,12 @@ class ProductApiErrorContractTests {
     private final HttpServletRequest request = request();
 
     @Test
-    void mapsEveryM1ReservationConflictToStable409ProblemCode() {
+    void mapsEveryReservationConflictToStable409ProblemCode() {
         assertThat(Arrays.stream(ProductError.values()).map(Enum::name)).containsExactly(
             "CAPACITY_UNAVAILABLE",
             "PARTY_SIZE_NOT_SUPPORTED",
             "BOOKING_NOT_ALLOWED",
+            "IDEMPOTENCY_KEY_REUSED",
             "HOLD_EXPIRED",
             "CANCELLATION_WINDOW_CLOSED",
             "RESERVATION_TRANSITION_NOT_ALLOWED"

@@ -6,12 +6,23 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEntity, UUID> {
 
     Optional<ReservationJpaEntity> findByVenueIdAndId(UUID venueId, UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select reservation from ReservationJpaEntity reservation "
+        + "where reservation.venueId = :venueId and reservation.id = :id")
+    Optional<ReservationJpaEntity> findCurrentByVenueIdAndId(
+        @Param("venueId") UUID venueId,
+        @Param("id") UUID id
+    );
 
     List<ReservationJpaEntity> findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(
         UUID tenantId,

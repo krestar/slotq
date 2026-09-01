@@ -2,6 +2,7 @@ package com.slotq.booking.application;
 
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
+import java.util.Optional;
 
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.auth.domain.PrincipalId;
@@ -18,6 +19,10 @@ class ReservationApplicationBoundaryTests {
             .map(RecordComponent::getType))
             .contains(AuthenticatedPrincipal.class)
             .doesNotContain(PrincipalId.class);
+        assertThat(Arrays.stream(ReservationUseCase.CreateHold.class.getRecordComponents())
+            .filter(component -> component.getName().equals("idempotencyKey"))
+            .map(RecordComponent::getType))
+            .containsExactly(Optional.class);
     }
 
     @Test
