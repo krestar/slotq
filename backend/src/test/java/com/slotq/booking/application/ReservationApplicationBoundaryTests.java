@@ -34,4 +34,18 @@ class ReservationApplicationBoundaryTests {
             SystemPrincipal.class
         )).isNotNull();
     }
+
+    @Test
+    void concurrencyLocksRemainScopedToOneSlotOrReservation() throws NoSuchMethodException {
+        assertThat(SlotInventoryRepository.class.getMethod(
+            "findForUpdate",
+            com.slotq.venue.domain.VenueId.class,
+            com.slotq.booking.domain.SlotInventoryId.class
+        ).getReturnType()).isEqualTo(Optional.class);
+        assertThat(ReservationRepository.class.getMethod(
+            "findForUpdate",
+            com.slotq.venue.domain.VenueId.class,
+            com.slotq.booking.domain.ReservationId.class
+        ).getReturnType()).isEqualTo(Optional.class);
+    }
 }

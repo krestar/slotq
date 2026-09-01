@@ -391,6 +391,23 @@ class ReservationHoldIntegrationTests {
         assertThat(jdbcTemplate.queryForObject(
             "SELECT active FROM capacity_allocations WHERE reservation_id = ?", Boolean.class, bytes(firstId)
         )).isTrue();
+        assertThat(jdbcTemplate.queryForObject("""
+            SELECT COALESCE(SUM(CASE
+                WHEN allocation.active = TRUE
+                 AND (reservation.state IN ('CONFIRMED', 'CHECKED_IN')
+                      OR (reservation.state = 'HELD' AND reservation.expires_at > ?))
+                THEN allocation.units ELSE 0 END), 0)
+              FROM reservations reservation
+              JOIN capacity_allocations allocation ON allocation.reservation_id = reservation.id
+             WHERE reservation.slot_inventory_id = ?
+            """, Integer.class, java.sql.Timestamp.from(clock.instant()), bytes(fixture.slot().id().value())))
+            .isEqualTo(1);
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(2);
+        assertThat(countForSlot("capacity_allocations", fixture.slot())).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("""
+            SELECT COUNT(*) FROM capacity_allocations
+             WHERE slot_inventory_id = ? AND active = TRUE
+            """, Long.class, bytes(fixture.slot().id().value()))).isEqualTo(2);
     }
 
     @Test

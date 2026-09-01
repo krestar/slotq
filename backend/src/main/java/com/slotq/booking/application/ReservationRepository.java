@@ -17,6 +17,8 @@ public interface ReservationRepository {
 
     Optional<Reservation> find(VenueId venueId, ReservationId reservationId);
 
+    Optional<Reservation> findForUpdate(VenueId venueId, ReservationId reservationId);
+
     /**
      * Uses a current locking read so a duplicate transaction can observe the Reservation
      * committed by the transaction that won the idempotency-key insert race.

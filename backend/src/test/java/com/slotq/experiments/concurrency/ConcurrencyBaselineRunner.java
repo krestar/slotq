@@ -104,6 +104,8 @@ public final class ConcurrencyBaselineRunner {
             bootstrap(httpClient, objectMapper, baseUri, "customer-b", config.timeout())
         );
         List<Fixture> fixtures = seedFixtures(context, config);
+        JdbcTemplate jdbcTemplate = context.getBean(JdbcTemplate.class);
+        DatabaseCounters countersBefore = databaseCounters(jdbcTemplate);
         SplittableRandom random = new SplittableRandom(config.seed());
         List<RequestResult> requests = new ArrayList<>();
         List<Long> iterationElapsedNanos = new ArrayList<>();
@@ -141,14 +143,18 @@ public final class ConcurrencyBaselineRunner {
 
         Instant verificationNow = Instant.now();
         Verification verification = verify(
-            context.getBean(JdbcTemplate.class), fixtures, verificationNow
+            jdbcTemplate, fixtures, verificationNow
         );
+        DatabaseCounters countersAfter = databaseCounters(jdbcTemplate);
         requests.sort(Comparator.comparingInt(RequestResult::iteration)
             .thenComparingInt(RequestResult::client));
         Environment environment = environment(context);
-        Metrics metrics = metrics(requests, iterationElapsedNanos, verification);
+        Metrics metrics = metrics(
+            requests, iterationElapsedNanos, verification,
+            countersAfter.minus(countersBefore)
+        );
         return new BaselineReport(
-            "slotq-concurrency-baseline/v1",
+            "slotq-concurrency-baseline/v2",
             UUID.randomUUID().toString(),
             Instant.now(),
             environment,
@@ -156,7 +162,7 @@ public final class ConcurrencyBaselineRunner {
                 config.clients(), config.iterations(), config.seed(), config.partySize(),
                 config.holdDuration().toString(), config.timeout().toString()
             ),
-            new ProductModel("TABLE_X_SLOT", SLOT_CAPACITY, ALLOCATION_UNIT,
+            new ProductModel("TABLE_X_SLOT", SLOT_CAPACITY, ALLOCATION_UNIT, config.strategy(),
                 "partySize is Resource seatingCapacity eligibility only"),
             verificationNow,
             metrics,
@@ -267,6 +273,7 @@ public final class ConcurrencyBaselineRunner {
         int effectiveTotal = 0;
         int rawActiveTotal = 0;
         int violations = 0;
+        int partialCommits = 0;
         Timestamp capturedTimestamp = Timestamp.from(verificationNow);
         for (int iteration = 0; iteration < fixtures.size(); iteration++) {
             Fixture fixture = fixtures.get(iteration);
@@ -278,9 +285,11 @@ public final class ConcurrencyBaselineRunner {
                               OR (reservation.state = 'HELD' AND reservation.expires_at > ?))
                         THEN allocation.units ELSE 0 END), 0) AS effective_occupancy,
                     COALESCE(SUM(CASE WHEN allocation.active = TRUE THEN 1 ELSE 0 END), 0)
-                        AS raw_active_allocation_rows
+                        AS raw_active_allocation_rows,
+                    COUNT(DISTINCT reservation.id) AS reservation_rows,
+                    COUNT(allocation.id) AS allocation_rows
                   FROM reservations reservation
-                  JOIN capacity_allocations allocation
+                  LEFT JOIN capacity_allocations allocation
                     ON allocation.reservation_id = reservation.id
                  WHERE reservation.tenant_id = ?
                    AND reservation.venue_id = ?
@@ -295,24 +304,29 @@ public final class ConcurrencyBaselineRunner {
             );
             int effective = ((Number) row.get("effective_occupancy")).intValue();
             int rawActive = ((Number) row.get("raw_active_allocation_rows")).intValue();
+            int reservationRows = ((Number) row.get("reservation_rows")).intValue();
+            int allocationRows = ((Number) row.get("allocation_rows")).intValue();
             boolean violation = effective > SLOT_CAPACITY;
+            boolean partialCommit = reservationRows != allocationRows;
             effectiveTotal += effective;
             rawActiveTotal += rawActive;
             violations += violation ? 1 : 0;
+            partialCommits += partialCommit ? 1 : 0;
             observations.add(new SlotObservation(
                 iteration, fixture.slot().id().value(), verificationNow,
-                effective, rawActive, violation
+                effective, rawActive, reservationRows, allocationRows, violation, partialCommit
             ));
         }
         return new Verification(
-            List.copyOf(observations), effectiveTotal, rawActiveTotal, violations
+            List.copyOf(observations), effectiveTotal, rawActiveTotal, violations, partialCommits
         );
     }
 
     private static Metrics metrics(
         List<RequestResult> requests,
         List<Long> iterationElapsedNanos,
-        Verification verification
+        Verification verification,
+        DatabaseCounters databaseCounters
     ) {
         List<Double> latencies = requests.stream()
             .map(RequestResult::latencyMs)
@@ -340,7 +354,27 @@ public final class ConcurrencyBaselineRunner {
             percentile(latencies, 0.50), percentile(latencies, 0.95), percentile(latencies, 0.99),
             conflicts, failures, timeouts, successful,
             verification.invariantViolations(), verification.effectiveOccupancy(),
-            verification.rawActiveAllocationRows(), maxStartSpread
+            verification.rawActiveAllocationRows(), verification.partialCommits(), maxStartSpread,
+            0L, 0L,
+            0L, 0L,
+            databaseCounters.lockWaits(), databaseCounters.lockWaitTimeMs(),
+            databaseCounters.deadlocks()
+        );
+    }
+
+    private static DatabaseCounters databaseCounters(JdbcTemplate jdbcTemplate) {
+        Map<String, Long> values = new HashMap<>();
+        jdbcTemplate.queryForList("""
+            SHOW GLOBAL STATUS
+            WHERE Variable_name IN ('Innodb_row_lock_waits', 'Innodb_row_lock_time', 'Innodb_deadlocks')
+            """).forEach(row -> values.put(
+                row.get("Variable_name").toString(),
+                Long.parseLong(row.get("Value").toString())
+            ));
+        return new DatabaseCounters(
+            values.getOrDefault("Innodb_row_lock_waits", 0L),
+            values.getOrDefault("Innodb_row_lock_time", 0L),
+            values.getOrDefault("Innodb_deadlocks", 0L)
         );
     }
 
@@ -516,6 +550,7 @@ public final class ConcurrencyBaselineRunner {
         String resourceModel,
         int slotCapacity,
         int allocationUnit,
+        String concurrencyStrategy,
         String partySizeRole
     ) {
     }
@@ -534,7 +569,15 @@ public final class ConcurrencyBaselineRunner {
         int invariantViolationCount,
         int effectiveOccupancy,
         int rawActiveAllocationRows,
-        double maxBarrierReleaseStartSpreadMs
+        int partialCommitCount,
+        double maxBarrierReleaseStartSpreadMs,
+        long staleRetryCount,
+        long staleRetryExhaustionCount,
+        long systemRetryCount,
+        long systemRetryExhaustionCount,
+        long lockWaitCount,
+        long lockWaitTimeMs,
+        long deadlockCount
     ) {
     }
 
@@ -544,7 +587,10 @@ public final class ConcurrencyBaselineRunner {
         Instant verificationNow,
         int effectiveOccupancy,
         int rawActiveAllocationRows,
-        boolean invariantViolation
+        int reservationRows,
+        int allocationRows,
+        boolean invariantViolation,
+        boolean partialCommit
     ) {
     }
 
@@ -564,7 +610,18 @@ public final class ConcurrencyBaselineRunner {
         List<SlotObservation> slots,
         int effectiveOccupancy,
         int rawActiveAllocationRows,
-        int invariantViolations
+        int invariantViolations,
+        int partialCommits
     ) {
+    }
+
+    private record DatabaseCounters(long lockWaits, long lockWaitTimeMs, long deadlocks) {
+        DatabaseCounters minus(DatabaseCounters before) {
+            return new DatabaseCounters(
+                Math.max(0L, lockWaits - before.lockWaits),
+                Math.max(0L, lockWaitTimeMs - before.lockWaitTimeMs),
+                Math.max(0L, deadlocks - before.deadlocks)
+            );
+        }
     }
 }

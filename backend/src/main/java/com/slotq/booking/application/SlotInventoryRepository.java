@@ -23,6 +23,8 @@ public interface SlotInventoryRepository {
 
     Optional<SlotInventory> find(VenueId venueId, SlotInventoryId slotInventoryId);
 
+    Optional<SlotInventory> findForUpdate(VenueId venueId, SlotInventoryId slotInventoryId);
+
     List<SlotInventory> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt);
 
     boolean overlaps(
