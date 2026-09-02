@@ -51,8 +51,8 @@ Status의 의미는 다음과 같다.
 - M0 Foundation: Complete.
 - M1 Reservation Core: Complete. M1 milestone의 open Issue는 없으며, 전체 read-only audit의
   corrective Bug #66도 Done이고 PR #67 merge 이후 focused 재검증에서 PASS했다.
-- M2 Done: #15, #17.
-- M2 Ready: #16.
+- M2 Done: #15, #16, #17.
+- M2 Ready: #70, #71.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -142,9 +142,9 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 
     M2: #13 ──> #15 ──> #16
         #13 ──> #17
-        #14 + #16 ──> M2-WP1 HOLD 만료·확정 경합
-        #17 + #19 ──> M2-WP2 UI retry·idempotency 계약
-        M2-WP1 + M2-WP2 ──> M2 complete
+        #14 + #16 ──> #70 HOLD 만료·확정 경합
+        #17 + #19 ──> #71 UI retry·idempotency 계약
+        #70 + #71 ──> M2 complete
                               │
                               v
     M3-WP1 Event contract·원자적 전달 결정 ──> M3-WP2 Relay·Inbox·Retry
@@ -191,14 +191,14 @@ Availability와 Reservation command, Venue management API, 공통 Frontend 기�
 Customer/Management mutation reconciliation HIGH 2건은 #66에서 보정했고, PR #67 merge 이후
 focused read-only 재검증에서 두 finding 모두 RESOLVED 및 새 M1 blocker 없음으로 PASS했다.
 
-M2에서는 #15와 #17이 Done이고 #16은 #15의 공통 실험 하네스를 사용한다.
+M2에서는 #15, #16, #17이 Done이다. #16은 #15의 공통 실험 하네스를 사용한다.
 #15 workload는 실제 Product와 같은 Table × Slot capacity=1, Allocation unit=1을 사용한다.
 #16 correctness는 raw active Allocation row 수가 아니라 동일 `verificationNow`의 effective
 capacity-consuming units로 판단하며 stale concurrent write와 `RESERVATION_STATE_CONFLICT`의
 실제 발생 조건도 이 단계에서 정의한다. #17의 idempotency namespace는 tenant + authenticated
 customerPrincipalId + key이고, 동일 command 재시도는 같은 Reservation identity와 Location을
-재사용하면서 body는 retry 시점의 current effective representation을 반환한다. M2-WP1과
-M2-WP2는 각각의 선행 조건이 충족된 뒤 구체 Issue로 전환한다.
+재사용하면서 body는 retry 시점의 current effective representation을 반환한다. #70은
+#14 + #16, #71은 #17 + #19 선행 조건이 충족되어 둘 다 Ready다.
 
 ## Release checkpoint
 
@@ -359,7 +359,7 @@ Customer-bound command idempotency를 해결하며 Customer UI의 안전한 retr
 ### 완료 기준
 
 - #15부터 #17까지 모두 Done이다.
-- M2-WP1의 HOLD 만료·확정 경합 검증이 완료되어 있다.
+- #70의 HOLD 만료·확정 경합 검증이 완료되어 있다.
 - #15의 동시성 workload는 Product와 동일한 Table × Slot capacity=1, Allocation unit=1을
   사용한다.
 - 같은 Resource와 Slot에 동시 요청을 반복해도 동일 `verificationNow`에서 effective
@@ -690,7 +690,7 @@ M7 Model Router & Agent Runtime.
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
 | Issue 크기와 개수가 적절한가? | 실제 구현 Issue는 M0 8개, M1 core와 supporting/corrective Issue, M2 선행 3개로 관리하며 먼 단계는 work package로 남긴다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45는 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M1은 Complete이고 M2의 #15·#17은 Done이며 #16이 Ready다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M1은 Complete이고 M2의 #15·#16·#17은 Done이며 #70·#71이 Ready다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

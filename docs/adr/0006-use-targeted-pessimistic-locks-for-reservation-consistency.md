@@ -78,9 +78,10 @@ API 계약으로 도입한다.
 
 DB deadlock, lock wait timeout, connection failure와 transaction failure도 retry하지 않는다.
 이들은 `CAPACITY_UNAVAILABLE`이나 `RESERVATION_STATE_CONFLICT`로 변환하지 않고 기존 generic
-`500 INTERNAL_ERROR` system failure로 남긴다. MySQL lock wait timeout과 allocation update
-failure에서 500 및 전체 rollback을 실제 통합 테스트로 확인한다. commit 결과가 불명확한
-mutation을 자동 replay하지 않는 기존 client 계약은 유지한다.
+`500 INTERNAL_ERROR` system failure로 남긴다. MySQL lock wait timeout, 실제 row cycle deadlock과
+allocation update failure에서 500 및 전체 rollback을 통합 테스트로 확인한다. connection
+acquisition failure도 같은 generic system-failure mapping을 결정적인 handler contract test로
+확인한다. commit 결과가 불명확한 mutation을 자동 replay하지 않는 기존 client 계약은 유지한다.
 
 ## 기각 이유
 

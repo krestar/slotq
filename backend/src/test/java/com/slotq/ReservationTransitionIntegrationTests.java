@@ -438,6 +438,41 @@ class ReservationTransitionIntegrationTests {
         assertThat(allocationActive(reservationId)).isTrue();
     }
 
+    @Test
+    void mapsMysqlDeadlockToSystemFailureAndRollsBackTheProductTransaction() throws Exception {
+        Fixture fixture = fixture();
+        UUID reservationId = createHold(fixture, customerToken);
+        UUID[] competingRows = new UUID[4];
+        for (int index = 0; index < competingRows.length; index++) {
+            Fixture competingFixture = fixture();
+            competingRows[index] = createHold(competingFixture, customerToken);
+        }
+        long lockWaitsBefore = innodbRowLockWaits();
+
+        try (Connection competing = dataSource.getConnection();
+             ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            competing.setAutoCommit(false);
+            enlargeTransaction(competing, competingRows);
+            lockAllocation(competing, reservationId);
+
+            Future<MvcResult> product = executor.submit(() -> command(
+                fixture, reservationId, "cancel", customerToken
+            ).andReturn());
+            awaitLockWaitAfter(lockWaitsBefore);
+
+            lockReservation(competing, reservationId);
+            MvcResult result = product.get(10, TimeUnit.SECONDS);
+            assertThat(result.getResponse().getStatus()).isEqualTo(500);
+            assertThat(JsonPath.<String>read(
+                result.getResponse().getContentAsString(), "$.code"
+            )).isEqualTo("INTERNAL_ERROR");
+            competing.rollback();
+        }
+
+        assertThat(storedState(reservationId)).isEqualTo("HELD");
+        assertThat(allocationActive(reservationId)).isTrue();
+    }
+
     private MvcResult concurrentCommand(Fixture fixture, UUID reservationId, String command,
                                         String token, CountDownLatch ready, CountDownLatch start)
         throws Exception {
@@ -458,6 +493,26 @@ class ReservationTransitionIntegrationTests {
         )) {
             statement.setBytes(1, bytes(reservationId));
             assertThat(statement.executeQuery().next()).isTrue();
+        }
+    }
+
+    private void lockAllocation(Connection connection, UUID reservationId) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+            "SELECT id FROM capacity_allocations WHERE reservation_id = ? FOR UPDATE"
+        )) {
+            statement.setBytes(1, bytes(reservationId));
+            assertThat(statement.executeQuery().next()).isTrue();
+        }
+    }
+
+    private void enlargeTransaction(Connection connection, UUID... reservationIds) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+            "UPDATE reservations SET party_size = party_size + 1 WHERE id = ?"
+        )) {
+            for (UUID reservationId : reservationIds) {
+                statement.setBytes(1, bytes(reservationId));
+                assertThat(statement.executeUpdate()).isEqualTo(1);
+            }
         }
     }
 
