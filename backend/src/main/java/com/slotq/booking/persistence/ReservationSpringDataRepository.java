@@ -16,6 +16,14 @@ interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEn
 
     Optional<ReservationJpaEntity> findByVenueIdAndId(UUID venueId, UUID id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select reservation from ReservationJpaEntity reservation "
+        + "where reservation.venueId = :venueId and reservation.id = :id")
+    Optional<ReservationJpaEntity> findForUpdateByVenueIdAndId(
+        @Param("venueId") UUID venueId,
+        @Param("id") UUID id
+    );
+
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("select reservation from ReservationJpaEntity reservation "
         + "where reservation.venueId = :venueId and reservation.id = :id")

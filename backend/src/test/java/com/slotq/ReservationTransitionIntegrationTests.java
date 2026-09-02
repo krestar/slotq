@@ -1,6 +1,9 @@
 package com.slotq;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -9,8 +12,18 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Map;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.sql.DataSource;
 
 import com.jayway.jsonpath.JsonPath;
 import com.slotq.auth.application.AccessControlProvisioning;
@@ -52,6 +65,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -84,7 +98,7 @@ class ReservationTransitionIntegrationTests {
     @ServiceConnection
     static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
         .withDatabaseName("slotq")
-        .withCommand("--log-bin-trust-function-creators=1");
+        .withCommand("--log-bin-trust-function-creators=1", "--innodb-lock-wait-timeout=1");
 
     @Autowired MockMvc mockMvc;
     @Autowired TenantUseCase tenantUseCase;
@@ -96,6 +110,7 @@ class ReservationTransitionIntegrationTests {
     @Autowired AccessControlProvisioning accessControlProvisioning;
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired MutableClock clock;
+    @Autowired DataSource dataSource;
 
     private String customerToken;
     private String otherCustomerToken;
@@ -315,6 +330,224 @@ class ReservationTransitionIntegrationTests {
 
         assertThat(storedState(reservationId)).isEqualTo("HELD");
         assertThat(allocationActive(reservationId)).isTrue();
+    }
+
+    @Test
+    void serializesCompetingLifecycleWritesAndPreservesTheLegalWinner() throws Exception {
+        Fixture fixture = fixture();
+        grantOperators(fixture);
+        UUID reservationId = createHold(fixture, customerToken);
+        command(fixture, reservationId, "confirm", customerToken).andExpect(status().isOk());
+        clock.set(STARTS_AT);
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<MvcResult> checkIn = executor.submit(() -> concurrentCommand(
+                fixture, reservationId, "check-in", staffToken, ready, start
+            ));
+            Future<MvcResult> cancel = executor.submit(() -> concurrentCommand(
+                fixture, reservationId, "cancel", ownerToken, ready, start
+            ));
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<MvcResult> results = List.of(
+                checkIn.get(10, TimeUnit.SECONDS), cancel.get(10, TimeUnit.SECONDS)
+            );
+            assertThat(results).extracting(result -> result.getResponse().getStatus())
+                .containsExactlyInAnyOrder(200, 409);
+            assertThat(results.stream()
+                .filter(result -> result.getResponse().getStatus() == 200)
+                .map(result -> JsonPath.<String>read(
+                    responseBody(result), "$.state"
+                ))).containsExactly("CHECKED_IN");
+            assertThat(results.stream()
+                .filter(result -> result.getResponse().getStatus() == 409)
+                .map(result -> JsonPath.<String>read(
+                    responseBody(result), "$.code"
+                ))).allMatch(Set.of(
+                    "CANCELLATION_WINDOW_CLOSED", "RESERVATION_TRANSITION_NOT_ALLOWED"
+                )::contains);
+        } finally {
+            start.countDown();
+        }
+
+        assertThat(storedState(reservationId)).isEqualTo("CHECKED_IN");
+        assertThat(allocationActive(reservationId)).isTrue();
+    }
+
+    @Test
+    void staleWriterReevaluatesTheCommittedWinnerBeforeReturningTheExistingBusinessCode()
+        throws Exception {
+        Fixture fixture = fixture();
+        UUID reservationId = createHold(fixture, customerToken);
+        long lockWaitsBefore = innodbRowLockWaits();
+        CountDownLatch ready = new CountDownLatch(1);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (Connection winner = dataSource.getConnection();
+             ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            winner.setAutoCommit(false);
+            lockReservation(winner, reservationId);
+            Future<MvcResult> staleConfirm = executor.submit(() -> concurrentCommand(
+                fixture, reservationId, "confirm", customerToken, ready, start
+            ));
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            awaitLockWaitAfter(lockWaitsBefore);
+
+            updateWinnerState(winner, reservationId, "CANCELLED", false);
+            winner.commit();
+
+            MvcResult result = staleConfirm.get(10, TimeUnit.SECONDS);
+            assertThat(result.getResponse().getStatus()).isEqualTo(409);
+            assertThat(JsonPath.<String>read(
+                result.getResponse().getContentAsString(), "$.code"
+            )).isEqualTo("RESERVATION_TRANSITION_NOT_ALLOWED");
+        } finally {
+            start.countDown();
+        }
+
+        assertThat(storedState(reservationId)).isEqualTo("CANCELLED");
+        assertThat(allocationActive(reservationId)).isFalse();
+    }
+
+    @Test
+    void mapsMysqlLockWaitTimeoutToSystemFailureWithoutBusinessConflict() throws Exception {
+        Fixture fixture = fixture();
+        UUID reservationId = createHold(fixture, customerToken);
+
+        try (Connection blocker = dataSource.getConnection();
+             ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            blocker.setAutoCommit(false);
+            lockReservation(blocker, reservationId);
+
+            Future<MvcResult> blocked = executor.submit(() -> command(
+                fixture, reservationId, "confirm", customerToken
+            ).andReturn());
+            MvcResult result = blocked.get(5, TimeUnit.SECONDS);
+            assertThat(result.getResponse().getStatus()).isEqualTo(500);
+            assertThat(JsonPath.<String>read(
+                result.getResponse().getContentAsString(), "$.code"
+            )).isEqualTo("INTERNAL_ERROR");
+            blocker.rollback();
+        }
+
+        assertThat(storedState(reservationId)).isEqualTo("HELD");
+        assertThat(allocationActive(reservationId)).isTrue();
+    }
+
+    @Test
+    void mapsMysqlDeadlockToSystemFailureAndRollsBackTheProductTransaction() throws Exception {
+        Fixture fixture = fixture();
+        UUID reservationId = createHold(fixture, customerToken);
+        UUID[] competingRows = new UUID[4];
+        for (int index = 0; index < competingRows.length; index++) {
+            Fixture competingFixture = fixture();
+            competingRows[index] = createHold(competingFixture, customerToken);
+        }
+        long lockWaitsBefore = innodbRowLockWaits();
+
+        try (Connection competing = dataSource.getConnection();
+             ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            competing.setAutoCommit(false);
+            enlargeTransaction(competing, competingRows);
+            lockAllocation(competing, reservationId);
+
+            Future<MvcResult> product = executor.submit(() -> command(
+                fixture, reservationId, "cancel", customerToken
+            ).andReturn());
+            awaitLockWaitAfter(lockWaitsBefore);
+
+            lockReservation(competing, reservationId);
+            MvcResult result = product.get(10, TimeUnit.SECONDS);
+            assertThat(result.getResponse().getStatus()).isEqualTo(500);
+            assertThat(JsonPath.<String>read(
+                result.getResponse().getContentAsString(), "$.code"
+            )).isEqualTo("INTERNAL_ERROR");
+            competing.rollback();
+        }
+
+        assertThat(storedState(reservationId)).isEqualTo("HELD");
+        assertThat(allocationActive(reservationId)).isTrue();
+    }
+
+    private MvcResult concurrentCommand(Fixture fixture, UUID reservationId, String command,
+                                        String token, CountDownLatch ready, CountDownLatch start)
+        throws Exception {
+        ready.countDown();
+        if (!start.await(5, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Concurrent Reservation command start timed out");
+        }
+        return command(fixture, reservationId, command, token).andReturn();
+    }
+
+    private String responseBody(MvcResult result) {
+        return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+    }
+
+    private void lockReservation(Connection connection, UUID reservationId) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+            "SELECT id FROM reservations WHERE id = ? FOR UPDATE"
+        )) {
+            statement.setBytes(1, bytes(reservationId));
+            assertThat(statement.executeQuery().next()).isTrue();
+        }
+    }
+
+    private void lockAllocation(Connection connection, UUID reservationId) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+            "SELECT id FROM capacity_allocations WHERE reservation_id = ? FOR UPDATE"
+        )) {
+            statement.setBytes(1, bytes(reservationId));
+            assertThat(statement.executeQuery().next()).isTrue();
+        }
+    }
+
+    private void enlargeTransaction(Connection connection, UUID... reservationIds) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+            "UPDATE reservations SET party_size = party_size + 1 WHERE id = ?"
+        )) {
+            for (UUID reservationId : reservationIds) {
+                statement.setBytes(1, bytes(reservationId));
+                assertThat(statement.executeUpdate()).isEqualTo(1);
+            }
+        }
+    }
+
+    private void updateWinnerState(Connection connection, UUID reservationId,
+                                   String state, boolean allocationActive) throws Exception {
+        try (PreparedStatement reservation = connection.prepareStatement(
+            "UPDATE reservations SET state = ? WHERE id = ?"
+        ); PreparedStatement allocation = connection.prepareStatement(
+            "UPDATE capacity_allocations SET active = ? WHERE reservation_id = ?"
+        )) {
+            reservation.setString(1, state);
+            reservation.setBytes(2, bytes(reservationId));
+            assertThat(reservation.executeUpdate()).isEqualTo(1);
+            allocation.setBoolean(1, allocationActive);
+            allocation.setBytes(2, bytes(reservationId));
+            assertThat(allocation.executeUpdate()).isEqualTo(1);
+        }
+    }
+
+    private long innodbRowLockWaits() {
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+            "SHOW GLOBAL STATUS LIKE 'Innodb_row_lock_waits'"
+        );
+        return Long.parseLong(row.get("Value").toString());
+    }
+
+    private void awaitLockWaitAfter(long before) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            if (innodbRowLockWaits() > before) {
+                return;
+            }
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
+        }
+        throw new AssertionError("Reservation command did not reach the MySQL row-lock boundary");
     }
 
     private void assertAllowed(PrincipalId principal, ReservationAccessTarget target,

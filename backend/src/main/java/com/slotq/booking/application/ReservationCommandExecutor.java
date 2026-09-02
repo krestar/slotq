@@ -90,7 +90,7 @@ class ReservationCommandExecutor {
     }
 
     private Reservation findReservation(VenueId venueId, ReservationId reservationId) {
-        return reservationRepository.find(venueId, reservationId)
+        return reservationRepository.findForUpdate(venueId, reservationId)
             .orElseThrow(ResourceNotFoundException::new);
     }
 

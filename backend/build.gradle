@@ -46,7 +46,7 @@ tasks.register('concurrencyBaseline', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.slotq.experiments.concurrency.ConcurrencyBaselineRunner'
 
-    ['clients', 'iterations', 'seed', 'partySize', 'holdDuration', 'timeout', 'output'].each { key ->
+    ['clients', 'iterations', 'seed', 'partySize', 'holdDuration', 'timeout', 'output', 'strategy'].each { key ->
         if (project.hasProperty(key)) {
             systemProperty "slotq.baseline.${key}", project.property(key)
         }

@@ -25,6 +25,7 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | [0003](0003-use-react-typescript-vite.md) | Thin SPA에 React, TypeScript, Vite 사용 | `Accepted` |
 | [0004](0004-use-java-25.md) | Java 25 LTS를 Backend 기준선으로 사용 | `Accepted` |
 | [0005](0005-use-mysql-hold-idempotency-record.md) | MySQL reliability record로 HOLD command idempotency 보장 | `Accepted` |
+| [0006](0006-use-targeted-pessimistic-locks-for-reservation-consistency.md) | Reservation 정합성 경계에 대상 row pessimistic lock 사용 | `Accepted` |
 
 ## 후보 등록부
 
@@ -42,7 +43,6 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 
 | 후보 | 상태 | 검토를 시작할 증거 또는 선행 조건 |
 | --- | --- | --- |
-| Optimistic/Pessimistic/Distributed Lock | `Deferred` | 재현 가능한 동시 예약 실험과 충돌률, 지연, DB 부하 측정 결과가 필요합니다. |
 | HOLD 만료 처리 방식 | `Deferred` | HOLD 요구사항과 허용 만료 오차, 복구 목표, 예상 부하가 구체화되어야 합니다. |
 | Transactional Outbox | `Deferred` | DB commit과 외부 event publish 사이의 원자성 문제가 실제 흐름에 등장해야 합니다. |
 | Kafka | `Deferred` | 단순한 DB 기반 처리나 애플리케이션 내부 이벤트로 충족할 수 없는 전달량, 소비자 분리 또는 보존 요구가 측정되어야 합니다. |

@@ -75,7 +75,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
         );
         Instant now = clock.instant();
         Clock commandClock = Clock.fixed(now, ZoneOffset.UTC);
-        SlotInventory slot = slotRepository.find(command.venueId(), command.slotInventoryId())
+        SlotInventory slot = slotRepository.findForUpdate(command.venueId(), command.slotInventoryId())
             .orElseThrow(ResourceNotFoundException::new);
         HoldIdempotencyStore.Fingerprint fingerprint = new HoldIdempotencyStore.Fingerprint(
             command.venueId(), command.slotInventoryId(), command.partySize()

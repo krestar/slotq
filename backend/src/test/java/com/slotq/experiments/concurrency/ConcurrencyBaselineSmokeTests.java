@@ -45,23 +45,36 @@ class ConcurrencyBaselineSmokeTests {
             context,
             URI.create("http://127.0.0.1:" + serverPort),
             new ConcurrencyBaselineConfig(
-                2, 2, 15001L, 2, Duration.ofMinutes(5), Duration.ofSeconds(10),
+                4, 3, 15001L, 2, Duration.ofMinutes(5), Duration.ofSeconds(10),
                 Path.of("build/reports/experiments/smoke-unused.json")
             )
         );
 
-        assertThat(report.schemaVersion()).isEqualTo("slotq-concurrency-baseline/v1");
+        assertThat(report.schemaVersion()).isEqualTo("slotq-concurrency-baseline/v2");
         assertThat(report.productModel().slotCapacity()).isEqualTo(1);
         assertThat(report.productModel().allocationUnit()).isEqualTo(1);
+        assertThat(report.productModel().concurrencyStrategy()).isNotBlank();
         assertThat(report.workload().seed()).isEqualTo(15001L);
-        assertThat(report.requests()).hasSize(4);
-        assertThat(report.metrics().totalRequests()).isEqualTo(4);
-        assertThat(report.metrics().successfulHoldResultCount()).isPositive();
+        assertThat(report.requests()).hasSize(12);
+        assertThat(report.metrics().totalRequests()).isEqualTo(12);
+        assertThat(report.metrics().successfulHoldResultCount()).isEqualTo(3);
+        assertThat(report.metrics().businessConflictCount()).isEqualTo(9);
+        assertThat(report.requests().stream()
+            .filter(request -> request.outcome() == ConcurrencyBaselineRunner.Outcome.BUSINESS_CONFLICT)
+            .map(ConcurrencyBaselineRunner.RequestResult::businessCode))
+            .containsOnly("CAPACITY_UNAVAILABLE");
         assertThat(report.metrics().successfulHoldResultCount()
             + report.metrics().businessConflictCount()
             + report.metrics().systemFailureCount()
             + report.metrics().timeoutCount()).isEqualTo(report.metrics().totalRequests());
-        assertThat(report.slotObservations()).hasSize(2);
+        assertThat(report.metrics().systemFailureCount()).isZero();
+        assertThat(report.metrics().timeoutCount()).isZero();
+        assertThat(report.metrics().invariantViolationCount()).isZero();
+        assertThat(report.metrics().partialCommitCount()).isZero();
+        assertThat(report.metrics().effectiveOccupancy()).isEqualTo(3);
+        assertThat(report.metrics().successfulHoldResultCount())
+            .isEqualTo(report.metrics().effectiveOccupancy());
+        assertThat(report.slotObservations()).hasSize(3);
         assertThat(report.slotObservations())
             .extracting(ConcurrencyBaselineRunner.SlotObservation::verificationNow)
             .containsOnly(report.verificationNow());
@@ -69,13 +82,17 @@ class ConcurrencyBaselineSmokeTests {
             .allSatisfy(observation -> {
                 assertThat(observation.effectiveOccupancy()).isGreaterThanOrEqualTo(0);
                 assertThat(observation.rawActiveAllocationRows()).isGreaterThanOrEqualTo(0);
+                assertThat(observation.effectiveOccupancy()).isEqualTo(1);
+                assertThat(observation.reservationRows()).isEqualTo(1);
+                assertThat(observation.allocationRows()).isEqualTo(1);
+                assertThat(observation.partialCommit()).isFalse();
             });
         assertThat(report.metrics().effectiveOccupancy()).isEqualTo(report.slotObservations().stream()
             .mapToInt(ConcurrencyBaselineRunner.SlotObservation::effectiveOccupancy).sum());
         assertThat(report.metrics().rawActiveAllocationRows()).isEqualTo(report.slotObservations().stream()
             .mapToInt(ConcurrencyBaselineRunner.SlotObservation::rawActiveAllocationRows).sum());
         assertThat(objectMapper.readTree(objectMapper.writeValueAsString(report))
-            .path("schemaVersion").asText()).isEqualTo("slotq-concurrency-baseline/v1");
+            .path("schemaVersion").asText()).isEqualTo("slotq-concurrency-baseline/v2");
         assertThat(jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM hold_idempotency_records", Long.class
         )).isZero();

@@ -56,6 +56,10 @@ record ConcurrencyBaselineConfig(
         return Math.toIntExact(holdDuration.toMinutes());
     }
 
+    String strategy() {
+        return property("strategy", "PESSIMISTIC_WRITE_SLOT");
+    }
+
     private static int integer(String name, int defaultValue) {
         return Integer.parseInt(property(name, Integer.toString(defaultValue)));
     }

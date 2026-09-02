@@ -64,7 +64,9 @@ Measured가 아닌 문서에는 전략 우열이나 목표 달성 수치를 결�
 ## Reservation concurrency
 
 현재 Product HOLD의 naive check-then-write 측정 절차와 JSON 계약은
-[Product HOLD concurrency baseline](concurrency-baseline.md)에 기록한다.
+[Product HOLD concurrency experiment](concurrency-baseline.md)에 기록한다. #16의 동일 조건
+후보 비교와 선택 근거는 [Reservation 동시성 전략 비교](concurrency-strategy-comparison.md)에
+기록한다.
 
 ### 질문
 

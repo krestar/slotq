@@ -183,6 +183,9 @@ capacity를 소비한다. stored state가 `HELD`이고 Allocation release가 아
 Product Charter의 규칙은 이 effective invariant의 결과로 보장된다. M1의 read와 capacity
 query는 이 predicate를 사용하고, due HOLD의 stored state와 Allocation release는 허용된
 mutation command 또는 내부 expire command에서 같은 transaction으로 materialize한다.
+새 HOLD write는 [ADR-0006](../adr/0006-use-targeted-pessimistic-locks-for-reservation-consistency.md)에
+따라 대상 SlotInventory row를 transaction의 첫 read에서 잠근 뒤 이 predicate와
+Reservation/Allocation 저장을 같은 transaction에서 수행한다.
 
 Restaurant MVP에서 하나의 Table과 고정 Slot 조합은 capacity `1`을 가지며, 인원수는
 별도 적합성 규칙으로 검사한다.
@@ -209,6 +212,8 @@ partySize <= Resource.seatingCapacity
 - Venue Policy가 바뀌어도 기존 Reservation의 적용 Deadline은 암묵적으로 바뀌지 않는다.
 - 같은 Idempotency Scope, Key, Request Fingerprint의 반복 Command는 최초 결과를
   반환하며, 다른 Fingerprint는 거부한다.
+- Lifecycle write는 대상 Reservation row를 transaction의 첫 read에서 잠그고 authoritative
+  current state와 시간 guard를 평가한 뒤 Allocation과 함께 저장한다.
 
 ### 6.4 Waitlist와 Event invariant
 
@@ -311,7 +316,6 @@ Transport 재전달은 어느 단계든 반복할 수 있다. Database Uniquenes
 Domain 의미는 구현 전에 안정되어야 하지만 다음 Mechanism은 Milestone 실험이나 장애
 테스트의 근거가 생길 때까지 Proposed로 둔다.
 
-- Optimistic Lock과 Pessimistic Lock
 - Allocation Row와 Atomic Counter의 물리 저장 방식
 - HOLD와 Offer 만료를 위한 정기 Database Polling과 Lazy Check
 - Transactional Outbox와 Event Relay
