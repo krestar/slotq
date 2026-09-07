@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
+import type { HoldAttemptMemory, HoldCommand } from './holdAttempt'
 import { Button, FormField, StatusBadge } from '../components'
 import {
   CustomerApiError,
@@ -14,6 +15,7 @@ import {
 
 export interface CustomerReservationFlowProps {
   api?: CustomerReservationApi
+  holdAttempts: HoldAttemptMemory
   navigation?: ReactNode
   onNavigationLockChange?: (locked: boolean) => void
 }
@@ -28,6 +30,10 @@ type LoadState = 'idle' | 'loading' | 'success' | 'error'
 type ReservationAction = 'confirm' | 'cancel'
 
 const errorCopy: Record<ClientErrorCode, { title: string; message: string }> = {
+  IDEMPOTENCY_KEY_REUSED: {
+    title: '예약 요청 키가 충돌했습니다',
+    message: '이 요청은 종료되었습니다. 새 예약을 시작해 주세요.',
+  },
   VALIDATION_FAILED: {
     title: '입력값을 확인해 주세요',
     message: '서버가 요청 값을 검증하지 못했습니다. 표시된 값을 확인해 주세요.',
@@ -169,9 +175,11 @@ function AvailabilityCard({
 
 export function CustomerReservationFlow({
   api = customerReservationApi,
+  holdAttempts,
   navigation,
   onNavigationLockChange,
 }: CustomerReservationFlowProps) {
+  const holdAttempt = useSyncExternalStore(holdAttempts.subscribe, holdAttempts.getSnapshot)
   const [venues, setVenues] = useState<VenueSummary[]>([])
   const [venueState, setVenueState] = useState<LoadState>('loading')
   const [venueError, setVenueError] = useState<CustomerApiError>()
@@ -190,7 +198,7 @@ export function CustomerReservationFlow({
   const [actionError, setActionError] = useState<CustomerApiError>()
   const [reservationReadState, setReservationReadState] = useState<LoadState>('idle')
   const [reservationReadError, setReservationReadError] = useState<CustomerApiError>()
-  const [resultUnknown, setResultUnknown] = useState<'hold' | 'transition'>()
+  const [resultUnknown, setResultUnknown] = useState<'transition'>()
   const availabilityRequestGeneration = useRef(0)
   const reservationReadGeneration = useRef(0)
   const reservationReadInFlight = useRef(false)
@@ -237,7 +245,6 @@ export function CustomerReservationFlow({
     setAvailabilityState('loading')
     setAvailabilityError(undefined)
     setSelectedSlotId('')
-    setResultUnknown(undefined)
     try {
       const result = await api.getAvailability(search.venueId, search.date, search.partySize)
       if (requestGeneration !== availabilityRequestGeneration.current) return
@@ -265,7 +272,8 @@ export function CustomerReservationFlow({
 
   function submitAvailability(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (holdInFlight.current || actionInFlight.current || resultUnknown === 'transition') return
+    if (holdInFlight.current || actionInFlight.current || resultUnknown === 'transition'
+      || holdAttempt.status === 'unknown' || holdAttempt.status === 'unavailable') return
     const nextErrors: Record<string, string> = {}
     const parsedPartySize = Number(partySize)
     if (!venueId) nextErrors.venue = 'Venue를 선택해 주세요.'
@@ -288,28 +296,46 @@ export function CustomerReservationFlow({
       || reservationReadInFlight.current
       || resultUnknown === 'transition'
     ) return
-    const command = {
+    const command = holdAttempts.begin({
       venueId: lastSearch.venueId,
       slotInventoryId: selectedSlotId,
       partySize: lastSearch.partySize,
-    }
+    })
+    if (command) await sendHold(command)
+  }
+
+  async function retryHold() {
+    if (holdInFlight.current || actionInFlight.current) return
+    const command = holdAttempts.retry()
+    if (command) await sendHold(command)
+  }
+
+  async function sendHold(command: HoldCommand) {
     holdInFlight.current = true
     setHoldState('loading')
     setActionError(undefined)
     setResultUnknown(undefined)
     try {
-      setReservation(await api.createHold(
+      const result = await api.createHold(
         command.venueId,
         command.slotInventoryId,
         command.partySize,
-      ))
+        command.idempotencyKey,
+      )
+      if (!holdAttempts.current(command)) return
+      setReservation(result)
+      holdAttempts.finish(command)
       setHoldState('success')
     } catch (error) {
       setHoldState('error')
-      if (error instanceof MutationResultUnknownError) setResultUnknown('hold')
-      else setActionError(normalizeError(error))
+      if (error instanceof MutationResultUnknownError) holdAttempts.unknown(command)
+      else {
+        holdAttempts.finish(command, true)
+        setActionError(normalizeError(error))
+      }
     } finally {
       holdInFlight.current = false
+      setHoldState((current) => current === 'loading' ? 'error' : current)
     }
   }
 
@@ -379,12 +405,14 @@ export function CustomerReservationFlow({
   const canCancel = reservation?.state === 'HELD' || reservation?.state === 'CONFIRMED'
   const mutationInFlight = holdState === 'loading' || actionState === 'loading'
   const knownReservationUnresolved = resultUnknown === 'transition'
-  const contextLocked = mutationInFlight || knownReservationUnresolved
+  const holdUnresolved = holdAttempt.status === 'unknown' || holdAttempt.status === 'unavailable'
+  const contextLocked = mutationInFlight || knownReservationUnresolved || holdUnresolved || holdAttempt.status === 'pending'
+  const navigationLocked = mutationInFlight || knownReservationUnresolved || holdAttempt.status === 'pending'
 
   useLayoutEffect(() => {
-    onNavigationLockChange?.(contextLocked)
+    onNavigationLockChange?.(navigationLocked)
     return () => onNavigationLockChange?.(false)
-  }, [contextLocked, onNavigationLockChange])
+  }, [navigationLocked, onNavigationLockChange])
 
   return (
     <>
@@ -401,6 +429,7 @@ export function CustomerReservationFlow({
           <p className="intro-copy">
             Venue와 날짜를 선택하고, 서버가 알려 주는 최신 예약 상태를 단계별로 확인하세요.
           </p>
+          <p>페이지를 새로고침하면 이전 HOLD 요청을 다시 시도할 수 없습니다. 결과를 받지 못한 예약도 생성되었을 수 있으므로 예약 가능 시간을 다시 확인해 주세요.</p>
         </section>
 
         <ol className="guided-flow">
@@ -427,7 +456,7 @@ export function CustomerReservationFlow({
                   <select
                     value={venueId}
                     onChange={(event) => {
-                      if (holdInFlight.current || actionInFlight.current || knownReservationUnresolved) return
+                      if (contextLocked) return
                       setVenueId(event.target.value)
                       setFormErrors((current) => ({ ...current, venue: '' }))
                       resetDownstream()
@@ -445,7 +474,7 @@ export function CustomerReservationFlow({
                     type="date"
                     value={date}
                     onChange={(event) => {
-                      if (holdInFlight.current || actionInFlight.current || knownReservationUnresolved) return
+                      if (contextLocked) return
                       setDate(event.target.value)
                       setFormErrors((current) => ({ ...current, date: '' }))
                       resetDownstream()
@@ -461,7 +490,7 @@ export function CustomerReservationFlow({
                     inputMode="numeric"
                     value={partySize}
                     onChange={(event) => {
-                      if (holdInFlight.current || actionInFlight.current || knownReservationUnresolved) return
+                      if (contextLocked) return
                       setPartySize(event.target.value)
                       setFormErrors((current) => ({ ...current, partySize: '' }))
                       resetDownstream()
@@ -512,7 +541,7 @@ export function CustomerReservationFlow({
                       selected={selectedSlotId === item.slotInventoryId}
                       disabled={contextLocked}
                       onSelect={() => {
-                        if (holdInFlight.current || actionInFlight.current) return
+                        if (contextLocked) return
                         setSelectedSlotId(item.slotInventoryId)
                       }}
                     />
@@ -520,7 +549,7 @@ export function CustomerReservationFlow({
                 </ul>
               ) : <p className="step-placeholder">먼저 예약 가능한 시간을 조회해 주세요.</p>}
 
-              {selectedItem && lastSearch ? (
+              {selectedItem && lastSearch && !reservation ? (
                 <div className="hold-action">
                   <p><strong>{selectedItem.resourceName}</strong> · {lastSearch.partySize}명</p>
                   <Button
@@ -533,10 +562,21 @@ export function CustomerReservationFlow({
               ) : null}
               {holdState === 'loading' ? <LoadingNotice>서버에서 예약 보류를 생성하는 중입니다.</LoadingNotice> : null}
               {actionError && !reservation ? <ErrorNotice error={actionError} /> : null}
-              {resultUnknown === 'hold' ? (
+              {holdUnresolved ? (
                 <div className="notice notice--unknown" role="alert">
                   <strong>HOLD 생성 결과를 확인할 수 없습니다</strong>
                   <span>Reservation ID를 받지 못했으므로 같은 요청을 자동 재전송하지 않습니다.</span>
+                  {holdAttempt.status === 'unknown' ? (
+                    <>
+                      <span>같은 예약 요청을 다시 시도하거나, 요청을 포기한 뒤 새 조건을 선택할 수 있습니다. Availability 조회만으로 이전 결과가 확정되지는 않습니다.</span>
+                      <p>Venue {holdAttempt.command.venueId} · 시간 {holdAttempt.command.slotInventoryId} · {holdAttempt.command.partySize}명</p>
+                      <Button onClick={() => void retryHold()} disabled={mutationInFlight}>같은 HOLD 요청 다시 시도</Button>
+                    </>
+                  ) : <span>인증 세션이 바뀌었거나 재시도 보존 시간이 끝나 이전 요청을 재전송할 수 없습니다. 이전 예약은 생성되었을 수 있습니다.</span>}
+                  <Button variant="secondary" disabled={mutationInFlight} onClick={() => {
+                    holdAttempts.abandon()
+                    resetDownstream()
+                  }}>이 요청 포기하고 새 예약 시작</Button>
                   {lastSearch ? (
                     <Button
                       variant="secondary"
@@ -548,6 +588,7 @@ export function CustomerReservationFlow({
                   ) : null}
                 </div>
               ) : null}
+              {holdAttempt.status === 'abandoned' ? <p className="notice" role="status">이전 요청의 재시도를 포기했습니다. 서버 예약을 취소한 것은 아니며, 최신 Availability를 조회한 뒤 새 예약을 시작해 주세요.</p> : null}
             </section>
           </li>
 

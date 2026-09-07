@@ -2,6 +2,7 @@ export interface LocalAuthSession {
   initialize(): Promise<void>
   accessToken(): string | undefined
   invalidate(): void
+  onInvalidate(listener: () => void): () => void
 }
 
 interface LocalAuthSessionOptions {
@@ -26,6 +27,7 @@ export function createLocalAuthSession({
   let inMemoryAccessToken: string | undefined
   let initialization: Promise<void> | undefined
   let sessionGeneration = 0
+  const invalidationListeners = new Set<() => void>()
 
   async function bootstrap(generation: number): Promise<void> {
     if (!selectedFixture) {
@@ -82,6 +84,11 @@ export function createLocalAuthSession({
       sessionGeneration += 1
       initialization = undefined
       inMemoryAccessToken = undefined
+      invalidationListeners.forEach((listener) => listener())
+    },
+    onInvalidate(listener) {
+      invalidationListeners.add(listener)
+      return () => { invalidationListeners.delete(listener) }
     },
   }
 }
