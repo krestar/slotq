@@ -108,3 +108,46 @@ Tenant/Venue 전체 lock, Redis/Distributed Lock은 대상 Slot/Reservation row�
 실제 hotspot lock wait가 latency 목표를 반복해서 넘거나, capacity/quantity가 1보다 커지거나,
 pooled capacity 또는 lifecycle contention이 도입되면 같은 workload와 추가된 Product model로
 optimistic/physical allocation 전략을 다시 비교한다.
+
+## #70 confirm/expiry 경합 재검증
+
+검증 테스트: [ReservationConfirmExpiryIntegrationTests](../../backend/src/test/java/com/slotq/ReservationConfirmExpiryIntegrationTests.java).
+기존 `ReservationService`의 public 권한용 read는 command transaction 밖에서 수행하며,
+confirm과 System Principal expiry는 모두 `ReservationCommandExecutor`의 첫 DB read인
+`findForUpdate`를 거친다. `commandNow`는 executor transaction 진입 전에 한 번 캡처하고,
+guard/domain transition/effective response에는 그 instant로 만든 fixed Clock을 사용한다.
+이 경계와 Reservation → Allocation 저장 순서는 이미 계약을 만족하므로 production 변경은 없다.
+
+MySQL 8.4의 독립된 테스트 container에서 다음 순서로 실제 두 command를 경합시킨다.
+
+1. 외부 transaction이 Reservation row를 잠그고 선행 command의 InnoDB row-lock wait를 관측한다.
+2. Reservation gate를 해제하면 선행 command가 Reservation lock을 얻는다. 테스트 전용
+   `BEFORE UPDATE` trigger가 별도 gate row에서 기다리므로 winner는 아직 commit할 수 없다.
+3. 이 두 번째 lock wait를 관측한 뒤 후행 command를 시작하고 세 번째 lock wait를 확인한다.
+   이때 두 command 모두 미완료이고 committed pair는 여전히 `HELD + active`이다.
+4. write gate를 해제해 winner를 commit시키면 loser는 current locked Reservation을 읽는다.
+
+confirm-first는 만료 전 confirm의 `200 CONFIRMED + active`와 뒤 expiry의
+`RESERVATION_TRANSITION_NOT_ALLOWED`를, expiry-first는 만료 경계 expiry의
+`EXPIRED + released`와 뒤 confirm의 `409 HOLD_EXPIRED`를 검증한다. 후자의 confirm은
+선행 권한 read의 committed HELD를 쓰기에 재사용하지 않는다. equality confirm도 두 순서로
+경합시켜 `409 HOLD_EXPIRED`와 `EXPIRED + released`를 확인한다. equality confirm이 먼저
+materialize한 경우에도 409 반환 전에 commit하며, 뒤 expiry는 same-target 성공을 유지한다.
+
+각 worker에 별도 test-only Clock 관측값을 두고 transaction 밖에서 해당 command instant를
+정확히 한 번 읽었는지 검사한다. 잠금 대기를 관측한 뒤 confirm Clock은 만료 후로, expiry
+Clock은 만료 전으로 바꾸어도 최초 instant가 유지된다. 순서는 sleep 간격이나 lock queue의
+FIFO 가정으로 결정하지 않으며 production synchronization hook도 추가하지 않는다.
+
+expiry의 Allocation release에는 MySQL trigger `SIGNAL SQLSTATE '45000'` failure를 주입해
+`HELD + active` 전체 rollback을 확인한다. 같은 due instant의 domain effective state는
+`EXPIRED`이고 domain/기존 capacity query 모두 non-consuming이다. 모든 race와 rollback 후
+DB pair 재조회, persistence/domain reconstruction, exact Reservation GET 및 read non-mutation을
+검증한다.
+
+stale retry attempt/exhaustion과 `RESERVATION_STATE_CONFLICT`는 이 선택 전략에 발생 경로가
+없어 N/A이다. loser는 retry 없이 최초 transaction의 locking current read로 기존 M1 결과를
+확정한다. lock timeout/deadlock/transaction failure는 기존
+`ReservationTransitionIntegrationTests`, connection failure mapping은
+`ProductApiErrorContractTests`의 #16 회귀 증거를 재사용한다. 이 검증은 전략 재선택이나
+latency/throughput 측정이 아니다.
