@@ -27,6 +27,7 @@ export interface Availability {
 }
 
 export interface Reservation {
+  location?: string
   id: string
   venueId: string
   resourceId: string
@@ -44,6 +45,7 @@ export interface Reservation {
 
 export type ProductErrorCode =
   | 'VALIDATION_FAILED'
+  | 'IDEMPOTENCY_KEY_REUSED'
   | 'AUTHENTICATION_REQUIRED'
   | 'ACCESS_DENIED'
   | 'RESOURCE_NOT_FOUND'
@@ -86,7 +88,7 @@ type ApiRequest = typeof apiRequest
 export interface CustomerReservationApi {
   listVenues(): Promise<VenueSummary[]>
   getAvailability(venueId: string, date: string, partySize: number): Promise<Availability>
-  createHold(venueId: string, slotInventoryId: string, partySize: number): Promise<Reservation>
+  createHold(venueId: string, slotInventoryId: string, partySize: number, idempotencyKey: string): Promise<Reservation>
   getReservation(venueId: string, reservationId: string): Promise<Reservation>
   confirmReservation(venueId: string, reservationId: string): Promise<Reservation>
   cancelReservation(venueId: string, reservationId: string): Promise<Reservation>
@@ -94,6 +96,7 @@ export interface CustomerReservationApi {
 
 const productErrorCodes = new Set<ProductErrorCode>([
   'VALIDATION_FAILED',
+  'IDEMPOTENCY_KEY_REUSED',
   'AUTHENTICATION_REQUIRED',
   'ACCESS_DENIED',
   'RESOURCE_NOT_FOUND',
@@ -150,6 +153,7 @@ async function requestJson<T>(
   path: string,
   options: Parameters<ApiRequest>[1],
   mutation: boolean,
+  hold?: Pick<Reservation, 'venueId' | 'slotInventoryId' | 'partySize'>,
 ): Promise<T> {
   let response: Response
   try {
@@ -169,6 +173,7 @@ async function requestJson<T>(
     const matchedCode = problem.code && codeMatchesStatus(response.status, problem.code)
       ? problem.code
       : undefined
+    if (hold && !matchedCode) throw new MutationResultUnknownError('NETWORK_ERROR')
     throw new CustomerApiError(
       response.status,
       matchedCode ?? (response.status >= 500 ? 'INTERNAL_ERROR' : 'UNEXPECTED_RESPONSE'),
@@ -177,7 +182,25 @@ async function requestJson<T>(
   }
 
   try {
-    return await response.json() as T
+    const payload = await response.json() as T
+    if (hold) {
+      const reservation = payload as Reservation
+      const location = response.headers.get('Location')
+      if (response.status !== 201 || !reservation || typeof reservation.id !== 'string'
+        || reservation.id.length === 0 || reservation.venueId !== hold.venueId
+        || reservation.slotInventoryId !== hold.slotInventoryId || reservation.partySize !== hold.partySize
+        || typeof reservation.resourceId !== 'string'
+        || ![reservation.startsAt, reservation.endsAt, reservation.expiresAt,
+          reservation.cancelAllowedUntil, reservation.noShowEligibleAt]
+          .every((value) => typeof value === 'string' && Number.isFinite(Date.parse(value)))
+        || !Number.isInteger(reservation.allocationQuantity) || !Number.isInteger(reservation.appliedPolicyVersion)
+        || !['HELD', 'CONFIRMED', 'CANCELLED', 'EXPIRED', 'CHECKED_IN', 'COMPLETED', 'NO_SHOW'].includes(reservation.state)
+        || location !== `/api/v1/venues/${encodeURIComponent(reservation.venueId)}/reservations/${encodeURIComponent(reservation.id)}`) {
+        throw new Error('Invalid HOLD representation')
+      }
+      return { ...reservation, location } as T
+    }
+    return payload
   } catch (cause) {
     if (mutation) {
       throw new MutationResultUnknownError('NETWORK_ERROR')
@@ -200,17 +223,19 @@ export function createCustomerReservationApi(request: ApiRequest): CustomerReser
         false,
       )
     },
-    createHold(venueId, slotInventoryId, partySize) {
+    createHold(venueId, slotInventoryId, partySize, idempotencyKey) {
       return requestJson<Reservation>(
         request,
         `/api/v1/venues/${encodeURIComponent(venueId)}/reservations/holds`,
         {
           access: 'protected',
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
+          signal: AbortSignal.timeout(30_000),
           body: JSON.stringify({ slotInventoryId, partySize }),
         },
         true,
+        { venueId, slotInventoryId, partySize },
       )
     },
     getReservation(venueId, reservationId) {

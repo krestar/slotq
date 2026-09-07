@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createHoldAttemptMemory } from './customer/holdAttempt'
 import { Button } from './components'
 import {
   CustomerReservationFlow,
@@ -19,6 +20,8 @@ type Surface = 'customer' | 'management'
 export function App({ api, managementApi }: AppProps) {
   const [surface, setSurface] = useState<Surface>('customer')
   const [navigationLocked, setNavigationLocked] = useState(false)
+  const [holdAttempts] = useState(createHoldAttemptMemory)
+  useEffect(() => holdAttempts.connect(), [holdAttempts])
   const navigation = (
     <nav className="surface-navigation" aria-label="Product surface">
       <Button
@@ -39,6 +42,6 @@ export function App({ api, managementApi }: AppProps) {
   )
 
   return surface === 'customer'
-    ? <CustomerReservationFlow api={api} navigation={navigation} onNavigationLockChange={setNavigationLocked} />
+    ? <CustomerReservationFlow api={api} holdAttempts={holdAttempts} navigation={navigation} onNavigationLockChange={setNavigationLocked} />
     : <ManagementVenueFlow api={managementApi} navigation={navigation} onNavigationLockChange={setNavigationLocked} />
 }

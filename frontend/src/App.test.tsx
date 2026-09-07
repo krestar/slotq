@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import {
   CustomerApiError,
+  createCustomerReservationApi,
   MutationResultUnknownError,
   type Availability,
   type CustomerReservationApi,
@@ -10,6 +11,9 @@ import {
   type Reservation,
 } from './customer/customerReservationApi'
 import type { ManagementApi } from './management/managementApi'
+import { localAuthSession } from './auth'
+import { createApiClient } from './auth/apiClient'
+import { HOLD_RETRY_WINDOW_MS } from './customer/holdAttempt'
 
 const venue = { id: 'venue-a', name: '서울 다이닝', timezone: 'Asia/Seoul' }
 const anotherVenue = { id: 'venue-b', name: '부산 다이닝', timezone: 'Asia/Seoul' }
@@ -77,6 +81,143 @@ async function createHeldReservation(api: CustomerReservationApi) {
 }
 
 describe('Customer reservation guided flow', () => {
+  it.each([
+    { wallElapsed: HOLD_RETRY_WINDOW_MS - 1, monotonicElapsed: 1_000, retryable: true },
+    { wallElapsed: HOLD_RETRY_WINDOW_MS, monotonicElapsed: 1_000, retryable: false },
+    { wallElapsed: 25 * 60 * 60 * 1000, monotonicElapsed: 1_000, retryable: false },
+    { wallElapsed: -1_000, monotonicElapsed: HOLD_RETRY_WINDOW_MS, retryable: false },
+  ])('checks retry clocks before sending HOLD: $wallElapsed wall / $monotonicElapsed monotonic', async ({ wallElapsed, monotonicElapsed, retryable }) => {
+    const wallStart = Date.now()
+    const wallClock = vi.spyOn(Date, 'now').mockReturnValue(wallStart)
+    const monotonicClock = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const api = makeApi({ createHold: vi.fn().mockRejectedValue(new MutationResultUnknownError('NETWORK_ERROR')) })
+    try {
+      await searchAvailability(api)
+      fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+      fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+      const retry = await screen.findByRole('button', { name: '같은 HOLD 요청 다시 시도' })
+      const first = vi.mocked(api.createHold).mock.calls[0]
+      // Model sleep without advancing timers: wall time passes while monotonic time barely moves.
+      wallClock.mockReturnValue(wallStart + wallElapsed)
+      monotonicClock.mockReturnValue(monotonicElapsed)
+      await act(async () => { fireEvent.click(retry) })
+      if (retryable) {
+        expect(api.createHold).toHaveBeenCalledTimes(2)
+        expect(vi.mocked(api.createHold).mock.calls[1]).toEqual(first)
+      } else {
+        expect(api.createHold).toHaveBeenCalledOnce()
+        expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
+        expect(screen.getByRole('alert')).toHaveTextContent('이전 예약은 생성되었을 수 있습니다')
+      }
+    } finally {
+      wallClock.mockRestore()
+      monotonicClock.mockRestore()
+    }
+  })
+
+  it('ends a stable 401 definitively even when the API client invalidates auth first', async () => {
+    const fetchImplementation = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'AUTHENTICATION_REQUIRED' }), { status: 401 }))
+    const realApi = createCustomerReservationApi(createApiClient({
+      apiBaseUrl: 'http://localhost:8080',
+      authSession: { ...localAuthSession, initialize: async () => undefined, accessToken: () => 'test-runtime-credential' },
+      fetchImplementation,
+    }))
+    const api = makeApi({ createHold: realApi.createHold })
+    await searchAvailability(api)
+    fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('AUTHENTICATION_REQUIRED'))
+    expect(screen.queryByText('HOLD 생성 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '이 시간 HOLD' })).toBeEnabled()
+    expect(fetchImplementation).toHaveBeenCalledOnce()
+  })
+  it.each(['HELD', 'EXPIRED'] as const)('retries the immutable intent after navigation and displays server %s', async (state) => {
+    const api = makeApi({ createHold: vi.fn()
+      .mockRejectedValueOnce(new MutationResultUnknownError('NETWORK_ERROR'))
+      .mockResolvedValueOnce({ ...held, state }) })
+    await searchAvailability(api)
+    fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    await screen.findByRole('button', { name: '같은 HOLD 요청 다시 시도' })
+    const first = vi.mocked(api.createHold).mock.calls[0]
+    expect(first[3]).toMatch(/^[0-9a-f-]{36}$/)
+    expect(screen.getByLabelText('인원')).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('인원'), { target: { value: '4' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Availability 새로고침' }))
+    await waitFor(() => expect(api.getAvailability).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('button', { name: '같은 HOLD 요청 다시 시도' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Venue 운영' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Customer 예약' }))
+    expect(api.createHold).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: '같은 HOLD 요청 다시 시도' }))
+    expect(await screen.findByText(state)).toBeInTheDocument()
+    expect(vi.mocked(api.createHold).mock.calls[1]).toEqual(first)
+    expect(screen.getByText(held.id)).toBeInTheDocument()
+    if (state === 'EXPIRED') expect(screen.queryByText(/표시용 남은 시간/)).not.toBeInTheDocument()
+  })
+
+  it.each(['abandon', 'definitive'] as const)('uses a new key for identical payload after %s', async (outcome) => {
+    const api = makeApi({ createHold: vi.fn().mockRejectedValueOnce(outcome === 'abandon'
+      ? new MutationResultUnknownError('INTERNAL_ERROR')
+      : new CustomerApiError(409, 'IDEMPOTENCY_KEY_REUSED')).mockResolvedValueOnce(held) })
+    await searchAvailability(api)
+    fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    await screen.findByRole('alert')
+    if (outcome === 'abandon') {
+      fireEvent.click(screen.getByRole('button', { name: '이 요청 포기하고 새 예약 시작' }))
+      expect(screen.getByRole('status')).toHaveTextContent('서버 예약을 취소한 것은 아니며')
+      fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 조회' }))
+      fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+    }
+    expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    await screen.findByText('HELD')
+    const [first, second] = vi.mocked(api.createHold).mock.calls
+    expect(second.slice(0, 3)).toEqual(first.slice(0, 3))
+    expect(second[3]).not.toBe(first[3])
+  })
+
+  it('drops retry context across a new App runtime without storing credentials or replaying', async () => {
+    const storage = vi.spyOn(Storage.prototype, 'setItem')
+    const api = makeApi({ createHold: vi.fn().mockRejectedValue(new MutationResultUnknownError('NETWORK_ERROR')) })
+    const view = render(<App api={api} />)
+    await screen.findByRole('option', { name: /서울 다이닝/ })
+    fireEvent.change(screen.getByLabelText('Venue'), { target: { value: venue.id } })
+    fireEvent.change(screen.getByLabelText('날짜'), { target: { value: '2099-09-01' } })
+    fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 조회' }))
+    fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    await screen.findByRole('alert')
+    view.unmount()
+    render(<App api={api} />)
+    await screen.findByRole('option', { name: /서울 다이닝/ })
+    expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
+    expect(api.createHold).toHaveBeenCalledOnce()
+    expect(storage).not.toHaveBeenCalled()
+    storage.mockRestore()
+  })
+
+  it.each(['session', 'retention'] as const)('discards an unresolved key at the %s boundary and never replays', async (boundary) => {
+    let resolve: (value: Reservation) => void = () => undefined
+    const api = makeApi({ createHold: vi.fn().mockReturnValue(new Promise<Reservation>((done) => { resolve = done })) })
+    await searchAvailability(api)
+    fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+    if (boundary === 'retention') vi.useFakeTimers()
+    try {
+      fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+      act(() => {
+        if (boundary === 'session') localAuthSession.invalidate()
+        else vi.advanceTimersByTime(HOLD_RETRY_WINDOW_MS)
+      })
+      await act(async () => { resolve(held) })
+      expect(screen.queryByRole('article', { name: '현재 예약' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '이 요청 포기하고 새 예약 시작' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Venue 운영' })).toBeEnabled()
+      expect(api.createHold).toHaveBeenCalledOnce()
+    } finally { vi.useRealTimers() }
+  })
   it('keeps the accessibility shell and loads active Venue choices from the API', async () => {
     let resolveVenues: ((value: typeof venue[]) => void) | undefined
     const api = makeApi({
@@ -446,7 +587,7 @@ describe('Customer reservation guided flow', () => {
     expect(createHold).toHaveBeenCalledOnce()
     resolveHold?.(held)
     expect(await screen.findByRole('article', { name: '현재 예약' })).toBeInTheDocument()
-    expect(createHold).toHaveBeenCalledWith(venue.id, slot.slotInventoryId, 2)
+    expect(createHold).toHaveBeenCalledWith(venue.id, slot.slotInventoryId, 2, expect.any(String))
     expect(screen.getByLabelText('인원')).toHaveValue(2)
   })
 })

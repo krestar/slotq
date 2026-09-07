@@ -223,6 +223,27 @@ class AuthWebIntegrationTests {
             .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
     }
 
+    @Test
+    void browserHoldPreflightAllowsIdempotencyKeyAndResponsesExposeLocation() throws Exception {
+        String holdPath = "/api/v1/venues/" + UUID.randomUUID() + "/reservations/holds";
+        mockMvc.perform(options(holdPath)
+                .header("Origin", "http://localhost:5173")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "Authorization,Content-Type,Idempotency-Key"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key"));
+        mockMvc.perform(get("/api/v1/venues")
+                .header("Origin", "http://localhost:5173"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Expose-Headers", "Location"));
+        mockMvc.perform(options(holdPath)
+                .header("Origin", "https://attacker.example")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "Authorization,Content-Type,Idempotency-Key"))
+            .andExpect(status().isForbidden())
+            .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
     private String bootstrap(String fixtureKey) throws Exception {
         String body = mockMvc.perform(post("/__dev/auth/session")
                 .contentType(MediaType.APPLICATION_JSON)

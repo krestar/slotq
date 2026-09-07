@@ -57,9 +57,30 @@ artifact에 저장하지 않는다. 보호 API가 `401`을 반환하면 기존 c
 재전송하지 않는다. 이후 사용자가 발생시킨 다음 보호 요청에서 runtime bootstrap을 다시 수행한다.
 production build는 이 fixture 설정이나 dev bootstrap에 의존하지 않는다.
 
-Customer mutation은 자동 retry하지 않으며 in-flight 중 같은 action의 중복 submit만 막는다.
-HOLD 응답이 유실되면 Availability를, Reservation command 결과가 불명확하면 Reservation GET을
-사용자가 명시적으로 재조회한다. M1 Frontend는 `Idempotency-Key` 보장을 제공하지 않는다.
+Customer mutation은 자동 retry하지 않으며 in-flight 중 중복 submit과 surface 전환을 막는다.
+HOLD 최초 submit 직전에 UUID key와 immutable `venueId + slotInventoryId + partySize` attempt를
+생성한다. network/30초 timeout/5xx/성공 응답 유실·파싱 불가 뒤에는 사용자가 같은 요청을
+명시적으로 재시도할 때만 같은 `Idempotency-Key`와 payload를 사용한다. stable status/code의
+4xx는 종료하며, 성공·definitive 오류·명시적 포기 이후 새 submit은 같은 payload라도 새 key다.
+
+Unresolved HOLD는 App의 현재 runtime memory에만 보존해 Customer surface unmount와 내부
+navigation을 지나 복구한다. 검색 조건 변경은 포기 전까지 잠그며 Availability refresh는
+이전 command 결과를 확정하지 않는다. 보존 상한은 최초 submit부터 23시간으로 #17의 성공
+완료부터 24시간 server retention보다 짧다. retry 직전에 wall-clock과 monotonic clock의
+23시간 경계를 모두 확인한다. sleep 중 monotonic clock이 멈추어도 wall-clock으로 차단하고,
+시스템 시계가 뒤로 조정되어도 monotonic 경계는 연장하지 않는다. 만료 또는 auth invalidate 시
+key/context를 폐기하며 결과를 실패로 단정하지 않는다.
+포기는 서버 예약 취소가 아니다.
+
+Reload는 새 runtime auth session이다. 기존 계약에는 인증 주체 연속성 증명이 없으므로 이전
+attempt를 저장·복구하거나 재전송하지 않는다. fixtureKey를 Customer identity 근거로 쓰지 않으며
+token/Principal/Tenant/Role/grant와 HOLD key/context 모두 browser persistent storage에 저장하지 않는다.
+Reload 전에 결과를 받지 못한 예약은 생성됐을 수 있으며 최신 Availability를 다시 조회한다.
+
+HOLD response의 최초 Reservation identity, canonical Location과 retry 시점 server effective
+representation을 사용한다. confirm/cancel에는 key를 보내지 않으며 결과 불명확 시 기존 exact
+Reservation GET으로만 재조정하고 context/navigation lock을 유지한다. Browser CORS는 HOLD key
+preflight와 Location 읽기를 지원한다.
 
 ## Accessibility baseline
 
