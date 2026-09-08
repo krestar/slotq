@@ -10,6 +10,7 @@ record ConcurrencyBaselineConfig(
     int partySize,
     Duration holdDuration,
     Duration timeout,
+    ConcurrencyStrategy strategy,
     Path output
 ) {
 
@@ -23,6 +24,7 @@ record ConcurrencyBaselineConfig(
             integer("partySize", 2),
             Duration.parse(property("holdDuration", "PT5M")),
             Duration.parse(property("timeout", "PT10S")),
+            ConcurrencyStrategy.parse(property("strategy", "PESSIMISTIC_WRITE_SLOT")),
             Path.of(property(
                 "output", "build/reports/experiments/concurrency-baseline.json"
             ))
@@ -50,14 +52,33 @@ record ConcurrencyBaselineConfig(
         if (output == null) {
             throw new IllegalArgumentException("output must not be null");
         }
+        if (strategy == null) {
+            throw new IllegalArgumentException("strategy must not be null");
+        }
     }
 
     int holdDurationMinutes() {
         return Math.toIntExact(holdDuration.toMinutes());
     }
 
-    String strategy() {
-        return property("strategy", "PESSIMISTIC_WRITE_SLOT");
+    String hostCpuModel() {
+        return property("hostCpuModel", System.getenv().getOrDefault(
+            "PROCESSOR_IDENTIFIER", System.getProperty("os.arch")
+        ));
+    }
+
+    String hostStorage() {
+        return property("hostStorage", "not recorded");
+    }
+
+    String containerLimits() {
+        return property("containerLimits", "not configured");
+    }
+
+    String networkCondition() {
+        return property(
+            "networkCondition", "local loopback and Docker bridge; no traffic shaping"
+        );
     }
 
     private static int integer(String name, int defaultValue) {

@@ -1,6 +1,7 @@
 package com.slotq.experiments.concurrency;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -68,13 +69,16 @@ public final class ConcurrencyBaselineRunner {
 
     public static void main(String[] args) throws Exception {
         ConcurrencyBaselineConfig config = ConcurrencyBaselineConfig.fromSystemProperties();
+        String profiles = config.strategy().optimistic()
+            ? "local,optimistic-concurrency-experiment"
+            : "local";
         try (MySQLContainer mysql = new MySQLContainer(DockerImageName.parse(DATABASE_IMAGE))
             .withDatabaseName("slotq")) {
             mysql.start();
             try (ConfigurableApplicationContext context = new SpringApplicationBuilder(SlotqApplication.class)
                 .run(
                     "--server.port=0",
-                    "--spring.profiles.active=local",
+                    "--spring.profiles.active=" + profiles,
                     "--spring.datasource.url=" + mysql.getJdbcUrl(),
                     "--spring.datasource.username=" + mysql.getUsername(),
                     "--spring.datasource.password=" + mysql.getPassword(),
@@ -103,9 +107,11 @@ public final class ConcurrencyBaselineRunner {
             bootstrap(httpClient, objectMapper, baseUri, "customer-a", config.timeout()),
             bootstrap(httpClient, objectMapper, baseUri, "customer-b", config.timeout())
         );
-        List<Fixture> fixtures = seedFixtures(context, config);
         JdbcTemplate jdbcTemplate = context.getBean(JdbcTemplate.class);
+        prepareStrategySchema(jdbcTemplate, config.strategy());
+        List<Fixture> fixtures = seedFixtures(context, config);
         DatabaseCounters countersBefore = databaseCounters(jdbcTemplate);
+        StrategyCounters strategyCountersBefore = strategyCounters(context);
         SplittableRandom random = new SplittableRandom(config.seed());
         List<RequestResult> requests = new ArrayList<>();
         List<Long> iterationElapsedNanos = new ArrayList<>();
@@ -146,15 +152,17 @@ public final class ConcurrencyBaselineRunner {
             jdbcTemplate, fixtures, verificationNow
         );
         DatabaseCounters countersAfter = databaseCounters(jdbcTemplate);
+        StrategyCounters strategyCountersAfter = strategyCounters(context);
         requests.sort(Comparator.comparingInt(RequestResult::iteration)
             .thenComparingInt(RequestResult::client));
-        Environment environment = environment(context);
+        Environment environment = environment(context, config);
         Metrics metrics = metrics(
             requests, iterationElapsedNanos, verification,
-            countersAfter.minus(countersBefore)
+            countersAfter.minus(countersBefore),
+            strategyCountersAfter.minus(strategyCountersBefore)
         );
         return new BaselineReport(
-            "slotq-concurrency-baseline/v2",
+            "slotq-concurrency-baseline/v3",
             UUID.randomUUID().toString(),
             Instant.now(),
             environment,
@@ -162,13 +170,29 @@ public final class ConcurrencyBaselineRunner {
                 config.clients(), config.iterations(), config.seed(), config.partySize(),
                 config.holdDuration().toString(), config.timeout().toString()
             ),
-            new ProductModel("TABLE_X_SLOT", SLOT_CAPACITY, ALLOCATION_UNIT, config.strategy(),
+            new ProductModel("TABLE_X_SLOT", SLOT_CAPACITY, ALLOCATION_UNIT, config.strategy().name(),
                 "partySize is Resource seatingCapacity eligibility only"),
             verificationNow,
+            countersBefore,
+            countersAfter,
+            strategyCountersBefore,
+            strategyCountersAfter,
             metrics,
             verification.slots(),
             requests
         );
+    }
+
+    private static void prepareStrategySchema(
+        JdbcTemplate jdbcTemplate,
+        ConcurrencyStrategy strategy
+    ) {
+        if (strategy.optimistic()) {
+            jdbcTemplate.execute("""
+                ALTER TABLE slot_inventories
+                    ADD COLUMN capacity_version BIGINT UNSIGNED NOT NULL DEFAULT 0
+                """);
+        }
     }
 
     private static List<Fixture> seedFixtures(
@@ -326,7 +350,8 @@ public final class ConcurrencyBaselineRunner {
         List<RequestResult> requests,
         List<Long> iterationElapsedNanos,
         Verification verification,
-        DatabaseCounters databaseCounters
+        DatabaseCounters databaseCounters,
+        StrategyCounters strategyCounters
     ) {
         List<Double> latencies = requests.stream()
             .map(RequestResult::latencyMs)
@@ -355,11 +380,22 @@ public final class ConcurrencyBaselineRunner {
             conflicts, failures, timeouts, successful,
             verification.invariantViolations(), verification.effectiveOccupancy(),
             verification.rawActiveAllocationRows(), verification.partialCommits(), maxStartSpread,
-            0L, 0L,
-            0L, 0L,
+            strategyCounters.staleRetries(), strategyCounters.staleRetryExhaustions(),
+            strategyCounters.systemRetries(), strategyCounters.systemRetryExhaustions(),
             databaseCounters.lockWaits(), databaseCounters.lockWaitTimeMs(),
             databaseCounters.deadlocks()
         );
+    }
+
+    private static StrategyCounters strategyCounters(ConfigurableApplicationContext context) {
+        OptimisticConcurrencyExperimentState state = context.getBeanProvider(
+            OptimisticConcurrencyExperimentState.class
+        ).getIfAvailable();
+        if (state == null) {
+            return StrategyCounters.ZERO;
+        }
+        OptimisticConcurrencyExperimentState.Snapshot snapshot = state.snapshot();
+        return new StrategyCounters(snapshot.retries(), snapshot.exhaustions(), 0L, 0L);
     }
 
     private static DatabaseCounters databaseCounters(JdbcTemplate jdbcTemplate) {
@@ -378,7 +414,10 @@ public final class ConcurrencyBaselineRunner {
         );
     }
 
-    private static Environment environment(ConfigurableApplicationContext context) {
+    private static Environment environment(
+        ConfigurableApplicationContext context,
+        ConcurrencyBaselineConfig config
+    ) {
         JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
         DataSource dataSource = context.getBean(DataSource.class);
         Map<String, Object> pool = new HashMap<>();
@@ -403,8 +442,21 @@ public final class ConcurrencyBaselineRunner {
             System.getProperty("java.version"), SpringBootVersion.getVersion(),
             System.getProperty("slotq.baseline.gradleVersion", "unknown"),
             System.getProperty("os.name") + " " + System.getProperty("os.version"),
-            System.getProperty("os.arch"), Runtime.getRuntime().availableProcessors()
+            System.getProperty("os.arch"), config.hostCpuModel(),
+            Runtime.getRuntime().availableProcessors(), totalPhysicalMemoryBytes(),
+            config.hostStorage(), ManagementFactory.getRuntimeMXBean().getInputArguments(),
+            "ConcurrencyBaselineRunner slotq-concurrency-baseline/v3",
+            config.containerLimits(), config.networkCondition()
         );
+    }
+
+    private static long totalPhysicalMemoryBytes() {
+        java.lang.management.OperatingSystemMXBean bean =
+            ManagementFactory.getOperatingSystemMXBean();
+        if (bean instanceof com.sun.management.OperatingSystemMXBean extended) {
+            return extended.getTotalMemorySize();
+        }
+        return -1L;
     }
 
     private static String bootstrap(
@@ -512,6 +564,10 @@ public final class ConcurrencyBaselineRunner {
         Workload workload,
         ProductModel productModel,
         Instant verificationNow,
+        DatabaseCounters databaseCountersBefore,
+        DatabaseCounters databaseCountersAfter,
+        StrategyCounters strategyCountersBefore,
+        StrategyCounters strategyCountersAfter,
         Metrics metrics,
         List<SlotObservation> slotObservations,
         List<RequestResult> requests
@@ -532,7 +588,14 @@ public final class ConcurrencyBaselineRunner {
         String gradleVersion,
         String operatingSystem,
         String architecture,
-        int availableProcessors
+        String cpuModel,
+        int availableProcessors,
+        long totalPhysicalMemoryBytes,
+        String storageType,
+        List<String> jvmOptions,
+        String toolingVersion,
+        String containerLimits,
+        String networkCondition
     ) {
     }
 
@@ -615,12 +678,30 @@ public final class ConcurrencyBaselineRunner {
     ) {
     }
 
-    private record DatabaseCounters(long lockWaits, long lockWaitTimeMs, long deadlocks) {
+    record DatabaseCounters(long lockWaits, long lockWaitTimeMs, long deadlocks) {
         DatabaseCounters minus(DatabaseCounters before) {
             return new DatabaseCounters(
                 Math.max(0L, lockWaits - before.lockWaits),
                 Math.max(0L, lockWaitTimeMs - before.lockWaitTimeMs),
                 Math.max(0L, deadlocks - before.deadlocks)
+            );
+        }
+    }
+
+    record StrategyCounters(
+        long staleRetries,
+        long staleRetryExhaustions,
+        long systemRetries,
+        long systemRetryExhaustions
+    ) {
+        private static final StrategyCounters ZERO = new StrategyCounters(0L, 0L, 0L, 0L);
+
+        StrategyCounters minus(StrategyCounters before) {
+            return new StrategyCounters(
+                Math.max(0L, staleRetries - before.staleRetries),
+                Math.max(0L, staleRetryExhaustions - before.staleRetryExhaustions),
+                Math.max(0L, systemRetries - before.systemRetries),
+                Math.max(0L, systemRetryExhaustions - before.systemRetryExhaustions)
             );
         }
     }

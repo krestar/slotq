@@ -156,6 +156,40 @@ describe('Customer reservation guided flow', () => {
     if (state === 'EXPIRED') expect(screen.queryByText(/표시용 남은 시간/)).not.toBeInTheDocument()
   })
 
+  it('uses the Reservation Venue timezone after a navigation retry', async () => {
+    const previousTimezone = process.env.TZ
+    process.env.TZ = 'America/New_York'
+    try {
+      const api = makeApi({ createHold: vi.fn()
+        .mockRejectedValueOnce(new MutationResultUnknownError('NETWORK_ERROR'))
+        .mockResolvedValueOnce(held) })
+      await searchAvailability(api)
+      fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
+      fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+      await screen.findByRole('button', { name: '같은 HOLD 요청 다시 시도' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Venue 운영' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Customer 예약' }))
+      fireEvent.click(screen.getByRole('button', { name: '같은 HOLD 요청 다시 시도' }))
+      await screen.findByText('HELD')
+
+      const venueFormatter = new Intl.DateTimeFormat('ko-KR', {
+        dateStyle: 'medium', timeStyle: 'short', timeZone: venue.timezone,
+      })
+      const browserFormatter = new Intl.DateTimeFormat('ko-KR', {
+        dateStyle: 'medium', timeStyle: 'short',
+      })
+      const venueStart = venueFormatter.format(new Date(held.startsAt))
+      const venueExpiry = venueFormatter.format(new Date(held.expiresAt))
+      expect(browserFormatter.format(new Date(held.startsAt))).not.toBe(venueStart)
+      expect(screen.getByRole('article', { name: '현재 예약' })).toHaveTextContent(venueStart)
+      expect(screen.getByRole('article', { name: '현재 예약' })).toHaveTextContent(venueExpiry)
+    } finally {
+      if (previousTimezone === undefined) delete process.env.TZ
+      else process.env.TZ = previousTimezone
+    }
+  })
+
   it.each(['abandon', 'definitive'] as const)('uses a new key for identical payload after %s', async (outcome) => {
     const api = makeApi({ createHold: vi.fn().mockRejectedValueOnce(outcome === 'abandon'
       ? new MutationResultUnknownError('INTERNAL_ERROR')

@@ -36,3 +36,16 @@ commit 또는 rollback한다. cleanup index `(state, completed_at)`는 retention
 `COMPLETED` row의 bounded delete만 지원하며 `IN_PROGRESS` row는 cleanup 대상이 아니다.
 V7 rollback은 idempotency replay 이력을 잃으므로 production에서는 table을 drop하지 않고
 더 높은 version의 forward-fix migration으로 처리한다.
+
+## V8 HOLD Idempotency Reservation Scope
+
+`V8__scope_hold_idempotency_reservation_reference.sql`은 V7의
+`reservation_id -> reservations(id)` 단일 외래키를
+`(tenant_id, venue_id, reservation_id) -> reservations(tenant_id, venue_id, id)` 복합
+외래키로 교체한다. 기존 정상 V7 row는 같은 값을 유지하며, completed reliability row가
+다른 Tenant 또는 Venue의 Reservation identity를 가리키는 직접 persistence를 DB에서
+거부한다.
+
+Application의 namespace, fingerprint, retention과 transaction 순서는 변경하지 않는다.
+Production rollback은 scoped constraint를 제거하지 않고 더 높은 version의 forward-fix
+migration으로 처리한다.
