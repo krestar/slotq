@@ -2,7 +2,8 @@
 
 - 상태: `Accepted`
 - 결정일: 2026-09-01
-- 관련 Issue: [#17](https://github.com/krestar/slotq/issues/17)
+- 관련 Issue: [#17](https://github.com/krestar/slotq/issues/17),
+  [#78](https://github.com/krestar/slotq/issues/78)
 
 ## 맥락
 
@@ -58,6 +59,11 @@ rollback되므로 기다리던 요청 중 하나가 row를 새로 insert하고 c
 실패하면 세 row가 모두 rollback되고 key가 점유되지 않는다. 정상 경로의 `IN_PROGRESS`
 row는 transaction 밖에 commit되지 않으므로 다른 요청은 미완료 row를 관찰하는 대신
 database lock에서 최초 transaction의 commit 또는 rollback을 기다린다.
+
+completed reliability row가 가리키는 Reservation은 같은 tenant와 Venue에 속해야 한다.
+Flyway V8은 기존 단일 `reservation_id` foreign key를
+`(tenant_id, venue_id, reservation_id)` composite foreign key로 교체한다. 정상 V7
+row는 그대로 유지하며 namespace, fingerprint, transaction 순서와 retention은 바꾸지 않는다.
 
 패자는 completed row의 fingerprint를 검증한 뒤 최초 ReservationId로 Reservation과
 Allocation을 locking current read한다. MySQL 기본 repeatable-read transaction이 insert
@@ -118,6 +124,7 @@ system을 요구한다. 현재 MySQL unique key와 transaction만으로 계약�
 - key를 제공한 HOLD retry와 같은-key 동시 요청은 Reservation/Allocation을 하나만 만든다.
 - 다른 Customer 또는 다른 Tenant는 같은 key 문자열을 독립적으로 사용할 수 있다.
 - invalid key, fingerprint conflict와 rollback은 completed success를 남기지 않는다.
+- completed reliability row는 다른 tenant나 Venue의 Reservation을 참조할 수 없다.
 - confirm, cancel, Management command와 Customer UI key lifecycle은 변경하지 않는다.
 - idempotency row에는 authenticated Customer principal ID가 포함되므로 access를 Product
   endpoint에 노출하지 않고 retention cleanup으로 제한한다.

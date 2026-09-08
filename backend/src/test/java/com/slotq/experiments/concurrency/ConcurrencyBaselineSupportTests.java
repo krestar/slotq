@@ -51,10 +51,12 @@ class ConcurrencyBaselineSupportTests {
     @Test
     void configurationRejectsValuesOutsideTheProductWorkloadContract() {
         assertThatThrownBy(() -> new ConcurrencyBaselineConfig(
-            1, 1, 15L, 2, Duration.ofMinutes(5), Duration.ofSeconds(10), Path.of("result.json")
+            1, 1, 15L, 2, Duration.ofMinutes(5), Duration.ofSeconds(10),
+            ConcurrencyStrategy.PESSIMISTIC_WRITE_SLOT, Path.of("result.json")
         )).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ConcurrencyBaselineConfig(
-            2, 1, 15L, 2, Duration.ofSeconds(90), Duration.ofSeconds(10), Path.of("result.json")
+            2, 1, 15L, 2, Duration.ofSeconds(90), Duration.ofSeconds(10),
+            ConcurrencyStrategy.PESSIMISTIC_WRITE_SLOT, Path.of("result.json")
         )).isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -399,7 +399,10 @@ export function CustomerReservationFlow({
     }
   }
 
-  const selectedVenue = venues.find((venue) => venue.id === venueId)
+  const reservationVenueId = reservation?.venueId
+    ?? ('command' in holdAttempt ? holdAttempt.command.venueId : undefined)
+    ?? venueId
+  const selectedVenue = venues.find((venue) => venue.id === reservationVenueId)
   const selectedItem = availability?.items.find((item) => item.slotInventoryId === selectedSlotId)
   const canConfirm = reservation?.state === 'HELD'
   const canCancel = reservation?.state === 'HELD' || reservation?.state === 'CONFIRMED'

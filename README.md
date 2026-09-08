@@ -347,11 +347,16 @@ M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분�
 
 ## Project Status
 
-> **M1 Reservation Core — Complete**
+> **M2 Concurrency & Consistency — Complete**
 
-M0 Foundation과 M1 Reservation Core는 main에 완료 상태로 반영되었습니다. M1의 Backend Reservation·Availability·Management API와 Customer·Venue 핵심 UI가 모두 병합됐고, M1 전체 read-only audit에서 발견된 UI mutation reconciliation corrective Bug #66도 PR #67로 수정한 뒤 focused 재검증에서 PASS했습니다.
+M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency는 main에 완료 상태로
+반영되었습니다. M2는 Product HOLD 경합과 lifecycle 정합성, Customer-bound idempotency,
+명시적 same-intent retry 계약을 실제 MySQL과 Browser↔Backend 흐름으로 검증했습니다.
 
-다음 단계는 M2 Concurrency & Consistency입니다. 현재 #15 동시 예약 실험 하네스와 #17 HOLD idempotency가 Ready이며, #16 동시성 제어 전략 비교·적용은 #15 완료를 기다립니다. M1에서 보장하지 않은 concurrent correctness와 key 기반 retry 계약은 M2에서 검증합니다.
+종료 감사 corrective Bug #78에서 clean commit의 optimistic·pessimistic 원시 비교 증거,
+내부 navigation 뒤 Venue timezone 복구, idempotency reliability row의 same-tenant/Venue
+Reservation 참조를 보강했습니다. 다음 단계는 M3 Reliable Event Foundation이며, 구체적인
+Issue를 만들기 전까지 roadmap의 work package와 실험 gate를 기준으로 범위를 확정합니다.
 
 상세한 Done/Ready/Backlog와 dependency는 [Roadmap](docs/roadmap.md)에서 관리합니다.
 

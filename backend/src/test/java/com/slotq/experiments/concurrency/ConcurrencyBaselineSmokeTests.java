@@ -46,11 +46,12 @@ class ConcurrencyBaselineSmokeTests {
             URI.create("http://127.0.0.1:" + serverPort),
             new ConcurrencyBaselineConfig(
                 4, 3, 15001L, 2, Duration.ofMinutes(5), Duration.ofSeconds(10),
+                ConcurrencyStrategy.PESSIMISTIC_WRITE_SLOT,
                 Path.of("build/reports/experiments/smoke-unused.json")
             )
         );
 
-        assertThat(report.schemaVersion()).isEqualTo("slotq-concurrency-baseline/v2");
+        assertThat(report.schemaVersion()).isEqualTo("slotq-concurrency-baseline/v3");
         assertThat(report.productModel().slotCapacity()).isEqualTo(1);
         assertThat(report.productModel().allocationUnit()).isEqualTo(1);
         assertThat(report.productModel().concurrencyStrategy()).isNotBlank();
@@ -92,7 +93,7 @@ class ConcurrencyBaselineSmokeTests {
         assertThat(report.metrics().rawActiveAllocationRows()).isEqualTo(report.slotObservations().stream()
             .mapToInt(ConcurrencyBaselineRunner.SlotObservation::rawActiveAllocationRows).sum());
         assertThat(objectMapper.readTree(objectMapper.writeValueAsString(report))
-            .path("schemaVersion").asText()).isEqualTo("slotq-concurrency-baseline/v2");
+            .path("schemaVersion").asText()).isEqualTo("slotq-concurrency-baseline/v3");
         assertThat(jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM hold_idempotency_records", Long.class
         )).isZero();
