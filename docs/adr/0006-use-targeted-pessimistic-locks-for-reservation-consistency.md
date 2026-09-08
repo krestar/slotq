@@ -4,6 +4,8 @@
 - 결정일: 2026-09-02
 - 관련 Issue: [#16](https://github.com/krestar/slotq/issues/16)
 - 비교 증거: [Reservation 동시성 전략 비교](../experiments/concurrency-strategy-comparison.md)
+- 종료 감사 재검증: 2026-09-08, revision
+  `e9faf83e091ab63d8f833bedd990355288054662`, 두 run 모두 `dirty=false`
 
 ## 맥락
 
@@ -23,7 +25,8 @@ Capacity optimistic 후보는 SlotInventory row의 별도 version을 capacity ch
 transaction 끝에서 compare-and-increment하고 최대 2회 새 transaction으로 시도했다.
 Reservation/Allocation/#17 reliability state는 stale 검출 시 함께 rollback했다. Lifecycle에
 같은 방식을 적용하려면 Reservation version migration, version propagation과 transaction
-밖 bounded retry가 별도로 필요하다.
+밖 bounded retry가 별도로 필요하다. 재현용 version column, repository decorator와 retry
+orchestration은 test source와 일회용 database에만 두고 Product artifact에는 포함하지 않았다.
 
 Pessimistic 후보는 capacity에는 SlotInventory 한 row, lifecycle에는 Reservation 한 row를
 `FOR UPDATE`로 읽었다. #15와 동일한 10 clients × 5 iterations, seed `15001`, MySQL
@@ -31,9 +34,9 @@ Pessimistic 후보는 capacity에는 SlotInventory 한 row, lifecycle에는 Rese
 invariant violation 0, successful HOLD 5, `CAPACITY_UNAVAILABLE` 45, system failure/timeout
 0, deadlock 0이었다.
 
-Optimistic은 90.36 req/s, P50/P95/P99 81.14/202.49/205.80ms, stale retry 45,
-row-lock wait 45회/507ms였다. Pessimistic은 48.95 req/s,
-P50/P95/P99 127.39/258.64/298.54ms, retry 0, row-lock wait 45회/4484ms였다.
+Optimistic은 79.29 req/s, P50/P95/P99 85.31/256.33/262.68ms, stale retry 45,
+row-lock wait 45회/1010ms였다. Pessimistic은 36.01 req/s,
+P50/P95/P99 166.77/392.05/440.25ms, retry 0, row-lock wait 45회/6095ms였다.
 이는 warm-up을 분리하지 않은 단일 local run이며 production 성능 보장이 아니다.
 
 ## 결정

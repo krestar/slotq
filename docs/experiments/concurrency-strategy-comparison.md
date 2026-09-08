@@ -2,9 +2,10 @@
 
 > 상태: Measured
 >
-> 실행일: 2026-09-02
+> 실행일: 2026-09-08
 >
-> 관련 Issue: [#16](https://github.com/krestar/slotq/issues/16)
+> 관련 Issue: [#16](https://github.com/krestar/slotq/issues/16),
+> [#78](https://github.com/krestar/slotq/issues/78)
 
 ## 비교 목적
 
@@ -17,9 +18,10 @@ transaction에서 commit 또는 rollback되도록 했다.
 
 | 항목 | 값 |
 | --- | --- |
-| 기준 revision | `33dfe554e602fbfbd6b9fa59e617981fe5fc73a9` + 후보별 dirty prototype |
+| 기준 revision | `e9faf83e091ab63d8f833bedd990355288054662`, 두 run 모두 `dirty=false` |
 | Database | `mysql:8.4`, server `8.4.11` |
 | Isolation | `REPEATABLE-READ` |
+| Schema | Flyway `8` |
 | Pool | HikariCP, maximumPoolSize `10`, connectionTimeout `30000ms` |
 | Workload | clients `10` × iterations `5`, 총 50 keyless HOLD |
 | Seed | `15001` |
@@ -29,21 +31,26 @@ transaction에서 commit 또는 rollback되도록 했다.
 | 시작 동기화 | iteration별 `CyclicBarrier` |
 | 검증 | workload 직후 하나의 `verificationNow`로 모든 Slot 재조회 |
 
-두 run은 같은 Windows 11/Docker Desktop host, Java `25.0.4.1`, Spring Boot `4.1.1`,
-Gradle `9.7.1`에서 연속 실행했다. warm-up을 별도로 분리하지 않은 단일 local run이므로
-latency와 throughput은 production 보장이나 일반적인 전략 우위가 아니다.
+두 run은 같은 Windows 11/Docker Desktop host, AMD64 Family 25 CPU 16 available
+processors, 16,329,510,912 bytes memory, WD PC SN810 NVMe SSD, Java `25.0.4.1`,
+Spring Boot `4.1.1`, Gradle `9.7.1`에서 연속 실행했다. 개별 container
+CPU·memory override와 network traffic shaping은 없었다. warm-up을 별도로 분리하지 않은
+단일 local run이므로 latency와 throughput은 production 보장이나 일반적인 전략 우위가
+아니다.
 
 ## 후보 구현
 
 ### Optimistic Slot version + bounded retry
 
-- 임시 `capacity_version`을 Slot row에 두고 capacity 검사와 Reservation/Allocation flush 뒤
+- test source 전용 profile이 일회용 MySQL에 임시 `capacity_version`을 추가하고,
+  capacity 검사와 Reservation/Allocation flush 뒤
   `WHERE id = ? AND capacity_version = ?` compare-and-increment로 stale contention을 검출했다.
 - 한 logical command의 `now`를 고정하고 최대 2회 transaction attempt로 제한했다.
 - 첫 attempt의 loser는 Reservation, Allocation, #17 reliability row와 version 변경을 모두
   rollback한 뒤 새 transaction에서 authoritative capacity를 다시 평가했다.
 - system/transaction failure는 retry하지 않았다.
-- 측정 뒤 version migration, retry loop와 metric component는 Product에서 제거했다.
+- version column, repository decorator, retry loop와 metric state는 모두 `src/test`에만
+  존재한다. Product migration, runtime profile과 운영 bean에는 추가하지 않았다.
 
 ### Pessimistic Slot row lock
 
@@ -60,26 +67,33 @@ latency와 throughput은 production 보장이나 일반적인 전략 우위가 �
 
 | Metric | Optimistic | Pessimistic |
 | --- | ---: | ---: |
-| runId | `7ed8d28d-54f1-4e93-ba11-20c59c3fded6` | `66391a9d-668d-49f6-b775-4c6f8a51186f` |
+| runId | [`3a9e8a98-a105-4734-a91d-1617c26ead2c`](concurrency/3a9e8a98-a105-4734-a91d-1617c26ead2c/summary.md) | [`4c571add-7867-4326-8cd5-60a899fda418`](concurrency/4c571add-7867-4326-8cd5-60a899fda418/summary.md) |
 | invariant violation | 0 | 0 |
 | successful HOLD | 5 | 5 |
 | `CAPACITY_UNAVAILABLE` | 45 | 45 |
 | system failure / timeout | 0 / 0 | 0 / 0 |
 | effective occupancy / raw active | 5 / 5 | 5 / 5 |
-| partial commit | 관측 없음 | 0 |
-| throughput (req/s) | 90.36 | 48.95 |
-| P50 (ms) | 81.14 | 127.39 |
-| P95 (ms) | 202.49 | 258.64 |
-| P99 (ms) | 205.80 | 298.54 |
+| partial commit | 0 | 0 |
+| throughput (req/s) | 79.29 | 36.01 |
+| P50 (ms) | 85.31 | 166.77 |
+| P95 (ms) | 256.33 | 392.05 |
+| P99 (ms) | 262.68 | 440.25 |
 | stale retry / exhaustion | 45 / 0 | 0 / 0 |
 | system retry / exhaustion | 0 / 0 | 0 / 0 |
-| MySQL row-lock wait / time | 45 / 507ms | 45 / 4484ms |
+| MySQL row-lock wait / time | 45 / 1010ms | 45 / 6095ms |
 | deadlock | 0 | 0 |
 
 Optimistic run은 5개의 committed Reservation과 5개의 active Allocation, effective occupancy
 5를 남겼고 나머지 45 transaction은 stale 검출 뒤 rollback/retry하여 모두 authoritative
-`CAPACITY_UNAVAILABLE`로 끝났다. Pessimistic 최종 run은 Slot별 Reservation/Allocation이
-각각 1개임을 별도 집계해 partial commit 0을 확인했다.
+`CAPACITY_UNAVAILABLE`로 끝났다. Pessimistic run도 Slot별 Reservation/Allocation이
+각각 1개이고 effective occupancy가 1임을 같은 `verificationNow`로 확인했다.
+
+각 run의 [optimistic raw JSON](concurrency/3a9e8a98-a105-4734-a91d-1617c26ead2c/raw/report.json)과
+[pessimistic raw JSON](concurrency/4c571add-7867-4326-8cd5-60a899fda418/raw/report.json)은
+요청별 outcome·latency·시작/종료 시각, Slot별 최종 재조회, MySQL/strategy counter의
+before·after를 보존한다.
+[ConcurrencyBaselineRawEvidenceTests](../../backend/src/test/java/com/slotq/experiments/concurrency/ConcurrencyBaselineRawEvidenceTests.java)는
+표의 correctness, latency, throughput, retry와 lock 수치를 이 원자료에서 다시 계산한다.
 
 ## 해석과 선택
 

@@ -1,9 +1,9 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 M0 Foundation과 M1 Reservation Core를 완료했고, 다음 단계인
-M2 Concurrency & Consistency의 선행 Issue를 시작할 수 있는 상태다. 존재하지 않는 Product
-기능이나 검증 명령을 전제로 하지 않는다.
+현재 저장소는 M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency를
+완료했고, 다음 단계는 M3 Reliable Event Foundation이다. 존재하지 않는 Product 기능이나
+검증 명령을 전제로 하지 않는다.
 
 ## 계획 원칙
 
@@ -17,8 +17,8 @@ M2 Concurrency & Consistency의 선행 Issue를 시작할 수 있는 상태다. 
   도입은 측정된 문제와 대안 비교가 있을 때만 검토한다.
 - Frontend는 React, TypeScript, Vite 기반의 thin SPA로 시작한다. backend API contract를
   먼저 확정하고, UI는 Product 규칙을 복제하지 않고 server state를 표현한다.
-- 가까운 작업인 M0 전체, M1 전체, M2의 명확한 선행 작업만 GitHub Issue로 관리한다.
-  M2 후반부터 M8까지는 착수 시점 전까지 work package 수준으로 유지한다.
+- 완료된 M0~M2 작업은 GitHub Issue와 검증 증거로 관리한다. M3부터 M8까지는 착수 시점
+  전까지 work package 수준으로 유지한다.
 - Milestone 완료는 문서 작성만으로 판단하지 않는다. 실행 가능한 테스트, 재현 기록,
   의사결정 기록 중 해당 작업에 필요한 근거가 함께 있어야 한다.
 
@@ -51,8 +51,8 @@ Status의 의미는 다음과 같다.
 - M0 Foundation: Complete.
 - M1 Reservation Core: Complete. M1 milestone의 open Issue는 없으며, 전체 read-only audit의
   corrective Bug #66도 Done이고 PR #67 merge 이후 focused 재검증에서 PASS했다.
-- M2 Done: #15, #16, #17.
-- M2 Ready: #70, #71.
+- M2 Concurrency & Consistency: Complete. #15, #16, #17, #70, #71과 종료 감사
+  corrective Bug #78이 Done이다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -88,11 +88,14 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #20 [Feature] Venue 운영 핵심 흐름 UI 구현
 - #66 [Bug] M1 UI mutation reconciliation context 보존
 
-### M2 선행 작업
+### M2
 
 - #15 [Chore] 동시 예약 실험 하네스와 baseline 구성
 - #16 [Feature] 예약 동시성 제어 전략 비교 및 적용
 - #17 [Feature] HOLD 생성 command idempotency 보장
+- #70 [Feature] HOLD 만료·확정 경합 정합성 보장
+- #71 [Feature] Customer HOLD retry·idempotency UI 구현
+- #78 [Bug] M2 종료 감사 blocker 보정
 
 #18, #19, #20과 #45의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는
 후속 UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
@@ -109,8 +112,8 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 | #8, #9, #10, #11, #13, #14, #38, #48, #49, #50, #66 | P1 | Reservation Core의 핵심 기능 또는 직접 선행·보정 작업이다. |
 | #12 | P2 | 중요한 read use case지만 쓰기 흐름의 선행 기반과 구분한다. |
 | #19, #20, #45 | P2 | 핵심 Product API 이후 UI와 공통 Frontend 기반을 완성하는 작업이다. |
-| #15, #16 | P1 | 동시성 전략을 선택하고 invariant를 보장하기 위한 핵심 선행·구현이다. |
-| #17 | P2 | 중요한 reliability 기능이지만 동시성 전략 적용을 직접 차단하지 않는다. |
+| #15, #16, #70, #78 | P1 | 동시성·lifecycle 정합성과 M2 종료 근거를 보장하는 핵심 구현·보정이다. |
+| #17, #71 | P2 | 중요한 reliability 기능이지만 동시성 전략 적용을 직접 차단하지 않는다. |
 
 현재 Issue에는 즉시 대응이 필요한 P0도, 장기 아이디어 성격의 P3도 부여하지 않는다.
 우선순위는 Milestone 번호와 같지 않으며, Ready 여부는 Priority가 아니라 dependency
@@ -144,7 +147,7 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
         #13 ──> #17
         #14 + #16 ──> #70 HOLD 만료·확정 경합
         #17 + #19 ──> #71 UI retry·idempotency 계약
-        #70 + #71 ──> M2 complete
+        #70 + #71 ──> #78 M2 audit corrective ──> M2 complete
                               │
                               v
     M3-WP1 Event contract·원자적 전달 결정 ──> M3-WP2 Relay·Inbox·Retry
@@ -191,14 +194,21 @@ Availability와 Reservation command, Venue management API, 공통 Frontend 기�
 Customer/Management mutation reconciliation HIGH 2건은 #66에서 보정했고, PR #67 merge 이후
 focused read-only 재검증에서 두 finding 모두 RESOLVED 및 새 M1 blocker 없음으로 PASS했다.
 
-M2에서는 #15, #16, #17이 Done이다. #16은 #15의 공통 실험 하네스를 사용한다.
+M2에서는 #15, #16, #17, #70과 #71이 Done이다. #16은 #15의 공통 실험 하네스를 사용한다.
 #15 workload는 실제 Product와 같은 Table × Slot capacity=1, Allocation unit=1을 사용한다.
 #16 correctness는 raw active Allocation row 수가 아니라 동일 `verificationNow`의 effective
 capacity-consuming units로 판단하며 stale concurrent write와 `RESERVATION_STATE_CONFLICT`의
 실제 발생 조건도 이 단계에서 정의한다. #17의 idempotency namespace는 tenant + authenticated
 customerPrincipalId + key이고, 동일 command 재시도는 같은 Reservation identity와 Location을
 재사용하면서 body는 retry 시점의 current effective representation을 반환한다. #70은
-#14 + #16, #71은 #17 + #19 선행 조건이 충족되어 둘 다 Ready다.
+confirm/expiry 경합을 기존 Reservation lock으로 검증했고, #71은 runtime auth session 안의
+명시적 same-intent HOLD retry와 reload no-replay 경계를 구현했다.
+
+종료 감사 corrective Bug #78은 #16 후보 비교를 clean commit의 동일 환경에서 다시 실행해
+environment manifest와 raw request/counter를 보존했고, #71 내부 navigation retry가
+Reservation Venue timezone을 복구하도록 보정했다. 또한 #17 reliability row의 Reservation
+참조를 tenant/Venue까지 묶는 composite foreign key를 추가했다. 세 finding의 regression
+test와 전체 검증을 통과해 M2는 Complete이며 다음 단계는 M3 Reliable Event Foundation이다.
 
 ## Release checkpoint
 
@@ -358,19 +368,23 @@ Customer-bound command idempotency를 해결하며 Customer UI의 안전한 retr
 
 ### 완료 기준
 
-- #15부터 #17까지 모두 Done이다.
+- #15, #16, #17, #70, #71과 종료 감사 corrective #78이 모두 Done이다.
 - #70의 HOLD 만료·확정 경합 검증이 완료되어 있다.
+- #71의 same-intent retry, 내부 navigation 복구와 reload no-replay 경계가 완료되어 있다.
 - #15의 동시성 workload는 Product와 동일한 Table × Slot capacity=1, Allocation unit=1을
   사용한다.
 - 같은 Resource와 Slot에 동시 요청을 반복해도 동일 `verificationNow`에서 effective
   capacity-consuming Allocation units가 1을 넘지 않는다.
 - Optimistic Lock과 Pessimistic Lock을 동일 workload로 비교하고 선택 근거를 ADR에
   기록한다.
+- 두 전략의 clean commit SHA, full environment manifest, workload, raw request·Slot·counter와
+  raw에서 재계산 가능한 summary를 보존한다.
 - 선택한 전략이 stale concurrent write를 방지하고, `RESERVATION_STATE_CONFLICT`가 필요한
   전략이라면 authoritative business result로 확정할 수 없는 정확한 조건을 정의·검증한다.
 - 동일 tenant, authenticated customerPrincipalId, idempotency key와 fingerprint의 재전송은
   하나의 HOLD command identity만 만들고 다른 fingerprint는 conflict로 처리한다.
 - 다른 Customer와 다른 tenant는 같은 key 문자열을 독립적으로 사용할 수 있다.
+- completed reliability row의 Reservation 참조는 같은 tenant와 Venue에 속해야 한다.
 - commit 후 response 유실 뒤 retry도 같은 Reservation identity와 Location을 재사용하고
   새 Reservation/Allocation을 만들지 않는다.
 - retry response body는 최초 serialized body가 아니라 retry 시점의 current effective
@@ -688,9 +702,9 @@ M7 Model Router & Agent Runtime.
 | AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M2 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. Outbox도 M3 대안 비교 전에는 확정하지 않는다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | 실제 구현 Issue는 M0 8개, M1 core와 supporting/corrective Issue, M2 선행 3개로 관리하며 먼 단계는 work package로 남긴다. |
-| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45는 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M1은 Complete이고 M2의 #15·#16·#17은 Done이며 #70·#71이 Ready다. |
+| Issue 크기와 개수가 적절한가? | 실제 구현 Issue는 M0 8개, M1 core와 supporting/corrective Issue, M2 구현·검증·corrective Issue로 관리하며 M3 이후는 work package로 남긴다. |
+| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71은 P2로 구분한다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0~M2는 Complete이고 다음 단계인 M3는 실제 Issue 생성 전 work package 상태다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |
