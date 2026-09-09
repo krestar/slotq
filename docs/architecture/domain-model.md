@@ -318,9 +318,11 @@ Domain 의미는 구현 전에 안정되어야 하지만 다음 Mechanism은 Mil
 
 - Allocation Row와 Atomic Counter의 물리 저장 방식
 - HOLD와 Offer 만료를 위한 정기 Database Polling과 Lazy Check
-- Transactional Outbox와 Event Relay
 - 외부 Broker 또는 Distributed Cache 필요성
 - Pooled Capacity, 가변 시간 구간, 복수 Resource Allocation
+
+Transactional Outbox와 DB 전달 경계는 [ADR-0007](../adr/0007-use-transactional-event-record-and-db-delivery.md)에서
+선택했다. 실제 producer/consumer 연결은 M4가 소유한다.
 
 어떤 Mechanism도 Capacity, Tenant, Idempotency, Lifecycle invariant를 약화해서는 안
 된다.
