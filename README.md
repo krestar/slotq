@@ -347,7 +347,7 @@ M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분�
 
 ## Project Status
 
-> **M2 Concurrency & Consistency — Complete**
+> **M3 Reliable Event Foundation — #80 Ready**
 
 M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency는 main에 완료 상태로
 반영되었습니다. M2는 Product HOLD 경합과 lifecycle 정합성, Customer-bound idempotency,
@@ -355,8 +355,12 @@ M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency는 main에 �
 
 종료 감사 corrective Bug #78에서 clean commit의 optimistic·pessimistic 원시 비교 증거,
 내부 navigation 뒤 Venue timezone 복구, idempotency reliability row의 same-tenant/Venue
-Reservation 참조를 보강했습니다. 다음 단계는 M3 Reliable Event Foundation이며, 구체적인
-Issue를 만들기 전까지 roadmap의 work package와 실험 gate를 기준으로 범위를 확정합니다.
+Reservation 참조를 보강했습니다.
+
+M3의 첫 확정 Issue #80 `[Chore] Event 전달 경계 비교와 reliability 계약 확정`이 Ready입니다.
+#80은 실제 MySQL에서 현실적인 전달 경계를 같은 기준으로 비교하고 mechanism-neutral
+reliability 계약과 Accepted ADR을 확정합니다. 후속 production implementation과 failure
+recovery Issue는 #80의 결과와 merged implementation을 기준으로 별도 확정합니다.
 
 상세한 Done/Ready/Backlog와 dependency는 [Roadmap](docs/roadmap.md)에서 관리합니다.
 
