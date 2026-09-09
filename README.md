@@ -243,7 +243,7 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 | Persistence | MySQL 8.4 LTS, Flyway | **Selected** |
 | Test | JUnit, Testcontainers MySQL | **Selected** |
 | Cache | Redis | 필요성과 측정 결과가 생길 때 검토 |
-| Messaging | Transactional Outbox와 DB relay는 유력 후보, Apache Kafka는 후속 후보 | M3의 유실·중복 실험과 대안 비교 후 선택 |
+| Messaging | Transactional event record와 같은 배포 내 DB 전달 선택, Kafka 보류 | #80 실제 MySQL 비교에 따른 ADR-0007; production runtime은 후속 M3 구현 |
 | Observability | Spring Boot Actuator, Micrometer 기반부터 시작 | M5에서 구체화 |
 | Infrastructure | 로컬 container 환경부터 시작 | Kubernetes는 운영상 필요가 생길 때 검토 |
 | AI Platform | MCP, RAG, Model Routing, Agent Runtime, Evaluation | M6 이후 단계적 도입 |
@@ -347,7 +347,7 @@ M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분�
 
 ## Project Status
 
-> **M3 Reliable Event Foundation — #80 Ready**
+> **M3 Reliable Event Foundation — 전달 경계 결정 / production runtime 후속**
 
 M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency는 main에 완료 상태로
 반영되었습니다. M2는 Product HOLD 경합과 lifecycle 정합성, Customer-bound idempotency,
@@ -357,10 +357,11 @@ M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency는 main에 �
 내부 navigation 뒤 Venue timezone 복구, idempotency reliability row의 same-tenant/Venue
 Reservation 참조를 보강했습니다.
 
-M3의 첫 확정 Issue #80 `[Chore] Event 전달 경계 비교와 reliability 계약 확정`이 Ready입니다.
-#80은 실제 MySQL에서 현실적인 전달 경계를 같은 기준으로 비교하고 mechanism-neutral
-reliability 계약과 Accepted ADR을 확정합니다. 후속 production implementation과 failure
-recovery Issue는 #80의 결과와 merged implementation을 기준으로 별도 확정합니다.
+M3의 #80은 실제 MySQL과 JVM crash 비교를 통해 전달 경계와 mechanism-neutral reliability
+계약을 [ADR-0007](docs/adr/0007-use-transactional-event-record-and-db-delivery.md)에 기록합니다.
+Transactional event record와 DB 전달을 선택했으며 production runtime은 아직 구현하지 않았습니다.
+후속 production implementation과 failure recovery Issue는 이 결정과 merged implementation을
+기준으로 별도 확정합니다.
 
 상세한 Done/Ready/Backlog와 dependency는 [Roadmap](docs/roadmap.md)에서 관리합니다.
 

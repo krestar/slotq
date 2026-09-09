@@ -40,6 +40,18 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+tasks.register('eventExperiment', JavaExec) {
+    group = 'verification'
+    description = 'Compares test-only event boundaries on MySQL 8.4, including child JVM crashes.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.events.EventExperimentRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.events.gradleVersion', gradle.gradleVersion
+    if (project.hasProperty('output')) {
+        systemProperty 'slotq.events.output', project.property('output')
+    }
+}
+
 tasks.register('concurrencyBaseline', JavaExec) {
     group = 'verification'
     description = 'Runs the MySQL 8.4 Product HOLD concurrency baseline.'

@@ -2,7 +2,7 @@
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
 현재 저장소는 M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency를
-완료했고, M3 Reliable Event Foundation의 첫 Ready Issue #80을 시작한다. 존재하지 않는
+완료했고, M3 Reliable Event Foundation의 #80 전달 경계 결정과 후속 구현을 구분한다. 존재하지 않는
 Product 기능이나 검증 명령을 전제로 하지 않는다.
 
 ## 계획 원칙
@@ -54,8 +54,8 @@ Status의 의미는 다음과 같다.
   corrective Bug #66도 Done이고 PR #67 merge 이후 focused 재검증에서 PASS했다.
 - M2 Concurrency & Consistency: Complete. #15, #16, #17, #70, #71과 종료 감사
   corrective Bug #78이 Done이다.
-- M3 Reliable Event Foundation: #80 Event 전달 경계 비교와 reliability 계약 확정이 Ready다.
-  후속 production implementation과 failure recovery Issue는 #80 결과 전까지 확정하지 않는다.
+- M3 Reliable Event Foundation: #80의 비교 결과와 계약은 ADR-0007에 기록한다.
+  후속 production implementation과 failure recovery는 별도 Issue이며 M3 전체는 미완료다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -158,7 +158,7 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
         #70 + #71 ──> #78 M2 audit corrective ──> M2 complete
                               │
                               v
-    #80 M3-WP1 Event contract·원자적 전달 결정 ──> M3-WP2 Relay·Inbox·Retry
+    #80 M3-WP1 Event contract·원자적 전달 결정 ──> M3-WP2 DB delivery·Retry·Internal replay
                                                    │
                                                    v
                                       M3-WP3 Failure recovery experiment
@@ -218,9 +218,11 @@ Reservation Venue timezone을 복구하도록 보정했다. 또한 #17 reliabili
 참조를 tenant/Venue까지 묶는 composite foreign key를 추가했다. 세 finding의 regression
 test와 전체 검증을 통과해 M2는 Complete이다.
 
-M3는 첫 실제 Issue #80만 Ready다. #80에서 전달 경계를 같은 기준으로 비교하고 Accepted
-ADR을 확정한 뒤에만 M3-WP2 production implementation Issue를 설계하며, M3-WP3 failure
-recovery Issue는 실제 merged production protocol을 기준으로 확정한다.
+M3의 첫 실제 Issue #80 결과는 [ADR-0007](adr/0007-use-transactional-event-record-and-db-delivery.md)과
+[비교 evidence](experiments/event-delivery-boundaries.md)에 기록한다. M3-WP2는 ADR의 atomic append,
+DB delivery, fencing/attempt와 internal replay 계약을 production으로 구현한다. M3-WP3 failure
+recovery Issue는 실제 merged production protocol을 기준으로 확정한다. 두 work package는
+아직 실제 Issue가 아니며 #80 결과의 검토·병합 뒤 최종 설계한다.
 
 ## Release checkpoint
 
@@ -443,8 +445,8 @@ M1 Reservation Core.
 
 ## M3 Reliable Event Foundation
 
-현재 실제 GitHub Issue는 #80 `[Chore] Event 전달 경계 비교와 reliability 계약 확정` 하나이며
-Ready다. 후속 production implementation과 failure recovery Issue는 #80의 Accepted ADR과
+현재 실제 GitHub Issue는 #80 `[Chore] Event 전달 경계 비교와 reliability 계약 확정` 하나다.
+후속 production implementation과 failure recovery Issue는 #80의 Accepted ADR과
 merged implementation을 기준으로 별도 설계·확정한다.
 
 ### 목표
@@ -458,7 +460,7 @@ Waitlist 비즈니스와 분리된, duplicate와 crash에 견디는 event 전달
 - relay restart, duplicate publish, consumer redelivery에서도 business side effect가
   중복되지 않는다.
 - retryable failure와 non-retryable failure가 구분된다.
-- retry exhaustion 상태, operator replay와 recovery 절차가 검증된다.
+- retry exhaustion 상태, tenant-safe trusted internal replay와 durable history가 검증된다.
 - 문서화된 crash point별 failure test가 통과한다.
 - 동기 처리, commit 이후 publish, Transactional Outbox 등 현실적인 대안과 선택 근거가
   ADR에 기록된다.
@@ -471,8 +473,8 @@ M2 Concurrency & Consistency.
 
 - event identity, schema version과 ordering 요구사항.
 - DB commit과 event publish 사이의 원자성 문제와 대안 비교.
-- Transactional Outbox를 선택할 경우 outbox schema와 relay ownership.
-- consumer inbox 또는 business unique constraint.
+- ADR-0007에서 선택한 transactional event schema와 같은 배포 내 DB delivery ownership.
+- consumer별 business unique constraint 또는 좁은 적용 receipt와 side effect 원자성.
 - retry, backoff, dead-letter와 replay audit.
 - DB polling으로 충분한지, broker가 필요한지를 측정으로 판단.
 
@@ -491,6 +493,15 @@ M2 Concurrency & Consistency.
 - 외부 notification provider 완성.
 
 ### M3 종료 후 일정·범위 재평가
+
+ADR-0007의 ownership에 따라 M3는 DB side effect와 internal recovery primitive까지 소유한다.
+사람 operator identity, replay UI/보호된 관리 surface, 운영 authorization·audit/runbook은 M5다.
+최초 실제 Booking event schema/trigger + 같은 transaction append + Waitlist consumer는 M4가
+함께 연결한다. M3에서 subscriber 없는 production event를 먼저 발행하지 않는다.
+external dependency의 response-before/after timeout은 첫 실제 external-side-effect/provider
+Issue의 필수 gate로 남긴다. 실제 provider 도입 Milestone은 고정하지 않으며, M4가 request
+contract만 다루면 provider 검증을 선도입하지 않는다. 이 검증 전 외부 전송의 중복 방지를
+완료로 주장하지 않는다.
 
 M3 결과를 기준으로 남은 일정, 실제 구현 완성도와 M4·M5 작업량을 재평가한다.
 
@@ -530,7 +541,8 @@ M3 Reliable Event Foundation.
 - active offer의 business unique constraint.
 - offer lease와 expiry.
 - promotion과 capacity 확보의 원자성.
-- notification 요청과 실제 전달 결과의 책임 분리.
+- notification 요청과 실제 전달 결과의 책임 분리. 첫 실제 provider Issue는 response 전후
+  timeout, provider idempotency/retention, ambiguous outcome 조회·재시도를 검증한다.
 - Waitlist와 offer 상태를 UI 전용 상태 기계로 재구현하지 않고 API contract에 매핑한다.
 
 ### 검증 결과물
@@ -574,7 +586,8 @@ M4 Waitlist Promotion.
 
 - 낮은 metric cardinality와 tenant·개인정보 노출 방지.
 - request에서 outbox와 consumer까지 correlation 전파.
-- 재처리와 수동 개입의 audit.
+- 재처리와 수동 개입의 audit. M3 internal replay primitive에 연결하는 human operator
+  identity·tenant 권한·보호된 management surface와 운영 audit/runbook.
 - alert가 실제 사용자 영향과 연결되도록 threshold를 정하는 일.
 - client error correlation을 적용할 경우 correlation ID 노출 범위, source map 보안,
   telemetry sampling과 개인정보 경계를 정하는 일.
@@ -718,7 +731,7 @@ M7 Model Router & Agent Runtime.
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
 | Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 현재 decision gate #80만 실제 Issue로 확정했다. 후속 work package는 선행 결과 전까지 Issue로 만들지 않는다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M0~M2는 Complete이고 M3의 #80만 Ready다. 후속 M3 work package는 #80 결과 전까지 확정하거나 Ready로 두지 않는다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0~M2는 Complete이고 M3는 #80 결정과 후속 runtime 구현을 구분한다. 후속 M3 work package는 #80 결과 검토·병합 뒤 확정한다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

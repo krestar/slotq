@@ -1,0 +1,2663 @@
+{
+  "probes" : [ {
+    "scenario" : "SYNCHRONOUS_SEQUENTIAL_DUPLICATE",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "SYNCHRONOUS_CONCURRENT_DUPLICATE",
+    "event" : {
+      "eventId" : "85ccd2dc-b30a-9711-04e5-9694f20db018",
+      "tenantId" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "aggregateId" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "tenant_id" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "85ccd2dc-b30a-9711-04e5-9694f20db018",
+      "tenant_id" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "aggregate_id" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "meaning" : "{\"eventId\": \"85ccd2dc-b30a-9711-04e5-9694f20db018\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"bfe709ad-9c10-1cfa-00af-49349ab497b1\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5143ad9c-71bc-fce0-1ce6-bcabbefe3fac\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "SYNCHRONOUS_DELAYED_DUPLICATE",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "SYNCHRONOUS_REVERSED",
+    "event" : {
+      "eventId" : "a21f31a4-7cab-ba01-09ae-df69a539076d",
+      "tenantId" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregateId" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "tenant_id" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "a21f31a4-7cab-ba01-09ae-df69a539076d",
+      "tenant_id" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregate_id" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "meaning" : "{\"eventId\": \"a21f31a4-7cab-ba01-09ae-df69a539076d\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"75e412bf-ca8a-771d-5979-ccbe3adaba40\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"513210d5-405a-dfc0-9f1c-858c263bda27\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "SYNCHRONOUS_FORGED_TENANT",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "TENANT_MISMATCH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "SYNCHRONOUS_IDENTITY_CORRUPTION",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 9,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "IDENTITY_CORRUPTION",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DIRECT_SEQUENTIAL_DUPLICATE",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DIRECT_CONCURRENT_DUPLICATE",
+    "event" : {
+      "eventId" : "85ccd2dc-b30a-9711-04e5-9694f20db018",
+      "tenantId" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "aggregateId" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "tenant_id" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "85ccd2dc-b30a-9711-04e5-9694f20db018",
+      "tenant_id" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "aggregate_id" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "meaning" : "{\"eventId\": \"85ccd2dc-b30a-9711-04e5-9694f20db018\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"bfe709ad-9c10-1cfa-00af-49349ab497b1\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5143ad9c-71bc-fce0-1ce6-bcabbefe3fac\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DIRECT_DELAYED_DUPLICATE",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DIRECT_REVERSED",
+    "event" : {
+      "eventId" : "a21f31a4-7cab-ba01-09ae-df69a539076d",
+      "tenantId" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregateId" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "tenant_id" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "a21f31a4-7cab-ba01-09ae-df69a539076d",
+      "tenant_id" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregate_id" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "meaning" : "{\"eventId\": \"a21f31a4-7cab-ba01-09ae-df69a539076d\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"75e412bf-ca8a-771d-5979-ccbe3adaba40\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"513210d5-405a-dfc0-9f1c-858c263bda27\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DIRECT_FORGED_TENANT",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "TENANT_MISMATCH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DIRECT_IDENTITY_CORRUPTION",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 9,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "IDENTITY_CORRUPTION",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DURABLE_SEQUENTIAL_DUPLICATE",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DURABLE_CONCURRENT_DUPLICATE",
+    "event" : {
+      "eventId" : "85ccd2dc-b30a-9711-04e5-9694f20db018",
+      "tenantId" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "aggregateId" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "tenant_id" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "85ccd2dc-b30a-9711-04e5-9694f20db018",
+      "tenant_id" : "bfe709ad-9c10-1cfa-00af-49349ab497b1",
+      "aggregate_id" : "5143ad9c-71bc-fce0-1ce6-bcabbefe3fac",
+      "meaning" : "{\"eventId\": \"85ccd2dc-b30a-9711-04e5-9694f20db018\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"bfe709ad-9c10-1cfa-00af-49349ab497b1\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5143ad9c-71bc-fce0-1ce6-bcabbefe3fac\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DURABLE_DELAYED_DUPLICATE",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DURABLE_REVERSED",
+    "event" : {
+      "eventId" : "a21f31a4-7cab-ba01-09ae-df69a539076d",
+      "tenantId" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregateId" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "SUCCESS",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "tenant_id" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "a21f31a4-7cab-ba01-09ae-df69a539076d",
+      "tenant_id" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregate_id" : "513210d5-405a-dfc0-9f1c-858c263bda27",
+      "meaning" : "{\"eventId\": \"a21f31a4-7cab-ba01-09ae-df69a539076d\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"75e412bf-ca8a-771d-5979-ccbe3adaba40\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"513210d5-405a-dfc0-9f1c-858c263bda27\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DURABLE_FORGED_TENANT",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "75e412bf-ca8a-771d-5979-ccbe3adaba40",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "TENANT_MISMATCH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "DURABLE_IDENTITY_CORRUPTION",
+    "event" : {
+      "eventId" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenantId" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregateId" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 9,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "IDENTITY_CORRUPTION",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "sequence_no" : 2
+    } ],
+    "effects" : [ {
+      "event_id" : "4359120b-8ecb-5906-5d6b-c722bed53fa6",
+      "tenant_id" : "e3e50fba-1061-ae67-9136-4b8fb0235966",
+      "aggregate_id" : "5137efc1-fb7b-9420-73b5-429759275154",
+      "meaning" : "{\"eventId\": \"4359120b-8ecb-5906-5d6b-c722bed53fa6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"e3e50fba-1061-ae67-9136-4b8fb0235966\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"5137efc1-fb7b-9420-73b5-429759275154\", \"schemaVersion\": 1}"
+    } ]
+  }, {
+    "scenario" : "OUTER_ROLLBACK",
+    "event" : {
+      "eventId" : "2533138c-0749-6244-fbf0-078b83f9c991",
+      "tenantId" : "52b8ae56-5a63-991b-40f2-d6be2269e628",
+      "aggregateId" : "2132b5d8-8ade-d2a5-1a1f-aff27588e88d",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "OUTER_ROLLBACK",
+    "snapshot" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ]
+  }, {
+    "scenario" : "INVALID_JSON",
+    "event" : {
+      "eventId" : "08e0b4c5-3da8-3f55-f726-beb6d0ce723b",
+      "tenantId" : "9cbba543-2be9-3ef8-e828-53348243c399",
+      "aggregateId" : "2144529f-bc40-efc5-97e9-e7130e4b4e12",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{broken"
+    },
+    "outcome" : "DataIntegrityViolationException",
+    "snapshot" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ]
+  }, {
+    "scenario" : "APPEND_WITHOUT_TRANSACTION",
+    "event" : {
+      "eventId" : "08e0b4c5-3da8-3f55-f726-beb6d0ce723b",
+      "tenantId" : "9cbba543-2be9-3ef8-e828-53348243c399",
+      "aggregateId" : "2144529f-bc40-efc5-97e9-e7130e4b4e12",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "append requires caller transaction",
+    "snapshot" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ]
+  }, {
+    "scenario" : "TRANSIENT_ATTEMPT_1",
+    "event" : {
+      "eventId" : "9b5ce683-8d57-e76e-dfa7-cc3d4602c019",
+      "tenantId" : "46a91c04-59fc-666d-3659-aed32bfbe78e",
+      "aggregateId" : "0912a055-9079-97fa-7676-d7b235eb2e36",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "TRANSIENT_FIXTURE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "9b5ce683-8d57-e76e-dfa7-cc3d4602c019",
+      "state" : "PENDING",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : null,
+      "last_error" : "TRANSIENT_FIXTURE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "TRANSIENT_ATTEMPT_2",
+    "event" : {
+      "eventId" : "9b5ce683-8d57-e76e-dfa7-cc3d4602c019",
+      "tenantId" : "46a91c04-59fc-666d-3659-aed32bfbe78e",
+      "aggregateId" : "0912a055-9079-97fa-7676-d7b235eb2e36",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "DONE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "0912a055-9079-97fa-7676-d7b235eb2e36",
+      "tenant_id" : "46a91c04-59fc-666d-3659-aed32bfbe78e",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "9b5ce683-8d57-e76e-dfa7-cc3d4602c019",
+      "tenant_id" : "46a91c04-59fc-666d-3659-aed32bfbe78e",
+      "aggregate_id" : "0912a055-9079-97fa-7676-d7b235eb2e36",
+      "meaning" : "{\"eventId\": \"9b5ce683-8d57-e76e-dfa7-cc3d4602c019\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"46a91c04-59fc-666d-3659-aed32bfbe78e\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"0912a055-9079-97fa-7676-d7b235eb2e36\", \"schemaVersion\": 1}"
+    } ],
+    "delivery" : [ {
+      "event_id" : "9b5ce683-8d57-e76e-dfa7-cc3d4602c019",
+      "state" : "DONE",
+      "attempts" : 2,
+      "lifetime_attempts" : 2,
+      "token" : 2,
+      "lease_until" : null,
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "EXHAUSTION_ATTEMPT_1",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "TRANSIENT_FIXTURE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "PENDING",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : null,
+      "last_error" : "TRANSIENT_FIXTURE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "EXHAUSTION_ATTEMPT_2",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "TRANSIENT_FIXTURE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "PENDING",
+      "attempts" : 2,
+      "lifetime_attempts" : 2,
+      "token" : 2,
+      "lease_until" : null,
+      "last_error" : "TRANSIENT_FIXTURE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "EXHAUSTION_ATTEMPT_3",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "TRANSIENT_FIXTURE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "DEAD",
+      "attempts" : 3,
+      "lifetime_attempts" : 3,
+      "token" : 3,
+      "lease_until" : null,
+      "last_error" : "TRANSIENT_FIXTURE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "EXHAUSTED_NO_AUTO_RETRY",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "BLOCKED",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "DEAD",
+      "attempts" : 3,
+      "lifetime_attempts" : 3,
+      "token" : 3,
+      "lease_until" : null,
+      "last_error" : "TRANSIENT_FIXTURE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "REPLAY_UNTRUSTED",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "REPLAY_DENIED",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "DEAD",
+      "attempts" : 3,
+      "lifetime_attempts" : 3,
+      "token" : 3,
+      "lease_until" : null,
+      "last_error" : "TRANSIENT_FIXTURE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "REPLAY_CROSS_TENANT",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "EmptyResultDataAccessException",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "DEAD",
+      "attempts" : 3,
+      "lifetime_attempts" : 3,
+      "token" : 3,
+      "lease_until" : null,
+      "last_error" : "TRANSIENT_FIXTURE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "REPLAY_AUDIT",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "REPLAYED",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "PENDING",
+      "attempts" : 0,
+      "lifetime_attempts" : 3,
+      "token" : 4,
+      "lease_until" : null,
+      "last_error" : null
+    } ],
+    "audit" : [ {
+      "id" : 1,
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenant_id" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "reason" : "fixture transient dependency repaired",
+      "prior_attempts" : 3,
+      "lifetime_attempts" : 3,
+      "recorded_at" : "2026-09-09T04:44:53.651Z"
+    } ]
+  }, {
+    "scenario" : "REPLAY_RECOVER",
+    "event" : {
+      "eventId" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenantId" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregateId" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "DONE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "tenant_id" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenant_id" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "aggregate_id" : "091e5e30-06bb-00ba-1fa8-51c79bc21c8f",
+      "meaning" : "{\"eventId\": \"ddd0a754-b197-2579-8721-9baf793b308b\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"22ab15f7-e5aa-d501-a5d2-ac78168d25d9\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"091e5e30-06bb-00ba-1fa8-51c79bc21c8f\", \"schemaVersion\": 1}"
+    } ],
+    "delivery" : [ {
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "state" : "DONE",
+      "attempts" : 1,
+      "lifetime_attempts" : 4,
+      "token" : 5,
+      "lease_until" : null,
+      "last_error" : null
+    } ],
+    "audit" : [ {
+      "id" : 1,
+      "event_id" : "ddd0a754-b197-2579-8721-9baf793b308b",
+      "tenant_id" : "22ab15f7-e5aa-d501-a5d2-ac78168d25d9",
+      "reason" : "fixture transient dependency repaired",
+      "prior_attempts" : 3,
+      "lifetime_attempts" : 3,
+      "recorded_at" : "2026-09-09T04:44:53.651Z"
+    } ]
+  }, {
+    "scenario" : "UNKNOWN_TYPE_ATTEMPT_1",
+    "event" : {
+      "eventId" : "fb3db11f-648e-0dff-60d7-5501dfe075de",
+      "tenantId" : "72c2cd62-71d8-03e8-df7e-902d155c1160",
+      "aggregateId" : "09ab4465-91cb-e9bb-0dfa-0aca61d548b8",
+      "eventType" : "Unknown",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "UNKNOWN_TYPE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "fb3db11f-648e-0dff-60d7-5501dfe075de",
+      "state" : "DEAD",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : null,
+      "last_error" : "UNKNOWN_TYPE"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "UNKNOWN_VERSION_ATTEMPT_1",
+    "event" : {
+      "eventId" : "d51c4f15-09ef-f2e3-be26-ce665fd35cc2",
+      "tenantId" : "4cbddc81-14a3-ef78-c8d0-1611caf0f5a4",
+      "aggregateId" : "098de9c4-ea28-63db-e6fe-5994633bf4da",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 2,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "UNKNOWN_VERSION",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "d51c4f15-09ef-f2e3-be26-ce665fd35cc2",
+      "state" : "DEAD",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : null,
+      "last_error" : "UNKNOWN_VERSION"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "PAYLOAD_INVARIANT_ATTEMPT_1",
+    "event" : {
+      "eventId" : "33e26eab-f7d0-53dd-6a69-e6ad4637248a",
+      "tenantId" : "debcdf86-cecc-b82e-9113-974055a8567f",
+      "aggregateId" : "09880ad8-2f07-af7b-1265-9c8930507dad",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":false}"
+    },
+    "outcome" : "PAYLOAD_INVARIANT",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "33e26eab-f7d0-53dd-6a69-e6ad4637248a",
+      "state" : "DEAD",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : null,
+      "last_error" : "PAYLOAD_INVARIANT"
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_CLAIM_CRASH_EXIT_80",
+    "event" : {
+      "eventId" : "17900fe6-2e2f-30ee-65a0-9dd6930bcd34",
+      "tenantId" : "28bfd673-a052-5e0b-3849-13b6b58233ef",
+      "aggregateId" : "0999a79f-6069-cc9b-902f-d3a9c912e332",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "CRASH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "17900fe6-2e2f-30ee-65a0-9dd6930bcd34",
+      "state" : "PROCESSING",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : "2026-09-09T04:44:55.393Z",
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_CLAIM_STALE_OWNER",
+    "event" : {
+      "eventId" : "17900fe6-2e2f-30ee-65a0-9dd6930bcd34",
+      "tenantId" : "28bfd673-a052-5e0b-3849-13b6b58233ef",
+      "aggregateId" : "0999a79f-6069-cc9b-902f-d3a9c912e332",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "STALE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "17900fe6-2e2f-30ee-65a0-9dd6930bcd34",
+      "state" : "PROCESSING",
+      "attempts" : 2,
+      "lifetime_attempts" : 2,
+      "token" : 2,
+      "lease_until" : "2026-09-09T04:44:55.699Z",
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_CLAIM_RECOVER",
+    "event" : {
+      "eventId" : "17900fe6-2e2f-30ee-65a0-9dd6930bcd34",
+      "tenantId" : "28bfd673-a052-5e0b-3849-13b6b58233ef",
+      "aggregateId" : "0999a79f-6069-cc9b-902f-d3a9c912e332",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "DONE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "0999a79f-6069-cc9b-902f-d3a9c912e332",
+      "tenant_id" : "28bfd673-a052-5e0b-3849-13b6b58233ef",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "17900fe6-2e2f-30ee-65a0-9dd6930bcd34",
+      "tenant_id" : "28bfd673-a052-5e0b-3849-13b6b58233ef",
+      "aggregate_id" : "0999a79f-6069-cc9b-902f-d3a9c912e332",
+      "meaning" : "{\"eventId\": \"17900fe6-2e2f-30ee-65a0-9dd6930bcd34\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"28bfd673-a052-5e0b-3849-13b6b58233ef\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"0999a79f-6069-cc9b-902f-d3a9c912e332\", \"schemaVersion\": 1}"
+    } ],
+    "delivery" : [ {
+      "event_id" : "17900fe6-2e2f-30ee-65a0-9dd6930bcd34",
+      "state" : "DONE",
+      "attempts" : 2,
+      "lifetime_attempts" : 2,
+      "token" : 2,
+      "lease_until" : null,
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_EFFECT_CRASH_EXIT_80",
+    "event" : {
+      "eventId" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "tenantId" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "aggregateId" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "CRASH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "tenant_id" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "tenant_id" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "aggregate_id" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "meaning" : "{\"eventId\": \"aefaed0a-af51-d7c7-1b76-47c9dfc643a6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"26b8eb9f-b76f-db08-b221-9bf68085d9e8\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"09708f25-4284-ddfb-c002-a85e64a2a0fc\", \"schemaVersion\": 1}"
+    } ],
+    "delivery" : [ {
+      "event_id" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "state" : "PROCESSING",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : "2026-09-09T04:44:57.002Z",
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_EFFECT_STALE_OWNER",
+    "event" : {
+      "eventId" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "tenantId" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "aggregateId" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "STALE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "tenant_id" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "tenant_id" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "aggregate_id" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "meaning" : "{\"eventId\": \"aefaed0a-af51-d7c7-1b76-47c9dfc643a6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"26b8eb9f-b76f-db08-b221-9bf68085d9e8\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"09708f25-4284-ddfb-c002-a85e64a2a0fc\", \"schemaVersion\": 1}"
+    } ],
+    "delivery" : [ {
+      "event_id" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "state" : "PROCESSING",
+      "attempts" : 2,
+      "lifetime_attempts" : 2,
+      "token" : 2,
+      "lease_until" : "2026-09-09T04:44:57.312Z",
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_EFFECT_RECOVER",
+    "event" : {
+      "eventId" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "tenantId" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "aggregateId" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "DONE",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "projection" : [ {
+      "aggregate_id" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "tenant_id" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "sequence_no" : 1
+    } ],
+    "effects" : [ {
+      "event_id" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "tenant_id" : "26b8eb9f-b76f-db08-b221-9bf68085d9e8",
+      "aggregate_id" : "09708f25-4284-ddfb-c002-a85e64a2a0fc",
+      "meaning" : "{\"eventId\": \"aefaed0a-af51-d7c7-1b76-47c9dfc643a6\", \"payload\": {\"valid\": true}, \"sequence\": 1, \"tenantId\": \"26b8eb9f-b76f-db08-b221-9bf68085d9e8\", \"eventType\": \"FixtureChanged\", \"occurredAt\": \"2026-09-09T00:00:01Z\", \"aggregateId\": \"09708f25-4284-ddfb-c002-a85e64a2a0fc\", \"schemaVersion\": 1}"
+    } ],
+    "delivery" : [ {
+      "event_id" : "aefaed0a-af51-d7c7-1b76-47c9dfc643a6",
+      "state" : "DONE",
+      "attempts" : 2,
+      "lifetime_attempts" : 2,
+      "token" : 2,
+      "lease_until" : null,
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_CLAIM_BUDGET_1",
+    "event" : {
+      "eventId" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "tenantId" : "1ada0a37-43ec-aef8-36cc-e97157f31567",
+      "aggregateId" : "39bc7803-ad90-bc10-b085-d2f449b50402",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "CRASH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "state" : "PROCESSING",
+      "attempts" : 1,
+      "lifetime_attempts" : 1,
+      "token" : 1,
+      "lease_until" : "2026-09-09T04:44:58.668Z",
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_CLAIM_BUDGET_2",
+    "event" : {
+      "eventId" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "tenantId" : "1ada0a37-43ec-aef8-36cc-e97157f31567",
+      "aggregateId" : "39bc7803-ad90-bc10-b085-d2f449b50402",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "CRASH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "state" : "PROCESSING",
+      "attempts" : 2,
+      "lifetime_attempts" : 2,
+      "token" : 2,
+      "lease_until" : "2026-09-09T04:45:00.257Z",
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_CLAIM_BUDGET_3",
+    "event" : {
+      "eventId" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "tenantId" : "1ada0a37-43ec-aef8-36cc-e97157f31567",
+      "aggregateId" : "39bc7803-ad90-bc10-b085-d2f449b50402",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "CRASH",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "state" : "PROCESSING",
+      "attempts" : 3,
+      "lifetime_attempts" : 3,
+      "token" : 3,
+      "lease_until" : "2026-09-09T04:45:01.817Z",
+      "last_error" : null
+    } ],
+    "audit" : [ ]
+  }, {
+    "scenario" : "AFTER_CLAIM_EXHAUSTED",
+    "event" : {
+      "eventId" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "tenantId" : "1ada0a37-43ec-aef8-36cc-e97157f31567",
+      "aggregateId" : "39bc7803-ad90-bc10-b085-d2f449b50402",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "outcome" : "BLOCKED",
+    "snapshot" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "projection" : [ ],
+    "effects" : [ ],
+    "delivery" : [ {
+      "event_id" : "051b07ea-c774-0b7e-fb80-8dd88eecc707",
+      "state" : "DEAD",
+      "attempts" : 3,
+      "lifetime_attempts" : 3,
+      "token" : 3,
+      "lease_until" : "2026-09-09T04:45:01.817Z",
+      "last_error" : "CRASH_EXHAUSTED"
+    } ],
+    "audit" : [ ]
+  } ],
+  "environment" : {
+    "applicationRevision" : "01158e9c5f7a6e65d490f54753817b03ce0b6a57",
+    "branch" : "chore/event-delivery-boundaries",
+    "dirty" : false,
+    "javaVersion" : "25.0.4.1+1-LTS",
+    "springBootVersion" : "4.1.1",
+    "gradleVersion" : "9.7.1",
+    "mysqlVersion" : "8.4.11",
+    "isolation" : "REPEATABLE-READ",
+    "poolSize" : 10,
+    "connectionTimeoutMs" : 30000,
+    "recordedAt" : "2026-09-09T13:45:02.096388200Z",
+    "databaseImage" : "mysql:8.4",
+    "os" : "Windows 11 10.0",
+    "processors" : 16,
+    "maxJvmMemoryBytes" : 4083154944,
+    "jvmOptions" : [ "-Dslotq.events.gradleVersion=9.7.1", "-Dfile.encoding=UTF-8", "-Duser.country=KR", "-Duser.language=ko", "-Duser.variant" ],
+    "workload" : {
+      "seed" : 80001,
+      "schema" : "test-only fixture v1",
+      "duplicateWorkers" : 4,
+      "repetitions" : 3,
+      "handlerDelayMs" : 100
+    },
+    "runtimeConfiguration" : {
+      "SYNCHRONOUS" : "handler in business transaction",
+      "DURABLE" : "same-transaction append; DB scan in fresh JVM; lease protocol probe: 3 attempts, 300ms DB lease, no backoff",
+      "DIRECT" : "process-local handler after commit; no recovery source"
+    }
+  },
+  "summary" : {
+    "SYNCHRONOUS" : {
+      "postCommitCrashLoss" : 0,
+      "lost" : 0,
+      "effectsAfterRecovery" : 9,
+      "committed" : 9,
+      "cases" : 15,
+      "slowProducerMeanMs" : 116.73663333333332
+    },
+    "DIRECT" : {
+      "postCommitCrashLoss" : 3,
+      "lost" : 6,
+      "effectsAfterRecovery" : 6,
+      "committed" : 12,
+      "cases" : 15,
+      "slowProducerMeanMs" : 122.00253333333335
+    },
+    "DURABLE" : {
+      "postCommitCrashLoss" : 0,
+      "lost" : 0,
+      "effectsAfterRecovery" : 12,
+      "committed" : 12,
+      "cases" : 15,
+      "slowProducerMeanMs" : 10.375133333333332
+    }
+  },
+  "schemaVersion" : "slotq-events/v1",
+  "rows" : [ {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "NONE",
+    "repetition" : 0,
+    "seed" : 80001,
+    "event" : {
+      "eventId" : "a61431de-67cf-ed44-e07f-c1f74bacde2b",
+      "tenantId" : "2abd3c18-7271-b87d-ce48-042fa7278ad5",
+      "aggregateId" : "6dffcb1f-58cf-d6f3-ac7c-0260f97c8bda",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 138.9549,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "NONE",
+    "repetition" : 1,
+    "seed" : 80002,
+    "event" : {
+      "eventId" : "89c1d316-9e2e-ca55-dbb6-7921988186d5",
+      "tenantId" : "74c03305-43f7-5e5a-757d-80a607016846",
+      "aggregateId" : "6e1167e5-8a31-f413-2a46-3980923ef15f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 14.3055,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "NONE",
+    "repetition" : 2,
+    "seed" : 80003,
+    "event" : {
+      "eventId" : "e887f2ad-8c0f-2b4f-87f9-91697ee54e9c",
+      "tenantId" : "06bf360a-fe20-2711-3dc1-01d391b8c920",
+      "aggregateId" : "6e0b88f8-cf11-3fb3-55ad-7c775f537a32",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 15.8132,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 0,
+    "seed" : 80004,
+    "event" : {
+      "eventId" : "c26690a4-3171-1033-e549-0accfed83580",
+      "tenantId" : "e0ba4529-a0ec-12a0-2712-87b9474dad64",
+      "aggregateId" : "6dee2e59-276d-b9d3-2eb1-cb4160ba2655",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 15.0776,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 1,
+    "seed" : 80005,
+    "event" : {
+      "eventId" : "212cb03c-1f51-712e-918c-2313e53bfd47",
+      "tenantId" : "72b94831-5b14-db57-ef56-08e6d2050e3e",
+      "aggregateId" : "6de84f6c-6c4d-0573-5a19-0e362dceaf28",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 15.4059,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 2,
+    "seed" : 80006,
+    "event" : {
+      "eventId" : "04da5175-55b0-4e3e-8cc2-da3f3210a5f2",
+      "tenantId" : "bcbc3f1e-2c9a-8134-968b-855d31deebaf",
+      "aggregateId" : "6df9ec32-9daf-2293-d7e3-4555c69114ad",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 14.1079,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 0,
+    "seed" : 80007,
+    "event" : {
+      "eventId" : "63a0710d-4390-af39-3905-f28618746db9",
+      "tenantId" : "4ebb4223-e6c3-49ea-5ecf-068abc964c89",
+      "aggregateId" : "6df40d45-e28e-6e33-034a-884b93a59d81",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1417.0223,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 1,
+    "seed" : 80008,
+    "event" : {
+      "eventId" : "3d7f0f02-e8f2-941d-9655-6be99867549d",
+      "tenantId" : "28b65142-898f-357a-4820-8c70722b30cd",
+      "aggregateId" : "6dd6b2a5-3aea-e853-dc4e-d715950c49a3",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1392.6627,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 2,
+    "seed" : 80009,
+    "event" : {
+      "eventId" : "9c452e99-d6d2-f517-4298-84317ecb1c64",
+      "tenantId" : "bab55449-43b7-fe30-1064-0d9dfce291a8",
+      "aggregateId" : "6dd0d3b8-7fca-33f3-07b6-1a0b6220d277",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1365.993,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 0,
+    "seed" : 80010,
+    "event" : {
+      "eventId" : "7ff2cfd3-0d31-d228-3dcf-3b5acb9fc50f",
+      "tenantId" : "04b84b37-153d-a40d-b799-8a145cbc6f19",
+      "aggregateId" : "6de2707e-b12c-5113-8580-512afae337fc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 9.8061,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 1,
+    "seed" : 80011,
+    "event" : {
+      "eventId" : "deb8ef6a-fb12-3323-ea12-53a2b2038cd6",
+      "tenantId" : "96b74e3c-cf66-6cc3-7fdd-0b41e773cff3",
+      "aggregateId" : "6ddc9191-f60b-9cb3-b0e7-9420c7f7c0cf",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 8.7224,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 2,
+    "seed" : 80012,
+    "event" : {
+      "eventId" : "b8978d60-a074-1807-4761-cd0731f673ba",
+      "tenantId" : "70b25d5c-7232-5853-692e-91269d08b437",
+      "aggregateId" : "6dbf36f2-4e68-16d3-89eb-e2eac95e6cf2",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 10.7605,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 0,
+    "seed" : 80013,
+    "event" : {
+      "eventId" : "175dacf8-8e54-7901-f3a4-e54e185a3b81",
+      "tenantId" : "02b16062-2c5b-210a-3172-125527c01511",
+      "aggregateId" : "6db95804-9347-6273-b553-25df9672f5c5",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 115.6532,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 1,
+    "seed" : 80014,
+    "event" : {
+      "eventId" : "fb0b4e31-c4b3-5612-eedb-9c78652ee42b",
+      "tenantId" : "4cb4574f-fde0-c6e7-d8a7-8ecb8799f282",
+      "aggregateId" : "6dcaf4ca-c4a9-7f93-331d-5d002f355b4a",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 116.2957,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 2,
+    "seed" : 80015,
+    "event" : {
+      "eventId" : "59d16dc8-b293-b70c-9b1e-b4c04b92abf3",
+      "tenantId" : "deb35a55-b809-8f9d-a0eb-0ff91251535c",
+      "aggregateId" : "6dc515de-0988-cb33-5e84-9ff4fc49e41e",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 118.261,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "NONE",
+    "repetition" : 0,
+    "seed" : 80001,
+    "event" : {
+      "eventId" : "a61431de-67cf-ed44-e07f-c1f74bacde2b",
+      "tenantId" : "2abd3c18-7271-b87d-ce48-042fa7278ad5",
+      "aggregateId" : "6dffcb1f-58cf-d6f3-ac7c-0260f97c8bda",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 56.5654,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "NONE",
+    "repetition" : 1,
+    "seed" : 80002,
+    "event" : {
+      "eventId" : "89c1d316-9e2e-ca55-dbb6-7921988186d5",
+      "tenantId" : "74c03305-43f7-5e5a-757d-80a607016846",
+      "aggregateId" : "6e1167e5-8a31-f413-2a46-3980923ef15f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 20.9452,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "NONE",
+    "repetition" : 2,
+    "seed" : 80003,
+    "event" : {
+      "eventId" : "e887f2ad-8c0f-2b4f-87f9-91697ee54e9c",
+      "tenantId" : "06bf360a-fe20-2711-3dc1-01d391b8c920",
+      "aggregateId" : "6e0b88f8-cf11-3fb3-55ad-7c775f537a32",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 23.431,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 0,
+    "seed" : 80004,
+    "event" : {
+      "eventId" : "c26690a4-3171-1033-e549-0accfed83580",
+      "tenantId" : "e0ba4529-a0ec-12a0-2712-87b9474dad64",
+      "aggregateId" : "6dee2e59-276d-b9d3-2eb1-cb4160ba2655",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 6.7535,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 1,
+    "seed" : 80005,
+    "event" : {
+      "eventId" : "212cb03c-1f51-712e-918c-2313e53bfd47",
+      "tenantId" : "72b94831-5b14-db57-ef56-08e6d2050e3e",
+      "aggregateId" : "6de84f6c-6c4d-0573-5a19-0e362dceaf28",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 5.9038,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 2,
+    "seed" : 80006,
+    "event" : {
+      "eventId" : "04da5175-55b0-4e3e-8cc2-da3f3210a5f2",
+      "tenantId" : "bcbc3f1e-2c9a-8134-968b-855d31deebaf",
+      "aggregateId" : "6df9ec32-9daf-2293-d7e3-4555c69114ad",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 5.2265,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 0,
+    "seed" : 80007,
+    "event" : {
+      "eventId" : "63a0710d-4390-af39-3905-f28618746db9",
+      "tenantId" : "4ebb4223-e6c3-49ea-5ecf-068abc964c89",
+      "aggregateId" : "6df40d45-e28e-6e33-034a-884b93a59d81",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1237.622,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 1,
+    "seed" : 80008,
+    "event" : {
+      "eventId" : "3d7f0f02-e8f2-941d-9655-6be99867549d",
+      "tenantId" : "28b65142-898f-357a-4820-8c70722b30cd",
+      "aggregateId" : "6dd6b2a5-3aea-e853-dc4e-d715950c49a3",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1236.0914,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 2,
+    "seed" : 80009,
+    "event" : {
+      "eventId" : "9c452e99-d6d2-f517-4298-84317ecb1c64",
+      "tenantId" : "bab55449-43b7-fe30-1064-0d9dfce291a8",
+      "aggregateId" : "6dd0d3b8-7fca-33f3-07b6-1a0b6220d277",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1266.2831,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 0,
+    "seed" : 80010,
+    "event" : {
+      "eventId" : "7ff2cfd3-0d31-d228-3dcf-3b5acb9fc50f",
+      "tenantId" : "04b84b37-153d-a40d-b799-8a145cbc6f19",
+      "aggregateId" : "6de2707e-b12c-5113-8580-512afae337fc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 14.7737,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 1,
+    "seed" : 80011,
+    "event" : {
+      "eventId" : "deb8ef6a-fb12-3323-ea12-53a2b2038cd6",
+      "tenantId" : "96b74e3c-cf66-6cc3-7fdd-0b41e773cff3",
+      "aggregateId" : "6ddc9191-f60b-9cb3-b0e7-9420c7f7c0cf",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 14.0657,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 2,
+    "seed" : 80012,
+    "event" : {
+      "eventId" : "b8978d60-a074-1807-4761-cd0731f673ba",
+      "tenantId" : "70b25d5c-7232-5853-692e-91269d08b437",
+      "aggregateId" : "6dbf36f2-4e68-16d3-89eb-e2eac95e6cf2",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 15.0935,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 0,
+    "seed" : 80013,
+    "event" : {
+      "eventId" : "175dacf8-8e54-7901-f3a4-e54e185a3b81",
+      "tenantId" : "02b16062-2c5b-210a-3172-125527c01511",
+      "aggregateId" : "6db95804-9347-6273-b553-25df9672f5c5",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 122.0516,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 1,
+    "seed" : 80014,
+    "event" : {
+      "eventId" : "fb0b4e31-c4b3-5612-eedb-9c78652ee42b",
+      "tenantId" : "4cb4574f-fde0-c6e7-d8a7-8ecb8799f282",
+      "aggregateId" : "6dcaf4ca-c4a9-7f93-331d-5d002f355b4a",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 121.717,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 2,
+    "seed" : 80015,
+    "event" : {
+      "eventId" : "59d16dc8-b293-b70c-9b1e-b4c04b92abf3",
+      "tenantId" : "deb35a55-b809-8f9d-a0eb-0ff91251535c",
+      "aggregateId" : "6dc515de-0988-cb33-5e84-9ff4fc49e41e",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 122.239,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 0,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "NONE",
+    "repetition" : 0,
+    "seed" : 80001,
+    "event" : {
+      "eventId" : "a61431de-67cf-ed44-e07f-c1f74bacde2b",
+      "tenantId" : "2abd3c18-7271-b87d-ce48-042fa7278ad5",
+      "aggregateId" : "6dffcb1f-58cf-d6f3-ac7c-0260f97c8bda",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 15.5423,
+    "handlerOutcome" : "SUCCESS",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "NONE",
+    "repetition" : 1,
+    "seed" : 80002,
+    "event" : {
+      "eventId" : "89c1d316-9e2e-ca55-dbb6-7921988186d5",
+      "tenantId" : "74c03305-43f7-5e5a-757d-80a607016846",
+      "aggregateId" : "6e1167e5-8a31-f413-2a46-3980923ef15f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 10.062,
+    "handlerOutcome" : "SUCCESS",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "NONE",
+    "repetition" : 2,
+    "seed" : 80003,
+    "event" : {
+      "eventId" : "e887f2ad-8c0f-2b4f-87f9-91697ee54e9c",
+      "tenantId" : "06bf360a-fe20-2711-3dc1-01d391b8c920",
+      "aggregateId" : "6e0b88f8-cf11-3fb3-55ad-7c775f537a32",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 10.0701,
+    "handlerOutcome" : "SUCCESS",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 0,
+    "seed" : 80004,
+    "event" : {
+      "eventId" : "c26690a4-3171-1033-e549-0accfed83580",
+      "tenantId" : "e0ba4529-a0ec-12a0-2712-87b9474dad64",
+      "aggregateId" : "6dee2e59-276d-b9d3-2eb1-cb4160ba2655",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 7.5344,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 1,
+    "seed" : 80005,
+    "event" : {
+      "eventId" : "212cb03c-1f51-712e-918c-2313e53bfd47",
+      "tenantId" : "72b94831-5b14-db57-ef56-08e6d2050e3e",
+      "aggregateId" : "6de84f6c-6c4d-0573-5a19-0e362dceaf28",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 6.6863,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 2,
+    "seed" : 80006,
+    "event" : {
+      "eventId" : "04da5175-55b0-4e3e-8cc2-da3f3210a5f2",
+      "tenantId" : "bcbc3f1e-2c9a-8134-968b-855d31deebaf",
+      "aggregateId" : "6df9ec32-9daf-2293-d7e3-4555c69114ad",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 6.8939,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 0,
+      "durable" : 0,
+      "effects" : 0
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 0,
+    "seed" : 80007,
+    "event" : {
+      "eventId" : "63a0710d-4390-af39-3905-f28618746db9",
+      "tenantId" : "4ebb4223-e6c3-49ea-5ecf-068abc964c89",
+      "aggregateId" : "6df40d45-e28e-6e33-034a-884b93a59d81",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1226.7071,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 1,
+    "seed" : 80008,
+    "event" : {
+      "eventId" : "3d7f0f02-e8f2-941d-9655-6be99867549d",
+      "tenantId" : "28b65142-898f-357a-4820-8c70722b30cd",
+      "aggregateId" : "6dd6b2a5-3aea-e853-dc4e-d715950c49a3",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1281.2076,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 2,
+    "seed" : 80009,
+    "event" : {
+      "eventId" : "9c452e99-d6d2-f517-4298-84317ecb1c64",
+      "tenantId" : "bab55449-43b7-fe30-1064-0d9dfce291a8",
+      "aggregateId" : "6dd0d3b8-7fca-33f3-07b6-1a0b6220d277",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1227.8889,
+    "handlerOutcome" : "IN_PRODUCER_OR_NOT_REACHED",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 0,
+    "seed" : 80010,
+    "event" : {
+      "eventId" : "7ff2cfd3-0d31-d228-3dcf-3b5acb9fc50f",
+      "tenantId" : "04b84b37-153d-a40d-b799-8a145cbc6f19",
+      "aggregateId" : "6de2707e-b12c-5113-8580-512afae337fc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 10.7089,
+    "handlerOutcome" : "TRANSIENT_FIXTURE",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 1,
+    "seed" : 80011,
+    "event" : {
+      "eventId" : "deb8ef6a-fb12-3323-ea12-53a2b2038cd6",
+      "tenantId" : "96b74e3c-cf66-6cc3-7fdd-0b41e773cff3",
+      "aggregateId" : "6ddc9191-f60b-9cb3-b0e7-9420c7f7c0cf",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 10.9968,
+    "handlerOutcome" : "TRANSIENT_FIXTURE",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 2,
+    "seed" : 80012,
+    "event" : {
+      "eventId" : "b8978d60-a074-1807-4761-cd0731f673ba",
+      "tenantId" : "70b25d5c-7232-5853-692e-91269d08b437",
+      "aggregateId" : "6dbf36f2-4e68-16d3-89eb-e2eac95e6cf2",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 10.8574,
+    "handlerOutcome" : "TRANSIENT_FIXTURE",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 0
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 0,
+    "seed" : 80013,
+    "event" : {
+      "eventId" : "175dacf8-8e54-7901-f3a4-e54e185a3b81",
+      "tenantId" : "02b16062-2c5b-210a-3172-125527c01511",
+      "aggregateId" : "6db95804-9347-6273-b553-25df9672f5c5",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 11.6283,
+    "handlerOutcome" : "SUCCESS",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 1,
+    "seed" : 80014,
+    "event" : {
+      "eventId" : "fb0b4e31-c4b3-5612-eedb-9c78652ee42b",
+      "tenantId" : "4cb4574f-fde0-c6e7-d8a7-8ecb8799f282",
+      "aggregateId" : "6dcaf4ca-c4a9-7f93-331d-5d002f355b4a",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 8.6674,
+    "handlerOutcome" : "SUCCESS",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 2,
+    "seed" : 80015,
+    "event" : {
+      "eventId" : "59d16dc8-b293-b70c-9b1e-b4c04b92abf3",
+      "tenantId" : "deb35a55-b809-8f9d-a0eb-0ff91251535c",
+      "aggregateId" : "6dc515de-0988-cb33-5e84-9ff4fc49e41e",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 10.8297,
+    "handlerOutcome" : "SUCCESS",
+    "beforeRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    },
+    "afterRecovery" : {
+      "business" : 1,
+      "durable" : 1,
+      "effects" : 1
+    }
+  } ]
+}

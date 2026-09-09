@@ -183,16 +183,17 @@ Database:
 
 ## Event processing
 
-Event experiment는 M3 Reliable Event Foundation 착수 전까지 Planned 상태다. 특정 broker나
-Transactional Outbox 채택을 전제하지 않고 DB commit과 event 전달 사이의 유실 문제부터
-재현한 뒤 가장 단순한 대안을 선택한다.
+Event 전달 경계의 #80 비교는 [Measured 결과](event-delivery-boundaries.md)와
+[ADR-0007](../adr/0007-use-transactional-event-record-and-db-delivery.md)에 기록한다.
+아래 matrix는 후속 production protocol 검증에도 적용한다. #80 fixture 결과가 M3 전체
+runtime/crash recovery gate나 M4 실제 consumer 완료를 대신하지 않는다.
 
 ### 질문
 
 - 업무 transaction commit과 event 전달 사이의 crash에서 event를 복구할 수 있는가?
 - duplicate publish와 redelivery가 duplicate business side effect를 만드는가?
 - retry, process restart와 partial failure 뒤 backlog가 얼마나 안전하게 회복되는가?
-- operator replay가 동일한 idempotency와 audit 규칙을 따르는가?
+- trusted internal replay가 동일한 idempotency와 durable audit 규칙을 따르는가?
 
 ### 비교할 전달 경계
 
@@ -230,7 +231,7 @@ isolation 또는 throughput 요구가 DB relay로 충족되지 않는다는 측�
 | Consumer concurrency | 1과 복수 consumer |
 | Ordering | 동일 aggregate 순서, 서로 다른 aggregate interleave |
 | Failure | 지정 횟수 exception, process kill, dependency timeout |
-| Recovery | relay restart, consumer restart, operator replay |
+| Recovery | relay restart, consumer restart, trusted internal replay |
 
 고정 event fixture에는 event ID, aggregate ID, tenant ID, schema version과 발생 순서를
 포함한다. 개인정보 payload는 사용하지 않는다.
@@ -247,13 +248,20 @@ isolation 또는 throughput 요구가 DB relay로 충족되지 않는다는 측�
 | 중복 event | 같은 event ID를 여러 번 전달 | 처리 결과와 business unique row가 하나다. |
 | 순서 역전 | 같은 aggregate의 후속 event를 먼저 전달 | 명시한 ordering 정책에 따라 지연·거부·보정된다. |
 | retry exhaustion | handler가 계속 실패하도록 구성 | dead-letter 상태와 마지막 오류가 조회된다. |
-| operator replay | dead-letter event를 다시 실행 | 같은 idempotency와 authorization·audit가 적용된다. |
-| 외부 dependency timeout | 응답 전후 timeout을 각각 주입 | 성공 여부가 불명확한 호출도 idempotency key로 중복되지 않는다. |
+| trusted internal replay | dead-letter event를 tenant scope와 reason으로 다시 실행 | 같은 identity·privilege·durable audit가 적용된다. 사람 operator surface는 M5가 소유한다. |
+| 외부 dependency timeout | 첫 실제 external-side-effect/provider Issue가 응답 전후 timeout을 각각 주입 | provider idempotency/retention과 ambiguous outcome의 조회·재시도·중복 effect를 검증한다. M3 DB transaction으로 외부 exactly-once를 주장하지 않는다. |
 | relay restart | backlog 도중 process restart | 미처리 backlog가 누락 없이 drain된다. |
 | consumer restart | 처리 중 process restart | committed side effect가 중복되지 않고 나머지가 처리된다. |
 
 각 항목은 최소 한 번의 happy path와 반복 failure run을 가진다. crash point를 모호하게
 표현하지 않고 test hook 또는 process 종료 위치를 기록한다.
+
+외부 timeout은 N/A가 아니다. ADR-0007에 따라 첫 실제 provider 연결 Issue의 필수 gate로
+이동한다. 실제 provider 도입 Milestone은 고정하지 않으며 M4가 notification request
+contract만 다루면 provider 검증을 선도입하지 않는다.
+M3는 실제 SMS/email provider와 사람용 replay entrypoint를 도입하지 않는다. M4가 최초
+Booking event schema/trigger, 실제 transaction append와 Waitlist consumer를 함께 연결하고,
+M5가 human operator 인증·권한·운영 audit/runbook을 소유한다.
 
 ### Metrics
 
@@ -271,7 +279,7 @@ Recovery:
 - time to recovery.
 - outbox와 consumer lag.
 - backlog drain time.
-- operator replay 성공·실패 count.
+- trusted internal replay 성공·실패 count.
 
 Performance:
 
@@ -286,7 +294,7 @@ Performance:
 2. duplicate business side effect가 발생하면 idempotency 설계는 탈락한다.
 3. retryable과 non-retryable failure를 구분하지 못하거나 무한 retry가 가능하면 완료로
    판단하지 않는다.
-4. operator replay가 authorization, tenant boundary와 audit를 우회하면 완료로 판단하지
+4. trusted internal replay가 privilege, tenant boundary와 audit를 우회하면 완료로 판단하지
    않는다.
 5. broker 도입은 correctness 자체가 아니라 측정된 fan-out, isolation, throughput 또는
    운영 요구를 해결하는 경우에만 선택한다.
@@ -299,7 +307,7 @@ Performance:
 - fault matrix별 raw log와 database snapshot.
 - duplicate, redelivery, crash, partial failure test report.
 - recovery time과 backlog drain raw data.
-- operator replay audit.
+- trusted internal replay durable audit; human operator audit 연계는 M5.
 - transport 선택 또는 보류 ADR.
 
 ## 결과 보고 규칙
