@@ -1,0 +1,1232 @@
+{
+  "rows" : [ {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "NONE",
+    "repetition" : 0,
+    "seed" : 80001,
+    "event" : {
+      "eventId" : "a61431de-67cf-ed44-e07f-c1f74bacde2b",
+      "tenantId" : "2abd3c18-7271-b87d-ce48-042fa7278ad5",
+      "aggregateId" : "6dffcb1f-58cf-d6f3-ac7c-0260f97c8bda",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 163.9979,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "NONE",
+    "repetition" : 1,
+    "seed" : 80002,
+    "event" : {
+      "eventId" : "89c1d316-9e2e-ca55-dbb6-7921988186d5",
+      "tenantId" : "74c03305-43f7-5e5a-757d-80a607016846",
+      "aggregateId" : "6e1167e5-8a31-f413-2a46-3980923ef15f",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 22.1383,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "NONE",
+    "repetition" : 2,
+    "seed" : 80003,
+    "event" : {
+      "eventId" : "e887f2ad-8c0f-2b4f-87f9-91697ee54e9c",
+      "tenantId" : "06bf360a-fe20-2711-3dc1-01d391b8c920",
+      "aggregateId" : "6e0b88f8-cf11-3fb3-55ad-7c775f537a32",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 16.9788,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 0,
+    "seed" : 80004,
+    "event" : {
+      "eventId" : "c26690a4-3171-1033-e549-0accfed83580",
+      "tenantId" : "e0ba4529-a0ec-12a0-2712-87b9474dad64",
+      "aggregateId" : "6dee2e59-276d-b9d3-2eb1-cb4160ba2655",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 14.9622,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 1,
+    "seed" : 80005,
+    "event" : {
+      "eventId" : "212cb03c-1f51-712e-918c-2313e53bfd47",
+      "tenantId" : "72b94831-5b14-db57-ef56-08e6d2050e3e",
+      "aggregateId" : "6de84f6c-6c4d-0573-5a19-0e362dceaf28",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 13.6182,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 2,
+    "seed" : 80006,
+    "event" : {
+      "eventId" : "04da5175-55b0-4e3e-8cc2-da3f3210a5f2",
+      "tenantId" : "bcbc3f1e-2c9a-8134-968b-855d31deebaf",
+      "aggregateId" : "6df9ec32-9daf-2293-d7e3-4555c69114ad",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 13.7616,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 0,
+    "seed" : 80007,
+    "event" : {
+      "eventId" : "63a0710d-4390-af39-3905-f28618746db9",
+      "tenantId" : "4ebb4223-e6c3-49ea-5ecf-068abc964c89",
+      "aggregateId" : "6df40d45-e28e-6e33-034a-884b93a59d81",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1506.1823,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 1,
+    "seed" : 80008,
+    "event" : {
+      "eventId" : "3d7f0f02-e8f2-941d-9655-6be99867549d",
+      "tenantId" : "28b65142-898f-357a-4820-8c70722b30cd",
+      "aggregateId" : "6dd6b2a5-3aea-e853-dc4e-d715950c49a3",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1468.1347,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 2,
+    "seed" : 80009,
+    "event" : {
+      "eventId" : "9c452e99-d6d2-f517-4298-84317ecb1c64",
+      "tenantId" : "bab55449-43b7-fe30-1064-0d9dfce291a8",
+      "aggregateId" : "6dd0d3b8-7fca-33f3-07b6-1a0b6220d277",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1334.5457,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 0,
+    "seed" : 80010,
+    "event" : {
+      "eventId" : "7ff2cfd3-0d31-d228-3dcf-3b5acb9fc50f",
+      "tenantId" : "04b84b37-153d-a40d-b799-8a145cbc6f19",
+      "aggregateId" : "6de2707e-b12c-5113-8580-512afae337fc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 7.9509,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 1,
+    "seed" : 80011,
+    "event" : {
+      "eventId" : "deb8ef6a-fb12-3323-ea12-53a2b2038cd6",
+      "tenantId" : "96b74e3c-cf66-6cc3-7fdd-0b41e773cff3",
+      "aggregateId" : "6ddc9191-f60b-9cb3-b0e7-9420c7f7c0cf",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 10.282,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 2,
+    "seed" : 80012,
+    "event" : {
+      "eventId" : "b8978d60-a074-1807-4761-cd0731f673ba",
+      "tenantId" : "70b25d5c-7232-5853-692e-91269d08b437",
+      "aggregateId" : "6dbf36f2-4e68-16d3-89eb-e2eac95e6cf2",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 9.5952,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 0,
+    "seed" : 80013,
+    "event" : {
+      "eventId" : "175dacf8-8e54-7901-f3a4-e54e185a3b81",
+      "tenantId" : "02b16062-2c5b-210a-3172-125527c01511",
+      "aggregateId" : "6db95804-9347-6273-b553-25df9672f5c5",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 115.9051,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 1,
+    "seed" : 80014,
+    "event" : {
+      "eventId" : "fb0b4e31-c4b3-5612-eedb-9c78652ee42b",
+      "tenantId" : "4cb4574f-fde0-c6e7-d8a7-8ecb8799f282",
+      "aggregateId" : "6dcaf4ca-c4a9-7f93-331d-5d002f355b4a",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 118.9024,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "SYNCHRONOUS",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 2,
+    "seed" : 80015,
+    "event" : {
+      "eventId" : "59d16dc8-b293-b70c-9b1e-b4c04b92abf3",
+      "tenantId" : "deb35a55-b809-8f9d-a0eb-0ff91251535c",
+      "aggregateId" : "6dc515de-0988-cb33-5e84-9ff4fc49e41e",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 118.696,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "NONE",
+    "repetition" : 0,
+    "seed" : 80016,
+    "event" : {
+      "eventId" : "5aec18cb-9be9-7ca2-700b-253cff0c99f1",
+      "tenantId" : "78ce08ad-15bc-6462-81cc-702670fa1c54",
+      "aggregateId" : "6e6398da-c5fb-d154-caa0-90185b1f75cc",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 19.9994,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "NONE",
+    "repetition" : 1,
+    "seed" : 80017,
+    "event" : {
+      "eventId" : "b9b23863-89c9-dd9d-1c4e-3d83e57061b8",
+      "tenantId" : "0acd0bb3-cfe5-2d18-4a0f-f152fbb17d2f",
+      "aggregateId" : "6e5db9ee-0adb-1cf4-f607-d30d2833fea0",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 20.9953,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "NONE",
+    "repetition" : 2,
+    "seed" : 80018,
+    "event" : {
+      "eventId" : "9d5fd99c-c028-baad-1784-f4ae32450a62",
+      "tenantId" : "54d002a0-a16a-d2f5-f145-6dca5b8b5aa0",
+      "aggregateId" : "6e6f56b5-3c3d-3a14-73d2-0a2dc0f66425",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 18.9545,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 0,
+    "seed" : 80019,
+    "event" : {
+      "eventId" : "fc25f934-ae09-1ba8-c3c8-0cf518a8d229",
+      "tenantId" : "e6cf05a7-5b93-9bab-b988-eef7e642bb7a",
+      "aggregateId" : "6e6977c7-811c-85b4-9f39-4d228e0aecf8",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 6.8923,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 1,
+    "seed" : 80020,
+    "event" : {
+      "eventId" : "d604972b-536b-008c-2117-8658989bb90d",
+      "tenantId" : "c0ca14c5-fe5f-873b-a2da-74dc9bd79fbe",
+      "aggregateId" : "6e4c1d26-d978-ffd4-783d-9bec8f71991b",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 4.8075,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 2,
+    "seed" : 80021,
+    "event" : {
+      "eventId" : "34cab6c2-414b-6187-cd5a-9ea17eff80d4",
+      "tenantId" : "52c917cc-b888-4ff1-6b1d-f60a268f0098",
+      "aggregateId" : "6e463e3a-1e58-4b74-a3a4-dee25c8621ee",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 7.8865,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 0,
+    "seed" : 80022,
+    "event" : {
+      "eventId" : "187857fc-77aa-3e97-c891-55cacbd4297f",
+      "tenantId" : "9ccc0eb9-8a0d-f5ce-1253-72808668de09",
+      "aggregateId" : "6e57db01-4fba-6894-216f-1602f5488773",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1165.9267,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 1,
+    "seed" : 80023,
+    "event" : {
+      "eventId" : "773e7793-658a-9f92-74d4-6e11b237f146",
+      "tenantId" : "2ecb11c0-4436-be85-da96-f3af11203ee3",
+      "aggregateId" : "6e51fc13-9499-b434-4cd6-58f7c25d1047",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1166.4432,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 2,
+    "seed" : 80024,
+    "event" : {
+      "eventId" : "511d1589-0aec-8476-d223-e776322ad82a",
+      "tenantId" : "08c620de-e702-aa14-c3e8-7993c6b52327",
+      "aggregateId" : "6e34a173-ecf6-2e53-25da-a7c1c3c3bc69",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1171.1329,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 0,
+    "seed" : 80025,
+    "event" : {
+      "eventId" : "afe33520-f8cc-e570-7e66-ffbe188e9ff1",
+      "tenantId" : "9ac523e5-a12b-72cb-8c2b-fac1516c8402",
+      "aggregateId" : "6e2ec287-31d5-79f3-5141-eab690d8453d",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 13.7059,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 1,
+    "seed" : 80026,
+    "event" : {
+      "eventId" : "9390d65a-2f2b-c281-799d-b6e86563489c",
+      "tenantId" : "e4c81ad3-72b1-18a8-3361-7737b1466173",
+      "aggregateId" : "6e405f4d-6337-9714-cf0c-21d8299aaac2",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 14.6297,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 2,
+    "seed" : 80027,
+    "event" : {
+      "eventId" : "f256f5f2-1d0c-237b-25e0-cf2f4bc71063",
+      "tenantId" : "76c71dd9-2cd9-e15e-fba4-f8663bfdc24d",
+      "aggregateId" : "6e3a805f-a816-e2b3-fa73-64ccf6af3395",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 13.4652,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 0,
+    "seed" : 80028,
+    "event" : {
+      "eventId" : "cc3593e7-c26e-0860-8330-4892cbb9f747",
+      "tenantId" : "50c22cf7-cfa5-ccee-e4f6-7e4af192a691",
+      "aggregateId" : "6e1d25c0-0073-5cd3-d377-b396f815dfb8",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 122.5418,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 1,
+    "seed" : 80029,
+    "event" : {
+      "eventId" : "2afbb37e-b04e-695a-2f73-60d9b21dbf0e",
+      "tenantId" : "e2c12ffe-89ce-95a4-ad39-ff797c4a076b",
+      "aggregateId" : "6e1746d3-4552-a873-fede-f68bc52a688b",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 122.1247,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DIRECT",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 2,
+    "seed" : 80030,
+    "event" : {
+      "eventId" : "0ea954b7-e6ad-466b-2aaa-1804fef267b8",
+      "tenantId" : "2cc426ec-5b54-3b81-546f-7beedc23e4dc",
+      "aggregateId" : "6e28e39a-76b4-c593-7ca9-2dad5decce10",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 122.6729,
+    "beforeRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "NONE",
+    "repetition" : 0,
+    "seed" : 80031,
+    "event" : {
+      "eventId" : "6d6f744f-d48d-a765-d6ed-304be5562f80",
+      "tenantId" : "bec329f2-157d-0437-1cb2-fd1d66db45b6",
+      "aggregateId" : "6e2304ac-bb94-1133-a810-70a22b0156e4",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 15.955,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "NONE",
+    "repetition" : 1,
+    "seed" : 80032,
+    "event" : {
+      "eventId" : "20120539-35fb-ab98-bc9f-b29731c20f4a",
+      "tenantId" : "d89e99d8-fd62-0692-0e74-a8ba735c4546",
+      "aggregateId" : "6d49cc6f-afd9-ff52-edfd-1e12cef91d7a",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 8.2945,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "NONE",
+    "repetition" : 2,
+    "seed" : 80033,
+    "event" : {
+      "eventId" : "7ed824d1-23dc-0c92-68e2-cadf1825d711",
+      "tenantId" : "6a9d9cde-b78a-cf48-d6b8-29e7fe13a621",
+      "aggregateId" : "6d43ed82-f4b9-4af2-1964-61089c0da64e",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 9.6355,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 0,
+    "seed" : 80034,
+    "event" : {
+      "eventId" : "6285c60a-5a3a-e9a3-6419-820964fa7fbb",
+      "tenantId" : "b4a093cc-8910-7525-7ded-a65f5ded8392",
+      "aggregateId" : "6d558a49-261b-6812-972e-982934d00bd3",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 6.0175,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 1,
+    "seed" : 80035,
+    "event" : {
+      "eventId" : "c14be5a1-481b-4a9d-105c-9a504b5e4782",
+      "tenantId" : "469f96d3-4339-3ddc-4631-278ce8a4e46c",
+      "aggregateId" : "6d4fab5c-6afa-b3b2-c295-db1e01e494a7",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 6.8842,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "BEFORE_COMMIT",
+    "repetition" : 2,
+    "seed" : 80036,
+    "event" : {
+      "eventId" : "9b2a8396-ed7d-2f81-6dac-13b3cb512e66",
+      "tenantId" : "209aa5f1-e605-296b-2f82-ad719e39c8b0",
+      "aggregateId" : "6d3250bb-c357-2dd2-9b9a-29e8034b40c9",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 1,
+    "producerElapsedMs" : 7.7978,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    },
+    "afterRecovery" : {
+      "effects" : 0,
+      "business" : 0,
+      "durable" : 0
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 0,
+    "seed" : 80037,
+    "event" : {
+      "eventId" : "f9f0a32e-db5d-907c-19ef-2bfab1b4f62d",
+      "tenantId" : "b299a8f7-a02d-f222-f7c6-2e9f28f1298a",
+      "aggregateId" : "6d2c71cf-0836-7972-c701-6cdcd05fc99c",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1157.7493,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 1,
+    "seed" : 80038,
+    "event" : {
+      "eventId" : "dd9e4468-11bc-6d8c-1525-e325fe899ed8",
+      "tenantId" : "fc9c9fe6-71b3-97ff-9efb-ab1588cb06fb",
+      "aggregateId" : "6d3e0e96-3998-9692-44cb-a3fe69222f21",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1154.4203,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "AFTER_COMMIT",
+    "repetition" : 2,
+    "seed" : 80039,
+    "event" : {
+      "eventId" : "3c6463ff-ff9c-ce87-c168-fb6ce4ed669f",
+      "tenantId" : "8e9ba2ec-2bdc-60b5-673f-2c44138267d6",
+      "aggregateId" : "6d382fa9-7e77-e232-7032-e6f33636b7f5",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 80,
+    "producerElapsedMs" : 1188.6308,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 0,
+    "seed" : 80040,
+    "event" : {
+      "eventId" : "164301f5-a4fe-b36b-1eb8-74d164e04d83",
+      "tenantId" : "6896b20a-cea8-4c45-5090-b228c9174c19",
+      "aggregateId" : "6d1ad507-d6d4-5c51-4937-35bd379d6417",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 8.9385,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 1,
+    "seed" : 80041,
+    "event" : {
+      "eventId" : "7509218c-92df-1466-cafb-8d184b44154a",
+      "tenantId" : "fa95b510-88d1-14fb-18d4-335653ceacf4",
+      "aggregateId" : "6d14f61b-1bb3-a7f1-749e-78b204b1eceb",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 8.9369,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "HANDLER_FAILURE",
+    "repetition" : 2,
+    "seed" : 80042,
+    "event" : {
+      "eventId" : "58b6c2c6-c93d-f176-c632-44429818bdf5",
+      "tenantId" : "4498abff-5a56-bad8-c009-afccb3a88a65",
+      "aggregateId" : "6d2692e2-4d15-c512-f268-afd29d745270",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 9.0044,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 0,
+    "seed" : 80043,
+    "event" : {
+      "eventId" : "b77ce25d-b71e-5271-7275-5c8a7e7c85bc",
+      "tenantId" : "d697af05-147f-838e-884d-30fb3e5feb3f",
+      "aggregateId" : "6d20b3f4-91f5-10b2-1dcf-f2c86a88db44",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 8.2506,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 1,
+    "seed" : 80044,
+    "event" : {
+      "eventId" : "915b8054-5c80-3755-cfc4-d5edfe6f6ca0",
+      "tenantId" : "b092be23-b74b-6f1e-719e-b6dff3f4cf83",
+      "aggregateId" : "6d035954-ea51-8ad1-f6d4-41926bef8766",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 9.0189,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  }, {
+    "boundary" : "DURABLE",
+    "fault" : "SLOW_HANDLER",
+    "repetition" : 2,
+    "seed" : 80045,
+    "event" : {
+      "eventId" : "f0219fec-4a60-984f-7c07-ee34e4d33467",
+      "tenantId" : "4291c12a-7174-37d5-39e2-380d7eac305d",
+      "aggregateId" : "6cfd7a68-2f30-d671-223b-848739041039",
+      "eventType" : "FixtureChanged",
+      "schemaVersion" : 1,
+      "occurredAt" : "2026-09-09T00:00:01Z",
+      "sequence" : 1,
+      "payload" : "{\"valid\":true}"
+    },
+    "exitCode" : 0,
+    "producerElapsedMs" : 8.337,
+    "beforeRecovery" : {
+      "effects" : 0,
+      "business" : 1,
+      "durable" : 1
+    },
+    "afterRecovery" : {
+      "effects" : 1,
+      "business" : 1,
+      "durable" : 1
+    }
+  } ],
+  "environment" : {
+    "applicationRevision" : "4cd88b98c9ee2b69e1bc85f3478d99ebd3c3f36a",
+    "branch" : "chore/event-delivery-boundaries",
+    "dirty" : true,
+    "javaVersion" : "25.0.4.1+1-LTS",
+    "springBootVersion" : "4.1.1",
+    "gradleVersion" : "9.7.1",
+    "mysqlVersion" : "8.4.11",
+    "isolation" : "REPEATABLE-READ",
+    "poolSize" : 10,
+    "connectionTimeoutMs" : 30000,
+    "recordedAt" : "2026-09-09T13:34:38.475606200Z"
+  },
+  "schemaVersion" : "slotq-events/v1"
+}
