@@ -149,7 +149,11 @@ class AuthWebIntegrationTests {
         Integer credentialColumns = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM information_schema.columns "
                 + "WHERE table_schema = DATABASE() "
-                + "AND LOWER(column_name) REGEXP 'token|credential|secret'",
+                + "AND LOWER(column_name) REGEXP 'token|credential|secret' "
+                // V9 ownership counters are integers, not bearer credentials. Keep the exception exact.
+                + "AND NOT (data_type = 'bigint' AND ("
+                + "(table_name = 'event_deliveries' AND column_name = 'fencing_token') OR "
+                + "(table_name = 'event_replay_audit' AND column_name = 'prior_fencing_token')))",
             Integer.class
         );
         assertThat(credentialColumns).isZero();
