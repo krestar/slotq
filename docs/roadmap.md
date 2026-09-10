@@ -2,7 +2,7 @@
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
 현재 저장소는 M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency를
-완료했고, M3 Reliable Event Foundation의 #80 전달 경계 결정과 후속 구현을 구분한다. 존재하지 않는
+완료했고, M3의 #80 전달 경계 결정, #84 production runtime과 후속 process recovery 검증을 구분한다. 존재하지 않는
 Product 기능이나 검증 명령을 전제로 하지 않는다.
 
 ## 계획 원칙
@@ -55,7 +55,8 @@ Status의 의미는 다음과 같다.
 - M2 Concurrency & Consistency: Complete. #15, #16, #17, #70, #71과 종료 감사
   corrective Bug #78이 Done이다.
 - M3 Reliable Event Foundation: #80의 비교 결과와 계약은 ADR-0007에 기록한다.
-  후속 production implementation과 failure recovery는 별도 Issue이며 M3 전체는 미완료다.
+  #84 production foundation은 [runtime 문서](architecture/event-delivery.md)에 정리한다.
+  M3-WP3 process failure recovery 종료 검증이 남아 있으며 M3 전체는 미완료다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -103,6 +104,7 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 ### M3
 
 - #80 [Chore] Event 전달 경계 비교와 reliability 계약 확정
+- #84 [Feature] Transactional event record와 DB delivery runtime 구현
 
 #18, #19, #20과 #45의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는
 후속 UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
@@ -219,10 +221,9 @@ Reservation Venue timezone을 복구하도록 보정했다. 또한 #17 reliabili
 test와 전체 검증을 통과해 M2는 Complete이다.
 
 M3의 첫 실제 Issue #80 결과는 [ADR-0007](adr/0007-use-transactional-event-record-and-db-delivery.md)과
-[비교 evidence](experiments/event-delivery-boundaries.md)에 기록한다. M3-WP2는 ADR의 atomic append,
+[비교 evidence](experiments/event-delivery-boundaries.md)에 기록한다. M3-WP2 #84는 ADR의 atomic append,
 DB delivery, fencing/attempt와 internal replay 계약을 production으로 구현한다. M3-WP3 failure
-recovery Issue는 실제 merged production protocol을 기준으로 확정한다. 두 work package는
-아직 실제 Issue가 아니며 #80 결과의 검토·병합 뒤 최종 설계한다.
+recovery Issue는 #84의 실제 merged production protocol을 기준으로 확정한다.
 
 ## Release checkpoint
 
@@ -729,7 +730,7 @@ M7 Model Router & Agent Runtime.
 | AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M3 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. Outbox도 M3 대안 비교 전에는 확정하지 않는다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 현재 decision gate #80만 실제 Issue로 확정했다. 후속 work package는 선행 결과 전까지 Issue로 만들지 않는다. |
+| Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 #80 decision gate와 #84 production foundation을 구분한다. WP3는 merged runtime을 기준으로 확정한다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71은 P2로 구분한다. |
 | Ready와 Backlog가 dependency를 반영하는가? | M0~M2는 Complete이고 M3는 #80 결정과 후속 runtime 구현을 구분한다. 후속 M3 work package는 #80 결과 검토·병합 뒤 확정한다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |

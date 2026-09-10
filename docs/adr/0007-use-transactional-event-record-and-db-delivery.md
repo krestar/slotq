@@ -5,6 +5,8 @@
 - 관련 Issue: [#80](https://github.com/krestar/slotq/issues/80)
 - 근거: [실험 및 완료조건 대조](../experiments/event-delivery-boundaries.md),
   [clean 원자료](../experiments/events/clean/report.json)
+- Production 구현: [#84 runtime/schema/configuration](../architecture/event-delivery.md).
+  WP2는 effect와 DONE을 하나의 transaction으로 commit하며 아래 #80 fixture의 별도 ack window를 도입하지 않는다.
 
 ## 비교와 결정
 

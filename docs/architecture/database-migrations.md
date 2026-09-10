@@ -49,3 +49,24 @@ V7 rollback은 idempotency replay 이력을 잃으므로 production에서는 tab
 Application의 namespace, fingerprint, retention과 transaction 순서는 변경하지 않는다.
 Production rollback은 scoped constraint를 제거하지 않고 더 높은 version의 forward-fix
 migration으로 처리한다.
+
+## V9 Transactional Event Foundation
+
+`V9__create_transactional_events.sql`은 기존 Product table을 변경하지 않는 additive migration이다.
+`event_boundary`, `event_records`, `event_registrations`, `event_discovery`, `event_deliveries`,
+`event_replay_audit`를 추가한다. 기존 Booking/Reservation을 event로 backfill하지 않으며
+scheduler도 기본 disabled다.
+
+UUID는 `BINARY(16)`, occurred/record/lease/retry time은 UTC `DATETIME(6)`이다. route identifier는
+100자 ASCII binary equality와 grammar CHECK를 사용한다. payload는 exact decimal 의미를
+유지하는 canonical `MEDIUMTEXT`와 `JSON_VALID` CHECK이며 native JSON 숫자 normalization에
+의존하지 않는다. `(tenant_id,event_id)` 복합 FK가 cross-tenant delivery를 막고 original
+registration UUID를 replay audit까지 보존한다.
+
+Append/cutover의 `event_boundary` singleton lock은 outer transaction까지 유지하며 sequence
+증가도 rollback된다. discovery cursor와 delivery materialization은 별도의 한 transaction이다.
+automatic retention/cleanup은 없으며 기존 HOLD idempotency retention과 연결하지 않는다.
+
+V9 rollback은 event·target·recovery 이력을 잃을 수 있으므로 table 삭제 대신 backup 복원 또는
+상위 version의 forward-fix로 처리한다. 상세 runtime 설정과 후속 ownership은
+[Event Delivery](event-delivery.md)에 기록한다.
