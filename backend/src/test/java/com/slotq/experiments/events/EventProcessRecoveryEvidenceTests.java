@@ -75,6 +75,19 @@ class EventProcessRecoveryEvidenceTests {
         assertThat(delivery(replay).path("fencingToken").asLong()).isEqualTo(5);
         assertThat(replay.path("replayAudit")).hasSize(1);
 
+        JsonNode databaseOutage = cases.get("DATABASE_UNAVAILABLE_AND_RECOVERY");
+        JsonNode outageProbe = databaseOutage.path("databaseOutageProbe");
+        assertThat(outageProbe.path("contextReadyBeforePause").asBoolean()).isTrue();
+        assertThat(outageProbe.path("workerEntryPoint").asText())
+            .isEqualTo("EventDeliveryWorker.runCycle");
+        assertThat(outageProbe.path("databaseAccessFailureObserved").asBoolean()).isTrue();
+        assertThat(outageProbe.path("failureType").asText()).matches(
+            "^(?:java\\.sql\\.|com\\.mysql\\.cj\\.jdbc\\.|org\\.springframework\\.(?:dao|jdbc)\\.).+"
+        );
+        assertThat(databaseOutage.path("childExitCode").asInt()).isEqualTo(90);
+        assertAtomic(databaseOutage.path("firstAuthoritativeState"), "PROCESSING", 0, 0);
+        assertAtomic(databaseOutage.path("recoveryAuthoritativeState"), "DONE", 1, 1);
+
         JsonNode backlog = cases.get("BACKLOG_LARGER_THAN_BATCH_RESTART_DRAIN")
             .path("recoveryAuthoritativeState");
         assertThat(backlog.path("deliveries")).hasSize(8).allSatisfy(row ->
