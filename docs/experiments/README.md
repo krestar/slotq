@@ -188,6 +188,10 @@ Event 전달 경계의 #80 비교는 [Measured 결과](event-delivery-boundaries
 아래 matrix는 후속 production protocol 검증에도 적용한다. #80 fixture 결과가 M3 전체
 runtime/crash recovery gate나 M4 실제 consumer 완료를 대신하지 않는다.
 
+#86의 production process recovery 종료 검증은
+[Measured summary](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/summary.md)와
+[authoritative raw DB evidence](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/raw/report.json)에 기록한다.
+
 ### 질문
 
 - 업무 transaction commit과 event 전달 사이의 crash에서 event를 복구할 수 있는가?
