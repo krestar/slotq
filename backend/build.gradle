@@ -52,6 +52,24 @@ tasks.register('eventExperiment', JavaExec) {
     }
 }
 
+tasks.register('eventProcessRecovery', JavaExec) {
+    group = 'verification'
+    description = 'Runs the production event delivery process crash/restart recovery matrix on MySQL 8.4.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.events.EventProcessRecoveryRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.events.gradleVersion', gradle.gradleVersion
+    if (project.hasProperty('output')) {
+        systemProperty 'slotq.events.recovery.output', project.property('output')
+    }
+    if (project.hasProperty('runId')) {
+        systemProperty 'slotq.events.recovery.runId', project.property('runId')
+    }
+    if (project.hasProperty('only')) {
+        systemProperty 'slotq.events.recovery.only', project.property('only')
+    }
+}
+
 tasks.register('concurrencyBaseline', JavaExec) {
     group = 'verification'
     description = 'Runs the MySQL 8.4 Product HOLD concurrency baseline.'
