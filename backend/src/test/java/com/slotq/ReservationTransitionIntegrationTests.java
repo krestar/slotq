@@ -54,6 +54,8 @@ import com.slotq.venue.domain.WeeklyOperatingHours;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -413,15 +415,23 @@ class ReservationTransitionIntegrationTests {
         assertThat(allocationActive(reservationId)).isFalse();
     }
 
-    @Test
-    void mapsMysqlLockWaitTimeoutToSystemFailureWithoutBusinessConflict() throws Exception {
+    @ParameterizedTest(name = "blockedTable={0}")
+    @ValueSource(strings = {"reservations", "slot_inventories"})
+    void mapsMysqlLockWaitTimeoutToSystemFailureWithoutBusinessConflict(String blockedTable) throws Exception {
         Fixture fixture = fixture();
         UUID reservationId = createHold(fixture, customerToken);
 
         try (Connection blocker = dataSource.getConnection();
              ExecutorService executor = Executors.newSingleThreadExecutor()) {
             blocker.setAutoCommit(false);
-            lockReservation(blocker, reservationId);
+            try (PreparedStatement statement = blocker.prepareStatement(
+                "SELECT id FROM " + blockedTable + " WHERE id = ? FOR UPDATE")) {
+                statement.setBytes(1, bytes(blockedTable.equals("reservations")
+                    ? reservationId : fixture.slot().id().value()));
+                try (var result = statement.executeQuery()) {
+                    assertThat(result.next()).isTrue();
+                }
+            }
 
             Future<MvcResult> blocked = executor.submit(() -> command(
                 fixture, reservationId, "confirm", customerToken

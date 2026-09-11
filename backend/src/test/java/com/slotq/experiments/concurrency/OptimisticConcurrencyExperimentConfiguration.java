@@ -220,6 +220,20 @@ class OptimisticConcurrencyExperimentConfiguration {
                 tenantId, venueId, resourceId, slotInventoryId, now
             );
         }
+
+        @Override
+        public boolean existsOtherEffectiveCapacityConsumer(
+            TenantId tenantId,
+            VenueId venueId,
+            ResourceId resourceId,
+            SlotInventoryId slotInventoryId,
+            ReservationId excludedReservationId,
+            java.time.Instant now
+        ) {
+            return delegate.existsOtherEffectiveCapacityConsumer(
+                tenantId, venueId, resourceId, slotInventoryId, excludedReservationId, now
+            );
+        }
     }
 
     private static final class BoundedRetryReservationUseCase implements ReservationUseCase {

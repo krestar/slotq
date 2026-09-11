@@ -191,7 +191,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
         );
 
         ReservationCommandExecutor.CommandResult result = commandExecutor.execute(
-            venueId, reservationId, command, clock.instant()
+            venueId, reservationId, reservation.slotInventoryId(), command, clock.instant()
         );
         if (result.expired()) {
             if (command == ReservationCommand.CONFIRM || command == ReservationCommand.CANCEL) {

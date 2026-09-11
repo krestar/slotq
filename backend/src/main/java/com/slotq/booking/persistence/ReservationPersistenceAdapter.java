@@ -79,7 +79,18 @@ class ReservationPersistenceAdapter implements ReservationRepository {
                                                     ResourceId resourceId,
                                                     SlotInventoryId slotInventoryId, Instant now) {
         return reservationRepository.countEffectiveCapacityConsumers(
-            tenantId.value(), venueId.value(), resourceId.value(), slotInventoryId.value(), now
+            tenantId.value(), venueId.value(), resourceId.value(), slotInventoryId.value(), null, now
+        ) > 0;
+    }
+
+    @Override
+    public boolean existsOtherEffectiveCapacityConsumer(TenantId tenantId, VenueId venueId,
+                                                         ResourceId resourceId,
+                                                         SlotInventoryId slotInventoryId,
+                                                         ReservationId excludedReservationId, Instant now) {
+        return reservationRepository.countEffectiveCapacityConsumers(
+            tenantId.value(), venueId.value(), resourceId.value(), slotInventoryId.value(),
+            excludedReservationId.value(), now
         ) > 0;
     }
 
