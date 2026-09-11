@@ -2,7 +2,7 @@
 
 - 상태: `Accepted`
 - 결정일: 2026-09-02
-- 관련 Issue: [#16](https://github.com/krestar/slotq/issues/16)
+- 관련 Issue: [#16](https://github.com/krestar/slotq/issues/16), [#70](https://github.com/krestar/slotq/issues/70), [#88](https://github.com/krestar/slotq/issues/88)
 - 비교 증거: [Reservation 동시성 전략 비교](../experiments/concurrency-strategy-comparison.md)
 - 종료 감사 재검증: 2026-09-08, revision
   `e9faf83e091ab63d8f833bedd990355288054662`, 두 run 모두 `dirty=false`
@@ -58,11 +58,13 @@ Allocation insert, idempotency completion이다.
 
 ### Lifecycle boundary
 
-권한 검증을 통과한 command transaction은 대상 Reservation 한 row를 첫 read에서
-`PESSIMISTIC_WRITE`로 잠근다. 그 뒤 Allocation을 읽고 authoritative current state/time
-guard를 평가한 다음 Reservation과 Allocation을 같은 transaction에서 저장한다. 모든
-lifecycle writer는 Reservation, Allocation 순서로 접근하며 unrelated Reservation은
-직렬화하지 않는다.
+권한 검증을 통과한 CONFIRM transaction은 첫 read에서 대상 Slot 한 row를
+`PESSIMISTIC_WRITE`로 잠근 뒤 대상 Reservation 한 row를 같은 방식으로 잠근다.
+CONFIRM 외 lifecycle command와 내부 expiry는 기존대로 대상 Reservation 한 row를
+첫 read에서 잠근다. 그 뒤 Allocation을 읽고 authoritative current state/time guard를
+평가한 다음 Reservation과 Allocation을 같은 transaction에서 저장한다. CONFIRM이
+HELD에서 전이하려면 자신을 제외한 effective capacity consumer가 없어야 한다.
+아래 #88 보정 기록에 Slot을 공유하는 이유와 production lock order를 설명한다.
 
 직렬화 뒤 current state에서 결과가 확정되면 기존 M1 code를 그대로 사용한다.
 `CAPACITY_UNAVAILABLE`, `HOLD_EXPIRED`, `CANCELLATION_WINDOW_CLOSED`,
@@ -115,7 +117,7 @@ optimistic/physical allocation 전략을 다시 비교한다.
 ## #70 confirm/expiry 경합 재검증
 
 검증 테스트: [ReservationConfirmExpiryIntegrationTests](../../backend/src/test/java/com/slotq/ReservationConfirmExpiryIntegrationTests.java).
-기존 `ReservationService`의 public 권한용 read는 command transaction 밖에서 수행하며,
+#70 당시 `ReservationService`의 public 권한용 read는 command transaction 밖에서 수행하며,
 confirm과 System Principal expiry는 모두 `ReservationCommandExecutor`의 첫 DB read인
 `findForUpdate`를 거친다. `commandNow`는 executor transaction 진입 전에 한 번 캡처하고,
 guard/domain transition/effective response에는 그 instant로 만든 fixed Clock을 사용한다.
@@ -154,3 +156,86 @@ stale retry attempt/exhaustion과 `RESERVATION_STATE_CONFLICT`는 이 선택 전
 `ReservationTransitionIntegrationTests`, connection failure mapping은
 `ProductApiErrorContractTests`의 #16 회귀 증거를 재사용한다. 이 검증은 전략 재선택이나
 latency/throughput 측정이 아니다.
+
+## #88 CONFIRM/replacement HOLD 교차 경합 보정
+
+2026-09-11 최신 main `b0c1124dc1a97cd89e60af626cb6d4e1e9a8070f`에서 #16의 Slot lock과
+#70의 Reservation lock은 각각의 race를 보호하지만 서로의 commit을 직렬화하지 않았다.
+만료 전 `commandNow`를 캡처한 CONFIRM이 지연되는 동안 만료 후 replacement HOLD는
+기존 stored HELD를 effective non-consuming으로 보고 commit할 수 있었다. 두 command가
+모두 commit하면 같은 시각의 effective occupancy가 capacity=1을 초과한다.
+`ReservationConfirmExpiryIntegrationTests.confirmReplacementHoldRaceCommitsOnlyOneCapacityWinner`
+를 보정 전 코드에 실행해 두 ordering 모두 `2 > 1` 실패를 직접 재현했다.
+
+### 직렬화와 시간/오류 계약
+
+CONFIRM도 HOLD와 같은 Slot 한 row의 lock을 transaction의 첫 DB read로 얻는다.
+권한 검증용 선행 read에서 전달하는 것은 immutable SlotInventoryId뿐이며 state, Allocation,
+capacity 또는 expiry 판단을 재사용하지 않는다. command transaction은 Reservation locking
+current read 뒤 locked Slot과 Reservation의 Slot/tenant/Venue/resource scope를 다시 검증한다.
+Slot lock 전에 consistent read를 하지 않아 MySQL REPEATABLE-READ의 capacity snapshot이
+선행 winner commit 이전에 고정되는 것을 막는다.
+
+기존 same-target 성공, stored EXPIRED, due HELD materialization과 금지 전이 guard가 우선한다.
+HELD에서 CONFIRM할 수 있을 때만 같은 scope의 기존 effective predicate에서 대상 Reservation을
+제외하고 다른 consumer 존재 여부를 조회한다. 다른 consumer가 있으면 mutation 전에
+`409 CAPACITY_UNAVAILABLE`로 transaction을 rollback한다. 이 조회는 consistent read이며
+historical due Reservation이나 다른 consumer row를 잠그지 않는다.
+
+`commandNow`는 #70대로 executor 진입 전에 한 번 캡처한다. lock wait 후 다시 읽지 않으며,
+time guard, 다른 capacity consumer 조회, domain transition과 response에 같은 instant를 쓴다.
+`commandNow < expiresAt`은 CONFIRM 시도 자격이며 capacity 확보를 보장하지 않는다.
+
+| Slot 직렬화 winner | CONFIRM 결과 | replacement HOLD 결과 | 최종 effective units |
+| --- | --- | --- | --- |
+| eligible CONFIRM | `200 CONFIRMED + active` | `409 CAPACITY_UNAVAILABLE` | 1 |
+| replacement HOLD | `409 CAPACITY_UNAVAILABLE` | `201 HELD + active` | 1 |
+
+replacement가 먼저 commit한 경우 기존 Reservation은 stored HELD + active로 남을 수 있다.
+만료 후에는 effective EXPIRED/non-consuming이며 loser rollback과 exact GET은 이를 materialize하지
+않는다. 최초 `commandNow >= expiresAt`이면 기존 `HOLD_EXPIRED`/atomic materialization을 유지한다.
+deadlock, Slot/Reservation lock timeout, connection/database/transaction failure와 commit outcome
+unknown은 기존 `500 INTERNAL_ERROR`이고 business conflict 변환이나 자동 retry를 추가하지 않는다.
+
+### Production lock order와 범위
+
+| 경로 | lock/write 순서 |
+| --- | --- |
+| 새 HOLD | Slot → 선택적 idempotency claim → 새 Reservation → 새 Allocation → idempotency completion |
+| 동일 HOLD key replay | Slot → idempotency claim/current row → 대상 Reservation shared current read → Allocation shared current read |
+| CONFIRM | Slot → 대상 Reservation → Allocation read → state/time/capacity 판단 → Reservation/Allocation 저장 |
+| 기타 lifecycle / 내부 expiry | 대상 Reservation → Allocation read → Reservation/Allocation 저장 |
+| Slot 생성 | Resource → 해당 시간 범위의 Slot overlap lock → 새 Slot 저장 |
+| Venue policy 변경 | Venue → 새 policy 저장 |
+| idempotency cleanup | due completed idempotency row 삭제 |
+
+기타 lifecycle/expiry의 response용 Slot 조회는 일반 consistent read이며 Slot lock을 요청하지
+않는다. 기존 Reservation/Allocation update는 immutable FK identity를 변경하지 않는다.
+HOLD와 CONFIRM은 Resource/Venue에 locking read 또는 update를 하지 않으므로 Slot 생성과
+역순 lock 간선을 만들지 않는다. idempotency fingerprint가 다른 Slot이면 replay 전에 conflict로
+끝나고 cleanup은 Reservation/Slot lock을 요청하지 않는다. Reservation → Slot lock 또는
+Allocation → Reservation lock을 새로 추가하지 않는다.
+
+추가 lock 범위는 CONFIRM 대상 Slot 한 row뿐이고, Reservation lock도 대상 한 row를 유지한다.
+같은 Slot의 CONFIRM/HOLD는 직렬화하지만 다른 Slot이나 historical Reservation 전체는 잠그지
+않는다. migration, version, retry framework, M3 event protocol 또는 M4 Waitlist 변경은 없다.
+
+### MySQL 회귀 증거
+
+기존 #70 테스트의 독립 MySQL 8.4 container, 외부 transaction과 테스트 전용 DB trigger gate를
+재사용한다. CONFIRM-first는 대상 Reservation gate 뒤 CONFIRM UPDATE gate 대기를 관측한 후
+replacement HOLD를 시작한다. HOLD-first는 CONFIRM의 최초 Clock capture를 latch로 보존한 채
+HOLD INSERT gate 대기를 관측하고 CONFIRM transaction을 진행한다. 후행 command의 InnoDB
+lock wait까지 관측한 뒤 write gate를 풀며 sleep 간격이나 lock queue FIFO를 가정하지 않는다.
+
+두 ordering 모두 최초 pre-expiry 캡처 후 Clock을 post-expiry로 변경하고, 실제 HTTP 응답,
+동일 `verificationNow`의 effective units, row 수, domain reconstruction, exact GET과 read
+non-mutation을 검증한다. winner가 있는 Slot에서도 loser pair를 따로 재구성해 부분 commit이
+없음을 확인한다. 추가 회귀는 Slot에서 기다리는 CONFIRM이 대상 Reservation을 선점하지 않아
+expiry가 먼저 완료되고 같은 Resource의 다른 Slot HOLD도 진행됨을 검증한다.
+
+CONFIRM write의 실제 SQLSTATE 45000 주입은 500과 HELD + active rollback을 검증한다.
+`ReservationTransitionIntegrationTests`는 기존 Reservation timeout에 Slot timeout을 추가하고
+기존 실제 deadlock/rollback 검증을 유지한다. 기존 #16 same-slot HOLD/due replacement,
+#70 confirm/expiry/equality/expiry rollback, idempotency, authorization과 API failure 계약도
+focused regression으로 함께 검증한다. 성능 수치나 M3 종료 상태를 이 보정에서 갱신하지 않는다.

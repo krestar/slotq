@@ -38,4 +38,17 @@ public interface ReservationRepository {
         SlotInventoryId slotInventoryId,
         Instant now
     );
+
+    /**
+     * Uses the same effective predicate, excluding the Reservation attempting CONFIRM.
+     * The command must own the Slot lock before any consistent read in its transaction.
+     */
+    boolean existsOtherEffectiveCapacityConsumer(
+        TenantId tenantId,
+        VenueId venueId,
+        ResourceId resourceId,
+        SlotInventoryId slotInventoryId,
+        ReservationId excludedReservationId,
+        Instant now
+    );
 }

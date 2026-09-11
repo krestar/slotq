@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -119,7 +120,9 @@ class ReservationConfirmExpiryIntegrationTests {
     @AfterEach
     void removeDatabaseGates() {
         jdbcTemplate.execute("DROP TRIGGER IF EXISTS gate_reservation_transition");
+        jdbcTemplate.execute("DROP TRIGGER IF EXISTS gate_replacement_hold");
         jdbcTemplate.execute("DROP TRIGGER IF EXISTS fail_expiry_release");
+        jdbcTemplate.execute("DROP TRIGGER IF EXISTS fail_confirm_write");
         jdbcTemplate.execute("DROP TABLE IF EXISTS reservation_transition_gate");
     }
 
@@ -134,6 +137,173 @@ class ReservationConfirmExpiryIntegrationTests {
     @ValueSource(booleans = {true, false})
     void confirmExpiryRaceAtEqualityNeverConfirms(boolean confirmFirst) throws Exception {
         runRace(confirmFirst, EXPIRES_AT);
+    }
+
+    @ParameterizedTest(name = "confirmFirst={0}")
+    @ValueSource(booleans = {true, false})
+    void confirmReplacementHoldRaceCommitsOnlyOneCapacityWinner(boolean confirmFirst) throws Exception {
+        Fixture fixture = fixture();
+        UUID reservationId = createHold(fixture);
+        installWriteGate(reservationId);
+        jdbcTemplate.execute("""
+            CREATE TRIGGER gate_replacement_hold BEFORE INSERT ON reservations
+            FOR EACH ROW
+            BEGIN
+                DECLARE gate_id BINARY(16);
+                SELECT id INTO gate_id FROM reservation_transition_gate LIMIT 1 FOR UPDATE;
+            END
+            """);
+        Instant confirmNow = EXPIRES_AT.minusNanos(1);
+        Instant verificationNow = EXPIRES_AT.plusSeconds(1);
+        CommandTime confirmTime = new CommandTime(confirmNow);
+        CountDownLatch captured = new CountDownLatch(1);
+        CountDownLatch enterConfirm = new CountDownLatch(confirmFirst ? 0 : 1);
+        confirmTime.pauseAfterCapture(captured, enterConfirm);
+        MvcResult holdResponse;
+
+        try (Connection writeGate = dataSource.getConnection();
+             Connection reservationGate = dataSource.getConnection()) {
+            writeGate.setAutoCommit(false);
+            reservationGate.setAutoCommit(false);
+            lockRow(writeGate, "SELECT id FROM reservation_transition_gate WHERE id = ? FOR UPDATE",
+                reservationId);
+            if (confirmFirst) {
+                lockRow(reservationGate, "SELECT id FROM reservations WHERE id = ? FOR UPDATE", reservationId);
+            }
+            try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+                try {
+                    long waits = rowLockWaits();
+                    Future<MvcResult> confirm = executor.submit(() ->
+                        clock.during(confirmTime, () -> confirm(fixture, reservationId)));
+                    assertThat(captured.await(10, TimeUnit.SECONDS)).isTrue();
+                    confirmTime.assertCapturedOnceBeforeTransaction(confirmNow);
+                    if (confirmFirst) {
+                        awaitLockWaitAfter(waits);
+                        waits = rowLockWaits();
+                        reservationGate.commit();
+                        awaitLockWaitAfter(waits);
+                    }
+                    // CONFIRM has already captured its eligible instant. The replacement starts after expiry.
+                    confirmTime.set(verificationNow);
+                    clock.set(verificationNow);
+                    waits = rowLockWaits();
+                    Future<MvcResult> hold = executor.submit(() -> hold(fixture));
+                    awaitLockWaitAfter(waits);
+                    if (!confirmFirst) {
+                        // The HOLD owns the Slot lock and is paused before INSERT/commit at the DB gate.
+                        waits = rowLockWaits();
+                        enterConfirm.countDown();
+                        awaitLockWaitAfter(waits);
+                    }
+                    assertThat(confirm.isDone()).isFalse();
+                    assertThat(hold.isDone()).isFalse();
+                    assertStoredPair(reservationId, "HELD", true);
+                    writeGate.commit();
+
+                    MvcResult confirmResponse = confirm.get(10, TimeUnit.SECONDS);
+                    holdResponse = hold.get(10, TimeUnit.SECONDS);
+                    // Check the invariant before the responses so the unfixed double commit is explicit.
+                    assertEffectiveCapacity(fixture, verificationNow, 1);
+                    assertThat(confirmResponse.getResponse().getStatus()).isEqualTo(confirmFirst ? 200 : 409);
+                    assertThat(holdResponse.getResponse().getStatus()).isEqualTo(confirmFirst ? 409 : 201);
+                    MvcResult loser = confirmFirst ? holdResponse : confirmResponse;
+                    assertThat(JsonPath.<String>read(loser.getResponse().getContentAsString(), "$.code"))
+                        .isEqualTo("CAPACITY_UNAVAILABLE");
+                    confirmTime.assertCapturedOnceBeforeTransaction(confirmNow);
+                } finally {
+                    enterConfirm.countDown();
+                    reservationGate.rollback();
+                    writeGate.rollback();
+                }
+            }
+        }
+
+        assertReconstructedPairAndGet(fixture, reservationId, confirmFirst ? "CONFIRMED" : "HELD",
+            true, confirmFirst ? "CONFIRMED" : "EXPIRED", confirmFirst, true);
+        if (!confirmFirst) {
+            UUID replacementId = UUID.fromString(JsonPath.read(
+                holdResponse.getResponse().getContentAsString(), "$.id"));
+            assertReconstructedPairAndGet(fixture, replacementId, "HELD", true, "HELD", true);
+        }
+        int expectedRows = confirmFirst ? 1 : 2;
+        for (String table : List.of("reservations", "capacity_allocations")) {
+            assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table
+                + " WHERE slot_inventory_id = ?", Integer.class, bytes(fixture.slot().id().value())))
+                .isEqualTo(expectedRows);
+        }
+        assertEffectiveCapacity(fixture, verificationNow, 1);
+    }
+
+    private void assertEffectiveCapacity(Fixture fixture, Instant verificationNow, int expectedUnits) {
+        int units = jdbcTemplate.queryForObject("""
+            SELECT COALESCE(SUM(a.units), 0)
+              FROM reservations r JOIN capacity_allocations a ON a.reservation_id = r.id
+             WHERE r.slot_inventory_id = ? AND a.active = 1
+               AND (r.state IN ('CONFIRMED', 'CHECKED_IN') OR (r.state = 'HELD' AND r.expires_at > ?))
+            """, Integer.class, bytes(fixture.slot().id().value()), java.sql.Timestamp.from(verificationNow));
+        assertThat(units).isLessThanOrEqualTo(fixture.slot().capacity()).isEqualTo(expectedUnits);
+    }
+
+    @Test
+    void confirmWaitingForSlotLeavesItsReservationAndAnotherSlotAvailable() throws Exception {
+        Fixture fixture = fixture();
+        UUID reservationId = createHold(fixture);
+        SlotInventory otherSlot = slotUseCase.createSlot(new SlotInventoryUseCase.CreateSlot(
+            fixture.tenant().id(), fixture.venue().id(), fixture.resource().id(),
+            STARTS_AT.plus(Duration.ofMinutes(30)).toString()
+        ));
+        Fixture other = new Fixture(fixture.tenant(), fixture.venue(), fixture.resource(), otherSlot);
+        CommandTime confirmTime = new CommandTime(EXPIRES_AT.minusNanos(1));
+
+        try (Connection slotGate = dataSource.getConnection()) {
+            slotGate.setAutoCommit(false);
+            lockRow(slotGate, "SELECT id FROM slot_inventories WHERE id = ? FOR UPDATE",
+                fixture.slot().id().value());
+            try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+                try {
+                    long waits = rowLockWaits();
+                    Future<MvcResult> confirm = executor.submit(() ->
+                        clock.during(confirmTime, () -> confirm(fixture, reservationId)));
+                    awaitLockWaitAfter(waits);
+                    clock.set(EXPIRES_AT);
+                    // Same-resource, different-Slot HOLD and target expiry both finish while CONFIRM waits.
+                    assertThat(hold(other).getResponse().getStatus()).isEqualTo(201);
+                    assertThat(expire(fixture, reservationId).effectiveState().name()).isEqualTo("EXPIRED");
+                    assertThat(confirm.isDone()).isFalse();
+                    slotGate.commit();
+                    MvcResult result = confirm.get(10, TimeUnit.SECONDS);
+                    assertThat(result.getResponse().getStatus()).isEqualTo(409);
+                    assertThat(JsonPath.<String>read(result.getResponse().getContentAsString(), "$.code"))
+                        .isEqualTo("HOLD_EXPIRED");
+                    confirmTime.assertCapturedOnceBeforeTransaction(EXPIRES_AT.minusNanos(1));
+                } finally {
+                    slotGate.rollback();
+                }
+            }
+        }
+        assertReconstructedPairAndGet(fixture, reservationId, "EXPIRED", false, "EXPIRED", false);
+    }
+
+    @Test
+    void confirmDatabaseFailureRemainsInternalErrorAndRollsBackThePair() throws Exception {
+        Fixture fixture = fixture();
+        UUID reservationId = createHold(fixture);
+        jdbcTemplate.execute("""
+            CREATE TRIGGER fail_confirm_write BEFORE UPDATE ON reservations
+            FOR EACH ROW
+            BEGIN
+                IF NEW.state = 'CONFIRMED' THEN
+                    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'forced confirm write failure';
+                END IF;
+            END
+            """);
+        CommandTime confirmTime = new CommandTime(EXPIRES_AT.minusNanos(1));
+        MvcResult result = clock.during(confirmTime, () -> confirm(fixture, reservationId));
+        assertThat(result.getResponse().getStatus()).isEqualTo(500);
+        assertThat(JsonPath.<String>read(result.getResponse().getContentAsString(), "$.code"))
+            .isEqualTo("INTERNAL_ERROR");
+        confirmTime.assertCapturedOnceBeforeTransaction(EXPIRES_AT.minusNanos(1));
+        assertReconstructedPairAndGet(fixture, reservationId, "HELD", true, "EXPIRED", false);
     }
 
     @Test
@@ -289,6 +459,12 @@ class ReservationConfirmExpiryIntegrationTests {
     private void assertReconstructedPairAndGet(Fixture fixture, UUID reservationId, String stored,
                                                boolean active, String effective, boolean consuming)
         throws Exception {
+        assertReconstructedPairAndGet(fixture, reservationId, stored, active, effective, consuming, consuming);
+    }
+
+    private void assertReconstructedPairAndGet(Fixture fixture, UUID reservationId, String stored,
+                                               boolean active, String effective, boolean consuming,
+                                               boolean slotConsuming) throws Exception {
         clock.set(EXPIRES_AT);
         assertStoredPair(reservationId, stored, active);
         Reservation reconstructed = reservationRepository.find(
@@ -300,7 +476,7 @@ class ReservationConfirmExpiryIntegrationTests {
         assertThat(reconstructed.effectiveConsumesCapacity(clock)).isEqualTo(consuming);
         assertThat(reservationRepository.existsEffectiveCapacityConsumer(
             fixture.tenant().id(), fixture.venue().id(), fixture.resource().id(), fixture.slot().id(), EXPIRES_AT
-        )).isEqualTo(consuming);
+        )).isEqualTo(slotConsuming);
         mockMvc.perform(get("/api/v1/venues/{venueId}/reservations/{reservationId}",
                 fixture.venue().id().value(), reservationId)
                 .header("Authorization", "Bearer " + customerToken))
@@ -328,14 +504,19 @@ class ReservationConfirmExpiryIntegrationTests {
     }
 
     private UUID createHold(Fixture fixture) throws Exception {
-        String body = mockMvc.perform(post("/api/v1/venues/{venueId}/reservations/holds", fixture.venue().id().value())
+        MvcResult result = hold(fixture);
+        assertThat(result.getResponse().getStatus()).isEqualTo(201);
+        String body = result.getResponse().getContentAsString();
+        assertThat(JsonPath.<String>read(body, "$.expiresAt")).isEqualTo(EXPIRES_AT.toString());
+        return UUID.fromString(JsonPath.read(body, "$.id"));
+    }
+
+    private MvcResult hold(Fixture fixture) throws Exception {
+        return mockMvc.perform(post("/api/v1/venues/{venueId}/reservations/holds", fixture.venue().id().value())
                 .header("Authorization", "Bearer " + customerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"slotInventoryId\":\"" + fixture.slot().id().value() + "\",\"partySize\":2}"))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.expiresAt").value(EXPIRES_AT.toString()))
-            .andReturn().getResponse().getContentAsString();
-        return UUID.fromString(JsonPath.read(body, "$.id"));
+            .andReturn();
     }
 
     private Fixture fixture() {
@@ -366,12 +547,27 @@ class ReservationConfirmExpiryIntegrationTests {
     static final class CommandTime {
         private final AtomicReference<Instant> current;
         private final List<Capture> captures = new CopyOnWriteArrayList<>();
+        private CountDownLatch captured;
+        private CountDownLatch proceed;
 
         CommandTime(Instant initial) { current = new AtomicReference<>(initial); }
         void set(Instant value) { current.set(value); }
+        void pauseAfterCapture(CountDownLatch captured, CountDownLatch proceed) {
+            this.captured = captured;
+            this.proceed = proceed;
+        }
         Instant capture() {
             Instant value = current.get();
             captures.add(new Capture(value, TransactionSynchronizationManager.isActualTransactionActive()));
+            if (captured != null) {
+                captured.countDown();
+                try {
+                    assertThat(proceed.await(10, TimeUnit.SECONDS)).isTrue();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(exception);
+                }
+            }
             return value;
         }
         void assertCapturedOnceBeforeTransaction(Instant expected) {

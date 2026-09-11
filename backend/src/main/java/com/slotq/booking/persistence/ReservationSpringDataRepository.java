@@ -51,6 +51,7 @@ interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEn
           and allocation.resourceId = :resourceId
           and allocation.slotInventoryId = :slotInventoryId
           and allocation.active = true
+          and (:excludedReservationId is null or reservation.id <> :excludedReservationId)
           and (reservation.state in (com.slotq.booking.domain.ReservationState.CONFIRMED,
                                      com.slotq.booking.domain.ReservationState.CHECKED_IN)
                or (reservation.state = com.slotq.booking.domain.ReservationState.HELD
@@ -61,6 +62,7 @@ interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEn
         @Param("venueId") UUID venueId,
         @Param("resourceId") UUID resourceId,
         @Param("slotInventoryId") UUID slotInventoryId,
+        @Param("excludedReservationId") UUID excludedReservationId,
         @Param("now") Instant now
     );
 }

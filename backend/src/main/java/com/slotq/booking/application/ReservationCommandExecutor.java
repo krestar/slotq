@@ -9,6 +9,7 @@ import com.slotq.booking.domain.Reservation;
 import com.slotq.booking.domain.ReservationId;
 import com.slotq.booking.domain.ReservationState;
 import com.slotq.booking.domain.SlotInventory;
+import com.slotq.booking.domain.SlotInventoryId;
 import com.slotq.venue.domain.VenueId;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +30,21 @@ class ReservationCommandExecutor {
     }
 
     @Transactional
-    CommandResult execute(VenueId venueId, ReservationId reservationId,
+    CommandResult execute(VenueId venueId, ReservationId reservationId, SlotInventoryId slotInventoryId,
                           ReservationCommand command, Instant now) {
+        // Slot must precede Reservation and every consistent read: HOLD uses the same capacity boundary.
+        // The authorization read supplies only immutable routing identity; validate it against locked state.
+        SlotInventory capacitySlot = command == ReservationCommand.CONFIRM
+            ? slotRepository.findForUpdate(venueId, slotInventoryId)
+                .orElseThrow(ResourceNotFoundException::new)
+            : null;
         Reservation reservation = findReservation(venueId, reservationId);
+        if (capacitySlot != null && (!capacitySlot.id().equals(reservation.slotInventoryId())
+            || !capacitySlot.tenantId().equals(reservation.tenantId())
+            || !capacitySlot.venueId().equals(reservation.venueId())
+            || !capacitySlot.resourceId().equals(reservation.resourceId()))) {
+            throw new ResourceNotFoundException();
+        }
         Clock commandClock = Clock.fixed(now, ZoneOffset.UTC);
 
         if (reservation.state() == targetState(command)) {
@@ -70,6 +83,13 @@ class ReservationCommandExecutor {
     private void validateAndApply(Reservation reservation, ReservationCommand command,
                                   Clock commandClock, Instant now) {
         transitionPolicy.requireAllowed(reservation, command, now);
+        if (command == ReservationCommand.CONFIRM
+            && reservationRepository.existsOtherEffectiveCapacityConsumer(
+                reservation.tenantId(), reservation.venueId(), reservation.resourceId(),
+                reservation.slotInventoryId(), reservation.id(), now
+            )) {
+            throw new CapacityUnavailableException();
+        }
         switch (command) {
             case CONFIRM -> reservation.confirm(commandClock);
             case CANCEL -> reservation.cancel(commandClock);
