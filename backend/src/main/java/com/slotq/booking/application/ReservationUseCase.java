@@ -1,6 +1,7 @@
 package com.slotq.booking.application;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import com.slotq.auth.domain.AuthenticatedPrincipal;
 import com.slotq.booking.domain.Reservation;
@@ -30,8 +31,22 @@ public interface ReservationUseCase {
         VenueId venueId,
         SlotInventoryId slotInventoryId,
         AuthenticatedPrincipal principal,
-        int partySize
-    ) { }
+        int partySize,
+        Optional<HoldIdempotencyKey> idempotencyKey
+    ) {
+        public CreateHold(
+            VenueId venueId,
+            SlotInventoryId slotInventoryId,
+            AuthenticatedPrincipal principal,
+            int partySize
+        ) {
+            this(venueId, slotInventoryId, principal, partySize, Optional.empty());
+        }
+
+        public CreateHold {
+            idempotencyKey = idempotencyKey == null ? Optional.empty() : idempotencyKey;
+        }
+    }
 
     record ReservationDetails(
         Reservation reservation,

@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import com.slotq.availability.application.AvailabilityValidationException;
 import com.slotq.auth.application.AccessDeniedException;
 import com.slotq.auth.application.ResourceNotFoundException;
+import com.slotq.booking.application.HoldIdempotencyValidationException;
 import com.slotq.booking.application.ProductApiException;
 import com.slotq.booking.application.SlotInventoryConflictException;
 import com.slotq.booking.application.SlotInventoryNotAllowedException;
@@ -66,6 +67,18 @@ class ProductApiExceptionHandler {
     ) {
         return problem(ApiProblem.validation(
             "One or more request fields are invalid.",
+            request.getRequestURI(),
+            exception.fieldErrors()
+        ));
+    }
+
+    @ExceptionHandler(HoldIdempotencyValidationException.class)
+    ResponseEntity<ApiProblem> holdIdempotencyValidation(
+        HoldIdempotencyValidationException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.validation(
+            "One or more request headers are invalid.",
             request.getRequestURI(),
             exception.fieldErrors()
         ));

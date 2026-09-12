@@ -134,6 +134,30 @@ class ManagementApiIntegrationTests {
         assertThat(actualIds).containsExactlyElementsOf(
             expected.stream().map(value -> value.id().value().toString()).toList()
         );
+        List<Map<String, Object>> actualVenues = JsonPath.read(body, "$[*]");
+        Map<String, Boolean> writableByVenue = actualVenues.stream().collect(
+            java.util.stream.Collectors.toMap(
+                item -> (String) item.get("id"),
+                item -> (Boolean) item.get("configurationWritable")
+            )
+        );
+        assertThat(writableByVenue).containsEntry(ownerA.id().value().toString(), true)
+            .containsEntry(ownerB.id().value().toString(), true)
+            .containsEntry(managerGranted.id().value().toString(), true)
+            .containsEntry(staffGranted.id().value().toString(), false);
+
+        mockMvc.perform(get("/api/v1/management/venues/{venueId}", ownerA.id().value())
+                .header("Authorization", bearer(operatorToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.configurationWritable").value(true));
+        mockMvc.perform(get("/api/v1/management/venues/{venueId}", managerGranted.id().value())
+                .header("Authorization", bearer(operatorToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.configurationWritable").value(true));
+        mockMvc.perform(get("/api/v1/management/venues/{venueId}", staffGranted.id().value())
+                .header("Authorization", bearer(operatorToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.configurationWritable").value(false));
     }
 
     @Test
@@ -156,6 +180,10 @@ class ManagementApiIntegrationTests {
                 .content("{\"name\":\"forbidden\"}"))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        mockMvc.perform(get("/api/v1/management/venues/{venueId}", venue.id().value())
+                .header("Authorization", bearer(staffToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.configurationWritable").value(false));
 
         mockMvc.perform(patch("/api/v1/management/venues/{venueId}", venue.id().value())
                 .header("Authorization", bearer(operatorToken))
@@ -163,7 +191,8 @@ class ManagementApiIntegrationTests {
                 .content("{\"name\":\"Renamed\",\"status\":\"INACTIVE\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Renamed"))
-            .andExpect(jsonPath("$.status").value("INACTIVE"));
+            .andExpect(jsonPath("$.status").value("INACTIVE"))
+            .andExpect(jsonPath("$.configurationWritable").value(true));
 
         Venue updated = venueUseCase.getVenue(tenant.id(), venue.id());
         assertThat(updated.timezone()).isEqualTo(venue.timezone());

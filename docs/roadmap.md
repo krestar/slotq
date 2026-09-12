@@ -1,9 +1,9 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 M0 Foundation을 완료하고 M1 Reservation Core를 진행하는 단계이며,
-Reservation HOLD 생성·조회까지 main에 반영되어 있다. 존재하지 않는 Product 기능이나
-검증 명령을 전제로 하지 않는다.
+현재 저장소는 M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency를
+완료했고, M3의 #80 전달 경계 결정, #84 production runtime과 후속 process recovery 검증을 구분한다. 존재하지 않는
+Product 기능이나 검증 명령을 전제로 하지 않는다.
 
 ## 계획 원칙
 
@@ -17,8 +17,9 @@ Reservation HOLD 생성·조회까지 main에 반영되어 있다. 존재하지 
   도입은 측정된 문제와 대안 비교가 있을 때만 검토한다.
 - Frontend는 React, TypeScript, Vite 기반의 thin SPA로 시작한다. backend API contract를
   먼저 확정하고, UI는 Product 규칙을 복제하지 않고 server state를 표현한다.
-- 가까운 작업인 M0 전체, M1 전체, M2의 명확한 선행 작업만 GitHub Issue로 관리한다.
-  M2 후반부터 M8까지는 착수 시점 전까지 work package 수준으로 유지한다.
+- 완료된 M0~M2 작업은 GitHub Issue와 검증 증거로 관리한다. M3부터 M8까지는 각
+  Milestone 착수 전까지 work package 수준으로 유지하고, 선행 조건이 충족된 뒤 필요한
+  Issue만 확정한다.
 - Milestone 완료는 문서 작성만으로 판단하지 않는다. 실행 가능한 테스트, 재현 기록,
   의사결정 기록 중 해당 작업에 필요한 근거가 함께 있어야 한다.
 
@@ -48,12 +49,14 @@ Status의 의미는 다음과 같다.
 
 현재 main 기준 상태는 다음과 같다.
 
-- Done: #3, #4, #5, #6, #7, #8, #9, #10, #11, #13, #18, #23, #28, #48, #49.
-- M1 Ready: #14, #45, #50.
-- M1 Backlog: #12는 #50, #38은 #14 + #50, #19는 #12 + #14 + #45,
-  #20은 #38 + #45 완료를 기다린다. #19와 #20의 공통 #23 선행은 이미 Done이다.
-- M2 선행 Ready: #15, #17.
-- M2 선행 Backlog: #16은 #15 완료를 기다린다.
+- M0 Foundation: Complete.
+- M1 Reservation Core: Complete. M1 milestone의 open Issue는 없으며, 전체 read-only audit의
+  corrective Bug #66도 Done이고 PR #67 merge 이후 focused 재검증에서 PASS했다.
+- M2 Concurrency & Consistency: Complete. #15, #16, #17, #70, #71과 종료 감사
+  corrective Bug #78이 Done이다.
+- M3 Reliable Event Foundation: #80의 비교 결과와 계약은 ADR-0007에 기록한다.
+  #84 production foundation은 [runtime 문서](architecture/event-delivery.md)에 정리한다.
+  M3-WP3 process failure recovery 종료 검증이 남아 있으며 M3 전체는 미완료다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -87,12 +90,21 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #45 [Chore] Frontend 디자인 기반 정립
 - #19 [Feature] Customer 예약 핵심 흐름 UI 구현
 - #20 [Feature] Venue 운영 핵심 흐름 UI 구현
+- #66 [Bug] M1 UI mutation reconciliation context 보존
 
-### M2 선행 작업
+### M2
 
 - #15 [Chore] 동시 예약 실험 하네스와 baseline 구성
 - #16 [Feature] 예약 동시성 제어 전략 비교 및 적용
 - #17 [Feature] HOLD 생성 command idempotency 보장
+- #70 [Feature] HOLD 만료·확정 경합 정합성 보장
+- #71 [Feature] Customer HOLD retry·idempotency UI 구현
+- #78 [Bug] M2 종료 감사 blocker 보정
+
+### M3
+
+- #80 [Chore] Event 전달 경계 비교와 reliability 계약 확정
+- #84 [Feature] Transactional event record와 DB delivery runtime 구현
 
 #18, #19, #20과 #45의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는
 후속 UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
@@ -106,11 +118,12 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 | #7 | P2 | #28 직후 후속 Backend 변경을 보호하는 검증 자동화다. |
 | #18 | P2 | thin SPA 기반이지만 backend domain 구현 순서를 차단하지 않는다. |
 | #23 | P2 | #18 직후 Frontend 검증을 독립적으로 자동화한다. |
-| #8, #9, #10, #11, #13, #14, #38, #48, #49, #50 | P1 | Reservation Core의 핵심 기능 또는 직접 선행·보정 작업이다. |
+| #8, #9, #10, #11, #13, #14, #38, #48, #49, #50, #66 | P1 | Reservation Core의 핵심 기능 또는 직접 선행·보정 작업이다. |
 | #12 | P2 | 중요한 read use case지만 쓰기 흐름의 선행 기반과 구분한다. |
 | #19, #20, #45 | P2 | 핵심 Product API 이후 UI와 공통 Frontend 기반을 완성하는 작업이다. |
-| #15, #16 | P1 | 동시성 전략을 선택하고 invariant를 보장하기 위한 핵심 선행·구현이다. |
-| #17 | P2 | 중요한 reliability 기능이지만 동시성 전략 적용을 직접 차단하지 않는다. |
+| #15, #16, #70, #78 | P1 | 동시성·lifecycle 정합성과 M2 종료 근거를 보장하는 핵심 구현·보정이다. |
+| #17, #71 | P2 | 중요한 reliability 기능이지만 동시성 전략 적용을 직접 차단하지 않는다. |
+| #80 | P1 | M3 후속 production protocol이 의존하는 전달 mechanism과 reliability 계약 decision gate다. |
 
 현재 Issue에는 즉시 대응이 필요한 P0도, 장기 아이디어 성격의 P3도 부여하지 않는다.
 우선순위는 Milestone 번호와 같지 않으며, Ready 여부는 Priority가 아니라 dependency
@@ -137,69 +150,80 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
         #38 + #23 + #45 ──> #20
         #19 + #20 ──> M1 complete
 
+    M1 audit corrective:
+        #19 + #20 ──> #66 ──> focused revalidation PASS
+
     M2: #13 ──> #15 ──> #16
         #13 ──> #17
-        #14 + #16 ──> M2-WP1 HOLD 만료·확정 경합
-        #17 + #19 ──> M2-WP2 UI retry·idempotency 계약
-        M2-WP1 + M2-WP2 ──> M2 complete
+        #14 + #16 ──> #70 HOLD 만료·확정 경합
+        #17 + #19 ──> #71 UI retry·idempotency 계약
+        #70 + #71 ──> #78 M2 audit corrective ──> M2 complete
                               │
                               v
-    M3-WP1 Event contract·원자적 전달 결정 ──> M3-WP2 Relay·Inbox·Retry
-                                               │
-                                               v
-                                  M3-WP3 Failure recovery experiment
-                                               │
-    M4-WP1 Waitlist model ─────────────────────┤
-                                               v
-                                  M4-WP2 Promotion·Offer
-                                               │
-                                               v
-                                  M4-WP3 Accept·Expire·Next
-                                               │
-                                               v
-                                  M4-WP4 Thin Waitlist UI
-                                               │
-                                               v
-                                  M5-WP1 Logs·Metrics·Trace
-                                               │
-                              ├──> M5-WP2 Drill·Runbook·Baseline
-                              └──> M5-WP3 Client error correlation 결정
-                              M5-WP2 + M5-WP3 ──> M5 complete
-                                               │
-                              ┌────────────────┴────────────────┐
-                              v                                 v
-                  M6-WP1 MCP access·Audit             M6-WP2 RAG boundary
-                              └────────────────┬────────────────┘
-                                               v
-                                  M7-WP1 Model router
-                                               │
-                                               v
-                                  M7-WP2 Agent runtime
-                                               │
-                                               v
-                                  M8-WP1 Evaluation
-                                               │
-                                               v
-                                  M8-WP2 Production hardening
+    #80 M3-WP1 Event contract·원자적 전달 결정 ──> M3-WP2 DB delivery·Retry·Internal replay
+                                                   │
+                                                   v
+                                      M3-WP3 Failure recovery experiment
+                                                   │
+    M4-WP1 Waitlist model ─────────────────────────┤
+                                                   v
+                                      M4-WP2 Promotion·Offer
+                                                   │
+                                                   v
+                                      M4-WP3 Accept·Expire·Next
+                                                   │
+                                                   v
+                                      M4-WP4 Thin Waitlist UI
+                                                   │
+                                                   v
+                                      M5-WP1 Logs·Metrics·Trace
+                                                   │
+                                  ├──> M5-WP2 Drill·Runbook·Baseline
+                                  └──> M5-WP3 Client error correlation 결정
+                                  M5-WP2 + M5-WP3 ──> M5 complete
+                                                   │
+                                  ┌────────────────┴────────────────┐
+                                  v                                 v
+                      M6-WP1 MCP access·Audit             M6-WP2 RAG boundary
+                                  └────────────────┬────────────────┘
+                                                   v
+                                      M7-WP1 Model router
+                                                   │
+                                                   v
+                                      M7-WP2 Agent runtime
+                                                   │
+                                                   v
+                                      M8-WP1 Evaluation
+                                                   │
+                                                   v
+                                      M8-WP2 Production hardening
 
-M0 Foundation은 #6과 #23까지 main에 병합되어 완료됐다. M1 Backend core는 #8부터 #11,
-그리고 corrective #48/#49를 거쳐 #13 HOLD 생성·조회까지 Done이다. #50은 #13과 독립적인
-Venue Configuration 작업으로 현재 Ready이며, 완료되면 #12 Availability를 연다. #14도
-#13 완료로 Ready이고, #14 + #50이 끝나면 #38 Venue 운영 Backend를 시작할 수 있다.
+M0 Foundation은 #6과 #23까지 main에 병합되어 완료됐다. M1 Reservation Core도 Backend core,
+Availability와 Reservation command, Venue management API, 공통 Frontend 기반과 Customer·Venue
+핵심 UI까지 모두 main에 병합되어 완료됐다. 이후 M1 전체 read-only audit에서 발견된
+Customer/Management mutation reconciliation HIGH 2건은 #66에서 보정했고, PR #67 merge 이후
+focused read-only 재검증에서 두 finding 모두 RESOLVED 및 새 M1 blocker 없음으로 PASS했다.
 
-Frontend에서는 #18과 #23이 Done이라 #45 디자인 기반이 Ready다. Customer UI #19는
-#12 + #14 + #45, Venue UI #20은 #38 + #45를 기다리며 #23 공통 선행은 이미 충족됐다.
-따라서 M1 완료는 #19와 #20이 모두 Done일 때 판단한다.
+M2에서는 #15, #16, #17, #70과 #71이 Done이다. #16은 #15의 공통 실험 하네스를 사용한다.
+#15 workload는 실제 Product와 같은 Table × Slot capacity=1, Allocation unit=1을 사용한다.
+#16 correctness는 raw active Allocation row 수가 아니라 동일 `verificationNow`의 effective
+capacity-consuming units로 판단하며 stale concurrent write와 `RESERVATION_STATE_CONFLICT`의
+실제 발생 조건도 이 단계에서 정의한다. #17의 idempotency namespace는 tenant + authenticated
+customerPrincipalId + key이고, 동일 command 재시도는 같은 Reservation identity와 Location을
+재사용하면서 body는 retry 시점의 current effective representation을 반환한다. #70은
+confirm/expiry 경합을 기존 Reservation lock으로 검증했고, #71은 runtime auth session 안의
+명시적 same-intent HOLD retry와 reload no-replay 경계를 구현했다.
 
-M2 선행 작업에서는 #15와 #17이 #13 완료로 Ready이고 #16은 #15의 공통 실험 하네스를
-선행으로 사용한다. #15 workload는 실제 Product와 같은 Table × Slot capacity=1,
-Allocation unit=1을 사용한다. #16 correctness는 raw active Allocation row 수가 아니라
-동일 `verificationNow`의 effective capacity-consuming units로 판단하며 stale concurrent
-write와 `RESERVATION_STATE_CONFLICT`의 실제 발생 조건도 이 단계에서 정의한다. #17의
-idempotency namespace는 tenant + authenticated customerPrincipalId + key이고, 동일 command
-재시도는 같은 Reservation identity와 Location을 재사용하면서 body는 retry 시점의 current
-effective representation을 반환한다. M2-WP1과 M2-WP2는 각각의 선행 조건이 충족된 뒤
-구체 Issue로 전환한다.
+종료 감사 corrective Bug #78은 #16 후보 비교를 clean commit의 동일 환경에서 다시 실행해
+environment manifest와 raw request/counter를 보존했고, #71 내부 navigation retry가
+Reservation Venue timezone을 복구하도록 보정했다. 또한 #17 reliability row의 Reservation
+참조를 tenant/Venue까지 묶는 composite foreign key를 추가했다. 세 finding의 regression
+test와 전체 검증을 통과해 M2는 Complete이다.
+
+M3의 첫 실제 Issue #80 결과는 [ADR-0007](adr/0007-use-transactional-event-record-and-db-delivery.md)과
+[비교 evidence](experiments/event-delivery-boundaries.md)에 기록한다. M3-WP2 #84는 ADR의 atomic append,
+DB delivery, fencing/attempt와 internal replay 계약을 production으로 구현한다. M3-WP3 failure
+recovery Issue는 #84의 실제 merged production protocol을 기준으로 확정한다.
 
 ## Release checkpoint
 
@@ -282,7 +306,7 @@ SPA 흐름을 추가한다.
 
 ### 완료 기준
 
-- #8부터 #14까지, #19, #20, #38, #45, #48, #49와 #50이 모두 Done이다.
+- #8부터 #14까지, #19, #20, #38, #45, #48, #49, #50과 corrective #66이 모두 Done이다.
 - Tenant, Venue, Policy, Resource와 Slot Capacity가 저장되고 tenant-scoped로만
   조회·변경된다.
 - 다른 tenant 식별자를 사용한 read/write가 데이터 노출이나 변경으로 이어지지 않는다.
@@ -298,6 +322,8 @@ SPA 흐름을 추가한다.
 - #19와 #20은 #45의 공통 Frontend token·접근성 baseline을 재사용한다.
 - 두 UI는 loading, empty, business conflict와 server error 상태를 구분해 표현한다.
 - capacity와 상태 전이 판단은 UI가 복제하지 않고 Product API 결과를 따른다.
+- M1 전체 read-only audit의 HIGH finding은 corrective #66과 PR #67로 보정되고 focused
+  재검증에서 모두 RESOLVED, 새 M1 blocker 없음으로 PASS한다.
 
 M1 Restaurant Product의 capacity invariant는 현재 서버 시각의 effective Allocation을
 기준으로 정의한다.
@@ -357,19 +383,23 @@ Customer-bound command idempotency를 해결하며 Customer UI의 안전한 retr
 
 ### 완료 기준
 
-- #15부터 #17까지 모두 Done이다.
-- M2-WP1의 HOLD 만료·확정 경합 검증이 완료되어 있다.
+- #15, #16, #17, #70, #71과 종료 감사 corrective #78이 모두 Done이다.
+- #70의 HOLD 만료·확정 경합 검증이 완료되어 있다.
+- #71의 same-intent retry, 내부 navigation 복구와 reload no-replay 경계가 완료되어 있다.
 - #15의 동시성 workload는 Product와 동일한 Table × Slot capacity=1, Allocation unit=1을
   사용한다.
 - 같은 Resource와 Slot에 동시 요청을 반복해도 동일 `verificationNow`에서 effective
   capacity-consuming Allocation units가 1을 넘지 않는다.
 - Optimistic Lock과 Pessimistic Lock을 동일 workload로 비교하고 선택 근거를 ADR에
   기록한다.
-- 선택한 전략이 stale concurrent write를 감지하는 실제 조건과
-  `RESERVATION_STATE_CONFLICT` business conflict mapping을 정의·검증한다.
+- 두 전략의 clean commit SHA, full environment manifest, workload, raw request·Slot·counter와
+  raw에서 재계산 가능한 summary를 보존한다.
+- 선택한 전략이 stale concurrent write를 방지하고, `RESERVATION_STATE_CONFLICT`가 필요한
+  전략이라면 authoritative business result로 확정할 수 없는 정확한 조건을 정의·검증한다.
 - 동일 tenant, authenticated customerPrincipalId, idempotency key와 fingerprint의 재전송은
   하나의 HOLD command identity만 만들고 다른 fingerprint는 conflict로 처리한다.
 - 다른 Customer와 다른 tenant는 같은 key 문자열을 독립적으로 사용할 수 있다.
+- completed reliability row의 Reservation 참조는 같은 tenant와 Venue에 속해야 한다.
 - commit 후 response 유실 뒤 retry도 같은 Reservation identity와 Location을 재사용하고
   새 Reservation/Allocation을 만들지 않는다.
 - retry response body는 최초 serialized body가 아니라 retry 시점의 current effective
@@ -416,7 +446,9 @@ M1 Reservation Core.
 
 ## M3 Reliable Event Foundation
 
-M3부터는 현재 GitHub Issue를 생성하지 않고 다음 work package만 유지한다.
+현재 실제 GitHub Issue는 #80 `[Chore] Event 전달 경계 비교와 reliability 계약 확정` 하나다.
+후속 production implementation과 failure recovery Issue는 #80의 Accepted ADR과
+merged implementation을 기준으로 별도 설계·확정한다.
 
 ### 목표
 
@@ -429,7 +461,7 @@ Waitlist 비즈니스와 분리된, duplicate와 crash에 견디는 event 전달
 - relay restart, duplicate publish, consumer redelivery에서도 business side effect가
   중복되지 않는다.
 - retryable failure와 non-retryable failure가 구분된다.
-- retry exhaustion 상태, operator replay와 recovery 절차가 검증된다.
+- retry exhaustion 상태, tenant-safe trusted internal replay와 durable history가 검증된다.
 - 문서화된 crash point별 failure test가 통과한다.
 - 동기 처리, commit 이후 publish, Transactional Outbox 등 현실적인 대안과 선택 근거가
   ADR에 기록된다.
@@ -442,8 +474,8 @@ M2 Concurrency & Consistency.
 
 - event identity, schema version과 ordering 요구사항.
 - DB commit과 event publish 사이의 원자성 문제와 대안 비교.
-- Transactional Outbox를 선택할 경우 outbox schema와 relay ownership.
-- consumer inbox 또는 business unique constraint.
+- ADR-0007에서 선택한 transactional event schema와 같은 배포 내 DB delivery ownership.
+- consumer별 business unique constraint 또는 좁은 적용 receipt와 side effect 원자성.
 - retry, backoff, dead-letter와 replay audit.
 - DB polling으로 충분한지, broker가 필요한지를 측정으로 판단.
 
@@ -462,6 +494,15 @@ M2 Concurrency & Consistency.
 - 외부 notification provider 완성.
 
 ### M3 종료 후 일정·범위 재평가
+
+ADR-0007의 ownership에 따라 M3는 DB side effect와 internal recovery primitive까지 소유한다.
+사람 operator identity, replay UI/보호된 관리 surface, 운영 authorization·audit/runbook은 M5다.
+최초 실제 Booking event schema/trigger + 같은 transaction append + Waitlist consumer는 M4가
+함께 연결한다. M3에서 subscriber 없는 production event를 먼저 발행하지 않는다.
+external dependency의 response-before/after timeout은 첫 실제 external-side-effect/provider
+Issue의 필수 gate로 남긴다. 실제 provider 도입 Milestone은 고정하지 않으며, M4가 request
+contract만 다루면 provider 검증을 선도입하지 않는다. 이 검증 전 외부 전송의 중복 방지를
+완료로 주장하지 않는다.
 
 M3 결과를 기준으로 남은 일정, 실제 구현 완성도와 M4·M5 작업량을 재평가한다.
 
@@ -501,7 +542,8 @@ M3 Reliable Event Foundation.
 - active offer의 business unique constraint.
 - offer lease와 expiry.
 - promotion과 capacity 확보의 원자성.
-- notification 요청과 실제 전달 결과의 책임 분리.
+- notification 요청과 실제 전달 결과의 책임 분리. 첫 실제 provider Issue는 response 전후
+  timeout, provider idempotency/retention, ambiguous outcome 조회·재시도를 검증한다.
 - Waitlist와 offer 상태를 UI 전용 상태 기계로 재구현하지 않고 API contract에 매핑한다.
 
 ### 검증 결과물
@@ -545,7 +587,8 @@ M4 Waitlist Promotion.
 
 - 낮은 metric cardinality와 tenant·개인정보 노출 방지.
 - request에서 outbox와 consumer까지 correlation 전파.
-- 재처리와 수동 개입의 audit.
+- 재처리와 수동 개입의 audit. M3 internal replay primitive에 연결하는 human operator
+  identity·tenant 권한·보호된 management surface와 운영 audit/runbook.
 - alert가 실제 사용자 영향과 연결되도록 threshold를 정하는 일.
 - client error correlation을 적용할 경우 correlation ID 노출 범위, source map 보안,
   telemetry sampling과 개인정보 경계를 정하는 일.
@@ -684,12 +727,12 @@ M7 Model Router & Agent Runtime.
 | 검토 질문 | 결론 |
 | --- | --- |
 | Product Backend와 AI Platform의 비중이 Charter 방향을 유지하는가? | M0~M5를 Product와 운영 신뢰성에 배정하고 M6 이후에만 AI 기반을 시작한다. |
-| AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M2 실제 Issue에는 AI 작업이 없다. |
+| AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M3 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. Outbox도 M3 대안 비교 전에는 확정하지 않는다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | 실제 Issue는 M0 8개, M1 core 10개에 corrective/supporting #45·#48·#49·#50을 더하고 M2 선행 3개로 관리한다. 먼 단계는 work package로 남긴다. |
-| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45는 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | 현재 #14·#45·#50과 M2 선행 #15·#17이 Ready이며, #12·#16·#19·#20·#38은 각 dependency가 끝날 때까지 Backlog다. |
+| Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 #80 decision gate와 #84 production foundation을 구분한다. WP3는 merged runtime을 기준으로 확정한다. |
+| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71은 P2로 구분한다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0~M2는 Complete이고 M3는 #80 결정과 후속 runtime 구현을 구분한다. 후속 M3 work package는 #80 결과 검토·병합 뒤 확정한다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일하며 별도의 Architecture 우위를 주장하지 않는다. 동시성·messaging 선택은 실험 전 확정하지 않는다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

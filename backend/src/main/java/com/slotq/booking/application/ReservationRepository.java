@@ -17,6 +17,14 @@ public interface ReservationRepository {
 
     Optional<Reservation> find(VenueId venueId, ReservationId reservationId);
 
+    Optional<Reservation> findForUpdate(VenueId venueId, ReservationId reservationId);
+
+    /**
+     * Uses a current locking read so a duplicate transaction can observe the Reservation
+     * committed by the transaction that won the idempotency-key insert race.
+     */
+    Optional<Reservation> findCurrent(VenueId venueId, ReservationId reservationId);
+
     List<Reservation> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt);
 
     /**
@@ -28,6 +36,19 @@ public interface ReservationRepository {
         VenueId venueId,
         ResourceId resourceId,
         SlotInventoryId slotInventoryId,
+        Instant now
+    );
+
+    /**
+     * Uses the same effective predicate, excluding the Reservation attempting CONFIRM.
+     * The command must own the Slot lock before any consistent read in its transaction.
+     */
+    boolean existsOtherEffectiveCapacityConsumer(
+        TenantId tenantId,
+        VenueId venueId,
+        ResourceId resourceId,
+        SlotInventoryId slotInventoryId,
+        ReservationId excludedReservationId,
         Instant now
     );
 }

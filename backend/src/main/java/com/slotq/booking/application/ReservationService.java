@@ -39,6 +39,8 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
     private final ResourceRepository resourceRepository;
     private final AuthorizationUseCase authorizationUseCase;
     private final ReservationCommandExecutor commandExecutor;
+    private final HoldIdempotencyStore idempotencyStore;
+    private final HoldIdempotencyPolicy idempotencyPolicy;
     private final Clock clock;
 
     ReservationService(ReservationRepository reservationRepository,
@@ -48,6 +50,8 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
                        ResourceRepository resourceRepository,
                        AuthorizationUseCase authorizationUseCase,
                        ReservationCommandExecutor commandExecutor,
+                       HoldIdempotencyStore idempotencyStore,
+                       HoldIdempotencyPolicy idempotencyPolicy,
                        Clock clock) {
         this.reservationRepository = reservationRepository;
         this.slotRepository = slotRepository;
@@ -56,6 +60,8 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
         this.resourceRepository = resourceRepository;
         this.authorizationUseCase = authorizationUseCase;
         this.commandExecutor = commandExecutor;
+        this.idempotencyStore = idempotencyStore;
+        this.idempotencyPolicy = idempotencyPolicy;
         this.clock = clock;
     }
 
@@ -69,8 +75,44 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
         );
         Instant now = clock.instant();
         Clock commandClock = Clock.fixed(now, ZoneOffset.UTC);
-        SlotInventory slot = slotRepository.find(command.venueId(), command.slotInventoryId())
+        SlotInventory slot = slotRepository.findForUpdate(command.venueId(), command.slotInventoryId())
             .orElseThrow(ResourceNotFoundException::new);
+        HoldIdempotencyStore.Fingerprint fingerprint = new HoldIdempotencyStore.Fingerprint(
+            command.venueId(), command.slotInventoryId(), command.partySize()
+        );
+        HoldIdempotencyStore.Claim claim = command.idempotencyKey()
+            .map(key -> idempotencyStore.claim(
+                slot.tenantId(), principal.principalId(), key, fingerprint, now,
+                now.minus(idempotencyPolicy.retention())
+            ))
+            .orElse(null);
+        if (claim != null && !claim.owner()) {
+            if (!fingerprint.equals(claim.fingerprint())) {
+                throw new IdempotencyKeyReusedException();
+            }
+            if (claim.reservationId() == null) {
+                throw new IllegalStateException("Committed HOLD idempotency record is incomplete");
+            }
+            return currentDetails(
+                command.venueId(), claim.reservationId(), principal,
+                Clock.fixed(clock.instant(), ZoneOffset.UTC), true
+            );
+        }
+
+        ReservationDetails details = createNewHold(command, principal, slot, now, commandClock);
+        command.idempotencyKey().ifPresent(key -> idempotencyStore.complete(
+            slot.tenantId(), principal.principalId(), key, details.reservation().id(), clock.instant()
+        ));
+        return details;
+    }
+
+    private ReservationDetails createNewHold(
+        CreateHold command,
+        AuthenticatedPrincipal principal,
+        SlotInventory slot,
+        Instant now,
+        Clock commandClock
+    ) {
         Tenant tenant = tenantRepository.findById(slot.tenantId())
             .orElseThrow(ResourceNotFoundException::new);
         Venue venue = venueRepository.find(slot.tenantId(), slot.venueId())
@@ -102,7 +144,22 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
     @Transactional(readOnly = true)
     public ReservationDetails getReservation(VenueId venueId, ReservationId reservationId,
                                              AuthenticatedPrincipal principal) {
-        Reservation reservation = reservationRepository.find(venueId, reservationId)
+        return currentDetails(
+            venueId, reservationId, principal,
+            Clock.fixed(clock.instant(), ZoneOffset.UTC), false
+        );
+    }
+
+    private ReservationDetails currentDetails(
+        VenueId venueId,
+        ReservationId reservationId,
+        AuthenticatedPrincipal principal,
+        Clock readClock,
+        boolean lockingRead
+    ) {
+        Reservation reservation = (lockingRead
+            ? reservationRepository.findCurrent(venueId, reservationId)
+            : reservationRepository.find(venueId, reservationId))
             .orElseThrow(ResourceNotFoundException::new);
         authorizationUseCase.authorizeReservationRead(
             principal,
@@ -114,7 +171,6 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
             .filter(found -> found.tenantId().equals(reservation.tenantId())
                 && found.resourceId().equals(reservation.resourceId()))
             .orElseThrow(ResourceNotFoundException::new);
-        Clock readClock = Clock.fixed(clock.instant(), ZoneOffset.UTC);
         return new ReservationDetails(reservation, slot.endsAt(), reservation.effectiveState(readClock));
     }
 
@@ -135,7 +191,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
         );
 
         ReservationCommandExecutor.CommandResult result = commandExecutor.execute(
-            venueId, reservationId, command, clock.instant()
+            venueId, reservationId, reservation.slotInventoryId(), command, clock.instant()
         );
         if (result.expired()) {
             if (command == ReservationCommand.CONFIRM || command == ReservationCommand.CANCEL) {

@@ -1,28 +1,47 @@
-export function App() {
-  return (
-    <>
-      <a className="skip-link" href="#main-content">
-        본문으로 바로가기
-      </a>
+import { useEffect, useState } from 'react'
+import { createHoldAttemptMemory } from './customer/holdAttempt'
+import { Button } from './components'
+import {
+  CustomerReservationFlow,
+  type CustomerReservationFlowProps,
+} from './customer/CustomerReservationFlow'
+import {
+  ManagementVenueFlow,
+  type ManagementVenueFlowProps,
+} from './management/ManagementVenueFlow'
 
-      <header className="site-header">
-        <span className="brand" aria-label="SlotQ">
-          SlotQ
-        </span>
-      </header>
+interface AppProps {
+  api?: CustomerReservationFlowProps['api']
+  managementApi?: ManagementVenueFlowProps['api']
+}
 
-      <main id="main-content" className="app-shell" tabIndex={-1}>
-        <section className="intro" aria-labelledby="page-title">
-          <h1 id="page-title">SlotQ</h1>
-          <p className="intro-copy">
-            Product API의 실제 사용자 흐름을 검증하기 위한 웹 클라이언트 기반입니다.
-          </p>
-        </section>
-      </main>
+type Surface = 'customer' | 'management'
 
-      <footer className="site-footer">
-        <small>Build the product first. Add intelligence on top.</small>
-      </footer>
-    </>
+export function App({ api, managementApi }: AppProps) {
+  const [surface, setSurface] = useState<Surface>('customer')
+  const [navigationLocked, setNavigationLocked] = useState(false)
+  const [holdAttempts] = useState(createHoldAttemptMemory)
+  useEffect(() => holdAttempts.connect(), [holdAttempts])
+  const navigation = (
+    <nav className="surface-navigation" aria-label="Product surface">
+      <Button
+        density="compact"
+        variant={surface === 'customer' ? 'primary' : 'secondary'}
+        aria-current={surface === 'customer' ? 'page' : undefined}
+        disabled={navigationLocked}
+        onClick={() => setSurface('customer')}
+      >Customer 예약</Button>
+      <Button
+        density="compact"
+        variant={surface === 'management' ? 'primary' : 'secondary'}
+        aria-current={surface === 'management' ? 'page' : undefined}
+        disabled={navigationLocked}
+        onClick={() => setSurface('management')}
+      >Venue 운영</Button>
+    </nav>
   )
+
+  return surface === 'customer'
+    ? <CustomerReservationFlow api={api} holdAttempts={holdAttempts} navigation={navigation} onNavigationLockChange={setNavigationLocked} />
+    : <ManagementVenueFlow api={managementApi} navigation={navigation} onNavigationLockChange={setNavigationLocked} />
 }

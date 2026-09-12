@@ -6,8 +6,9 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
-import com.slotq.booking.application.ReservationUseCase;
+import com.slotq.booking.application.HoldIdempotencyKey;
 import com.slotq.booking.application.ReservationCommand;
+import com.slotq.booking.application.ReservationUseCase;
 import com.slotq.booking.domain.Reservation;
 import com.slotq.booking.domain.ReservationId;
 import com.slotq.booking.domain.SlotInventoryId;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,6 +40,7 @@ class ReservationController {
     ResponseEntity<ReservationResponse> createHold(
         @PathVariable UUID venueId,
         @AuthenticationPrincipal AuthenticatedPrincipal principal,
+        @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
         @Valid @RequestBody HoldRequest request
     ) {
         VenueId targetVenueId = new VenueId(venueId);
@@ -46,7 +49,8 @@ class ReservationController {
                 targetVenueId,
                 new SlotInventoryId(request.slotInventoryId()),
                 principal,
-                request.partySize()
+                request.partySize(),
+                HoldIdempotencyKey.fromHeader(idempotencyKey)
             )
         );
         ReservationResponse response = response(details);
