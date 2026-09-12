@@ -1,0 +1,1036 @@
+{
+  "schemaVersion" : "slotq-event-process-recovery/v1",
+  "environment" : {
+    "runId" : "64a31a31-98a0-4ce3-8f23-e93f966f30c2",
+    "applicationRevision" : "294a35d510e69d6029a27c10435d28463bc99fba",
+    "branch" : "fix/event-db-outage-evidence",
+    "dirty" : false,
+    "recordedAt" : "2026-09-11T18:04:15.711310200Z",
+    "javaVersion" : "25.0.4.1+1-LTS",
+    "springBootVersion" : "4.1.1",
+    "gradleVersion" : "9.7.1",
+    "mysqlImage" : "mysql:8.4",
+    "mysqlVersion" : "8.4.11",
+    "transactionIsolation" : "REPEATABLE-READ",
+    "dockerVersion" : "29.7.2",
+    "os" : "Windows 11 10.0",
+    "processors" : 16,
+    "maxJvmMemoryBytes" : 4083154944,
+    "childTermination" : "Runtime.halt or parent destroyForcibly; shutdown hooks bypassed",
+    "databaseContinuity" : "one MySQL container and database retained across all child JVMs",
+    "testDeliveryPolicy" : {
+      "lease" : "PT4S",
+      "retryDelays" : [ "PT0S", "PT0S" ],
+      "effectTimeout" : "PT2S",
+      "maxAttempts" : 3,
+      "productionSlo" : false,
+      "batchSize" : 3,
+      "lockWait" : "PT1S"
+    }
+  },
+  "cases" : [ {
+    "name" : "MATERIALIZATION_BEFORE_PROCESS_EXIT",
+    "faultPoint" : "committed event before materialize()",
+    "termination" : "Runtime.halt",
+    "childExitCode" : 86,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:00:07.362380Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 0,
+      "eventBoundary" : 2,
+      "deliveries" : [ ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:00:15.507733Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "A963731A4C1938A7B804D507529983D0",
+        "eventId" : "B15E2D7F76DC32D3AAD15AEA1B7310C1",
+        "registrationId" : "472378FFCE9E4EAEA332AC15690F8600",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "B15E2D7F76DC32D3AAD15AEA1B7310C1",
+        "tenantId" : "A963731A4C1938A7B804D507529983D0",
+        "ownerId" : "8C8EE90CFFAF3D2F975684A3DA29BBE7",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "B15E2D7F76DC32D3AAD15AEA1B7310C1",
+        "tenantId" : "A963731A4C1938A7B804D507529983D0",
+        "aggregateId" : "8C8EE90CFFAF3D2F975684A3DA29BBE7",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "CLAIM_COMMIT_THEN_PROCESS_EXIT",
+    "faultPoint" : "claim() commit before handler",
+    "termination" : "Runtime.halt",
+    "childExitCode" : 86,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:00:31.628916Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "184DDE4CC3EB38AF8EA3B0287FEE756B",
+        "eventId" : "B81897169CFB3B5CB7A9360624F81105",
+        "registrationId" : "3C3D579976ED42BE90EBBED6E6B0D6D9",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : "2026-09-11T18:00:35.268239Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "beforeLeaseExpiry" : {
+      "databaseNow" : "2026-09-11T18:00:31.800978Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "184DDE4CC3EB38AF8EA3B0287FEE756B",
+        "eventId" : "B81897169CFB3B5CB7A9360624F81105",
+        "registrationId" : "3C3D579976ED42BE90EBBED6E6B0D6D9",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : "2026-09-11T18:00:35.268239Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:00:43.332914Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "184DDE4CC3EB38AF8EA3B0287FEE756B",
+        "eventId" : "B81897169CFB3B5CB7A9360624F81105",
+        "registrationId" : "3C3D579976ED42BE90EBBED6E6B0D6D9",
+        "state" : "DONE",
+        "cycleAttempts" : 2,
+        "lifetimeAttempts" : 2,
+        "fencingToken" : 2,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "B81897169CFB3B5CB7A9360624F81105",
+        "tenantId" : "184DDE4CC3EB38AF8EA3B0287FEE756B",
+        "ownerId" : "95AD3B03C992318FBC7977A78893777D",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "B81897169CFB3B5CB7A9360624F81105",
+        "tenantId" : "184DDE4CC3EB38AF8EA3B0287FEE756B",
+        "aggregateId" : "95AD3B03C992318FBC7977A78893777D",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "EFFECT_TRANSACTION_PROCESS_EXIT",
+    "faultPoint" : "after synthetic effect/receipt writes, before effect transaction commit",
+    "termination" : "Runtime.halt",
+    "childExitCode" : 87,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:00:59.451426Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "E05865FBACFA300C82BF32F73B748440",
+        "eventId" : "245291334A143C74945298273DB47B3D",
+        "registrationId" : "8103EBADF9834FD4945AEC2B53D64A2E",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : "2026-09-11T18:01:03.065352Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:01:11.024231Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "E05865FBACFA300C82BF32F73B748440",
+        "eventId" : "245291334A143C74945298273DB47B3D",
+        "registrationId" : "8103EBADF9834FD4945AEC2B53D64A2E",
+        "state" : "DONE",
+        "cycleAttempts" : 2,
+        "lifetimeAttempts" : 2,
+        "fencingToken" : 2,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "245291334A143C74945298273DB47B3D",
+        "tenantId" : "E05865FBACFA300C82BF32F73B748440",
+        "ownerId" : "1239F2CBC6073DC6B3DC1EB36E03F93C",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "245291334A143C74945298273DB47B3D",
+        "tenantId" : "E05865FBACFA300C82BF32F73B748440",
+        "aggregateId" : "1239F2CBC6073DC6B3DC1EB36E03F93C",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "EFFECT_AND_DONE_COMMIT_OUTCOME_UNKNOWN",
+    "faultPoint" : "after physical effect + DONE commit, before transaction completion returns",
+    "termination" : "afterCommit Runtime.halt",
+    "childExitCode" : 88,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:01:27.341443Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "98F8130EBC6F33C49FA320AB2CBA273A",
+        "eventId" : "49AF2E75B21A3A169A40BC4D8C645209",
+        "registrationId" : "0CAA938E84A246DEBA159CF6D5BC2AD9",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "49AF2E75B21A3A169A40BC4D8C645209",
+        "tenantId" : "98F8130EBC6F33C49FA320AB2CBA273A",
+        "ownerId" : "5FD3730638AD306CB23FE0A916ABCDFA",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "49AF2E75B21A3A169A40BC4D8C645209",
+        "tenantId" : "98F8130EBC6F33C49FA320AB2CBA273A",
+        "aggregateId" : "5FD3730638AD306CB23FE0A916ABCDFA",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:01:37.074853Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "98F8130EBC6F33C49FA320AB2CBA273A",
+        "eventId" : "49AF2E75B21A3A169A40BC4D8C645209",
+        "registrationId" : "0CAA938E84A246DEBA159CF6D5BC2AD9",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "49AF2E75B21A3A169A40BC4D8C645209",
+        "tenantId" : "98F8130EBC6F33C49FA320AB2CBA273A",
+        "ownerId" : "5FD3730638AD306CB23FE0A916ABCDFA",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "49AF2E75B21A3A169A40BC4D8C645209",
+        "tenantId" : "98F8130EBC6F33C49FA320AB2CBA273A",
+        "aggregateId" : "5FD3730638AD306CB23FE0A916ABCDFA",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "STALE_OWNER_AFTER_NEW_OWNER_DONE",
+    "faultPoint" : "JVM A claim -> lease expiry -> JVM B reclaim/DONE -> JVM A process",
+    "termination" : "coordinated two-JVM interleaving",
+    "childExitCode" : 0,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:02:08.661074Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "08A29832363C3516A6706D7043165F02",
+        "eventId" : "0BC78C339D243639A5DBD37C5914F3BF",
+        "registrationId" : "11F457947E7F4768A985A91215332DBE",
+        "state" : "DONE",
+        "cycleAttempts" : 2,
+        "lifetimeAttempts" : 2,
+        "fencingToken" : 2,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "0BC78C339D243639A5DBD37C5914F3BF",
+        "tenantId" : "08A29832363C3516A6706D7043165F02",
+        "ownerId" : "95BE09554BA03E4DADBE7DBED8C05FA9",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "0BC78C339D243639A5DBD37C5914F3BF",
+        "tenantId" : "08A29832363C3516A6706D7043165F02",
+        "aggregateId" : "95BE09554BA03E4DADBE7DBED8C05FA9",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "ownerAClaimed" : {
+      "databaseNow" : "2026-09-11T18:01:56.667976Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "08A29832363C3516A6706D7043165F02",
+        "eventId" : "0BC78C339D243639A5DBD37C5914F3BF",
+        "registrationId" : "11F457947E7F4768A985A91215332DBE",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : "2026-09-11T18:02:00.635496Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:02:08.954344Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "08A29832363C3516A6706D7043165F02",
+        "eventId" : "0BC78C339D243639A5DBD37C5914F3BF",
+        "registrationId" : "11F457947E7F4768A985A91215332DBE",
+        "state" : "DONE",
+        "cycleAttempts" : 2,
+        "lifetimeAttempts" : 2,
+        "fencingToken" : 2,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "0BC78C339D243639A5DBD37C5914F3BF",
+        "tenantId" : "08A29832363C3516A6706D7043165F02",
+        "ownerId" : "95BE09554BA03E4DADBE7DBED8C05FA9",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "0BC78C339D243639A5DBD37C5914F3BF",
+        "tenantId" : "08A29832363C3516A6706D7043165F02",
+        "aggregateId" : "95BE09554BA03E4DADBE7DBED8C05FA9",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "CLAIM_CRASH_EXHAUSTION",
+    "faultPoint" : "claim() commit followed by repeated Runtime.halt",
+    "termination" : "Runtime.halt x3",
+    "childExitCode" : 86,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:03:00.620347Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "state" : "DEAD",
+        "cycleAttempts" : 3,
+        "lifetimeAttempts" : 3,
+        "fencingToken" : 3,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : "CRASH_EXHAUSTED",
+        "failureDetail" : "Claim attempt budget exhausted"
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "attemptSnapshots" : [ {
+      "databaseNow" : "2026-09-11T18:02:25.264643Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : "2026-09-11T18:02:28.907918Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    }, {
+      "databaseNow" : "2026-09-11T18:02:37.144312Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 2,
+        "lifetimeAttempts" : 2,
+        "fencingToken" : 2,
+        "leaseUntil" : "2026-09-11T18:02:40.786906Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    }, {
+      "databaseNow" : "2026-09-11T18:02:48.987389Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 3,
+        "lifetimeAttempts" : 3,
+        "fencingToken" : 3,
+        "leaseUntil" : "2026-09-11T18:02:52.606298Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    } ],
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:03:08.551289Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "state" : "DEAD",
+        "cycleAttempts" : 3,
+        "lifetimeAttempts" : 3,
+        "fencingToken" : 3,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : "CRASH_EXHAUSTED",
+        "failureDetail" : "Claim attempt budget exhausted"
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "TRUSTED_INTERNAL_REPLAY_AFTER_CRASH_EXHAUSTION",
+    "faultPoint" : "CRASH_EXHAUSTED replay and new retry cycle",
+    "termination" : "new child JVM",
+    "childExitCode" : 0,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:03:00.620347Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "state" : "DEAD",
+        "cycleAttempts" : 3,
+        "lifetimeAttempts" : 3,
+        "fencingToken" : 3,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : "CRASH_EXHAUSTED",
+        "failureDetail" : "Claim attempt budget exhausted"
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:03:16.588337Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 4,
+        "fencingToken" : 5,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "ownerId" : "7238E4CF26943FD3A3F6D65BB2EB1FDA",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "tenantId" : "195FE24C52163952A43ACE5B32D5D7D3",
+        "aggregateId" : "7238E4CF26943FD3A3F6D65BB2EB1FDA",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ {
+        "replayId" : "581501B5198C48ABBB3C6AF518D1B91B",
+        "eventId" : "37BAE7434E903679A5388B2DA5DECE08",
+        "registrationId" : "9BC922981E474CA485593A6000089649",
+        "consumerId" : "ProcessRecoveryProjection",
+        "reason" : "process recovery cause resolved",
+        "recoveryOrigin" : "TRUSTED_INTERNAL",
+        "priorState" : "DEAD",
+        "priorCycleAttempts" : 3,
+        "lifetimeAttempts" : 3,
+        "priorFencingToken" : 3,
+        "priorFailureCode" : "CRASH_EXHAUSTED"
+      } ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "DATABASE_UNAVAILABLE_AND_RECOVERY",
+    "faultPoint" : "ready child enters production runCycle() while MySQL container is paused",
+    "termination" : "observed DB access failure then Runtime.halt",
+    "childExitCode" : 90,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:03:42.865370Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "EF4E3EFF55303CC6AB923A8D3DAAEEA2",
+        "eventId" : "D7F50C7FD1063B36B2E9B40BD4D85DC2",
+        "registrationId" : "AD1A62FC30004DE4B9EB38B45E153D92",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : "2026-09-11T18:03:36.366326Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "databaseOutageProbe" : {
+      "failureType" : "java.sql.SQLTransientConnectionException",
+      "databaseAccessFailureObserved" : true,
+      "workerEntryPoint" : "EventDeliveryWorker.runCycle",
+      "contextReadyBeforePause" : true
+    },
+    "beforeOutage" : {
+      "databaseNow" : "2026-09-11T18:03:32.723506Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "EF4E3EFF55303CC6AB923A8D3DAAEEA2",
+        "eventId" : "D7F50C7FD1063B36B2E9B40BD4D85DC2",
+        "registrationId" : "AD1A62FC30004DE4B9EB38B45E153D92",
+        "state" : "PROCESSING",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : "2026-09-11T18:03:36.366326Z",
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ ],
+      "receipts" : [ ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:03:50.929397Z",
+      "eventCount" : 1,
+      "registrationCount" : 1,
+      "discoveryCursor" : 2,
+      "eventBoundary" : 2,
+      "deliveries" : [ {
+        "tenantId" : "EF4E3EFF55303CC6AB923A8D3DAAEEA2",
+        "eventId" : "D7F50C7FD1063B36B2E9B40BD4D85DC2",
+        "registrationId" : "AD1A62FC30004DE4B9EB38B45E153D92",
+        "state" : "DONE",
+        "cycleAttempts" : 2,
+        "lifetimeAttempts" : 2,
+        "fencingToken" : 2,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "D7F50C7FD1063B36B2E9B40BD4D85DC2",
+        "tenantId" : "EF4E3EFF55303CC6AB923A8D3DAAEEA2",
+        "ownerId" : "22BE06BFAE393F4C92FAB89E5006E6FA",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "D7F50C7FD1063B36B2E9B40BD4D85DC2",
+        "tenantId" : "EF4E3EFF55303CC6AB923A8D3DAAEEA2",
+        "aggregateId" : "22BE06BFAE393F4C92FAB89E5006E6FA",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  }, {
+    "name" : "BACKLOG_LARGER_THAN_BATCH_RESTART_DRAIN",
+    "faultPoint" : "one production runCycle() completes a partial batch before process exit",
+    "termination" : "Runtime.halt after runCycle",
+    "childExitCode" : 89,
+    "firstAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:04:07.261553Z",
+      "eventCount" : 8,
+      "registrationCount" : 1,
+      "discoveryCursor" : 4,
+      "eventBoundary" : 9,
+      "deliveries" : [ {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "52B1FD2124413AB8B3F7A0CFFFB0C8E8",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "7E9B2121DB1539F19FD252168C93D4E7",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "F67775F5E9FA3F88BFEFE8C94668D35B",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "52B1FD2124413AB8B3F7A0CFFFB0C8E8",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "7E9B2121DB1539F19FD252168C93D4E7",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "F67775F5E9FA3F88BFEFE8C94668D35B",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "52B1FD2124413AB8B3F7A0CFFFB0C8E8",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "7E9B2121DB1539F19FD252168C93D4E7",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "F67775F5E9FA3F88BFEFE8C94668D35B",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "recoveryAuthoritativeState" : {
+      "databaseNow" : "2026-09-11T18:04:15.519707Z",
+      "eventCount" : 8,
+      "registrationCount" : 1,
+      "discoveryCursor" : 9,
+      "eventBoundary" : 9,
+      "deliveries" : [ {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "232B3402A7933A1CA3C2428DB74520F8",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "42D93A7E419737058EC157357060954E",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "4349FE06F86F3D7C9AD8800A168A86BA",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "52B1FD2124413AB8B3F7A0CFFFB0C8E8",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "7E9B2121DB1539F19FD252168C93D4E7",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "94EAE3F241DE3B95AA05572ADB12DFAA",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "BE8F88E4E47B3FC3885FAB695C4D5A12",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      }, {
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "eventId" : "F67775F5E9FA3F88BFEFE8C94668D35B",
+        "registrationId" : "6CF1F365D20744329B0425283F692FB3",
+        "state" : "DONE",
+        "cycleAttempts" : 1,
+        "lifetimeAttempts" : 1,
+        "fencingToken" : 1,
+        "leaseUntil" : null,
+        "nextAttemptAt" : null,
+        "failureCode" : null,
+        "failureDetail" : null
+      } ],
+      "effects" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "232B3402A7933A1CA3C2428DB74520F8",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "42D93A7E419737058EC157357060954E",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "4349FE06F86F3D7C9AD8800A168A86BA",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "52B1FD2124413AB8B3F7A0CFFFB0C8E8",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "7E9B2121DB1539F19FD252168C93D4E7",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "94EAE3F241DE3B95AA05572ADB12DFAA",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "BE8F88E4E47B3FC3885FAB695C4D5A12",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "F67775F5E9FA3F88BFEFE8C94668D35B",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "ownerId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "currentRevision" : 7,
+        "applications" : 1
+      } ],
+      "receipts" : [ {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "232B3402A7933A1CA3C2428DB74520F8",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "42D93A7E419737058EC157357060954E",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "4349FE06F86F3D7C9AD8800A168A86BA",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "52B1FD2124413AB8B3F7A0CFFFB0C8E8",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "7E9B2121DB1539F19FD252168C93D4E7",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "94EAE3F241DE3B95AA05572ADB12DFAA",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "BE8F88E4E47B3FC3885FAB695C4D5A12",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      }, {
+        "consumerId" : "ProcessRecoveryProjection",
+        "eventId" : "F67775F5E9FA3F88BFEFE8C94668D35B",
+        "tenantId" : "27299E764BB03A9AA144AA65F931D73A",
+        "aggregateId" : "6AB7D55D90C4322CBD491170618B73F0",
+        "eventType" : "ProcessRecoveryChanged",
+        "schemaVersion" : 1
+      } ],
+      "replayAudit" : [ ]
+    },
+    "outcome" : "PASS"
+  } ],
+  "summary" : {
+    "failed" : 0,
+    "wp3ReliabilityGate" : "PASS",
+    "faultCases" : 9,
+    "passed" : 9
+  }
+}

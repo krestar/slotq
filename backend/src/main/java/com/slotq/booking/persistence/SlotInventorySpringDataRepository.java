@@ -16,6 +16,16 @@ interface SlotInventorySpringDataRepository extends JpaRepository<SlotInventoryJ
 
     Optional<SlotInventoryJpaEntity> findByVenueIdAndId(UUID venueId, UUID id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select slot from SlotInventoryJpaEntity slot
+        where slot.venueId = :venueId and slot.id = :id
+        """)
+    Optional<SlotInventoryJpaEntity> findForUpdateByVenueIdAndId(
+        @Param("venueId") UUID venueId,
+        @Param("id") UUID id
+    );
+
     Optional<SlotInventoryJpaEntity> findByTenantIdAndVenueIdAndResourceIdAndId(
         UUID tenantId,
         UUID venueId,

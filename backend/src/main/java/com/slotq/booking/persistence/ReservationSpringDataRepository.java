@@ -6,12 +6,31 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEntity, UUID> {
 
     Optional<ReservationJpaEntity> findByVenueIdAndId(UUID venueId, UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select reservation from ReservationJpaEntity reservation "
+        + "where reservation.venueId = :venueId and reservation.id = :id")
+    Optional<ReservationJpaEntity> findForUpdateByVenueIdAndId(
+        @Param("venueId") UUID venueId,
+        @Param("id") UUID id
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select reservation from ReservationJpaEntity reservation "
+        + "where reservation.venueId = :venueId and reservation.id = :id")
+    Optional<ReservationJpaEntity> findCurrentByVenueIdAndId(
+        @Param("venueId") UUID venueId,
+        @Param("id") UUID id
+    );
 
     List<ReservationJpaEntity> findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(
         UUID tenantId,
@@ -32,6 +51,7 @@ interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEn
           and allocation.resourceId = :resourceId
           and allocation.slotInventoryId = :slotInventoryId
           and allocation.active = true
+          and (:excludedReservationId is null or reservation.id <> :excludedReservationId)
           and (reservation.state in (com.slotq.booking.domain.ReservationState.CONFIRMED,
                                      com.slotq.booking.domain.ReservationState.CHECKED_IN)
                or (reservation.state = com.slotq.booking.domain.ReservationState.HELD
@@ -42,6 +62,7 @@ interface ReservationSpringDataRepository extends JpaRepository<ReservationJpaEn
         @Param("venueId") UUID venueId,
         @Param("resourceId") UUID resourceId,
         @Param("slotInventoryId") UUID slotInventoryId,
+        @Param("excludedReservationId") UUID excludedReservationId,
         @Param("now") Instant now
     );
 }

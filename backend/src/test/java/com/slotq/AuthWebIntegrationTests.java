@@ -149,7 +149,11 @@ class AuthWebIntegrationTests {
         Integer credentialColumns = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM information_schema.columns "
                 + "WHERE table_schema = DATABASE() "
-                + "AND LOWER(column_name) REGEXP 'token|credential|secret'",
+                + "AND LOWER(column_name) REGEXP 'token|credential|secret' "
+                // V9 ownership counters are integers, not bearer credentials. Keep the exception exact.
+                + "AND NOT (data_type = 'bigint' AND ("
+                + "(table_name = 'event_deliveries' AND column_name = 'fencing_token') OR "
+                + "(table_name = 'event_replay_audit' AND column_name = 'prior_fencing_token')))",
             Integer.class
         );
         assertThat(credentialColumns).isZero();
@@ -219,6 +223,27 @@ class AuthWebIntegrationTests {
                 .header("Origin", "https://attacker.example")
                 .header("Access-Control-Request-Method", "GET")
                 .header("Access-Control-Request-Headers", "Authorization"))
+            .andExpect(status().isForbidden())
+            .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void browserHoldPreflightAllowsIdempotencyKeyAndResponsesExposeLocation() throws Exception {
+        String holdPath = "/api/v1/venues/" + UUID.randomUUID() + "/reservations/holds";
+        mockMvc.perform(options(holdPath)
+                .header("Origin", "http://localhost:5173")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "Authorization,Content-Type,Idempotency-Key"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key"));
+        mockMvc.perform(get("/api/v1/venues")
+                .header("Origin", "http://localhost:5173"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Expose-Headers", "Location"));
+        mockMvc.perform(options(holdPath)
+                .header("Origin", "https://attacker.example")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "Authorization,Content-Type,Idempotency-Key"))
             .andExpect(status().isForbidden())
             .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
     }

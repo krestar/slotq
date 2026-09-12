@@ -45,6 +45,24 @@ class ReservationPersistenceAdapter implements ReservationRepository {
     }
 
     @Override
+    public Optional<Reservation> findForUpdate(VenueId venueId, ReservationId reservationId) {
+        return reservationRepository.findForUpdateByVenueIdAndId(venueId.value(), reservationId.value())
+            .map(entity -> toDomain(entity, allocationRepository
+                .findByTenantIdAndVenueIdAndReservationId(
+                    entity.tenantId(), entity.venueId(), entity.id()
+                ).orElseThrow(() -> new IllegalStateException("Reservation allocation is missing"))));
+    }
+
+    @Override
+    public Optional<Reservation> findCurrent(VenueId venueId, ReservationId reservationId) {
+        return reservationRepository.findCurrentByVenueIdAndId(venueId.value(), reservationId.value())
+            .map(entity -> toDomain(entity, allocationRepository
+                .findCurrentByTenantIdAndVenueIdAndReservationId(
+                    entity.tenantId(), entity.venueId(), entity.id()
+                ).orElseThrow(() -> new IllegalStateException("Reservation allocation is missing"))));
+    }
+
+    @Override
     public List<Reservation> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt) {
         return reservationRepository
             .findAllByTenantIdAndVenueIdAndStartsAtGreaterThanEqualAndStartsAtLessThanOrderByStartsAtAscIdAsc(
@@ -61,7 +79,18 @@ class ReservationPersistenceAdapter implements ReservationRepository {
                                                     ResourceId resourceId,
                                                     SlotInventoryId slotInventoryId, Instant now) {
         return reservationRepository.countEffectiveCapacityConsumers(
-            tenantId.value(), venueId.value(), resourceId.value(), slotInventoryId.value(), now
+            tenantId.value(), venueId.value(), resourceId.value(), slotInventoryId.value(), null, now
+        ) > 0;
+    }
+
+    @Override
+    public boolean existsOtherEffectiveCapacityConsumer(TenantId tenantId, VenueId venueId,
+                                                         ResourceId resourceId,
+                                                         SlotInventoryId slotInventoryId,
+                                                         ReservationId excludedReservationId, Instant now) {
+        return reservationRepository.countEffectiveCapacityConsumers(
+            tenantId.value(), venueId.value(), resourceId.value(), slotInventoryId.value(),
+            excludedReservationId.value(), now
         ) > 0;
     }
 

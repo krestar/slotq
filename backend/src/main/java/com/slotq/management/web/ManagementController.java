@@ -75,8 +75,9 @@ class ManagementController {
     ) {
         ManagementUseCase.PatchVenue patch = request == null ? null
             : new ManagementUseCase.PatchVenue(request.name(), request.status());
-        Venue updated = management.patchVenue(principal, new VenueId(venueId), patch);
-        return ResponseEntity.ok(venue(updated));
+        return ResponseEntity.ok(venue(management.patchVenue(
+            principal, new VenueId(venueId), patch
+        )));
     }
 
     @GetMapping("/venues/{venueId}/policy")
@@ -188,10 +189,11 @@ class ManagementController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
     }
 
-    private VenueResponse venue(Venue venue) {
+    private VenueResponse venue(ManagementUseCase.VenueItem item) {
+        Venue venue = item.venue();
         return new VenueResponse(
             venue.id().value(), venue.name(), venue.timezone().getId(), venue.status(),
-            venue.currentPolicy().version()
+            venue.currentPolicy().version(), item.configurationWritable()
         );
     }
 
@@ -243,7 +245,8 @@ class ManagementController {
         String name,
         String timezone,
         VenueStatus status,
-        long currentPolicyVersion
+        long currentPolicyVersion,
+        boolean configurationWritable
     ) { }
 
     record PolicyResponse(
