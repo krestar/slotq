@@ -10,6 +10,7 @@ const productionSession: LocalAuthSession = {
   initialize: async () => undefined,
   accessToken: () => undefined,
   invalidate: () => undefined,
+  onInvalidate: () => () => undefined,
 }
 
 export const localAuthSession = import.meta.env.DEV

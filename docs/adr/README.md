@@ -24,6 +24,9 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | [0002](0002-start-with-modular-monolith.md) | 단일 배포형 Modular Monolith로 시작 | `Accepted` |
 | [0003](0003-use-react-typescript-vite.md) | Thin SPA에 React, TypeScript, Vite 사용 | `Accepted` |
 | [0004](0004-use-java-25.md) | Java 25 LTS를 Backend 기준선으로 사용 | `Accepted` |
+| [0005](0005-use-mysql-hold-idempotency-record.md) | MySQL reliability record로 HOLD command idempotency 보장 | `Accepted` |
+| [0006](0006-use-targeted-pessimistic-locks-for-reservation-consistency.md) | Reservation 정합성 경계에 대상 row pessimistic lock 사용 | `Accepted` |
+| [0007](0007-use-transactional-event-record-and-db-delivery.md) | Transactional event record와 DB 기반 전달 경계 사용 | `Accepted` |
 
 ## 후보 등록부
 
@@ -35,16 +38,14 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | --- | --- | --- |
 | Reservation 상태 모델 | `Proposed` | Reservation Core 구현 전에 허용 상태, 전이, 종료 상태와 거부 규칙을 정의합니다. |
 | Capacity 모델 | `Proposed` | 예약 생성 구현 전에 시간 구간, Resource, 수량 중 무엇이 수용량의 기준인지와 핵심 invariant의 트랜잭션 경계를 정합니다. |
-| 요청·명령 Idempotency | `Proposed` | 변경 API 구현 전에 idempotency key의 범위, 저장 기간, 동일 키·다른 payload 처리와 응답 재현 규칙을 정합니다. |
 | Multi-tenancy 격리 | `Proposed` | tenant 데이터를 저장하기 전에 tenant 식별·전파 방식, 데이터 접근 경계와 권한 검증 위치를 정합니다. |
 
 ### 증거가 생긴 뒤 결정할 항목
 
 | 후보 | 상태 | 검토를 시작할 증거 또는 선행 조건 |
 | --- | --- | --- |
-| Optimistic/Pessimistic/Distributed Lock | `Deferred` | 재현 가능한 동시 예약 실험과 충돌률, 지연, DB 부하 측정 결과가 필요합니다. |
 | HOLD 만료 처리 방식 | `Deferred` | HOLD 요구사항과 허용 만료 오차, 복구 목표, 예상 부하가 구체화되어야 합니다. |
-| Transactional Outbox | `Deferred` | DB commit과 외부 event publish 사이의 원자성 문제가 실제 흐름에 등장해야 합니다. |
+| Transactional Outbox | `Accepted` | #80의 MySQL 비교와 실제 JVM crash evidence에 따라 ADR-0007에서 선택했습니다. Production 구현은 후속 M3 Issue가 소유합니다. |
 | Kafka | `Deferred` | 단순한 DB 기반 처리나 애플리케이션 내부 이벤트로 충족할 수 없는 전달량, 소비자 분리 또는 보존 요구가 측정되어야 합니다. |
 | Redis | `Deferred` | DB만으로 충족하지 못하는 지연·부하·분산 조정 문제가 측정되어야 하며 캐시 정합성 비용을 비교해야 합니다. |
 | Observability stack | `Deferred` | 서비스 수준 목표와 추적할 실패·지연 신호가 정의된 뒤 필요한 metrics, logs, traces 범위를 결정합니다. |

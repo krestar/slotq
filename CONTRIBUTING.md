@@ -74,7 +74,7 @@ scope는 변경 책임이 드러나는 실제 영역을 사용합니다. 제목 
 
 ## 로컬 검증
 
-Backend 개발에는 JDK 21이 필요합니다. 별도의 Gradle 설치 없이 `backend/`의 Gradle Wrapper를 사용합니다.
+Backend 개발에는 JDK 25가 필요합니다. 별도의 Gradle 설치 없이 `backend/`의 Gradle Wrapper를 사용합니다.
 
 Windows PowerShell:
 
@@ -94,7 +94,7 @@ cd backend
 java -jar build/libs/slotq-0.0.1-SNAPSHOT.jar
 ```
 
-Backend 기준선은 Java 21 LTS, Spring Boot 4.1.1 GA, Gradle Wrapper 9.7.1입니다. Spring Boot 4.1.1은 Java 21과 Gradle 9.x를 공식 지원하며, Wrapper로 로컬과 CI의 Gradle 버전 및 실행 진입점을 통일합니다.
+Backend 기준선은 Java 25 LTS, Spring Boot 4.1.1 GA, Gradle Wrapper 9.7.1입니다. Java 25 기준은 ADR-0004와 Backend Gradle toolchain에 맞추며, Wrapper로 로컬과 CI의 Gradle 버전 및 실행 진입점을 통일합니다.
 
 Frontend 개발에는 Node.js 24 LTS와 npm 11이 필요합니다.
 

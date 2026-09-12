@@ -39,3 +39,51 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.register('eventExperiment', JavaExec) {
+    group = 'verification'
+    description = 'Compares test-only event boundaries on MySQL 8.4, including child JVM crashes.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.events.EventExperimentRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.events.gradleVersion', gradle.gradleVersion
+    if (project.hasProperty('output')) {
+        systemProperty 'slotq.events.output', project.property('output')
+    }
+}
+
+tasks.register('eventProcessRecovery', JavaExec) {
+    group = 'verification'
+    description = 'Runs the production event delivery process crash/restart recovery matrix on MySQL 8.4.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.events.EventProcessRecoveryRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.events.gradleVersion', gradle.gradleVersion
+    if (project.hasProperty('output')) {
+        systemProperty 'slotq.events.recovery.output', project.property('output')
+    }
+    if (project.hasProperty('runId')) {
+        systemProperty 'slotq.events.recovery.runId', project.property('runId')
+    }
+    if (project.hasProperty('only')) {
+        systemProperty 'slotq.events.recovery.only', project.property('only')
+    }
+}
+
+tasks.register('concurrencyBaseline', JavaExec) {
+    group = 'verification'
+    description = 'Runs the MySQL 8.4 Product HOLD concurrency baseline.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.concurrency.ConcurrencyBaselineRunner'
+
+    [
+        'clients', 'iterations', 'seed', 'partySize', 'holdDuration', 'timeout',
+        'output', 'strategy', 'hostCpuModel', 'hostStorage', 'containerLimits',
+        'networkCondition'
+    ].each { key ->
+        if (project.hasProperty(key)) {
+            systemProperty "slotq.baseline.${key}", project.property(key)
+        }
+    }
+    systemProperty 'slotq.baseline.gradleVersion', gradle.gradleVersion
+}
