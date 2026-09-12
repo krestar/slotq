@@ -14,8 +14,9 @@ effect와 receipt, delivery `DONE`은 하나의 transaction에서 전체 commit 
 effect/DONE 뒤 어떤 durable 상태도 바꾸지 못했다. 세 claim crash는 `CRASH_EXHAUSTED`로 끝났고,
 trusted replay는 lifetime attempt와 identity, append-only audit을 유지한 새 cycle에서 수렴했다.
 
-MySQL pause 중 실행된 child는 memory-only 상태를 남기지 못했고 같은 container를 unpause한 뒤 기존
-durable claim에서 회복했다. batch 3보다 큰 8개 backlog도 process restart 뒤 전부 `DONE`으로
+MySQL pause 전에 준비된 child는 production `runCycle()`의 DB access failure를 실제로 관측했고
+memory-only 상태를 남기지 않았다. 같은 container를 unpause한 뒤 기존 durable claim에서 회복했다.
+batch 3보다 큰 8개 backlog도 process restart 뒤 전부 `DONE`으로
 drain됐으며 effect/receipt는 logical target마다 하나였다.
 
 ## 적용 범위와 한계

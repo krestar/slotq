@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -59,6 +61,7 @@ public final class EventProcessRecoveryRunner {
     private static final int EFFECT_CRASH_EXIT = 87;
     private static final int COMMIT_UNKNOWN_EXIT = 88;
     private static final int BACKLOG_EXIT = 89;
+    private static final int DATABASE_OUTAGE_EXIT = 90;
     private static final int BACKLOG_SIZE = 8;
     private static final int BATCH_SIZE = 3;
 
@@ -254,22 +257,38 @@ public final class EventProcessRecoveryRunner {
         child(mysql, "SEED", "db-unavailable", "1").expect(0);
         child(mysql, "CLAIM_HALT", "db-unavailable").expect(CRASH_EXIT);
         Map<String, Object> beforeOutage = db.snapshot();
+        Path ready = Files.createTempFile("slotq-db-outage-ready-", ".gate");
+        Path release = Files.createTempFile("slotq-db-outage-release-", ".gate");
+        Path failure = Files.createTempFile("slotq-db-outage-failure-", ".txt");
+        Files.deleteIfExists(ready);
+        Files.deleteIfExists(release);
+        Files.deleteIfExists(failure);
         RunningChild unavailable = null;
         boolean paused = false;
-        boolean forced;
         int exit;
+        String failureType;
         try {
+            unavailable = startChild(mysql, "WAIT_FOR_DATABASE_OUTAGE", "db-unavailable",
+                ready.toString(), release.toString(), failure.toString());
+            awaitFile(ready, Duration.ofSeconds(30));
             DockerClientFactory.instance().client().pauseContainerCmd(mysql.getContainerId()).exec();
             paused = true;
-            unavailable = startChild(mysql, "DRAIN", "db-unavailable");
-            Thread.sleep(1500);
-            forced = unavailable.isAlive();
-            exit = unavailable.terminate();
+            Files.createFile(release);
+            exit = unavailable.await(Duration.ofSeconds(30));
+            require(exit == DATABASE_OUTAGE_EXIT,
+                "worker did not terminate after an observed production DB access failure: " + unavailable.log());
+            require(Files.isRegularFile(failure),
+                "worker did not preserve the observed production DB access failure");
+            failureType = Files.readString(failure).strip();
+            require(!failureType.isBlank(), "worker DB access failure type is missing");
         } finally {
             if (paused) {
                 DockerClientFactory.instance().client().unpauseContainerCmd(mysql.getContainerId()).exec();
             }
             if (unavailable != null) unavailable.close();
+            Files.deleteIfExists(ready);
+            Files.deleteIfExists(release);
+            Files.deleteIfExists(failure);
         }
         Map<String, Object> afterOutage = db.snapshot();
         require(db.processing() == 1 && db.attempts() == 1 && db.effects() == 0 && db.receipts() == 0,
@@ -280,10 +299,17 @@ public final class EventProcessRecoveryRunner {
         require(db.done() == 1 && db.attempts() == 2 && db.effects() == 1 && db.receipts() == 1,
             "same MySQL state did not recover after temporary unavailability");
         cases.add(caseRow("DATABASE_UNAVAILABLE_AND_RECOVERY",
-            "committed PROCESSING claim while MySQL container is paused",
-            forced ? "parent destroyForcibly during DB outage" : "child exit during DB connection failure",
+            "ready child enters production runCycle() while MySQL container is paused",
+            "observed DB access failure then Runtime.halt",
             exit, afterOutage, recovered,
-            Map.of("beforeOutage", beforeOutage)));
+            Map.of(
+                "beforeOutage", beforeOutage,
+                "databaseOutageProbe", Map.of(
+                    "contextReadyBeforePause", true,
+                    "workerEntryPoint", "EventDeliveryWorker.runCycle",
+                    "databaseAccessFailureObserved", true,
+                    "failureType", failureType
+                ))));
     }
 
     private static void backlogDrain(MySQLContainer mysql, RecoveryDatabase db,
@@ -338,6 +364,22 @@ public final class EventProcessRecoveryRunner {
                     Files.createFile(ready);
                     awaitFile(release, Duration.ofSeconds(60));
                     worker.process(claim);
+                }
+                case "WAIT_FOR_DATABASE_OUTAGE" -> {
+                    Path ready = Path.of(args[2]);
+                    Path release = Path.of(args[3]);
+                    Path failure = Path.of(args[4]);
+                    Files.createFile(ready);
+                    awaitFile(release, Duration.ofSeconds(60));
+                    try {
+                        worker.runCycle();
+                    } catch (RuntimeException outage) {
+                        String failureType = databaseFailureType(outage);
+                        if (failureType == null) throw outage;
+                        Files.writeString(failure, failureType);
+                        Runtime.getRuntime().halt(DATABASE_OUTAGE_EXIT);
+                    }
+                    throw new IllegalStateException("EventDeliveryWorker completed while MySQL was unavailable");
                 }
                 case "REPLAY_DRAIN" -> {
                     context.getBean(EventReplayService.class).replay(SystemPrincipal.INSTANCE, firstKey(db),
@@ -580,8 +622,9 @@ public final class EventProcessRecoveryRunner {
             effect/DONE 뒤 어떤 durable 상태도 바꾸지 못했다. 세 claim crash는 `CRASH_EXHAUSTED`로 끝났고,
             trusted replay는 lifetime attempt와 identity, append-only audit을 유지한 새 cycle에서 수렴했다.
 
-            MySQL pause 중 실행된 child는 memory-only 상태를 남기지 못했고 같은 container를 unpause한 뒤 기존
-            durable claim에서 회복했다. batch 3보다 큰 8개 backlog도 process restart 뒤 전부 `DONE`으로
+            MySQL pause 전에 준비된 child는 production `runCycle()`의 DB access failure를 실제로 관측했고
+            memory-only 상태를 남기지 않았다. 같은 container를 unpause한 뒤 기존 durable claim에서 회복했다.
+            batch 3보다 큰 8개 backlog도 process restart 뒤 전부 `DONE`으로
             drain됐으며 effect/receipt는 logical target마다 하나였다.
 
             ## 적용 범위와 한계
@@ -614,6 +657,17 @@ public final class EventProcessRecoveryRunner {
         String value = System.getenv(name);
         if (value == null || value.isBlank()) throw new IllegalStateException("Missing child environment: " + name);
         return value;
+    }
+
+    private static String databaseFailureType(Throwable failure) {
+        Throwable current = failure;
+        while (current != null) {
+            if (current instanceof SQLException || current instanceof DataAccessException) {
+                return current.getClass().getName();
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private static void require(boolean condition, String message) {

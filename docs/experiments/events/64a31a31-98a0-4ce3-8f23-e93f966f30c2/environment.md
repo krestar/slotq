@@ -1,8 +1,8 @@
 # Event delivery process recovery environment
 
 - Run ID: `64a31a31-98a0-4ce3-8f23-e93f966f30c2`
-- Revision: `5687dfda3c12abd42b6b7ffec717396194916d21`
-- Branch: `chore/event-delivery-process-recovery`
+- Revision: `294a35d510e69d6029a27c10435d28463bc99fba`
+- Branch: `fix/event-db-outage-evidence`
 - Dirty at run start: `false`
 - Java: `25.0.4.1+1-LTS`
 - Spring Boot: `4.1.1`
