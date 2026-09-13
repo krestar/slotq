@@ -12,6 +12,10 @@ import com.slotq.booking.application.ProductApiException;
 import com.slotq.booking.application.SlotInventoryConflictException;
 import com.slotq.booking.application.SlotInventoryNotAllowedException;
 import com.slotq.management.application.ManagementValidationException;
+import com.slotq.waitlist.application.WaitlistDemandNotAllowedException;
+import com.slotq.waitlist.application.WaitlistIdempotencyKeyReusedException;
+import com.slotq.waitlist.application.WaitlistTransitionNotAllowedException;
+import com.slotq.waitlist.application.WaitlistValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.http.HttpStatus;
@@ -82,6 +86,47 @@ class ProductApiExceptionHandler {
             request.getRequestURI(),
             exception.fieldErrors()
         ));
+    }
+
+    @ExceptionHandler(WaitlistValidationException.class)
+    ResponseEntity<ApiProblem> waitlistValidation(
+        WaitlistValidationException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.validation(
+            "One or more request fields or headers are invalid.",
+            request.getRequestURI(), exception.fieldErrors()
+        ));
+    }
+
+    @ExceptionHandler(WaitlistDemandNotAllowedException.class)
+    ResponseEntity<ApiProblem> waitlistDemandNotAllowed(
+        WaitlistDemandNotAllowedException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.of(409, "Waitlist demand not allowed",
+            "The selected time window cannot accept this waitlist demand.",
+            request.getRequestURI(), "WAITLIST_DEMAND_NOT_ALLOWED"));
+    }
+
+    @ExceptionHandler(WaitlistTransitionNotAllowedException.class)
+    ResponseEntity<ApiProblem> waitlistTransitionNotAllowed(
+        WaitlistTransitionNotAllowedException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.of(409, "Waitlist transition not allowed",
+            "The requested waitlist entry transition is not allowed.",
+            request.getRequestURI(), "WAITLIST_TRANSITION_NOT_ALLOWED"));
+    }
+
+    @ExceptionHandler(WaitlistIdempotencyKeyReusedException.class)
+    ResponseEntity<ApiProblem> waitlistIdempotencyReused(
+        WaitlistIdempotencyKeyReusedException exception,
+        HttpServletRequest request
+    ) {
+        return problem(ApiProblem.of(409, "Idempotency key reused",
+            "The idempotency key was already used for a different waitlist registration request.",
+            request.getRequestURI(), "IDEMPOTENCY_KEY_REUSED"));
     }
 
     @ExceptionHandler(SlotInventoryConflictException.class)

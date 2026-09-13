@@ -70,3 +70,16 @@ automatic retention/cleanup은 없으며 기존 HOLD idempotency retention과 �
 V9 rollback은 event·target·recovery 이력을 잃을 수 있으므로 table 삭제 대신 backup 복원 또는
 상위 version의 forward-fix로 처리한다. 상세 runtime 설정과 후속 ownership은
 [Event Delivery](event-delivery.md)에 기록한다.
+
+## V10 Waitlist Registration
+
+`V10__create_waitlist_registration.sql`은 normalized Demand, WaitlistEntry와 등록 요청 결과를
+추가한다. Demand identity는 `(tenant, venue, startsAt, endsAt, partySize)`이며 Demand row는
+Queue 전체가 아닌 같은 Customer 수요의 등록·취소만 직렬화하는 좁은 경계다.
+
+stored `WAITING`/`OFFERED`만 generated active-membership key에 참여하므로 Customer와 Demand당
+활성 Entry를 하나로 제한하면서 terminal 이후 새 Entry를 허용한다. 등록 요청은 tenant,
+Customer, UUID key scope와 원본 Venue/Slot/partySize fingerprint, 최초 Entry/status를 보존한다.
+Demand/Entry/result는 같은 transaction에서 commit 또는 rollback되며 자동 cleanup은 없다.
+Entry, 원본 Slot과 Customer 참조는 scoped foreign key로 보호한다. V10 rollback은 Queue 및
+response-loss 복구 이력을 잃으므로 production에서는 상위 migration으로 처리한다.

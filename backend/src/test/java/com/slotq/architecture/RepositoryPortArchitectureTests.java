@@ -27,6 +27,7 @@ import com.slotq.venue.application.VenueRepository;
 import com.slotq.venue.domain.Resource;
 import com.slotq.venue.domain.Venue;
 import com.slotq.venue.domain.VenueId;
+import com.slotq.waitlist.domain.WaitlistEntry;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +39,8 @@ class RepositoryPortArchitectureTests {
         Venue.class,
         Resource.class,
         SlotInventory.class,
-        Reservation.class
+        Reservation.class,
+        WaitlistEntry.class
     );
 
     private static final Set<String> AGGREGATE_WRITE_METHODS = Set.of(
