@@ -248,6 +248,14 @@ Promotional HOLD 생성은 기존 HOLD와 같은 Slot row를 잠근 뒤 current-
 transaction에 참여해도 capacity 조회는 locking current read를 사용하며 JPA 1차 cache의
 Reservation/Allocation을 재사용하지 않고 JDBC locking current read로 재구성해 판단한다.
 
+생성 적격성과 적용 policy도 Slot 획득 뒤 일반 JPA read를 재사용하지 않는다. 잠근 Slot을
+driving row로 한 JDBC `STRAIGHT_JOIN` query에서 해당 Tenant, Venue, Resource와 최신 Booking
+Policy만 shared current read한다. Tenant/Venue/Policy는 기존 configuration 경로와 같은 순서로
+기다린다. Slot 생성의 기존 `Resource → overlap Slot`과 역방향 대기를 만들 수 있는 Resource
+lock만 `NOWAIT`로 획득하며, 이 경합은 business refusal가 아니라 기존 system failure로 남긴다.
+따라서 committed `INACTIVE` Resource/Venue와 최신 policy를 반영하면서 global configuration이나
+다른 Resource/Slot을 잠그지 않는다.
+
 Accept는 `Slot → Entry → Offer → Reservation`으로 capacity 획득 경계에 참여한다. 생성은
 `Slot → Entry → 새 Reservation/Allocation → 새 Offer`이며, #94 등록 경로의 기존
 `Slot → Demand → Entry`와 방향이 같다. Reject, Offer expiry와 backing reconciliation은

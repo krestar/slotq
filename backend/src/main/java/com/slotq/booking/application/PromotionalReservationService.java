@@ -11,14 +11,9 @@ import com.slotq.booking.domain.Reservation;
 import com.slotq.booking.domain.ReservationId;
 import com.slotq.booking.domain.ReservationState;
 import com.slotq.booking.domain.SlotInventory;
-import com.slotq.tenancy.application.TenantRepository;
-import com.slotq.tenancy.domain.Tenant;
 import com.slotq.tenancy.domain.TenantStatus;
-import com.slotq.venue.application.ResourceRepository;
-import com.slotq.venue.application.VenueRepository;
 import com.slotq.venue.domain.Resource;
 import com.slotq.venue.domain.ResourceStatus;
-import com.slotq.venue.domain.Venue;
 import com.slotq.venue.domain.VenueStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,22 +23,16 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
 
     private final ReservationRepository reservations;
     private final SlotInventoryRepository slots;
-    private final TenantRepository tenants;
-    private final VenueRepository venues;
-    private final ResourceRepository resources;
+    private final PromotionalReservationContextQuery contexts;
 
     PromotionalReservationService(
         ReservationRepository reservations,
         SlotInventoryRepository slots,
-        TenantRepository tenants,
-        VenueRepository venues,
-        ResourceRepository resources
+        PromotionalReservationContextQuery contexts
     ) {
         this.reservations = reservations;
         this.slots = slots;
-        this.tenants = tenants;
-        this.venues = venues;
-        this.resources = resources;
+        this.contexts = contexts;
     }
 
     @Override
@@ -78,12 +67,11 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
             return new CreateResult(CreateOutcome.EXISTING, view(existing, slot.endsAt()));
         }
 
-        Tenant tenant = tenants.findById(slot.tenantId()).orElseThrow(ResourceNotFoundException::new);
-        Venue venue = venues.find(slot.tenantId(), slot.venueId())
-            .orElseThrow(ResourceNotFoundException::new);
-        Resource resource = resources.find(slot.tenantId(), slot.venueId(), slot.resourceId())
-            .orElseThrow(ResourceNotFoundException::new);
-        if (tenant.status() != TenantStatus.ACTIVE || venue.status() != VenueStatus.ACTIVE
+        PromotionalReservationContextQuery.Context context = contexts.findCurrent(
+            slot.tenantId(), slot.venueId(), slot.resourceId(), slot.id()
+        ).orElseThrow(() -> new IllegalStateException("Promotional Reservation context is missing"));
+        Resource resource = context.resource();
+        if (context.tenantStatus() != TenantStatus.ACTIVE || context.venueStatus() != VenueStatus.ACTIVE
             || resource.status() != ResourceStatus.ACTIVE
             || command.partySize() > resource.seatingCapacity()
             || !command.commandNow().isBefore(slot.startsAt())) {
@@ -99,7 +87,7 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
         Reservation reservation = Reservation.promotionalHold(
             ReservationId.newId(), CapacityAllocationId.newId(), slot.tenantId(), slot.venueId(),
             resource, slot, command.customerPrincipalId(), new PartySize(command.partySize()),
-            venue.currentPolicy().applyTo(slot.startsAt(), commandClock), commandClock,
+            context.currentPolicy().applyTo(slot.startsAt(), commandClock), commandClock,
             command.promotionalRequestId()
         );
         reservations.save(reservation);

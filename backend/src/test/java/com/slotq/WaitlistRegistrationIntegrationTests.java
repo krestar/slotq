@@ -740,6 +740,92 @@ class WaitlistRegistrationIntegrationTests {
     }
 
     @Test
+    void outerRepeatableReadRefusesCommittedInactiveResourceWithoutPoisoningCallerTransaction() {
+        Fixture fixture = fixture(4, null, "2026-09-13T11:00:00Z", "UTC");
+        String entryId;
+        try {
+            entryId = registerEntry(fixture);
+        } catch (Exception failure) {
+            throw new IllegalStateException(failure);
+        }
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+
+        transaction.executeWithoutResult(status -> {
+            assertThat(resourceUseCase.getResource(
+                fixture.tenant().id(), fixture.venue().id(), fixture.firstSlot().resourceId()
+            ).status()).isEqualTo(ResourceStatus.ACTIVE);
+            try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+                Future<ResourceStatus> update = executor.submit(() -> resourceUseCase.updateResource(
+                    new ResourceUseCase.UpdateResource(
+                        fixture.tenant().id(), fixture.venue().id(),
+                        fixture.firstSlot().resourceId(), "First", 4, ResourceStatus.INACTIVE
+                    )
+                ).status());
+                assertThat(update.get(10, TimeUnit.SECONDS)).isEqualTo(ResourceStatus.INACTIVE);
+            } catch (Exception failure) {
+                throw new IllegalStateException(failure);
+            }
+
+            WaitlistOfferUseCase.TargetResult result = waitlistOffers.createTarget(
+                SystemPrincipal.INSTANCE, fixture.venue().id(),
+                new WaitlistEntryId(UUID.fromString(entryId)), fixture.firstSlot().id()
+            );
+            assertThat(result.outcome()).isEqualTo(WaitlistOfferUseCase.TargetOutcome.NOT_ELIGIBLE);
+            assertThat(status.isRollbackOnly()).isFalse();
+            assertThat(jdbc.update(
+                "UPDATE waitlist_entries SET joined_at = joined_at WHERE id = ?",
+                bytes(UUID.fromString(entryId))
+            )).isEqualTo(1);
+        });
+
+        assertThat(count("reservations", fixture.venue().id().value())).isZero();
+        assertThat(count("capacity_allocations", fixture.venue().id().value())).isZero();
+        assertThat(count("waitlist_offers", fixture.venue().id().value())).isZero();
+        assertThat(jdbc.queryForObject(
+            "SELECT state FROM waitlist_entries WHERE id = ?",
+            String.class, bytes(UUID.fromString(entryId))
+        )).isEqualTo("WAITING");
+    }
+
+    @Test
+    void outerRepeatableReadAppliesCommittedCurrentPolicyToPromotionalHold() {
+        Fixture fixture = fixture(4, null, "2026-09-13T11:00:00Z", "UTC");
+        String entryId;
+        try {
+            entryId = registerEntry(fixture);
+        } catch (Exception failure) {
+            throw new IllegalStateException(failure);
+        }
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+
+        transaction.executeWithoutResult(status -> {
+            assertThat(venueUseCase.getVenue(
+                fixture.tenant().id(), fixture.venue().id()
+            ).currentPolicy().version()).isEqualTo(1L);
+            try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+                Future<Long> update = executor.submit(() -> venueUseCase.updateBookingPolicy(
+                    new VenueConfigurationUseCase.UpdateBookingPolicy(
+                        fixture.tenant().id(), fixture.venue().id(),
+                        new BookingPolicyTerms(30, 17, 20, 10)
+                    )
+                ).version());
+                assertThat(update.get(10, TimeUnit.SECONDS)).isEqualTo(2L);
+            } catch (Exception failure) {
+                throw new IllegalStateException(failure);
+            }
+
+            WaitlistOfferUseCase.TargetResult result = waitlistOffers.createTarget(
+                SystemPrincipal.INSTANCE, fixture.venue().id(),
+                new WaitlistEntryId(UUID.fromString(entryId)), fixture.firstSlot().id()
+            );
+            assertThat(result.outcome()).isEqualTo(WaitlistOfferUseCase.TargetOutcome.CREATED);
+            assertThat(result.offer().reservation().appliedPolicyVersion()).isEqualTo(2L);
+            assertThat(result.offer().expiresAt()).isEqualTo(BASE_NOW.plusSeconds(17 * 60L));
+            assertThat(status.isRollbackOnly()).isFalse();
+        });
+    }
+
+    @Test
     void offerInsertFailureRollsBackReservationAllocationAndAllowsAnotherSlotRetry() throws Exception {
         Fixture fixture = fixture(4, 4, "2026-09-13T11:00:00Z", "UTC");
         String entryId = registerEntry(fixture);
