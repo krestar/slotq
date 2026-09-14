@@ -106,6 +106,20 @@ class JdbcWaitlistEntryRepository implements WaitlistEntryRepository {
     }
 
     @Override
+    public Optional<WaitlistEntry> find(VenueId venueId, WaitlistEntryId entryId) {
+        return queryOne(" WHERE entry.venue_id = ? AND entry.id = ?",
+            JdbcWaitlistDemandStore.bytes(venueId.value()),
+            JdbcWaitlistDemandStore.bytes(entryId.value()));
+    }
+
+    @Override
+    public Optional<WaitlistEntry> findForUpdate(VenueId venueId, WaitlistEntryId entryId) {
+        return queryOne(" WHERE entry.venue_id = ? AND entry.id = ? FOR UPDATE",
+            JdbcWaitlistDemandStore.bytes(venueId.value()),
+            JdbcWaitlistDemandStore.bytes(entryId.value()));
+    }
+
+    @Override
     public Optional<WaitlistEntry> findActiveForUpdate(
         TenantId tenantId,
         VenueId venueId,

@@ -24,6 +24,7 @@ import com.slotq.venue.domain.VenueId;
 import com.slotq.waitlist.domain.WaitlistEntry;
 import com.slotq.waitlist.domain.WaitlistEntryId;
 import com.slotq.waitlist.domain.WaitlistEntryState;
+import com.slotq.waitlist.domain.WaitlistOffer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,7 @@ class WaitlistService implements WaitlistUseCase {
     private final WaitlistDemandQuery demandQuery;
     private final AuthorizationUseCase authorization;
     private final Clock clock;
+    private final WaitlistOfferService offerService;
 
     WaitlistService(
         WaitlistCommandExecutor commandExecutor,
@@ -48,7 +50,8 @@ class WaitlistService implements WaitlistUseCase {
         WaitlistVenueQuery venueQuery,
         WaitlistDemandQuery demandQuery,
         AuthorizationUseCase authorization,
-        Clock clock
+        Clock clock,
+        WaitlistOfferService offerService
     ) {
         this.commandExecutor = commandExecutor;
         this.entryRepository = entryRepository;
@@ -57,6 +60,7 @@ class WaitlistService implements WaitlistUseCase {
         this.demandQuery = demandQuery;
         this.authorization = authorization;
         this.clock = clock;
+        this.offerService = offerService;
     }
 
     @Override
@@ -138,9 +142,26 @@ class WaitlistService implements WaitlistUseCase {
             venueId, principal.principalId(), entryId
         ).orElseThrow(ResourceNotFoundException::new);
         Instant commandNow = clock.instant();
-        WaitlistEntry cancelled = commandExecutor.cancel(
+        WaitlistCommandExecutor.CancelResult result = commandExecutor.cancel(
             venueId, principal.principalId(), routed, commandNow
         );
+        WaitlistEntry cancelled = result.entry();
+        if (result.outcome() == WaitlistCommandExecutor.CancelOutcome.OFFERED) {
+            WaitlistOffer offer = offerService.findOfferForEntry(cancelled);
+            WaitlistOfferCommandExecutor.ActionExecution declined =
+                offerService.cancelEntry(offer, commandNow);
+            cancelled = entryRepository.findOwned(venueId, principal.principalId(), entryId)
+                .orElseThrow(ResourceNotFoundException::new);
+            if (declined.outcome() == WaitlistOfferUseCase.CommandOutcome.OFFER_EXPIRED) {
+                throw new OfferExpiredException();
+            }
+            if (declined.outcome() == WaitlistOfferUseCase.CommandOutcome.TRANSITION_NOT_ALLOWED) {
+                throw new WaitlistTransitionNotAllowedException();
+            }
+            if (declined.outcome() == WaitlistOfferUseCase.CommandOutcome.CAPACITY_UNAVAILABLE) {
+                throw new IllegalStateException("Entry cancel cannot acquire capacity");
+            }
+        }
         WaitlistVenueQuery.VenueScope venue = requireVenue(venueId);
         return view(cancelled, clock.instant(), venue.timezone(), true);
     }
@@ -180,10 +201,7 @@ class WaitlistService implements WaitlistUseCase {
         ).entries();
         Instant observedAt = clock.instant();
         List<ManagementItem> items = pageItems(fetched, limit).stream().map(entry ->
-            new ManagementItem(
-                view(entry, observedAt, venue.timezone(), false),
-                slot == null ? null : slot.eligible(entry.demand().partySize())
-            )
+            managementItem(entry, observedAt, venue.timezone(), slot)
         ).toList();
         return new ManagementPage(
             items, nextCursor(fetched, limit, cursorScope), observedAt, venue.timezone()
@@ -200,13 +218,41 @@ class WaitlistService implements WaitlistUseCase {
         ZoneId timezone,
         boolean customer
     ) {
-        WaitlistEntryState state = entry.effectiveState(observedAt);
-        List<String> actions = customer && state == WaitlistEntryState.WAITING
+        WaitlistOfferService.EntryOffer entryOffer = offerService.entryOffer(entry, observedAt);
+        return view(entry, observedAt, timezone, customer, entryOffer);
+    }
+
+    private EntryView view(
+        WaitlistEntry entry,
+        Instant observedAt,
+        ZoneId timezone,
+        boolean customer,
+        WaitlistOfferService.EntryOffer entryOffer
+    ) {
+        WaitlistEntryState state = entryOffer == null
+            ? entry.effectiveState(observedAt) : entryOffer.entryState();
+        List<String> actions = customer
+            && (state == WaitlistEntryState.WAITING || state == WaitlistEntryState.OFFERED)
             ? List.of("CANCEL") : List.of();
         return new EntryView(
             entry.id().value(), entry.venueId().value(), entry.demand().startsAt(),
             entry.demand().endsAt(), entry.demand().partySize(), entry.joinedAt(), state,
-            observedAt, timezone, actions, null
+            observedAt, timezone, actions,
+            entryOffer == null ? null : entryOffer.offerId().value()
+        );
+    }
+
+    private ManagementItem managementItem(
+        WaitlistEntry entry, Instant observedAt, ZoneId timezone,
+        WaitlistDemandQuery.SlotTarget slot
+    ) {
+        WaitlistOfferService.EntryOffer offer = offerService.entryOffer(entry, observedAt);
+        return new ManagementItem(
+            view(entry, observedAt, timezone, false, offer),
+            slot == null ? null : slot.eligible(entry.demand().partySize()),
+            offer == null ? null : offer.offerState(),
+            offer == null ? null : offer.offerExpiresAt(),
+            offer == null ? null : offer.reservationId().value()
         );
     }
 

@@ -16,6 +16,8 @@ import com.slotq.waitlist.application.WaitlistDemandNotAllowedException;
 import com.slotq.waitlist.application.WaitlistIdempotencyKeyReusedException;
 import com.slotq.waitlist.application.WaitlistTransitionNotAllowedException;
 import com.slotq.waitlist.application.WaitlistValidationException;
+import com.slotq.waitlist.application.OfferExpiredException;
+import com.slotq.waitlist.application.OfferTransitionNotAllowedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.http.HttpStatus;
@@ -127,6 +129,24 @@ class ProductApiExceptionHandler {
         return problem(ApiProblem.of(409, "Idempotency key reused",
             "The idempotency key was already used for a different waitlist registration request.",
             request.getRequestURI(), "IDEMPOTENCY_KEY_REUSED"));
+    }
+
+    @ExceptionHandler(OfferExpiredException.class)
+    ResponseEntity<ApiProblem> offerExpired(
+        OfferExpiredException exception, HttpServletRequest request
+    ) {
+        return problem(ApiProblem.of(409, "Offer expired",
+            "The promotional hold backing this offer has expired.",
+            request.getRequestURI(), "OFFER_EXPIRED"));
+    }
+
+    @ExceptionHandler(OfferTransitionNotAllowedException.class)
+    ResponseEntity<ApiProblem> offerTransitionNotAllowed(
+        OfferTransitionNotAllowedException exception, HttpServletRequest request
+    ) {
+        return problem(ApiProblem.of(409, "Offer transition not allowed",
+            "The requested offer transition is not allowed.",
+            request.getRequestURI(), "OFFER_TRANSITION_NOT_ALLOWED"));
     }
 
     @ExceptionHandler(SlotInventoryConflictException.class)

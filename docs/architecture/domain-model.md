@@ -212,8 +212,9 @@ partySize <= Resource.seatingCapacity
 - Venue Policy가 바뀌어도 기존 Reservation의 적용 Deadline은 암묵적으로 바뀌지 않는다.
 - 같은 Idempotency Scope, Key, Request Fingerprint의 반복 Command는 최초 결과를
   반환하며, 다른 Fingerprint는 거부한다.
-- Lifecycle write는 대상 Reservation row를 transaction의 첫 read에서 잠그고 authoritative
-  current state와 시간 guard를 평가한 뒤 Allocation과 함께 저장한다.
+- Lifecycle write는 대상 Reservation의 authoritative current state와 시간 guard를 평가한 뒤
+  Allocation과 함께 저장한다. Capacity를 새로 확보하거나 HELD를 CONFIRMED로 만드는 경로는
+  #88의 Slot row를 먼저 잠그고, 그 밖의 해제 전이는 대상 Reservation row만 잠근다.
 
 ### 6.4 Waitlist와 Event invariant
 

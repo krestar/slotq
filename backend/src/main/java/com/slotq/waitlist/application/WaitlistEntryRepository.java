@@ -29,6 +29,10 @@ public interface WaitlistEntryRepository {
         WaitlistEntryId entryId
     );
 
+    Optional<WaitlistEntry> find(VenueId venueId, WaitlistEntryId entryId);
+
+    Optional<WaitlistEntry> findForUpdate(VenueId venueId, WaitlistEntryId entryId);
+
     Optional<WaitlistEntry> findActiveForUpdate(
         TenantId tenantId,
         VenueId venueId,

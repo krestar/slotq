@@ -239,3 +239,25 @@ CONFIRM write의 실제 SQLSTATE 45000 주입은 500과 HELD + active rollback�
 기존 실제 deadlock/rollback 검증을 유지한다. 기존 #16 same-slot HOLD/due replacement,
 #70 confirm/expiry/equality/expiry rollback, idempotency, authorization과 API failure 계약도
 focused regression으로 함께 검증한다. 성능 수치나 M3 종료 상태를 이 보정에서 갱신하지 않는다.
+
+## #95 Promotional HOLD와 Offer 결합 경계
+
+Promotional HOLD 생성은 기존 HOLD와 같은 Slot row를 잠근 뒤 current-read capacity predicate를
+사용한다. 그 다음 지정 Entry를 잠그고 Reservation/Allocation, Offer, Entry `OFFERED` 전이를
+같은 physical transaction에 저장한다. 이미 일반 read가 실행된 outer `REPEATABLE-READ`
+transaction에 참여해도 capacity 조회는 locking current read를 사용하며 JPA 1차 cache의
+Reservation/Allocation을 재사용하지 않고 JDBC locking current read로 재구성해 판단한다.
+
+Accept는 `Slot → Entry → Offer → Reservation`으로 capacity 획득 경계에 참여한다. 생성은
+`Slot → Entry → 새 Reservation/Allocation → 새 Offer`이며, #94 등록 경로의 기존
+`Slot → Demand → Entry`와 방향이 같다. Reject, Offer expiry와 backing reconciliation은
+capacity를 새로 얻지 않으므로 `Entry → Offer → Reservation`만 잠근다. 기존 ordinary
+cancel/expiry는 Reservation-only이고 Booking은 Waitlist type이나 repository를 참조하지 않는다.
+따라서 새 경로는 기존 `Reservation → Slot` 또는 `Entry → Slot` 역방향 간선을 만들지 않는다.
+
+Booking public internal boundary는 promotional request UUID, immutable fingerprint와
+`CREATED/EXISTING/NOT_ELIGIBLE/CAPACITY_UNAVAILABLE` 등 typed result를 반환한다. Expected
+refusal는 rollback 예외로 변환하지 않는다. Waitlist public service가 committed expiry/backing
+수렴 결과를 받은 뒤 HTTP `409`로 바꾸므로, caller transaction 참여와 rollback도 같은
+physical boundary를 따른다. Booking 소유 Reservation에는 promotional identity와 최초 CONFIRM
+증거만 내구성 있게 남기며 Customer HOLD Idempotency-Key나 Waitlist Offer ID와 합치지 않는다.

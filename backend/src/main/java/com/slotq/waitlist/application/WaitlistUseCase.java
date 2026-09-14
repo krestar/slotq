@@ -11,6 +11,7 @@ import com.slotq.booking.domain.SlotInventoryId;
 import com.slotq.venue.domain.VenueId;
 import com.slotq.waitlist.domain.WaitlistEntryId;
 import com.slotq.waitlist.domain.WaitlistEntryState;
+import com.slotq.waitlist.domain.WaitlistOfferState;
 
 public interface WaitlistUseCase {
 
@@ -96,7 +97,10 @@ public interface WaitlistUseCase {
         }
     }
 
-    record ManagementItem(EntryView entry, Boolean eligibleForSlot) { }
+    record ManagementItem(
+        EntryView entry, Boolean eligibleForSlot, WaitlistOfferState offerState,
+        Instant offerExpiresAt, UUID reservationId
+    ) { }
 
     record ManagementPage(
         List<ManagementItem> items,

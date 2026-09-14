@@ -199,6 +199,13 @@ class OptimisticConcurrencyExperimentConfiguration {
         }
 
         @Override
+        public Optional<Reservation> findPromotionalCurrent(
+            TenantId tenantId, java.util.UUID promotionalRequestId
+        ) {
+            return delegate.findPromotionalCurrent(tenantId, promotionalRequestId);
+        }
+
+        @Override
         public List<Reservation> findAll(
             TenantId tenantId,
             VenueId venueId,
@@ -231,6 +238,20 @@ class OptimisticConcurrencyExperimentConfiguration {
             java.time.Instant now
         ) {
             return delegate.existsOtherEffectiveCapacityConsumer(
+                tenantId, venueId, resourceId, slotInventoryId, excludedReservationId, now
+            );
+        }
+
+        @Override
+        public boolean existsEffectiveCapacityConsumerCurrent(
+            TenantId tenantId,
+            VenueId venueId,
+            ResourceId resourceId,
+            SlotInventoryId slotInventoryId,
+            ReservationId excludedReservationId,
+            java.time.Instant now
+        ) {
+            return delegate.existsEffectiveCapacityConsumerCurrent(
                 tenantId, venueId, resourceId, slotInventoryId, excludedReservationId, now
             );
         }

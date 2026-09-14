@@ -101,21 +101,23 @@ class WaitlistController {
     @PostMapping("/waitlist-entries/{entryId}/cancel")
     ResponseEntity<EntryResponse> cancel(
         @PathVariable UUID venueId, @PathVariable UUID entryId,
+        @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
         HttpServletRequest request,
         @AuthenticationPrincipal AuthenticatedPrincipal principal
     ) {
-        requireNoBody(request);
+        requireNoBodyOrKey(request, idempotencyKey);
         return ok(response(waitlist.cancel(
             new VenueId(venueId), new WaitlistEntryId(entryId), principal
         )));
     }
 
-    private void requireNoBody(HttpServletRequest request) {
+    private void requireNoBodyOrKey(HttpServletRequest request, String idempotencyKey) {
+        java.util.Map<String, String> errors = new java.util.LinkedHashMap<>();
+        if (idempotencyKey != null) errors.put("Idempotency-Key", "Idempotency-Key is not allowed.");
         if (request.getContentLengthLong() > 0 || request.getHeader("Transfer-Encoding") != null) {
-            throw new WaitlistValidationException(java.util.Map.of(
-                "body", "A request body is not allowed."
-            ));
+            errors.put("body", "A request body is not allowed.");
         }
+        if (!errors.isEmpty()) throw new WaitlistValidationException(errors);
     }
 
     private EntryResponse response(WaitlistUseCase.EntryView view) {

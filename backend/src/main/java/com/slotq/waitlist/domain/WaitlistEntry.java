@@ -71,6 +71,41 @@ public final class WaitlistEntry {
         state = WaitlistEntryState.CANCELLED;
     }
 
+    public void offer() {
+        requireState(WaitlistEntryState.WAITING, WaitlistEntryState.OFFERED);
+        state = WaitlistEntryState.OFFERED;
+    }
+
+    public void fulfill() {
+        if (state == WaitlistEntryState.FULFILLED) {
+            return;
+        }
+        requireState(WaitlistEntryState.OFFERED, WaitlistEntryState.FULFILLED);
+        state = WaitlistEntryState.FULFILLED;
+    }
+
+    public void decline() {
+        if (state == WaitlistEntryState.DECLINED) {
+            return;
+        }
+        requireState(WaitlistEntryState.OFFERED, WaitlistEntryState.DECLINED);
+        state = WaitlistEntryState.DECLINED;
+    }
+
+    public void expireOffer() {
+        if (state == WaitlistEntryState.EXPIRED) {
+            return;
+        }
+        requireState(WaitlistEntryState.OFFERED, WaitlistEntryState.EXPIRED);
+        state = WaitlistEntryState.EXPIRED;
+    }
+
+    private void requireState(WaitlistEntryState required, WaitlistEntryState target) {
+        if (state != required) {
+            throw new IllegalStateException("Waitlist entry cannot transition from " + state + " to " + target);
+        }
+    }
+
     public WaitlistEntryId id() { return id; }
     public TenantId tenantId() { return tenantId; }
     public VenueId venueId() { return venueId; }
