@@ -3,6 +3,7 @@ package com.slotq.booking.application;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import com.slotq.booking.domain.Reservation;
 import com.slotq.booking.domain.ReservationId;
@@ -25,6 +26,8 @@ public interface ReservationRepository {
      */
     Optional<Reservation> findCurrent(VenueId venueId, ReservationId reservationId);
 
+    Optional<Reservation> findPromotionalCurrent(TenantId tenantId, UUID promotionalRequestId);
+
     List<Reservation> findAll(TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt);
 
     /**
@@ -44,6 +47,15 @@ public interface ReservationRepository {
      * The command must own the Slot lock before any consistent read in its transaction.
      */
     boolean existsOtherEffectiveCapacityConsumer(
+        TenantId tenantId,
+        VenueId venueId,
+        ResourceId resourceId,
+        SlotInventoryId slotInventoryId,
+        ReservationId excludedReservationId,
+        Instant now
+    );
+
+    boolean existsEffectiveCapacityConsumerCurrent(
         TenantId tenantId,
         VenueId venueId,
         ResourceId resourceId,

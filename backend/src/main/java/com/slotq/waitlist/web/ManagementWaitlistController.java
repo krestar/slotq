@@ -11,6 +11,7 @@ import com.slotq.booking.domain.SlotInventoryId;
 import com.slotq.venue.domain.VenueId;
 import com.slotq.waitlist.application.WaitlistUseCase;
 import com.slotq.waitlist.domain.WaitlistEntryState;
+import com.slotq.waitlist.domain.WaitlistOfferState;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,7 +52,8 @@ class ManagementWaitlistController {
         return new ItemResponse(
             view.id(), view.venueId(), view.startsAt(), view.endsAt(), view.partySize(),
             view.joinedAt(), view.state(), view.observedAt(), view.venueTimezone().getId(),
-            view.allowedActions(), view.offerId(), item.eligibleForSlot()
+            view.allowedActions(), view.offerId(), item.eligibleForSlot(), item.offerState(),
+            item.offerExpiresAt(), item.reservationId()
         );
     }
 
@@ -60,7 +62,8 @@ class ManagementWaitlistController {
         UUID id, UUID venueId, Instant startsAt, Instant endsAt, int partySize,
         Instant joinedAt, WaitlistEntryState state, Instant observedAt,
         String venueTimezone, List<String> allowedActions, UUID offerId,
-        Boolean eligibleForSlot
+        Boolean eligibleForSlot, WaitlistOfferState offerState,
+        Instant offerExpiresAt, UUID reservationId
     ) { }
 
     record CollectionResponse(

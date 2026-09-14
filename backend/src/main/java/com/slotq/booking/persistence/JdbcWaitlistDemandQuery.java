@@ -105,12 +105,12 @@ class JdbcWaitlistDemandQuery implements WaitlistDemandQuery {
         return row.getObject(column, LocalDateTime.class).toInstant(ZoneOffset.UTC);
     }
 
-    private static byte[] bytes(UUID value) {
+    static byte[] bytes(UUID value) {
         return ByteBuffer.allocate(16).putLong(value.getMostSignificantBits())
             .putLong(value.getLeastSignificantBits()).array();
     }
 
-    private static UUID uuid(byte[] value) {
+    static UUID uuid(byte[] value) {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         return new UUID(buffer.getLong(), buffer.getLong());
     }

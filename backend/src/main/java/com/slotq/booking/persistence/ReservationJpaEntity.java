@@ -43,13 +43,18 @@ class ReservationJpaEntity {
     private Instant cancelAllowedUntil;
     @Column(name = "no_show_eligible_at", nullable = false)
     private Instant noShowEligibleAt;
+    @Column(name = "promotional_request_id", columnDefinition = "BINARY(16)")
+    private UUID promotionalRequestId;
+    @Column(name = "promotional_confirmed", nullable = false)
+    private boolean promotionalConfirmed;
 
     protected ReservationJpaEntity() { }
 
     ReservationJpaEntity(UUID id, UUID tenantId, UUID venueId, UUID resourceId, UUID slotInventoryId,
                          UUID customerPrincipalId, int partySize, ReservationState state,
                          long appliedPolicyVersion, Instant startsAt, Instant expiresAt,
-                         Instant cancelAllowedUntil, Instant noShowEligibleAt) {
+                         Instant cancelAllowedUntil, Instant noShowEligibleAt,
+                         UUID promotionalRequestId, boolean promotionalConfirmed) {
         this.id = id;
         this.tenantId = tenantId;
         this.venueId = venueId;
@@ -63,6 +68,8 @@ class ReservationJpaEntity {
         this.expiresAt = expiresAt;
         this.cancelAllowedUntil = cancelAllowedUntil;
         this.noShowEligibleAt = noShowEligibleAt;
+        this.promotionalRequestId = promotionalRequestId;
+        this.promotionalConfirmed = promotionalConfirmed;
     }
 
     UUID id() { return id; }
@@ -78,4 +85,6 @@ class ReservationJpaEntity {
     Instant expiresAt() { return expiresAt; }
     Instant cancelAllowedUntil() { return cancelAllowedUntil; }
     Instant noShowEligibleAt() { return noShowEligibleAt; }
+    UUID promotionalRequestId() { return promotionalRequestId; }
+    boolean promotionalConfirmed() { return promotionalConfirmed; }
 }

@@ -20,17 +20,20 @@ class WaitlistCommandExecutor {
     private final WaitlistDemandStore demandStore;
     private final WaitlistEntryRepository entryRepository;
     private final WaitlistRegistrationStore registrationStore;
+    private final WaitlistOfferCommandExecutor offerExecutor;
 
     WaitlistCommandExecutor(
         WaitlistDemandQuery demandQuery,
         WaitlistDemandStore demandStore,
         WaitlistEntryRepository entryRepository,
-        WaitlistRegistrationStore registrationStore
+        WaitlistRegistrationStore registrationStore,
+        WaitlistOfferCommandExecutor offerExecutor
     ) {
         this.demandQuery = demandQuery;
         this.demandStore = demandStore;
         this.entryRepository = entryRepository;
         this.registrationStore = registrationStore;
+        this.offerExecutor = offerExecutor;
     }
 
     @Transactional
@@ -74,6 +77,13 @@ class WaitlistCommandExecutor {
         WaitlistEntry entry = entryRepository.findActiveForUpdate(
             target.tenantId(), venueId, customerPrincipalId, demand.id()
         ).orElse(null);
+        if (entry != null && entry.state() == com.slotq.waitlist.domain.WaitlistEntryState.OFFERED) {
+            WaitlistOfferCommandExecutor.TargetExecution reconciled =
+                offerExecutor.reconcileLocked(entry, commandNow);
+            if (reconciled.outcome() != WaitlistOfferUseCase.TargetOutcome.NOT_DUE) {
+                entry = null;
+            }
+        }
         int originalStatus;
         if (entry == null) {
             entry = WaitlistEntry.join(
@@ -92,7 +102,7 @@ class WaitlistCommandExecutor {
     }
 
     @Transactional
-    WaitlistEntry cancel(
+    CancelResult cancel(
         VenueId venueId,
         PrincipalId customerPrincipalId,
         WaitlistEntry routedEntry,
@@ -105,14 +115,21 @@ class WaitlistCommandExecutor {
         if (!current.demand().id().equals(routedEntry.demand().id())) {
             throw new ResourceNotFoundException();
         }
-        try {
-            current.cancel(commandNow);
-        } catch (IllegalStateException invalidTransition) {
+        if (current.state() == com.slotq.waitlist.domain.WaitlistEntryState.OFFERED) {
+            return new CancelResult(current, CancelOutcome.OFFERED);
+        }
+        if (current.state() == com.slotq.waitlist.domain.WaitlistEntryState.DECLINED) {
+            return new CancelResult(current, CancelOutcome.DECLINED);
+        }
+        try { current.cancel(commandNow); }
+        catch (IllegalStateException invalidTransition) {
             throw new WaitlistTransitionNotAllowedException();
         }
         entryRepository.updateState(venueId, current);
-        return current;
+        return new CancelResult(current, CancelOutcome.CANCELLED);
     }
 
     record Registration(WaitlistEntry entry, int originalStatus) { }
+    enum CancelOutcome { CANCELLED, OFFERED, DECLINED }
+    record CancelResult(WaitlistEntry entry, CancelOutcome outcome) { }
 }

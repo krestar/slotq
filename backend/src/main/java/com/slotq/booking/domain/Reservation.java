@@ -3,6 +3,7 @@ package com.slotq.booking.domain;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.UUID;
 
 import com.slotq.auth.domain.PrincipalId;
 import com.slotq.tenancy.domain.TenantId;
@@ -26,6 +27,8 @@ public final class Reservation {
     private final Instant cancelAllowedUntil;
     private final Instant noShowEligibleAt;
     private final CapacityAllocation allocation;
+    private final UUID promotionalRequestId;
+    private boolean promotionalConfirmed;
     private ReservationState state;
 
     private Reservation(
@@ -64,6 +67,8 @@ public final class Reservation {
         this.cancelAllowedUntil = deadlines.cancelAllowedUntil();
         this.noShowEligibleAt = deadlines.noShowEligibleAt();
         this.state = ReservationState.HELD;
+        this.promotionalRequestId = null;
+        this.promotionalConfirmed = false;
         this.allocation = new CapacityAllocation(
             allocationId,
             id,
@@ -88,7 +93,9 @@ public final class Reservation {
         Instant expiresAt,
         Instant cancelAllowedUntil,
         Instant noShowEligibleAt,
-        CapacityAllocation allocation
+        CapacityAllocation allocation,
+        UUID promotionalRequestId,
+        boolean promotionalConfirmed
     ) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.tenantId = Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -113,10 +120,13 @@ public final class Reservation {
         );
         this.noShowEligibleAt = Objects.requireNonNull(noShowEligibleAt, "noShowEligibleAt must not be null");
         this.allocation = Objects.requireNonNull(allocation, "allocation must not be null");
+        this.promotionalRequestId = promotionalRequestId;
+        this.promotionalConfirmed = promotionalConfirmed;
 
         validateStoredDeadlines();
         validateAllocationIdentity();
         validateStoredState();
+        validatePromotionalIdentity();
     }
 
     public static Reservation hold(
@@ -145,6 +155,33 @@ public final class Reservation {
         );
     }
 
+    public static Reservation promotionalHold(
+        ReservationId id,
+        CapacityAllocationId allocationId,
+        TenantId tenantId,
+        VenueId venueId,
+        Resource resource,
+        SlotInventory slotInventory,
+        PrincipalId customerPrincipalId,
+        PartySize partySize,
+        PolicyDeadlines deadlines,
+        Clock clock,
+        UUID promotionalRequestId
+    ) {
+        Reservation reservation = new Reservation(
+            id, allocationId, tenantId, venueId, resource, slotInventory,
+            customerPrincipalId, partySize, deadlines, clock
+        );
+        return new Reservation(
+            reservation.id, reservation.tenantId, reservation.venueId, reservation.resourceId,
+            reservation.slotInventoryId, reservation.customerPrincipalId, reservation.partySize,
+            reservation.state, reservation.appliedPolicyVersion, reservation.startsAt,
+            reservation.expiresAt, reservation.cancelAllowedUntil, reservation.noShowEligibleAt,
+            reservation.allocation, Objects.requireNonNull(promotionalRequestId,
+                "promotionalRequestId must not be null"), false
+        );
+    }
+
     public static Reservation reconstitute(
         ReservationId id,
         TenantId tenantId,
@@ -161,6 +198,31 @@ public final class Reservation {
         Instant noShowEligibleAt,
         CapacityAllocation allocation
     ) {
+        return reconstitute(
+            id, tenantId, venueId, resourceId, slotInventoryId, customerPrincipalId,
+            partySize, state, appliedPolicyVersion, startsAt, expiresAt,
+            cancelAllowedUntil, noShowEligibleAt, allocation, null, false
+        );
+    }
+
+    public static Reservation reconstitute(
+        ReservationId id,
+        TenantId tenantId,
+        VenueId venueId,
+        ResourceId resourceId,
+        SlotInventoryId slotInventoryId,
+        PrincipalId customerPrincipalId,
+        PartySize partySize,
+        ReservationState state,
+        long appliedPolicyVersion,
+        Instant startsAt,
+        Instant expiresAt,
+        Instant cancelAllowedUntil,
+        Instant noShowEligibleAt,
+        CapacityAllocation allocation,
+        UUID promotionalRequestId,
+        boolean promotionalConfirmed
+    ) {
         return new Reservation(
             id,
             tenantId,
@@ -175,7 +237,7 @@ public final class Reservation {
             expiresAt,
             cancelAllowedUntil,
             noShowEligibleAt,
-            allocation
+            allocation, promotionalRequestId, promotionalConfirmed
         );
     }
 
@@ -189,6 +251,9 @@ public final class Reservation {
             throw new IllegalStateException("Expired HOLD cannot be confirmed");
         }
         state = ReservationState.CONFIRMED;
+        if (promotionalRequestId != null) {
+            promotionalConfirmed = true;
+        }
     }
 
     public void expire(Clock clock) {
@@ -324,6 +389,12 @@ public final class Reservation {
         }
     }
 
+    private void validatePromotionalIdentity() {
+        if (promotionalConfirmed && promotionalRequestId == null) {
+            throw new IllegalArgumentException("Only promotional Reservations can preserve confirm evidence");
+        }
+    }
+
     private void requireState(ReservationState required, ReservationState target) {
         if (state != required) {
             throw forbidden(target);
@@ -393,4 +464,8 @@ public final class Reservation {
     public CapacityAllocation allocation() {
         return allocation;
     }
+
+    public UUID promotionalRequestId() { return promotionalRequestId; }
+
+    public boolean promotionalConfirmed() { return promotionalConfirmed; }
 }

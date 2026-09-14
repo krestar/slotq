@@ -83,3 +83,19 @@ Customer, UUID key scope와 원본 Venue/Slot/partySize fingerprint, 최초 Entr
 Demand/Entry/result는 같은 transaction에서 commit 또는 rollback되며 자동 cleanup은 없다.
 Entry, 원본 Slot과 Customer 참조는 scoped foreign key로 보호한다. V10 rollback은 Queue 및
 response-loss 복구 이력을 잃으므로 production에서는 상위 migration으로 처리한다.
+
+## V11 Waitlist Offer Lifecycle
+
+`V11__create_waitlist_offers.sql`은 promotional Reservation identity와 최초 CONFIRM 증거를
+Reservation에 추가하고, Entry별 Offer 생명주기를 저장하는 `waitlist_offers`를 추가한다.
+Offer, Entry, Reservation은 모두 Tenant/Venue scope 복합 외래키로 연결되며 Entry당 Offer와
+Reservation당 Offer는 각각 하나로 제한한다.
+
+promotional HOLD 생성 시 Reservation, CapacityAllocation, Offer와 Entry의 `OFFERED` 전이는 같은
+transaction에서 commit 또는 rollback한다. promotional request identity는 Entry ID이고 일반
+Customer HOLD의 Idempotency-Key namespace와 공유하지 않는다. `promotional_confirmed`는 최초
+CONFIRM 완료를 보존하는 durable evidence이며 이후 일반 Reservation cancel과 구분한다.
+
+V11 rollback은 활성 Offer와 수락 증거를 잃고 기존 Reservation column도 제거해야 하므로
+production에서는 migration을 되돌리지 않고 backup 복원 또는 상위 version의 forward-fix로
+처리한다.

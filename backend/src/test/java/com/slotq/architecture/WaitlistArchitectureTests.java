@@ -40,14 +40,12 @@ class WaitlistArchitectureTests {
     }
 
     @Test
-    void waitlistDoesNotReachIntoBookingPersistenceOrFutureOfferAndEventWork() throws Exception {
+    void waitlistUsesOnlyTheBookingPublicBoundaryAndDoesNotReachIntoPersistence() throws Exception {
         List<String> forbiddenReferences = List.of(
             "com/slotq/booking/persistence/",
-            "com/slotq/booking/domain/Reservation",
-            "com/slotq/booking/domain/CapacityAllocation",
-            "com/slotq/events/",
-            "WaitlistOffer",
-            "PromotionalHold"
+            "com/slotq/booking/domain/Reservation;",
+            "com/slotq/booking/domain/CapacityAllocation;",
+            "com/slotq/events/"
         );
         List<String> violations = new ArrayList<>();
         for (Path classFile : waitlistClasses()) {
