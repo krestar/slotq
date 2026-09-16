@@ -20,13 +20,16 @@ class ReservationCommandExecutor {
     private final ReservationRepository reservationRepository;
     private final SlotInventoryRepository slotRepository;
     private final ReservationTransitionPolicy transitionPolicy;
+    private final ReservationTransitionRecorder recorder;
 
     ReservationCommandExecutor(ReservationRepository reservationRepository,
                                SlotInventoryRepository slotRepository,
-                               ReservationTransitionPolicy transitionPolicy) {
+                               ReservationTransitionPolicy transitionPolicy,
+                               ReservationTransitionRecorder recorder) {
         this.reservationRepository = reservationRepository;
         this.slotRepository = slotRepository;
         this.transitionPolicy = transitionPolicy;
+        this.recorder = recorder;
     }
 
     @Transactional
@@ -46,6 +49,7 @@ class ReservationCommandExecutor {
             throw new ResourceNotFoundException();
         }
         Clock commandClock = Clock.fixed(now, ZoneOffset.UTC);
+        var before = ReservationTransitionRecorder.Before.capture(reservation);
 
         if (reservation.state() == targetState(command)) {
             return CommandResult.success(details(reservation, commandClock));
@@ -55,12 +59,12 @@ class ReservationCommandExecutor {
         }
         if (reservation.state() == ReservationState.HELD && !now.isBefore(reservation.expiresAt())) {
             reservation.expire(commandClock);
-            reservationRepository.save(reservation);
+            recorder.save(reservation, before, now);
             return CommandResult.expired(details(reservation, commandClock));
         }
 
         validateAndApply(reservation, command, commandClock, now);
-        reservationRepository.save(reservation);
+        recorder.save(reservation, before, now);
         return CommandResult.success(details(reservation, commandClock));
     }
 
@@ -68,6 +72,7 @@ class ReservationCommandExecutor {
     ReservationUseCase.ReservationDetails expire(VenueId venueId, ReservationId reservationId,
                                                   Instant now) {
         Reservation reservation = findReservation(venueId, reservationId);
+        var before = ReservationTransitionRecorder.Before.capture(reservation);
         Clock commandClock = Clock.fixed(now, ZoneOffset.UTC);
         if (reservation.state() == ReservationState.EXPIRED) {
             return details(reservation, commandClock);
@@ -76,7 +81,7 @@ class ReservationCommandExecutor {
             throw new ReservationTransitionNotAllowedException();
         }
         reservation.expire(commandClock);
-        reservationRepository.save(reservation);
+        recorder.save(reservation, before, now);
         return details(reservation, commandClock);
     }
 

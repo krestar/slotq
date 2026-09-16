@@ -24,15 +24,18 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
     private final ReservationRepository reservations;
     private final SlotInventoryRepository slots;
     private final PromotionalReservationContextQuery contexts;
+    private final ReservationTransitionRecorder recorder;
 
     PromotionalReservationService(
         ReservationRepository reservations,
         SlotInventoryRepository slots,
-        PromotionalReservationContextQuery contexts
+        PromotionalReservationContextQuery contexts,
+        ReservationTransitionRecorder recorder
     ) {
         this.reservations = reservations;
         this.slots = slots;
         this.contexts = contexts;
+        this.recorder = recorder;
     }
 
     @Override
@@ -105,6 +108,7 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
         Reservation reservation = reservations.findForUpdate(command.venueId(), command.reservationId())
             .orElseThrow(() -> new IllegalStateException("Promotional Reservation is missing"));
         requireIdentity(reservation, command.promotionalRequestId(), slot);
+        var before = ReservationTransitionRecorder.Before.capture(reservation);
         if (reservation.promotionalConfirmed()) {
             return new AcceptResult(AcceptOutcome.ALREADY_ACCEPTED, view(reservation, slot.endsAt()));
         }
@@ -114,7 +118,7 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
                 && !command.commandNow().isBefore(reservation.expiresAt()))) {
             if (reservation.state() == ReservationState.HELD) {
                 reservation.expire(commandClock);
-                reservations.save(reservation);
+                recorder.save(reservation, before, command.commandNow());
             }
             return new AcceptResult(AcceptOutcome.EXPIRED, view(reservation, slot.endsAt()));
         }
@@ -131,7 +135,7 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
             return new AcceptResult(AcceptOutcome.CAPACITY_UNAVAILABLE, view(reservation, slot.endsAt()));
         }
         reservation.confirm(commandClock);
-        reservations.save(reservation);
+        recorder.save(reservation, before, command.commandNow());
         return new AcceptResult(AcceptOutcome.ACCEPTED, view(reservation, slot.endsAt()));
     }
 
@@ -140,6 +144,7 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
     public ReleaseResult release(ReleaseCommand command) {
         Reservation reservation = reservations.findForUpdate(command.venueId(), command.reservationId())
             .orElseThrow(() -> new IllegalStateException("Promotional Reservation is missing"));
+        var before = ReservationTransitionRecorder.Before.capture(reservation);
         if (!command.promotionalRequestId().equals(reservation.promotionalRequestId())) {
             throw new IllegalStateException("Promotional Reservation identity does not match");
         }
@@ -154,7 +159,7 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
                 && !command.commandNow().isBefore(reservation.expiresAt()))) {
             if (reservation.state() == ReservationState.HELD) {
                 reservation.expire(commandClock);
-                reservations.save(reservation);
+                recorder.save(reservation, before, command.commandNow());
             }
             return new ReleaseResult(ReleaseOutcome.EXPIRED, view(reservation, slot.endsAt()));
         }
@@ -168,7 +173,7 @@ class PromotionalReservationService implements PromotionalReservationUseCase {
             return new ReleaseResult(ReleaseOutcome.NOT_DUE, view(reservation, slot.endsAt()));
         }
         reservation.cancel(commandClock);
-        reservations.save(reservation);
+        recorder.save(reservation, before, command.commandNow());
         return new ReleaseResult(ReleaseOutcome.RELEASED, view(reservation, slot.endsAt()));
     }
 

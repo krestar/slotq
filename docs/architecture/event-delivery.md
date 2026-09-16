@@ -3,7 +3,8 @@
 Issue [#84](https://github.com/krestar/slotq/issues/84)는
 [ADR-0007](../adr/0007-use-transactional-event-record-and-db-delivery.md)의 M3-WP2 production
 foundation이다. 같은 Product 배포, DataSource, `JpaTransactionManager`를 사용한다.
-Booking event와 실제 consumer는 아직 없으며 event scheduler의 기본값은 disabled다.
+Booking capacity release producer는 아래의 disabled checkpoint까지 구현됐다.
+실제 consumer는 아직 없으며 event scheduler의 기본값은 disabled다.
 
 ## Producer와 durable cutover
 
@@ -15,7 +16,57 @@ boundary counter, event record가 같은 물리 transaction에서 commit/rollbac
 Producer는 authoritative aggregate ownership에서 `TenantId`를 도출하고 `EventId.newId()`로
 별도의 server event identity를 한 번 생성한다. retry에도 같은 identity와 meaning을 사용한다.
 append를 `REQUIRES_NEW`, autocommit 또는 async 경로로 분리하면 안 된다. 실제 Booking JPA
-write와 append의 vertical-slice 검증은 M4 첫 producer가 다시 수행한다.
+write와 append의 물리 transaction 결합은 `BookingCapacityReleaseIntegrationTests`가 검증한다.
+
+### Booking capacity release producer — #96 첫 checkpoint
+
+`ReservationTransitionRecorder`는 ordinary 및 promotional Booking executor가 잠근
+Reservation/Allocation의 전이 전 값을 받고, 저장/flush 이후 실제 Allocation
+`active → inactive`일 때만 `booking.capacity-released` v1을 기록한다.
+public API, System expiry, Offer reject/expiry/reconcile에 별도 publisher를 두지 않는다.
+
+| 실제 저장 전이 | 기록 여부 |
+| --- | --- |
+| `HELD → CANCELLED`, `HELD → EXPIRED` | active Allocation을 해제한 경우 1건 |
+| `CONFIRMED → CANCELLED`, `CONFIRMED → NO_SHOW` | active Allocation을 해제한 경우 1건 |
+| `CHECKED_IN → COMPLETED` | active Allocation을 해제한 경우 1건 |
+| HOLD 생성, confirm, check-in, 동일 target 반복, GET, effective expiry만 관측 | 기록하지 않음 |
+| 실패/outer rollback | Booking 변경과 event/boundary 모두 남지 않음 |
+
+Envelope의 aggregate는 `Reservation`/Reservation ID이고 event ID는 별도의 server UUID다.
+Tenant는 잠근 Reservation과 Allocation의 검증된 ownership에서 도출한다. immutable Slot
+scope도 non-locking read로 대조하며, ordinary release에 Slot lock을 추가하지 않는다.
+payload는 `venueId`, `resourceId`, `slotInventoryId`, `fromState`, `toState`만 포함한다.
+`occurredAt`은 해당 command의 단일 `commandNow`이며 foundation이 UTC microsecond로 정규화한다.
+
+`slotq.waitlist.promotion.enabled=false`가 기본값이다. disabled이면 기존 Booking 동작만
+유지한다. enabled여도 `CapacityReleaseReadiness` 제공자가 없거나 ready가 아니면 release
+transaction을 실패시킨다. 이 checkpoint에는 production readiness 제공자, handler,
+registration bootstrap을 추가하지 않는다. 설정만으로 producer를 활성화할 수 없다.
+테스트에서만 readiness와 durable registration을 공급하며 worker는 실행하지 않는다.
+
+readiness와 별도로 `EventAppendService.appendForActiveRoute`는 기존 MANDATORY 경계 안에서
+`event_boundary`를 잠근 뒤 정확한 `waitlist.promotion` / `booking.capacity-released` / v1
+active route를 current-read한다. 등록 누락/비활성/불일치를 조용히 건너뛰지 않는다.
+route 검증·flush·append 실패를 caller가 catch해도 같은 outer transaction은 rollback-only다.
+일반 `append`의 기존 계약은 변경하지 않는다.
+
+lock 순서는 기존 business lock 뒤에 append fence만 덧붙인다.
+
+- ordinary release/expiry: Reservation/Allocation → `event_boundary` → active registration/event
+- ordinary confirm의 due expiry: Slot → Reservation/Allocation → append fence
+- Offer reject/reconcile: Entry → Offer → Reservation/Allocation → append fence
+- Offer accept의 due expiry: Slot → Entry → Offer → Reservation/Allocation → append fence
+
+fence는 outer commit까지 유지한다. 이후 #95의 Offer/Entry 저장은 이미 잠근 row를 갱신하며,
+그 단계의 실패도 Booking/event와 함께 rollback한다. registration lifecycle은 business row를
+잠그지 않는다. producer transaction 안에서 후보 선택이나 promotion을 실행하지 않는다.
+
+MySQL RR의 기존 promotional capacity locking scan은 조건 평가 중 due Booking row에
+대기할 수 있다. 이 producer는 scan이나 isolation을 바꾸지 않고, release가 Slot을 다시
+요청하지 않아 `Slot → Booking → append fence` 대기가 순환하지 않는 것을 검증한다.
+public Offer accept가 사전 조회에서 이미 만료를 관측하면 기존 reconcile 경로를 사용한다.
+Slot-first accept executor와 이 경로를 동일한 lock 경로로 간주하지 않는다.
 
 Append와 `EventRegistrationService.activate/deactivate`는 singleton `event_boundary`를
 `FOR UPDATE`로 잠그고 transaction 안에서 sequence를 증가시킨다. 잠금은 outer transaction

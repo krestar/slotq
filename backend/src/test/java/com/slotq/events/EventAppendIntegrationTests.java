@@ -73,6 +73,41 @@ class EventAppendIntegrationTests {
             .isInstanceOf(IllegalTransactionStateException.class);
         assertThatThrownBy(() -> append.append(null))
             .isInstanceOf(IllegalTransactionStateException.class);
+        assertThatThrownBy(() -> append.appendForActiveRoute(null, null))
+            .isInstanceOf(IllegalTransactionStateException.class);
+    }
+
+    @Test
+    void requiredRouteMustBeExactActiveAndItsFailureMarksCallerRollbackOnly() {
+        ConsumerRoute route = route();
+        EventEnvelope event = event(route.eventType(), "{}");
+        for (ConsumerRoute invalid : java.util.Arrays.asList(null, route,
+            new ConsumerRoute(route.consumerId(), "AnotherEvent", 1),
+            new ConsumerRoute(route.consumerId(), route.eventType(), 2))) {
+            long before = boundary();
+            UUID ownerId = UUID.randomUUID();
+            assertThatThrownBy(() -> transaction.executeWithoutResult(status -> {
+                insertOwner(ownerId);
+                assertThatThrownBy(() -> append.appendForActiveRoute(event, invalid))
+                    .isInstanceOf(RuntimeException.class);
+            })).isInstanceOf(UnexpectedRollbackException.class);
+            assertThat(ownerCount(ownerId)).isZero();
+            assertThat(eventCount(event.eventId())).isZero();
+            assertThat(boundary()).isEqualTo(before);
+        }
+        // A sibling version does not satisfy exact route admission.
+        UUID sibling = registrations.activate(new ConsumerRoute(route.consumerId(), route.eventType(), 2));
+        assertThatThrownBy(() -> transaction.execute(status -> append.appendForActiveRoute(event, route)))
+            .isInstanceOf(IllegalStateException.class);
+        UUID active = registrations.activate(route);
+        StoredEvent stored = transaction.execute(status -> append.appendForActiveRoute(event, route));
+        assertThat(transaction.<StoredEvent>execute(status -> append.appendForActiveRoute(event, route)))
+            .isEqualTo(stored);
+        registrations.deactivate(active);
+        assertThatThrownBy(() -> transaction.execute(status -> append.appendForActiveRoute(event, route)))
+            .isInstanceOf(IllegalStateException.class);
+        assertThat(eventCount(event.eventId())).isEqualTo(1);
+        registrations.deactivate(sibling);
     }
 
     @Test
