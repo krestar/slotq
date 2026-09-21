@@ -3,8 +3,9 @@
 Issue [#84](https://github.com/krestar/slotq/issues/84)는
 [ADR-0007](../adr/0007-use-transactional-event-record-and-db-delivery.md)의 M3-WP2 production
 foundation이다. 같은 Product 배포, DataSource, `JpaTransactionManager`를 사용한다.
-Booking capacity release producer는 아래의 disabled checkpoint까지 구현됐다.
-실제 consumer는 아직 없으며 event scheduler의 기본값은 disabled다.
+Booking capacity release producer와 두 실제 Waitlist promotion handler는 disabled checkpoint까지
+구현됐다. durable registration/readiness bootstrap은 후속 checkpoint이고 scheduler 기본값은 disabled다.
+실제 effect/receipt/notification과 application lock order는 [Waitlist Promotion](waitlist-promotion.md)을 따른다.
 
 ## Producer와 durable cutover
 
@@ -41,9 +42,9 @@ payload는 `venueId`, `resourceId`, `slotInventoryId`, `fromState`, `toState`만
 
 `slotq.waitlist.promotion.enabled=false`가 기본값이다. disabled이면 기존 Booking 동작만
 유지한다. enabled여도 `CapacityReleaseReadiness` 제공자가 없거나 ready가 아니면 release
-transaction을 실패시킨다. 이 checkpoint에는 production readiness 제공자, handler,
-registration bootstrap을 추가하지 않는다. 설정만으로 producer를 활성화할 수 없다.
-테스트에서만 readiness와 durable registration을 공급하며 worker는 실행하지 않는다.
+transaction을 실패시킨다. 첫 checkpoint에는 handler가 없었고 두 번째 checkpoint에서 실제 두 handler가
+추가됐다. production readiness 제공자/registration bootstrap은 아직 없으므로 설정만으로 producer를
+활성화할 수 없다. 테스트에서만 readiness와 durable registration을 공급해 실제 M3 worker를 검증한다.
 
 readiness와 별도로 `EventAppendService.appendForActiveRoute`는 기존 MANDATORY 경계 안에서
 `event_boundary`를 잠근 뒤 정확한 `waitlist.promotion` / `booking.capacity-released` / v1
@@ -143,6 +144,13 @@ handler에 무한 CPU loop, unbounded wait나 외부 I/O를 넣지 않으며 thr
 query timeout, 명시적 transient connection/resource failure만 남은 예산 안에서 재시도한다.
 constraint/schema/임의 programming exception은 `UNCLASSIFIED_FAILURE` DEAD다. diagnostic은
 stable code와 제한된 고정 문구만 저장하고 handler/SQL exception 원문은 저장하지 않는다.
+
+MySQL 1213/1205와 NOWAIT의 3572는 `DB_LOCK_TRANSIENT`다. #96 C3의 acyclicity는
+application-controlled inverse edge를 금지하며, 동일한 합법적 순서 아래의 InnoDB RR physical
+gap/next-key/insert-intention deadlock과 구분한다. 실제 trace로 분류하고 전자는 제거,
+후자는 위 bounded retry/전체 rollback/DEAD/replay 규칙으로 처리한다.
+[#95 baseline evidence](../experiments/booking-capacity-gap-lock-finding.md)는 opt-in 진단으로 유지한다.
+이 분류를 public Booking command에 자동 retry를 도입하는 근거로 사용하지 않는다.
 
 commit/rollback outcome unknown은 rollback으로 추측하지 않고 기존 durable claim을 유지한다.
 DB unavailable 시 memory retry loop 없이 현재 cycle이 끝나거나 실패하고 DB 복구 후 재개한다.

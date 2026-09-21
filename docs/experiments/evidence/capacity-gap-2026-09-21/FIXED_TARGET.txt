@@ -1,0 +1,87 @@
+MYSQL=8.4.11 isolation=REPEATABLE-READ
+scenario=FIXED_TARGET bothReadsBeforeInsert=true
+result=[Attempt[success=false, code=1213, message=Deadlock found when trying to get lock; try restarting transaction], Attempt[success=true, code=0, message=committed]]
+BEFORE INSERT:
+2227|booking_policies|null|TABLE|IS|GRANTED|null|
+2227|booking_policies|PRIMARY|RECORD|S|GRANTED|0xA50B6C3D4AFF4B33B8849E1BE82195DD, 0xFAD6F40F32144718916CF949DFDD11CA, 1|
+2227|booking_policies|PRIMARY|RECORD|S|GRANTED|supremum pseudo-record|
+2227|reservations|null|TABLE|IS|GRANTED|null|
+2227|reservations|uk_reservations_promotional_identity|RECORD|S|GRANTED|supremum pseudo-record|
+2227|reservations|uk_reservations_scope_id|RECORD|S|GRANTED|supremum pseudo-record|
+2227|resources|null|TABLE|IS|GRANTED|null|
+2227|resources|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xD5FF057368044D2A9F083A39BC09A9EA|
+2227|slot_inventories|null|TABLE|IX|GRANTED|null|
+2227|slot_inventories|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0x57C9F1BAD28840E3A81495AA46357911|
+2227|tenants|null|TABLE|IS|GRANTED|null|
+2227|tenants|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xA50B6C3D4AFF4B33B8849E1BE82195DD|
+2227|venues|null|TABLE|IS|GRANTED|null|
+2227|venues|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xFAD6F40F32144718916CF949DFDD11CA|
+2227|waitlist_demands|null|TABLE|IX|GRANTED|null|
+2227|waitlist_demands|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0xCF402FEA44C7491BBEA3AD3298748868|
+2227|waitlist_entries|null|TABLE|IX|GRANTED|null|
+2227|waitlist_entries|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0x523C91975F884363A399D9E5CA79FCE0|
+2227|waitlist_offers|null|TABLE|IX|GRANTED|null|
+2227|waitlist_offers|uk_waitlist_offers_entry|RECORD|X|GRANTED|supremum pseudo-record|
+2228|booking_policies|null|TABLE|IS|GRANTED|null|
+2228|booking_policies|PRIMARY|RECORD|S|GRANTED|0xA50B6C3D4AFF4B33B8849E1BE82195DD, 0xFAD6F40F32144718916CF949DFDD11CA, 1|
+2228|booking_policies|PRIMARY|RECORD|S|GRANTED|supremum pseudo-record|
+2228|reservations|null|TABLE|IS|GRANTED|null|
+2228|reservations|uk_reservations_promotional_identity|RECORD|S|GRANTED|supremum pseudo-record|
+2228|reservations|uk_reservations_scope_id|RECORD|S|GRANTED|supremum pseudo-record|
+2228|resources|null|TABLE|IS|GRANTED|null|
+2228|resources|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0x7604F509B2494F378993F784BC686551|
+2228|slot_inventories|null|TABLE|IX|GRANTED|null|
+2228|slot_inventories|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0x3C4E6D2BEFD24213A07793B54029419D|
+2228|tenants|null|TABLE|IS|GRANTED|null|
+2228|tenants|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xA50B6C3D4AFF4B33B8849E1BE82195DD|
+2228|venues|null|TABLE|IS|GRANTED|null|
+2228|venues|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xFAD6F40F32144718916CF949DFDD11CA|
+2228|waitlist_demands|null|TABLE|IX|GRANTED|null|
+2228|waitlist_demands|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0x13FA1C1744664C65AF815226EF5C310F|
+2228|waitlist_entries|null|TABLE|IX|GRANTED|null|
+2228|waitlist_entries|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0x1F7979B762DA45D381FD419B9DAD01B8|
+2228|waitlist_offers|null|TABLE|IX|GRANTED|null|
+2228|waitlist_offers|uk_waitlist_offers_entry|RECORD|X|GRANTED|supremum pseudo-record|
+
+LATEST DETECTED DEADLOCK
+------------------------
+2026-09-21 01:38:38 140619628402240
+*** (1) TRANSACTION:
+TRANSACTION 2227, ACTIVE 0 sec inserting
+mysql tables in use 1, locked 1
+LOCK WAIT 21 lock struct(s), heap size 1128, 12 row lock(s), undo log entries 1
+MySQL thread id 11, OS thread handle 140619717604928, query id 605 172.17.0.1 test update
+insert into reservations (applied_policy_version,cancel_allowed_until,customer_principal_id,expires_at,no_show_eligible_at,party_size,promotional_confirmed,promotional_request_id,resource_id,slot_inventory_id,starts_at,state,tenant_id,venue_id,id) values (1,'2026-08-30 11:10:00',x'38e1fd330a43427da86cc6de939f89ae','2026-08-30 09:05:00','2026-08-30 11:40:00',2,0,x'523c91975f884363a399d9e5ca79fce0',x'd5ff057368044d2a9f083a39bc09a9ea',x'57c9f1bad28840e3a81495aa46357911','2026-08-30 11:30:00','HELD',x'a50b6c3d4aff4b33b8849e1be82195dd',x'fad6f40f32144718916cf949dfdd11ca',x'b6bee31d5392416697ce483491a965c9')
+
+*** (1) HOLDS THE LOCK(S):
+RECORD LOCKS space id 28 page no 5 n bits 72 index uk_reservations_scope_id of table `capacity_lock_evidence`.`reservations` trx id 2227 lock mode S
+Record lock, heap no 1 PHYSICAL RECORD: n_fields 1; compact format; info bits 0
+ 0: len 8; hex 73757072656d756d; asc supremum;;
+
+
+*** (1) WAITING FOR THIS LOCK TO BE GRANTED:
+RECORD LOCKS space id 28 page no 5 n bits 72 index uk_reservations_scope_id of table `capacity_lock_evidence`.`reservations` trx id 2227 lock_mode X insert intention waiting
+Record lock, heap no 1 PHYSICAL RECORD: n_fields 1; compact format; info bits 0
+ 0: len 8; hex 73757072656d756d; asc supremum;;
+
+
+*** (2) TRANSACTION:
+TRANSACTION 2228, ACTIVE 0 sec inserting
+mysql tables in use 1, locked 1
+LOCK WAIT 21 lock struct(s), heap size 1128, 12 row lock(s), undo log entries 1
+MySQL thread id 10, OS thread handle 140620116133440, query id 606 172.17.0.1 test update
+insert into reservations (applied_policy_version,cancel_allowed_until,customer_principal_id,expires_at,no_show_eligible_at,party_size,promotional_confirmed,promotional_request_id,resource_id,slot_inventory_id,starts_at,state,tenant_id,venue_id,id) values (1,'2026-08-30 10:40:00',x'0022ddd6a80b481ab4cf57d9d469381e','2026-08-30 09:05:00','2026-08-30 11:10:00',2,0,x'1f7979b762da45d381fd419b9dad01b8',x'7604f509b2494f378993f784bc686551',x'3c4e6d2befd24213a07793b54029419d','2026-08-30 11:00:00','HELD',x'a50b6c3d4aff4b33b8849e1be82195dd',x'fad6f40f32144718916cf949dfdd11ca',x'e695e10222084eddac90ccaeb28d0c36')
+
+*** (2) HOLDS THE LOCK(S):
+RECORD LOCKS space id 28 page no 5 n bits 72 index uk_reservations_scope_id of table `capacity_lock_evidence`.`reservations` trx id 2228 lock mode S
+Record lock, heap no 1 PHYSICAL RECORD: n_fields 1; compact format; info bits 0
+ 0: len 8; hex 73757072656d756d; asc supremum;;
+
+
+*** (2) WAITING FOR THIS LOCK TO BE GRANTED:
+RECORD LOCKS space id 28 page no 5 n bits 72 index uk_reservations_scope_id of table `capacity_lock_evidence`.`reservations` trx id 2228 lock_mode X insert intention waiting
+Record lock, heap no 1 PHYSICAL RECORD: n_fields 1; compact format; info bits 0
+ 0: len 8; hex 73757072656d756d; asc supremum;;
+
+*** WE ROLL BACK TRANSACTION (2)
+------------

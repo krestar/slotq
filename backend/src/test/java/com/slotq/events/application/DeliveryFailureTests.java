@@ -22,6 +22,8 @@ class DeliveryFailureTests {
             .isEqualTo(DeliveryFailure.EFFECT_TIMEOUT);
         assertThat(DeliveryFailure.classify(new RuntimeException(new SQLException("deadlock", "40001", 1213))))
             .isEqualTo(DeliveryFailure.DB_LOCK_TRANSIENT);
+        assertThat(DeliveryFailure.classify(new RuntimeException(new SQLException("NOWAIT", "HY000", 3572))))
+            .isEqualTo(DeliveryFailure.DB_LOCK_TRANSIENT);
         assertThat(DeliveryFailure.classify(new RuntimeException(new SQLTransientConnectionException())))
             .isEqualTo(DeliveryFailure.DB_RESOURCE_TRANSIENT);
         assertThat(DeliveryFailure.classify(new TransientDataAccessResourceException("temporary resource")))

@@ -269,3 +269,17 @@ refusal는 rollback 예외로 변환하지 않는다. Waitlist public service가
 수렴 결과를 받은 뒤 HTTP `409`로 바꾸므로, caller transaction 참여와 rollback도 같은
 physical boundary를 따른다. Booking 소유 Reservation에는 promotional identity와 최초 CONFIRM
 증거만 내구성 있게 남기며 Customer HOLD Idempotency-Key나 Waitlist Offer ID와 합치지 않는다.
+
+## #96 Event promotion의 lock 검증 해석
+
+#96은 위 Slot-first/current-read 경계를 보존하고 Slot과 current context 획득 뒤 FIFO 후보를
+선택하는 Booking overload를 사용한다. receipt·Booking pair·Offer·Entry·notification과 M3 DONE은
+같은 physical transaction이다. 구체적인 application lock 방향과 범위는
+[Waitlist Promotion](../architecture/waitlist-promotion.md)에 기록한다.
+
+2026-09-21 갱신된 C3에서 acyclicity는 application-controlled inverse edge를 금지하는 계약이다.
+동일한 합법적 순서 아래 InnoDB RR의 physical gap/next-key/insert-intention deadlock은 별도로
+분류한다. [main #95 baseline trace](../experiments/booking-capacity-gap-lock-finding.md)는 후자이며,
+capacity authority/query/isolation을 변경하지 않고 M3의 전체 rollback/bounded retry/DEAD/replay로
+복구한다. 이 판단은 새로운 application cycle을 허용하거나 public Booking 명령에 worker retry를
+도입한다는 의미가 아니다. ORM/FK/unique/secondary-index 실제 trace 관찰은 계속 필요하다.

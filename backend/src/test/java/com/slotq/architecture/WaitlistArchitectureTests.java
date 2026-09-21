@@ -13,8 +13,18 @@ import java.util.UUID;
 import com.slotq.waitlist.application.WaitlistRegistrationKey;
 import com.slotq.waitlist.application.WaitlistRegistrationStore;
 import com.slotq.waitlist.application.WaitlistUseCase;
+import com.slotq.waitlist.application.WaitlistPromotionUseCase;
+import com.slotq.waitlist.application.WaitlistPromotionReceiptStore;
+import com.slotq.waitlist.application.WaitlistNotificationStore;
+import com.slotq.auth.domain.SystemPrincipal;
+import com.slotq.events.application.StoredEvent;
+import com.slotq.events.application.ConsumerRoute;
+import com.slotq.integration.waitlist.BookingCapacityReleasedHandler;
+import com.slotq.integration.waitlist.WaitlistPromotionRequestedHandler;
 import com.slotq.waitlist.domain.WaitlistEntryState;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -69,6 +79,41 @@ class WaitlistArchitectureTests {
                 if (bytes.contains("com/slotq/waitlist/")) {
                     violations.add(classes.relativize(classFile).toString());
                 }
+            }
+        }
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void twoExactProductionRoutesDelegateToOneMandatoryEventNeutralPromotionPort() throws Exception {
+        assertThat(BookingCapacityReleasedHandler.ROUTE).isEqualTo(
+            new ConsumerRoute("waitlist.promotion", "booking.capacity-released", 1));
+        assertThat(WaitlistPromotionRequestedHandler.ROUTE).isEqualTo(
+            new ConsumerRoute("waitlist.promotion", "waitlist.promotion-requested", 1));
+        for (Class<?> handler : List.of(BookingCapacityReleasedHandler.class, WaitlistPromotionRequestedHandler.class)) {
+            assertThat(handler.getMethod("handle", StoredEvent.class).getAnnotation(Transactional.class).propagation())
+                .isEqualTo(Propagation.MANDATORY);
+        }
+        Class<?> promotion = Class.forName("com.slotq.waitlist.application.WaitlistPromotionService");
+        assertThat(promotion.getMethod("promote", SystemPrincipal.class, WaitlistPromotionUseCase.Command.class)
+            .getAnnotation(Transactional.class).propagation()).isEqualTo(Propagation.MANDATORY);
+        assertThat(WaitlistPromotionUseCase.Outcome.values()).extracting(Enum::name).containsExactly(
+            "PROMOTED", "NO_CAPACITY", "NO_CANDIDATE", "NOT_ELIGIBLE", "SLOT_PAST", "DEFERRED");
+        assertThat(Arrays.stream(WaitlistPromotionReceiptStore.class.getDeclaredMethods()).map(method -> method.getName()))
+            .containsExactlyInAnyOrder("claim", "complete");
+        assertThat(Arrays.stream(WaitlistNotificationStore.class.getDeclaredMethods()).map(method -> method.getName()))
+            .containsExactly("offerAvailable");
+    }
+
+    @Test
+    void promotionIntegrationCannotBootstrapOrDirectlyAccessBusinessPersistence() throws Exception {
+        List<String> forbidden = List.of("/persistence/", "EventRegistrationService", "EventDeliveryWorker",
+            "CapacityReleaseReadiness", "ApplicationRunner", "Scheduled");
+        List<String> violations = new ArrayList<>();
+        try (var paths = Files.walk(mainClasses().resolve("com/slotq/integration/waitlist"))) {
+            for (Path path : paths.filter(file -> file.toString().endsWith(".class")).toList()) {
+                String bytes = new String(Files.readAllBytes(path), StandardCharsets.ISO_8859_1);
+                forbidden.stream().filter(bytes::contains).forEach(reference -> violations.add(path.getFileName() + " -> " + reference));
             }
         }
         assertThat(violations).isEmpty();

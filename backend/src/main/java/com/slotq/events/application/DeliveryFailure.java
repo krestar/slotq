@@ -51,7 +51,7 @@ public enum DeliveryFailure {
                 return DB_RESOURCE_TRANSIENT;
             }
             if (cause instanceof java.sql.SQLException sql
-                && (sql.getErrorCode() == 1213 || sql.getErrorCode() == 1205)) {
+                && (sql.getErrorCode() == 1213 || sql.getErrorCode() == 1205 || sql.getErrorCode() == 3572)) {
                 return DB_LOCK_TRANSIENT;
             }
         }

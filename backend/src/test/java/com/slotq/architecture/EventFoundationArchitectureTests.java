@@ -158,7 +158,7 @@ class EventFoundationArchitectureTests {
     }
 
     @Test
-    void handlerGuardIsExercisedBeforeTheFirstProductionBusinessConsumerExists() throws Exception {
+    void handlerGuardDetectsUnsafeIndependentEffectsUsingNegativeFixtures() throws Exception {
         assertThat(independentEffectReferences(bytecode(SynchronousHandler.class))).isEmpty();
         assertThat(independentEffectReferences(bytecode(RawConnectionHandler.class)))
             .contains("javax/sql/DataSource", "java/sql/Connection");

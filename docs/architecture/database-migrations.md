@@ -99,3 +99,22 @@ CONFIRM 완료를 보존하는 durable evidence이며 이후 일반 Reservation 
 V11 rollback은 활성 Offer와 수락 증거를 잃고 기존 Reservation column도 제거해야 하므로
 production에서는 migration을 되돌리지 않고 backup 복원 또는 상위 version의 forward-fix로
 처리한다.
+
+## V12 Waitlist Promotion Effect
+
+`V12__create_waitlist_promotion_effect.sql`은 Waitlist 소유의 event-level receipt와
+테스트용 Offer 알림 요청 접수를 추가한다. receipt PK는 `(tenant_id, consumer_id, event_id)`,
+notification PK는 `(tenant_id, offer_id, request_type)`이다. registration generation/token은
+logical effect identity에 포함하지 않는다. v1 immutable 의미를 typed field로 보존한다.
+
+receipt claim은 Slot 전에 insert/lock하지만 아직 NULL인 effect FK 때문에 business parent를
+선점하지 않는다. receipt completion과 notification은 같은 Tenant/Venue/Entry/Reservation/Offer
+조합을 scoped FK로 참조한다. NULL outcome은 transaction 안의 미완료 claim일 뿐이며 정상
+production 경로는 반드시 outcome을 완성하거나 전체 rollback한다. 별도 request 완료 ledger는 없다.
+
+Entry의 `(demand_id,state,joined_at,id)` index는 eligible Demand별 WAITING head의 current-read를
+지원한다. 기존 Offer에는 effect 참조용 scoped unique key만 추가한다. 기존 Booking capacity
+table/authority, Offer/Customer API, 기존 data의 의미는 바꾸지 않는다.
+
+V12만 적용해도 producer/worker를 활성화하지 않는다. receipt/notification/event 이력 cleanup이나
+undo migration은 없으며 문제 발생 시 backup 복원 또는 상위 version의 forward-fix를 사용한다.
