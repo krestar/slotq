@@ -118,3 +118,15 @@ table/authority, Offer/Customer API, 기존 data의 의미는 바꾸지 않는�
 
 V12만 적용해도 producer/worker를 활성화하지 않는다. receipt/notification/event 이력 cleanup이나
 undo migration은 없으며 문제 발생 시 backup 복원 또는 상위 version의 forward-fix를 사용한다.
+
+## V13 Waitlist Promotion Request Admission
+
+`V13__create_waitlist_promotion_requests.sql`은 `(tenant_id,slot_inventory_id)`당 마지막 request
+event ID 연결만 추가한다. nullable last_event_id는 아직 발행하지 않은 admission anchor이며 별도
+완료/실패/retry 상태는 없다. 기존 V12 receipt와 원 event의 의미가 완료 oracle이다.
+
+Slot/receipt/event FK는 두지 않는다. receipt 이전 Slot FK lock 또는 event_boundary 이전 event FK
+lock을 추가하지 않으며, stored Slot ownership + 같은 target transaction의 link/append가 무결성을
+보장한다. [request transaction/lock 경계](waitlist-promotion-requests.md)를 따른다.
+기존 Booking/Offer/capacity schema와 데이터는 변경하지 않고 migration만으로 runtime을 활성화하지 않는다.
+기록 cleanup/undo migration은 제공하지 않으며 문제 발생 시 상위 version의 forward-fix를 사용한다.

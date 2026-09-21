@@ -6,6 +6,9 @@ foundation이다. 같은 Product 배포, DataSource, `JpaTransactionManager`를 
 Booking capacity release producer와 두 실제 Waitlist promotion handler는 disabled checkpoint까지
 구현됐다. durable registration/readiness bootstrap은 후속 checkpoint이고 scheduler 기본값은 disabled다.
 실제 effect/receipt/notification과 application lock order는 [Waitlist Promotion](waitlist-promotion.md)을 따른다.
+release 없는 기회의 scoped admission/새 요청 append는 [Waitlist promotion requests](waitlist-promotion-requests.md)를 따른다.
+`EventRecordQuery.find(tenantId,eventId)`는 원 event/receipt 의미 대조를 위한 nonlocking immutable 조회만
+추가하며 global append/cutover locking port나 delivery protocol은 바꾸지 않는다.
 
 ## Producer와 durable cutover
 

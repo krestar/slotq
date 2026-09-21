@@ -58,7 +58,7 @@ class JdbcWaitlistPromotionReceiptStore implements WaitlistPromotionReceiptStore
         if (count != 1) throw new IllegalStateException("Promotion receipt completion must affect one row");
     }
 
-    private static Receipt receipt(ResultSet row, int number) throws SQLException {
+    static Receipt receipt(ResultSet row, int number) throws SQLException {
         var meaning = new WaitlistPromotionUseCase.Command(new TenantId(uuid(row.getBytes("tenant_id"))),
             uuid(row.getBytes("event_id")), WaitlistPromotionUseCase.Signal.valueOf(row.getString("signal_type")),
             uuid(row.getBytes("source_id")), row.getObject("occurred_at", LocalDateTime.class).toInstant(ZoneOffset.UTC),

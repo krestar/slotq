@@ -44,7 +44,7 @@ class WaitlistPromotionEventAdapter {
         // Infrastructure failures pass through to the existing M3 classifier; never return a no-op.
     }
 
-    private WaitlistPromotionUseCase.Command decode(EventEnvelope event, ConsumerRoute route,
+    WaitlistPromotionUseCase.Command decode(EventEnvelope event, ConsumerRoute route,
                                                      WaitlistPromotionUseCase.Signal signal) {
         if (event.schemaVersion() != route.schemaVersion()) throw new EventHandlingException(DeliveryFailure.UNSUPPORTED_VERSION);
         if (!event.eventType().equals(route.eventType())) throw new EventHandlingException(DeliveryFailure.TARGET_ROUTE_CORRUPTION);

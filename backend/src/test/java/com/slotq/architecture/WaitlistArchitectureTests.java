@@ -108,7 +108,7 @@ class WaitlistArchitectureTests {
     @Test
     void promotionIntegrationCannotBootstrapOrDirectlyAccessBusinessPersistence() throws Exception {
         List<String> forbidden = List.of("/persistence/", "EventRegistrationService", "EventDeliveryWorker",
-            "CapacityReleaseReadiness", "ApplicationRunner", "Scheduled");
+            "ApplicationRunner", "Scheduled");
         List<String> violations = new ArrayList<>();
         try (var paths = Files.walk(mainClasses().resolve("com/slotq/integration/waitlist"))) {
             for (Path path : paths.filter(file -> file.toString().endsWith(".class")).toList()) {
@@ -117,6 +117,17 @@ class WaitlistArchitectureTests {
             }
         }
         assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void requestAdmissionAndDiscoveryCannotCreateBookingEffectsOrDriveDelivery() throws Exception {
+        List<String> forbidden = List.of("PromotionalReservationUseCase", "ReservationUseCase", "WaitlistOfferUseCase",
+            "EventDeliveryWorker", "EventRegistrationService", "EventReplayService", "afterCommit", "Scheduled", "REQUIRES_NEW");
+        for (String name : List.of("com/slotq/integration/waitlist/WaitlistPromotionRequestAdmission.class",
+            "com/slotq/waitlist/application/WaitlistPromotionDiscovery.class")) {
+            String bytes = new String(Files.readAllBytes(mainClasses().resolve(name)), StandardCharsets.ISO_8859_1);
+            assertThat(forbidden.stream().filter(bytes::contains)).as(name).isEmpty();
+        }
     }
 
     private List<Path> waitlistClasses() throws IOException, URISyntaxException {

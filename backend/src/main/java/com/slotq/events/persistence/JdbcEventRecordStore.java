@@ -91,7 +91,7 @@ public class JdbcEventRecordStore implements EventRecordStore {
             """, deactivationBoundary, bytes(registrationId)));
     }
 
-    private static StoredEvent storedEvent(ResultSet row, int rowNumber) throws SQLException {
+    static StoredEvent storedEvent(ResultSet row, int rowNumber) throws SQLException {
         return new StoredEvent(new EventEnvelope(
             new EventId(uuid(row.getBytes("event_id"))), new TenantId(uuid(row.getBytes("tenant_id"))),
             row.getString("aggregate_type"), uuid(row.getBytes("aggregate_id")), row.getString("event_type"),

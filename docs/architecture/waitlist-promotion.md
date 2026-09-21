@@ -150,7 +150,8 @@ handler bean은 존재하지만 durable registration을 만들지 않는다. pro
 enabled라도 production readiness provider가 없으면 release를 fail-closed한다. event scheduler도
 기본 disabled다. 이 checkpoint의 테스트만 readiness/registration을 공급한다.
 
-후속 checkpoint는 request admission/discovery → maintenance → durable bootstrap/activation 및
+세 번째 checkpoint에서 [request admission/discovery](waitlist-promotion-requests.md)를 추가했다.
+후속 checkpoint는 maintenance → durable bootstrap/activation 및
 실제 business process crash/DB outage evidence 순서다. 현재 worker 교체 테스트는 같은 DB의
 claim/token/terminal receipt를 새 worker 객체가 재사용하는 component 증거이며 별도 JVM 종료 실험이 아니다.
 기존 M3 synthetic recovery를 실제 Waitlist process evidence라고 재사용하지 않는다.

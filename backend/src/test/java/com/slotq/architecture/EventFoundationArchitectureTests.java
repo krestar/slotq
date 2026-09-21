@@ -29,6 +29,7 @@ import com.slotq.events.application.EventEnvelope;
 import com.slotq.events.application.EventHandler;
 import com.slotq.events.application.EventId;
 import com.slotq.events.application.EventRecordStore;
+import com.slotq.events.application.EventRecordQuery;
 import com.slotq.events.application.EventReplayService;
 import com.slotq.events.application.StoredEvent;
 import com.slotq.tenancy.domain.TenantId;
@@ -40,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventFoundationArchitectureTests {
 
     @Test
-    void discoversTheActualFoundationAndOnlyItsTwoNarrowPersistencePorts() throws Exception {
+    void discoversTheActualFoundationAndItsTwoNarrowWriteStores() throws Exception {
         List<Class<?>> foundation = mainTypes().stream()
             .filter(type -> type.getPackageName().startsWith("com.slotq.events.")).toList();
 
@@ -65,6 +66,11 @@ class EventFoundationArchitectureTests {
             "boolean isRegistrationActive(UUID)",
             "void deactivateRegistration(UUID,long)"
         );
+    }
+
+    @Test
+    void immutableEvidenceQueryRequiresTenantAndEventAndCannotChangeDelivery() {
+        assertThat(signatures(EventRecordQuery.class)).containsExactly("Optional find(TenantId,EventId)");
     }
 
     @Test
