@@ -130,6 +130,23 @@ class WaitlistArchitectureTests {
         }
     }
 
+    @Test
+    void maintenanceOnlyComposesNamedCommandsAndCannotPromoteOrPublishDirectly() throws Exception {
+        String bytes = new String(Files.readAllBytes(mainClasses().resolve(
+            "com/slotq/integration/waitlist/WaitlistMaintenanceRuntime.class")), StandardCharsets.ISO_8859_1);
+        assertThat(bytes).contains("ReservationExpiryUseCase", "WaitlistEntryExpiryUseCase", "reconcileTarget",
+            "WaitlistPromotionDiscovery");
+        for (String forbidden : List.of("/persistence/", "JdbcTemplate", "EntityManager", "EventAppendService",
+            "EventHandler", "WaitlistPromotionUseCase", "PromotionalReservationUseCase", "createTarget",
+            "createHold", "REQUIRES_NEW", "afterCommit", "Scheduled")) assertThat(bytes).doesNotContain(forbidden);
+        try (var paths = Files.walk(mainClasses().resolve("com/slotq/waitlist/web"))) {
+            for (Path path : paths.filter(file -> file.toString().endsWith(".class")).toList()) {
+                assertThat(new String(Files.readAllBytes(path), StandardCharsets.ISO_8859_1))
+                    .doesNotContain("WaitlistEntryExpiryUseCase", "WaitlistMaintenanceRuntime");
+            }
+        }
+    }
+
     private List<Path> waitlistClasses() throws IOException, URISyntaxException {
         try (var paths = Files.walk(mainClasses().resolve("com/slotq/waitlist"))) {
             return paths.filter(path -> path.toString().endsWith(".class")).toList();

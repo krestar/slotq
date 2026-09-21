@@ -4,6 +4,7 @@ Issue [#96 §5](https://github.com/krestar/slotq/issues/96)의 세 번째 checkp
 Commit 2 `4156053`의 [promotion effect](waitlist-promotion.md)를 바꾸지 않고, release 없는 기회를
 새 `waitlist.promotion-requested` v1 event로 연결한다. maintenance expiry/reconcile, durable bootstrap,
 scheduler 활성화, 별도 JVM crash/DB outage 실험은 후속 checkpoint다.
+이후 추가된 [bounded maintenance runtime](waitlist-maintenance.md)은 이 discovery를 그대로 호출한다.
 
 ## Public 경계
 

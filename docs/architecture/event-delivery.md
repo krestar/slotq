@@ -7,6 +7,8 @@ Booking capacity release producer와 두 실제 Waitlist promotion handler는 di
 구현됐다. durable registration/readiness bootstrap은 후속 checkpoint이고 scheduler 기본값은 disabled다.
 실제 effect/receipt/notification과 application lock order는 [Waitlist Promotion](waitlist-promotion.md)을 따른다.
 release 없는 기회의 scoped admission/새 요청 append는 [Waitlist promotion requests](waitlist-promotion-requests.md)를 따른다.
+durable HOLD/Offer/WAITING backlog와 request discovery의 bounded 순회는
+[Waitlist maintenance](waitlist-maintenance.md)를 따른다. production scheduler/bootstrap은 아직 활성화하지 않는다.
 `EventRecordQuery.find(tenantId,eventId)`는 원 event/receipt 의미 대조를 위한 nonlocking immutable 조회만
 추가하며 global append/cutover locking port나 delivery protocol은 바꾸지 않는다.
 

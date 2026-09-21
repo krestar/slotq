@@ -130,3 +130,10 @@ lock을 추가하지 않으며, stored Slot ownership + 같은 target transactio
 보장한다. [request transaction/lock 경계](waitlist-promotion-requests.md)를 따른다.
 기존 Booking/Offer/capacity schema와 데이터는 변경하지 않고 migration만으로 runtime을 활성화하지 않는다.
 기록 cleanup/undo migration은 제공하지 않으며 문제 발생 시 상위 version의 forward-fix를 사용한다.
+
+## V14 Maintenance Backlog Indexes
+
+`V14__index_maintenance_backlogs.sql`은 reservations / waitlist_offers / waitlist_entries에
+`(state,id)` nonunique index를 추가한다. [maintenance](waitlist-maintenance.md)의 nonlocking bounded
+keyset scan을 지원하며 capacity authority, state/unique/FK 의미, 기존 current-read query를 바꾸지 않는다.
+index 추가만으로 worker/scheduler/producer를 활성화하지 않는다. data rewrite/삭제/undo migration은 없다.

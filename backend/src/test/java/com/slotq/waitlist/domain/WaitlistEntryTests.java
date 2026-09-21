@@ -41,6 +41,22 @@ class WaitlistEntryTests {
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void storedWaitingExpiryIsDueOnlyAndNeverExpiresAnOfferOrCancelledEntry() {
+        Instant start = Instant.parse("2030-01-01T10:00:00Z");
+        var waiting = entry(start);
+        assertThat(waiting.expireWaiting(start.minusNanos(1))).isFalse();
+        assertThat(waiting.expireWaiting(start)).isTrue();
+        assertThat(waiting.expireWaiting(start.plusSeconds(1))).isFalse();
+        assertThat(waiting.state()).isEqualTo(WaitlistEntryState.EXPIRED);
+        var offered = entry(start); offered.offer();
+        assertThat(offered.expireWaiting(start)).isFalse();
+        assertThat(offered.state()).isEqualTo(WaitlistEntryState.OFFERED);
+        var cancelled = entry(start); cancelled.cancel(start.minusSeconds(1));
+        assertThat(cancelled.expireWaiting(start)).isFalse();
+        assertThat(cancelled.state()).isEqualTo(WaitlistEntryState.CANCELLED);
+    }
+
     private WaitlistEntry entry(Instant startsAt) {
         TenantId tenantId = TenantId.newId();
         VenueId venueId = VenueId.newId();

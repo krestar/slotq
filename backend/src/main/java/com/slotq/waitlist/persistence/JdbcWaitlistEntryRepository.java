@@ -138,6 +138,14 @@ class JdbcWaitlistEntryRepository implements WaitlistEntryRepository {
     }
 
     @Override
+    public Optional<WaitlistEntry> findForExpiry(VenueId venueId, WaitlistEntryId entryId) {
+        // Demand is immutable. Expiry must not acquire Demand/Offer/Reservation/Slot locks.
+        return queryOne(" WHERE entry.venue_id = ? AND entry.id = ? FOR UPDATE OF entry",
+            JdbcWaitlistDemandStore.bytes(venueId.value()),
+            JdbcWaitlistDemandStore.bytes(entryId.value()));
+    }
+
+    @Override
     public Optional<WaitlistEntry> firstEligibleForUpdate(
         TenantId tenantId, VenueId venueId, java.time.Instant startsAt,
         java.time.Instant endsAt, int seatingCapacity
