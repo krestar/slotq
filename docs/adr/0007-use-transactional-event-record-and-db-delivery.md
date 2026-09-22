@@ -209,3 +209,11 @@ DB polling의 fan-out, consumer isolation, 처리량, retention 또는 독립 �
 충족하지 못한다는 측정이 생기면 broker/다른 mechanism을 비교한다. 현재는 그런 근거가 없다.
 lease/receipt 비용이 local DB 처리에서 병목이면 같은 outcome invariant를 지키는 co-transaction
 delivery 등 더 단순한 topology도 재비교한다. 선택 후보의 industry 관행은 채택 근거가 아니다.
+
+## #96 최초 production activation 연결
+
+[Waitlist activation](../architecture/waitlist-activation.md)은 같은 runtime의 두 exact handler와
+durable registration을 먼저 검증한 뒤 shared readiness로 producer/maintenance/delivery scheduler를 연다.
+restart는 ACTIVE registration UUID와 boundary를 보존하며, 경쟁/응답 유실은 별도 fenced metadata
+inspection으로 확인한다. metadata inspection도 business lock을 갖지 않는다. 기존 append fence,
+target membership, effect/DONE transaction과 retry/replay protocol은 변경하지 않는다.

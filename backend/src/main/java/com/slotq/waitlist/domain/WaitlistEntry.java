@@ -71,6 +71,13 @@ public final class WaitlistEntry {
         state = WaitlistEntryState.CANCELLED;
     }
 
+    public boolean expireWaiting(Instant commandNow) {
+        Objects.requireNonNull(commandNow, "commandNow must not be null");
+        if (state != WaitlistEntryState.WAITING || commandNow.isBefore(demand.startsAt())) return false;
+        state = WaitlistEntryState.EXPIRED;
+        return true;
+    }
+
     public void offer() {
         requireState(WaitlistEntryState.WAITING, WaitlistEntryState.OFFERED);
         state = WaitlistEntryState.OFFERED;

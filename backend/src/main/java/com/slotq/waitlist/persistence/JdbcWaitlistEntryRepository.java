@@ -35,6 +35,24 @@ class JdbcWaitlistEntryRepository implements WaitlistEntryRepository {
            AND demand.id = entry.demand_id
         """;
 
+    private static final String PROMOTION_SELECT = """
+        SELECT entry.id, entry.tenant_id, entry.venue_id, entry.customer_principal_id,
+               entry.joined_at, entry.state, demand.id AS demand_id,
+               demand.starts_at, demand.ends_at, demand.party_size
+          FROM waitlist_demands demand FORCE INDEX (uk_waitlist_demands_identity)
+          JOIN LATERAL (
+              SELECT candidate.id, candidate.tenant_id, candidate.venue_id,
+                     candidate.customer_principal_id, candidate.joined_at, candidate.state
+                FROM waitlist_entries candidate FORCE INDEX (idx_waitlist_entries_promotion)
+               WHERE candidate.demand_id = demand.id AND candidate.state = 'WAITING'
+               ORDER BY candidate.demand_id, candidate.state, candidate.joined_at, candidate.id
+               LIMIT 1 FOR UPDATE OF candidate NOWAIT
+          ) entry ON TRUE
+         WHERE demand.tenant_id = ? AND demand.venue_id = ?
+           AND demand.starts_at = ? AND demand.ends_at = ? AND demand.party_size <= ?
+         ORDER BY entry.joined_at, entry.id LIMIT 1 FOR SHARE OF demand NOWAIT
+        """;
+
     private final JdbcTemplate jdbc;
 
     JdbcWaitlistEntryRepository(JdbcTemplate jdbc) {
@@ -117,6 +135,29 @@ class JdbcWaitlistEntryRepository implements WaitlistEntryRepository {
         return queryOne(" WHERE entry.venue_id = ? AND entry.id = ? FOR UPDATE",
             JdbcWaitlistDemandStore.bytes(venueId.value()),
             JdbcWaitlistDemandStore.bytes(entryId.value()));
+    }
+
+    @Override
+    public Optional<WaitlistEntry> findForExpiry(VenueId venueId, WaitlistEntryId entryId) {
+        // Demand is immutable. Expiry must not acquire Demand/Offer/Reservation/Slot locks.
+        return queryOne(" WHERE entry.venue_id = ? AND entry.id = ? FOR UPDATE OF entry",
+            JdbcWaitlistDemandStore.bytes(venueId.value()),
+            JdbcWaitlistDemandStore.bytes(entryId.value()));
+    }
+
+    @Override
+    public Optional<WaitlistEntry> firstEligibleForUpdate(
+        TenantId tenantId, VenueId venueId, java.time.Instant startsAt,
+        java.time.Instant endsAt, int seatingCapacity
+    ) {
+        // Current-read each eligible immutable Demand and only its indexed WAITING head.
+        // A flat FIFO join locks an unrelated Entry prefix and an unlocked Demand join reads
+        // an early RR snapshot. LATERAL LIMIT bounds Entry locks to one head per eligible Demand.
+        // NOWAIT preserves FIFO (no SKIP LOCKED) and breaks Demand -> Entry / #95 Entry -> Demand
+        // inversion by failing the complete effect through the existing transient DB taxonomy.
+        return jdbc.query(PROMOTION_SELECT, JdbcWaitlistEntryRepository::entry, JdbcWaitlistDemandStore.bytes(tenantId.value()),
+            JdbcWaitlistDemandStore.bytes(venueId.value()), Timestamp.from(startsAt),
+            Timestamp.from(endsAt), seatingCapacity).stream().findFirst();
     }
 
     @Override

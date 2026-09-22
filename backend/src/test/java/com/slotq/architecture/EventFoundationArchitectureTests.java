@@ -29,6 +29,7 @@ import com.slotq.events.application.EventEnvelope;
 import com.slotq.events.application.EventHandler;
 import com.slotq.events.application.EventId;
 import com.slotq.events.application.EventRecordStore;
+import com.slotq.events.application.EventRecordQuery;
 import com.slotq.events.application.EventReplayService;
 import com.slotq.events.application.StoredEvent;
 import com.slotq.tenancy.domain.TenantId;
@@ -40,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventFoundationArchitectureTests {
 
     @Test
-    void discoversTheActualFoundationAndOnlyItsTwoNarrowPersistencePorts() throws Exception {
+    void discoversTheActualFoundationAndItsTwoNarrowWriteStores() throws Exception {
         List<Class<?>> foundation = mainTypes().stream()
             .filter(type -> type.getPackageName().startsWith("com.slotq.events.")).toList();
 
@@ -61,10 +62,16 @@ class EventFoundationArchitectureTests {
             "Optional findEventForAppend(EventId)",
             "StoredEvent insertEvent(EventEnvelope,long)",
             "boolean hasActiveRegistration(ConsumerRoute)",
+            "List registrationsFor(String,List)",
             "void insertRegistration(UUID,ConsumerRoute,long)",
             "boolean isRegistrationActive(UUID)",
             "void deactivateRegistration(UUID,long)"
         );
+    }
+
+    @Test
+    void immutableEvidenceQueryRequiresTenantAndEventAndCannotChangeDelivery() {
+        assertThat(signatures(EventRecordQuery.class)).containsExactly("Optional find(TenantId,EventId)");
     }
 
     @Test
@@ -158,7 +165,7 @@ class EventFoundationArchitectureTests {
     }
 
     @Test
-    void handlerGuardIsExercisedBeforeTheFirstProductionBusinessConsumerExists() throws Exception {
+    void handlerGuardDetectsUnsafeIndependentEffectsUsingNegativeFixtures() throws Exception {
         assertThat(independentEffectReferences(bytecode(SynchronousHandler.class))).isEmpty();
         assertThat(independentEffectReferences(bytecode(RawConnectionHandler.class)))
             .contains("javax/sql/DataSource", "java/sql/Connection");

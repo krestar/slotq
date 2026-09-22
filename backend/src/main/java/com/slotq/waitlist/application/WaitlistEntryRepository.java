@@ -33,6 +33,12 @@ public interface WaitlistEntryRepository {
 
     Optional<WaitlistEntry> findForUpdate(VenueId venueId, WaitlistEntryId entryId);
 
+    Optional<WaitlistEntry> findForExpiry(VenueId venueId, WaitlistEntryId entryId);
+
+    Optional<WaitlistEntry> firstEligibleForUpdate(
+        TenantId tenantId, VenueId venueId, Instant startsAt, Instant endsAt, int seatingCapacity
+    );
+
     Optional<WaitlistEntry> findActiveForUpdate(
         TenantId tenantId,
         VenueId venueId,

@@ -1,0 +1,6 @@
+{
+  "baseAt" : "2026-08-30T09:00:00Z",
+  "tenantId" : "b0eae167-926d-402d-8032-f74943998879",
+  "startAt" : "2026-08-30T11:00:00Z",
+  "seed" : "public commands; random server IDs preserved in snapshots"
+}

@@ -1,0 +1,46 @@
+WaitlistMaintenanceIntegrationTests
+Base HEAD: ed1d72f + bounded maintenance checkpoint source
+Observed: 2026-09-22 KST, Java 25.0.4, Gradle 9.7.1, MySQL 8.4.11, REPEATABLE-READ, V14
+Settings: maintenance batch=2, target timeout=5s (timeout regression=2s), discovery batch=2
+IDs below are disposable synthetic fixture identities.
+
+Query: performance_schema.data_locks joined to threads by THREAD_ID,
+filtered PROCESSLIST_ID = target connection AND LOCK_TYPE='RECORD', ordered OBJECT_NAME,INDEX_NAME.
+Columns: OBJECT_NAME|INDEX_NAME|LOCK_MODE|LOCK_STATUS|LOCK_DATA
+
+WAITING expiry, after actual Entry UPDATE, before commit:
+waitlist_entries|PRIMARY|X,REC_NOT_GAP|GRANTED|0x1BEA99F566D64F9294DA53B58965A681
+Oracle: another Entry of the same Demand expires while this transaction remains open;
+no Reservation/Offer created; first target commits EXPIRED after gate release.
+
+Ordinary System expiry, after JPA pair flush, blocked on external event_boundary X:
+capacity_allocations|PRIMARY|X,REC_NOT_GAP|GRANTED|0x5EA10339E3554E05A08FA231F46F0AE7
+capacity_allocations|uk_capacity_allocations_reservation|X,REC_NOT_GAP|GRANTED|0xDB0CE35B71E943BC8F4E71CA809B71D6, 0x5EA10339E3554E05A08FA231F46F0AE7
+event_boundary|PRIMARY|X,REC_NOT_GAP|WAITING|1
+reservations|PRIMARY|X,REC_NOT_GAP|GRANTED|0xDB0CE35B71E943BC8F4E71CA809B71D6
+
+Offer reconcile, after JPA backing flush, blocked on external event_boundary X:
+capacity_allocations|PRIMARY|X,REC_NOT_GAP|GRANTED|0x3E9A8AEF0E9548478990830508DB4BE9
+capacity_allocations|uk_capacity_allocations_reservation|X,REC_NOT_GAP|GRANTED|0xFFA3B6C30A684427A414A5AE6E9C4C79, 0x3E9A8AEF0E9548478990830508DB4BE9
+event_boundary|PRIMARY|X,REC_NOT_GAP|WAITING|1
+reservations|PRIMARY|X,REC_NOT_GAP|GRANTED|0xFFA3B6C30A684427A414A5AE6E9C4C79
+waitlist_demands|PRIMARY|X,REC_NOT_GAP|GRANTED|0xD003CA5766F84B0EAD2F50DEFCE18B94
+waitlist_entries|PRIMARY|X,REC_NOT_GAP|GRANTED|0xAD7929CAC35E4135974C1BA9A855CED8
+waitlist_offers|PRIMARY|X,REC_NOT_GAP|GRANTED|0x9AAD1CD21F4941C7B730E2F43FCC3418
+Oracle for both: release only event_boundary gate; external Slot X remains held until target
+commit has completed. Cycle.failures empty, release event count=1.
+
+These are visible record-lock snapshots, not a claim that every implicit secondary-index/FK
+lock is enumerated by performance_schema. V14 index writes and all existing constraints were
+enabled. The Slot-held completion and same-Demand unrelated Entry progress are separate oracles.
+No 1213 was observed in this maintenance suite. Existing independent actual-1213 M3 regression
+passed separately; capacity-gap diagnostic remains opt-in, not a maintenance success condition.
+
+Initial integration failure (not a deadlock): twoMaintenanceComponentsDrainSameDurableBacklog
+reported "EXPIRED Offer backing is not released" after wrapping #95 routing SELECT and executor
+in one RR transaction. The bounded adapter now ends routing observation before the existing
+reconcile target, retaining its projection corruption guard. The deterministic
+terminalReconcileAfterRoutingSnapshotUsesFreshTargetTransaction regression and multiworker
+test both pass. #95 executor/capacity/current-read implementation is unchanged.
+
+This fixture replaces components against one DB; it does not simulate an actual JVM crash or DB outage.

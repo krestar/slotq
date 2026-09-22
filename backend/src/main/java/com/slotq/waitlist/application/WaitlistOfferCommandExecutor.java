@@ -6,6 +6,7 @@ import com.slotq.auth.application.ResourceNotFoundException;
 import com.slotq.auth.domain.PrincipalId;
 import com.slotq.auth.domain.SystemPrincipal;
 import com.slotq.booking.application.PromotionalReservationUseCase;
+import com.slotq.booking.domain.ReservationId;
 import com.slotq.booking.domain.SlotInventoryId;
 import com.slotq.venue.domain.VenueId;
 import com.slotq.waitlist.domain.WaitlistEntry;
@@ -82,16 +83,61 @@ class WaitlistOfferCommandExecutor {
         };
         if (refusal != null) return new TargetExecution(refusal, null, null);
 
-        PromotionalReservationUseCase.ReservationView reservation = bookingResult.reservation();
+        return createOffer(holder.entry, bookingResult.reservation());
+    }
+
+    @Transactional
+    PromotionExecution promote(SystemPrincipal principal, WaitlistPromotionUseCase.Command command,
+                               Instant commandNow, PromotionPolicy policy) {
+        Holder holder = new Holder();
+        var result = booking.createHold(new PromotionalReservationUseCase.PromotionCommand(
+            principal, command.tenantId(), command.venueId(), command.resourceId(), command.slotInventoryId(),
+            command.signal() == WaitlistPromotionUseCase.Signal.CAPACITY_RELEASED
+                ? new ReservationId(command.sourceId()) : null, commandNow
+        ), context -> {
+            long started = System.nanoTime();
+            for (int checked = 0; checked < policy.candidateBatchSize(); checked++) {
+                WaitlistEntry entry = entries.firstEligibleForUpdate(command.tenantId(), command.venueId(),
+                    context.slot().startsAt(), context.slot().endsAt(), context.seatingCapacity()).orElse(null);
+                if (System.nanoTime() - started >= policy.candidateTimeLimit().toNanos()) {
+                    return new PromotionalReservationUseCase.Selection(PromotionalReservationUseCase.SelectionOutcome.DEFERRED, null);
+                }
+                if (entry == null) return new PromotionalReservationUseCase.Selection(PromotionalReservationUseCase.SelectionOutcome.NONE, null);
+                if (entry.state() != WaitlistEntryState.WAITING) continue;
+                if (!entry.tenantId().equals(command.tenantId()) || !entry.venueId().equals(command.venueId())
+                    || !entry.demand().startsAt().equals(context.slot().startsAt())
+                    || !entry.demand().endsAt().equals(context.slot().endsAt())
+                    || entry.demand().partySize() > context.seatingCapacity()) {
+                    throw new IllegalStateException("Locked promotion candidate scope does not match");
+                }
+                // WAITING + this row lock is the admission guard. The Offer unique insert rejects
+                // corrupt preexisting identity without locking an absent Offer index gap.
+                holder.entry = entry;
+                return new PromotionalReservationUseCase.Selection(PromotionalReservationUseCase.SelectionOutcome.SELECTED,
+                    new PromotionalReservationUseCase.Candidate(entry.id().value(), entry.customerPrincipalId(),
+                        entry.demand().startsAt(), entry.demand().endsAt(), entry.demand().partySize()));
+            }
+            return new PromotionalReservationUseCase.Selection(PromotionalReservationUseCase.SelectionOutcome.DEFERRED, null);
+        });
+        if (result.outcome() != PromotionalReservationUseCase.PromotionOutcome.CREATED) {
+            return new PromotionExecution(WaitlistPromotionUseCase.Outcome.valueOf(result.outcome().name()), null);
+        }
+        var target = createOffer(holder.entry, result.reservation());
+        return new PromotionExecution(WaitlistPromotionUseCase.Outcome.PROMOTED, target.offer());
+    }
+
+    private TargetExecution createOffer(WaitlistEntry entry, PromotionalReservationUseCase.ReservationView reservation) {
         WaitlistOffer offer = WaitlistOffer.pending(
-            WaitlistOfferId.newId(), holder.entry, reservation.resourceId(),
+            WaitlistOfferId.newId(), entry, reservation.resourceId(),
             reservation.slotInventoryId(), reservation.id(), reservation.expiresAt()
         );
-        holder.entry.offer();
+        entry.offer();
         offers.create(offer.venueId(), offer);
-        entries.updateState(holder.entry.venueId(), holder.entry);
+        entries.updateState(entry.venueId(), entry);
         return new TargetExecution(WaitlistOfferUseCase.TargetOutcome.CREATED, offer, reservation);
     }
+
+    record PromotionExecution(WaitlistPromotionUseCase.Outcome outcome, WaitlistOffer offer) { }
 
     @Transactional
     ActionExecution accept(WaitlistOffer routed, Instant commandNow) {

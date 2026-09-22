@@ -1,0 +1,99 @@
+MYSQL=8.4.11 isolation=REPEATABLE-READ
+scenario=CURRENT_NOWAIT bothReadsBeforeInsert=true
+result=[Attempt[success=false, code=1213, message=Deadlock found when trying to get lock; try restarting transaction], Attempt[success=true, code=0, message=committed]]
+BEFORE INSERT:
+2310|booking_policies|null|TABLE|IS|GRANTED|null|
+2310|booking_policies|PRIMARY|RECORD|S|GRANTED|0xB5FE80DDFFF14ACBBF1C7C547C1DDD32, 0x608F4DFC05294D86BC0721A65B168660, 1|
+2310|booking_policies|PRIMARY|RECORD|S,GAP|GRANTED|0xD5336BE3E1214F2BA95955FF24544FA4, 0x99D4601282EF453AA8C1E6EA4B269D80, 1|
+2310|reservations|null|TABLE|IS|GRANTED|null|
+2310|reservations|idx_reservations_effective_occupancy|RECORD|S|GRANTED|0xD5336BE3E1214F2BA95955FF24544FA4, 0x99D4601282EF453AA8C1E6EA4B269D80, 0xB5C01853F2D84FF6BC7EE442EEAB083F, 0x0A34C2D7CAE44EAF8DBBF95AFF103A17, 'HELD', 0x6A93F23C000000, 0xF8155D167AE24F07B5C033D11B65A991|
+2310|reservations|idx_reservations_effective_occupancy|RECORD|S,GAP|GRANTED|0xD5336BE3E1214F2BA95955FF24544FA4, 0x99D4601282EF453AA8C1E6EA4B269D80, 0xB5C01853F2D84FF6BC7EE442EEAB083F, 0x0A34C2D7CAE44EAF8DBBF95AFF103A17, 'HELD', 0x6A93F23C000000, 0xF8155D167AE24F07B5C033D11B65A991|
+2310|resources|null|TABLE|IS|GRANTED|null|
+2310|resources|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xFEF148DA2A784A5D82DB119999A2C6AC|
+2310|slot_inventories|null|TABLE|IX|GRANTED|null|
+2310|slot_inventories|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0x632934EB834F47BCB9C4B045709DCE4A|
+2310|tenants|null|TABLE|IS|GRANTED|null|
+2310|tenants|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xB5FE80DDFFF14ACBBF1C7C547C1DDD32|
+2310|venues|null|TABLE|IS|GRANTED|null|
+2310|venues|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0x608F4DFC05294D86BC0721A65B168660|
+2311|booking_policies|null|TABLE|IS|GRANTED|null|
+2311|booking_policies|PRIMARY|RECORD|S|GRANTED|0xB5FE80DDFFF14ACBBF1C7C547C1DDD32, 0x608F4DFC05294D86BC0721A65B168660, 1|
+2311|booking_policies|PRIMARY|RECORD|S,GAP|GRANTED|0xD5336BE3E1214F2BA95955FF24544FA4, 0x99D4601282EF453AA8C1E6EA4B269D80, 1|
+2311|reservations|null|TABLE|IS|GRANTED|null|
+2311|reservations|idx_reservations_effective_occupancy|RECORD|S|GRANTED|0xD5336BE3E1214F2BA95955FF24544FA4, 0x99D4601282EF453AA8C1E6EA4B269D80, 0xB5C01853F2D84FF6BC7EE442EEAB083F, 0x0A34C2D7CAE44EAF8DBBF95AFF103A17, 'HELD', 0x6A93F23C000000, 0xF8155D167AE24F07B5C033D11B65A991|
+2311|reservations|idx_reservations_effective_occupancy|RECORD|S,GAP|GRANTED|0xD5336BE3E1214F2BA95955FF24544FA4, 0x99D4601282EF453AA8C1E6EA4B269D80, 0xB5C01853F2D84FF6BC7EE442EEAB083F, 0x0A34C2D7CAE44EAF8DBBF95AFF103A17, 'HELD', 0x6A93F23C000000, 0xF8155D167AE24F07B5C033D11B65A991|
+2311|resources|null|TABLE|IS|GRANTED|null|
+2311|resources|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0x7AAADA92CE3C45F9AE3ECBAE5BA26C5F|
+2311|slot_inventories|null|TABLE|IX|GRANTED|null|
+2311|slot_inventories|PRIMARY|RECORD|X,REC_NOT_GAP|GRANTED|0xC9D13AE96B804F67A64272330F73E0FA|
+2311|tenants|null|TABLE|IS|GRANTED|null|
+2311|tenants|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0xB5FE80DDFFF14ACBBF1C7C547C1DDD32|
+2311|venues|null|TABLE|IS|GRANTED|null|
+2311|venues|PRIMARY|RECORD|S,REC_NOT_GAP|GRANTED|0x608F4DFC05294D86BC0721A65B168660|
+
+LATEST DETECTED DEADLOCK
+------------------------
+2026-09-21 01:38:43 140619628402240
+*** (1) TRANSACTION:
+TRANSACTION 2311, ACTIVE 0 sec inserting
+mysql tables in use 1, locked 1
+LOCK WAIT 17 lock struct(s), heap size 1128, 10 row lock(s), undo log entries 1
+MySQL thread id 11, OS thread handle 140619717604928, query id 1200 172.17.0.1 test update
+insert into reservations (applied_policy_version,cancel_allowed_until,customer_principal_id,expires_at,no_show_eligible_at,party_size,promotional_confirmed,promotional_request_id,resource_id,slot_inventory_id,starts_at,state,tenant_id,venue_id,id) values (1,'2026-08-30 11:10:00',x'fd5e1ccce7804042a287139554c49373','2026-08-30 09:05:00','2026-08-30 11:40:00',2,0,x'f88d0a3638154f1ea6da2751b4dc6557',x'7aaada92ce3c45f9ae3ecbae5ba26c5f',x'c9d13ae96b804f67a64272330f73e0fa','2026-08-30 11:30:00','HELD',x'b5fe80ddfff14acbbf1c7c547c1ddd32',x'608f4dfc05294d86bc0721a65b168660',x'53661b141b1b4c3a9caa57a9d893879f')
+
+*** (1) HOLDS THE LOCK(S):
+RECORD LOCKS space id 28 page no 10 n bits 80 index idx_reservations_effective_occupancy of table `capacity_lock_evidence`.`reservations` trx id 2311 lock mode S
+Record lock, heap no 5 PHYSICAL RECORD: n_fields 7; compact format; info bits 0
+ 0: len 16; hex d5336be3e1214f2ba95955ff24544fa4; asc  3k  !O+ YU $TO ;;
+ 1: len 16; hex 99d4601282ef453aa8c1e6ea4b269d80; asc   `   E:    K&  ;;
+ 2: len 16; hex b5c01853f2d84ff6bc7ee442eeab083f; asc    S  O  ~ B   ?;;
+ 3: len 16; hex 0a34c2d7cae44eaf8dbbf95aff103a17; asc  4    N    Z  : ;;
+ 4: len 4; hex 48454c44; asc HELD;;
+ 5: len 7; hex 6a93f23c000000; asc j  <   ;;
+ 6: len 16; hex f8155d167ae24f07b5c033d11b65a991; asc   ] z O   3  e  ;;
+
+
+*** (1) WAITING FOR THIS LOCK TO BE GRANTED:
+RECORD LOCKS space id 28 page no 10 n bits 80 index idx_reservations_effective_occupancy of table `capacity_lock_evidence`.`reservations` trx id 2311 lock_mode X locks gap before rec insert intention waiting
+Record lock, heap no 5 PHYSICAL RECORD: n_fields 7; compact format; info bits 0
+ 0: len 16; hex d5336be3e1214f2ba95955ff24544fa4; asc  3k  !O+ YU $TO ;;
+ 1: len 16; hex 99d4601282ef453aa8c1e6ea4b269d80; asc   `   E:    K&  ;;
+ 2: len 16; hex b5c01853f2d84ff6bc7ee442eeab083f; asc    S  O  ~ B   ?;;
+ 3: len 16; hex 0a34c2d7cae44eaf8dbbf95aff103a17; asc  4    N    Z  : ;;
+ 4: len 4; hex 48454c44; asc HELD;;
+ 5: len 7; hex 6a93f23c000000; asc j  <   ;;
+ 6: len 16; hex f8155d167ae24f07b5c033d11b65a991; asc   ] z O   3  e  ;;
+
+
+*** (2) TRANSACTION:
+TRANSACTION 2310, ACTIVE 0 sec inserting
+mysql tables in use 1, locked 1
+LOCK WAIT 17 lock struct(s), heap size 1128, 10 row lock(s), undo log entries 1
+MySQL thread id 10, OS thread handle 140620116133440, query id 1199 172.17.0.1 test update
+insert into reservations (applied_policy_version,cancel_allowed_until,customer_principal_id,expires_at,no_show_eligible_at,party_size,promotional_confirmed,promotional_request_id,resource_id,slot_inventory_id,starts_at,state,tenant_id,venue_id,id) values (1,'2026-08-30 10:40:00',x'28f071e6dffe4f348c055b7f5b69618f','2026-08-30 09:05:00','2026-08-30 11:10:00',2,0,x'174073fb6ba54203940688d40980ba9f',x'fef148da2a784a5d82db119999a2c6ac',x'632934eb834f47bcb9c4b045709dce4a','2026-08-30 11:00:00','HELD',x'b5fe80ddfff14acbbf1c7c547c1ddd32',x'608f4dfc05294d86bc0721a65b168660',x'417903e6791e40d98cc4038d4248d573')
+
+*** (2) HOLDS THE LOCK(S):
+RECORD LOCKS space id 28 page no 10 n bits 80 index idx_reservations_effective_occupancy of table `capacity_lock_evidence`.`reservations` trx id 2310 lock mode S
+Record lock, heap no 5 PHYSICAL RECORD: n_fields 7; compact format; info bits 0
+ 0: len 16; hex d5336be3e1214f2ba95955ff24544fa4; asc  3k  !O+ YU $TO ;;
+ 1: len 16; hex 99d4601282ef453aa8c1e6ea4b269d80; asc   `   E:    K&  ;;
+ 2: len 16; hex b5c01853f2d84ff6bc7ee442eeab083f; asc    S  O  ~ B   ?;;
+ 3: len 16; hex 0a34c2d7cae44eaf8dbbf95aff103a17; asc  4    N    Z  : ;;
+ 4: len 4; hex 48454c44; asc HELD;;
+ 5: len 7; hex 6a93f23c000000; asc j  <   ;;
+ 6: len 16; hex f8155d167ae24f07b5c033d11b65a991; asc   ] z O   3  e  ;;
+
+
+*** (2) WAITING FOR THIS LOCK TO BE GRANTED:
+RECORD LOCKS space id 28 page no 10 n bits 80 index idx_reservations_effective_occupancy of table `capacity_lock_evidence`.`reservations` trx id 2310 lock_mode X locks gap before rec insert intention waiting
+Record lock, heap no 5 PHYSICAL RECORD: n_fields 7; compact format; info bits 0
+ 0: len 16; hex d5336be3e1214f2ba95955ff24544fa4; asc  3k  !O+ YU $TO ;;
+ 1: len 16; hex 99d4601282ef453aa8c1e6ea4b269d80; asc   `   E:    K&  ;;
+ 2: len 16; hex b5c01853f2d84ff6bc7ee442eeab083f; asc    S  O  ~ B   ?;;
+ 3: len 16; hex 0a34c2d7cae44eaf8dbbf95aff103a17; asc  4    N    Z  : ;;
+ 4: len 4; hex 48454c44; asc HELD;;
+ 5: len 7; hex 6a93f23c000000; asc j  <   ;;
+ 6: len 16; hex f8155d167ae24f07b5c033d11b65a991; asc   ] z O   3  e  ;;
+
+*** WE ROLL BACK TRANSACTION (2)
+------------

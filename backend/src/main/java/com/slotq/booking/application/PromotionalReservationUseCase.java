@@ -17,6 +17,26 @@ public interface PromotionalReservationUseCase {
 
     CreateResult createHold(CreateCommand command, CreateGuard guard);
 
+    /** Selects at most one candidate only after Slot serialization and current context validation. */
+    PromotionResult createHold(PromotionCommand command, CandidateSelector selector);
+
+    enum PromotionOutcome { CREATED, NO_CAPACITY, NO_CANDIDATE, NOT_ELIGIBLE, SLOT_PAST, DEFERRED }
+    enum SelectionOutcome { SELECTED, NONE, DEFERRED }
+
+    record PromotionCommand(SystemPrincipal principal, TenantId tenantId, VenueId venueId,
+                            ResourceId resourceId, SlotInventoryId slotInventoryId,
+                            ReservationId releasedReservationId, Instant commandNow) { }
+    record PromotionContext(SlotView slot, int seatingCapacity) { }
+    record Candidate(UUID promotionalRequestId, PrincipalId customerPrincipalId,
+                     Instant startsAt, Instant endsAt, int partySize) { }
+    record Selection(SelectionOutcome outcome, Candidate candidate) { }
+    record PromotionResult(PromotionOutcome outcome, ReservationView reservation) { }
+
+    @FunctionalInterface
+    interface CandidateSelector {
+        Selection afterSlotLocked(PromotionContext context);
+    }
+
     AcceptResult accept(AcceptCommand command, AcceptGuard guard);
 
     ReleaseResult release(ReleaseCommand command);
