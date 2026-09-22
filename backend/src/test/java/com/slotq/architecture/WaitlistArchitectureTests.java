@@ -106,14 +106,19 @@ class WaitlistArchitectureTests {
     }
 
     @Test
-    void promotionIntegrationCannotBootstrapOrDirectlyAccessBusinessPersistence() throws Exception {
+    void onlyBootstrapAndThinSchedulerOwnActivationWithoutDirectBusinessPersistence() throws Exception {
         List<String> forbidden = List.of("/persistence/", "EventRegistrationService", "EventDeliveryWorker",
             "ApplicationRunner", "Scheduled");
         List<String> violations = new ArrayList<>();
         try (var paths = Files.walk(mainClasses().resolve("com/slotq/integration/waitlist"))) {
             for (Path path : paths.filter(file -> file.toString().endsWith(".class")).toList()) {
                 String bytes = new String(Files.readAllBytes(path), StandardCharsets.ISO_8859_1);
-                forbidden.stream().filter(bytes::contains).forEach(reference -> violations.add(path.getFileName() + " -> " + reference));
+                forbidden.stream().filter(bytes::contains).filter(reference -> {
+                    String name = path.getFileName().toString();
+                    return !(name.equals("WaitlistPromotionBootstrap.class")
+                        && (reference.equals("EventRegistrationService") || reference.equals("ApplicationRunner")))
+                        && !(name.equals("WaitlistMaintenanceScheduler.class") && reference.equals("Scheduled"));
+                }).forEach(reference -> violations.add(path.getFileName() + " -> " + reference));
             }
         }
         assertThat(violations).isEmpty();

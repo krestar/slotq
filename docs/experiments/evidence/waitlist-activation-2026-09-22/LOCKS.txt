@@ -1,0 +1,34 @@
+# #96 checkpoint 5 bootstrap / append fence evidence
+# Date: 2026-09-22
+# Base HEAD: 1786a36, checkpoint 5 worktree
+# Fixture: WaitlistActivationIntegrationTests.bootstrapAndBusinessAppendShareOnlyFoundationFenceAndKeepEventTarget
+# Java 25 / Gradle 9.7.1 / MySQL Testcontainers mysql:8.4
+# Fixed business clock: 2026-08-30T09:00:00Z; Slot start: 2026-08-30T11:00:00Z
+# Fixture identities are random UUIDs. This is a bounded two-transaction contention probe, not a benchmark.
+# Setup: both exact routes already ACTIVE; one ordinary HELD Reservation with active Allocation.
+# External fixture connections hold event_boundary X and this Slot X independently.
+# Compete ordinary Booking CANCEL against another component's bootstrap inspection.
+# Capture: performance_schema.data_locks for threads waiting on event_boundary, RECORD locks only.
+
+mysql=8.4.11
+isolation=REPEATABLE-READ
+connection=10
+capacity_allocations|PRIMARY|X,REC_NOT_GAP|GRANTED|0xC3405DBE8E624917A71C34DDFD16D089
+capacity_allocations|uk_capacity_allocations_reservation|X,REC_NOT_GAP|GRANTED|0xAB30A365DCD7459C97599DC9610F7C53, 0xC3405DBE8E624917A71C34DDFD16D089
+event_boundary|PRIMARY|X,REC_NOT_GAP|WAITING|1
+reservations|PRIMARY|X,REC_NOT_GAP|GRANTED|0xAB30A365DCD7459C97599DC9610F7C53
+connection=11
+event_boundary|PRIMARY|X,REC_NOT_GAP|WAITING|1
+
+# Interpretation / asserted termination oracle:
+# - CANCEL owns Reservation/Allocation current row locks and waits on foundation fence.
+# - Bootstrap waits on foundation fence with no business RECORD lock in this capture.
+# - Neither contender requests the externally held Slot X.
+# - Release ONLY event_boundary; while Slot X remains held, both contenders complete within 10 seconds.
+# - Registration identity/activation boundary set remains unchanged.
+# - Exactly one release event and one target delivery; production handler reaches DONE.
+# Bootstrap never calls a business lock/callback under its event_boundary/registration transaction.
+# This capture is not an exhaustive implicit FK/unique/secondary-index lock inventory.
+# Existing schema constraints and real JPA release/append/handler commit are enabled in the fixture.
+# No capacity query, Slot serialization, isolation, M3 effect/DONE or retry policy changed.
+# This is component-level MySQL lock evidence, not a JVM crash or DB outage/recovery experiment.

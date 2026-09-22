@@ -1,6 +1,7 @@
 package com.slotq.events.application;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -19,6 +20,8 @@ public interface EventRecordStore {
     StoredEvent insertEvent(EventEnvelope envelope, long boundarySequence);
 
     boolean hasActiveRegistration(ConsumerRoute route);
+
+    List<EventRegistration> registrationsFor(String consumerId, List<String> eventTypes);
 
     void insertRegistration(UUID registrationId, ConsumerRoute route, long activationBoundary);
 

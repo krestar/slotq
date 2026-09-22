@@ -6,12 +6,15 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import com.slotq.events.application.ConsumerRoute;
 import com.slotq.events.application.EventEnvelope;
 import com.slotq.events.application.EventId;
 import com.slotq.events.application.EventRecordStore;
+import com.slotq.events.application.EventRegistration;
 import com.slotq.events.application.StoredEvent;
 import com.slotq.tenancy.domain.TenantId;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -64,6 +67,18 @@ public class JdbcEventRecordStore implements EventRecordStore {
             WHERE consumer_id = ? AND event_type = ? AND schema_version = ?
               AND deactivation_boundary IS NULL FOR UPDATE
             """, route.consumerId(), route.eventType(), route.schemaVersion()).isEmpty();
+    }
+
+    @Override
+    public List<EventRegistration> registrationsFor(String consumerId, List<String> eventTypes) {
+        var args = new ArrayList<Object>(); args.add(consumerId); args.addAll(eventTypes);
+        return jdbc.query("SELECT registration_id,consumer_id,event_type,schema_version,activation_boundary,deactivation_boundary"
+            + " FROM event_registrations WHERE consumer_id = ? OR event_type IN ("
+            + String.join(",", java.util.Collections.nCopies(eventTypes.size(), "?"))
+            + ") ORDER BY activation_boundary FOR UPDATE", (row, n) -> new EventRegistration(
+                uuid(row.getBytes("registration_id")),
+                new ConsumerRoute(row.getString("consumer_id"), row.getString("event_type"), row.getInt("schema_version")),
+                row.getLong("activation_boundary"), row.getObject("deactivation_boundary", Long.class)), args.toArray());
     }
 
     @Override

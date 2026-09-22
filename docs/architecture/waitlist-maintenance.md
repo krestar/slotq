@@ -4,6 +4,8 @@ Issue [#96 §6](https://github.com/krestar/slotq/issues/96)의 네 번째 checkp
 `ed1d72f`이며 [promotion effect](waitlist-promotion.md)와
 [request admission/discovery](waitlist-promotion-requests.md)의 계약은 변경하지 않는다.
 durable registration/bootstrap, scheduler 활성화와 실제 JVM crash/DB outage 실험은 후속 checkpoint다.
+이후 추가된 [activation / scheduler wiring](waitlist-activation.md)이 이 runtime을 그대로 호출한다.
+실제 JVM crash/DB outage는 아직 별도 후속 checkpoint 소유다.
 
 ## 실행 / scan 경계
 

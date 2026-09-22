@@ -2,6 +2,7 @@ package com.slotq.events.application;
 
 import java.util.Objects;
 import java.util.UUID;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -31,7 +32,7 @@ public class EventRegistrationService {
             }
             long boundary = store.lockBoundary();
             if (store.hasActiveRegistration(route)) {
-                throw new IllegalStateException("consumer route already has an active registration");
+                throw new AlreadyActiveException();
             }
             long nextBoundary = Math.incrementExact(boundary);
             UUID registrationId = UUID.randomUUID();
@@ -52,6 +53,29 @@ public class EventRegistrationService {
             store.deactivateRegistration(registrationId, nextBoundary);
             return true;
         }));
+    }
+
+    /** Fresh, fenced metadata only. Must not inherit a business transaction or its RR snapshot. */
+    public Snapshot inspect(String consumerId, List<String> eventTypes) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("Registration inspection must start outside a caller transaction");
+        }
+        EventCanonicalizer.requireIdentifier(consumerId, "consumerId");
+        var types = List.copyOf(eventTypes);
+        if (types.isEmpty() || types.size() > 100) throw new IllegalArgumentException("Invalid event type scope");
+        types.forEach(type -> EventCanonicalizer.requireIdentifier(type, "eventType"));
+        return transaction.execute(status -> {
+            requireWritableTransaction();
+            long boundary = store.lockBoundary();
+            return new Snapshot(boundary, store.registrationsFor(consumerId, types));
+        });
+    }
+
+    public record Snapshot(long boundary, List<EventRegistration> registrations) {
+        public Snapshot { registrations = List.copyOf(registrations); }
+    }
+    public static final class AlreadyActiveException extends IllegalStateException {
+        public AlreadyActiveException() { super("consumer route already has an active registration"); }
     }
 
     private void requireWritableTransaction() {

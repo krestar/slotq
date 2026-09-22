@@ -107,6 +107,8 @@ import static org.mockito.Mockito.doReturn;
     "slotq.waitlist.promotion.candidate-time-limit=PT0.1S", "slotq.events.delivery.scheduler-enabled=false"})
 @Import(WaitlistPromotionRequestIntegrationTests.Configuration.class)
 class WaitlistPromotionRequestIntegrationTests {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    com.slotq.integration.waitlist.WaitlistPromotionBootstrap bootstrap;
     private static final Instant NOW = Instant.parse("2026-08-30T09:00:00Z");
     private static final Instant START = Instant.parse("2026-08-30T11:00:00Z");
     private static final ConsumerRoute REQUEST = WaitlistPromotionRequestedHandler.ROUTE;
@@ -649,7 +651,7 @@ class WaitlistPromotionRequestIntegrationTests {
     record Entry(UUID id, AuthenticatedPrincipal customer) { }
     @TestConfiguration static class Configuration {
         @Bean @Primary MutableClock requestClock() { return new MutableClock(); }
-        @Bean Readiness readiness() { return new Readiness(); }
+        @Bean @Primary Readiness readiness() { return new Readiness(); }
     }
     static class Readiness implements CapacityReleaseReadiness {
         final AtomicBoolean ready = new AtomicBoolean(true);

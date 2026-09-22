@@ -89,6 +89,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import(BookingCapacityReleaseIntegrationTests.FixtureConfiguration.class)
 class BookingCapacityReleaseIntegrationTests {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    com.slotq.integration.waitlist.WaitlistPromotionBootstrap bootstrap;
     private static final Instant NOW = Instant.parse("2026-08-30T09:00:00.123456789Z");
     private static final Instant START = Instant.parse("2026-08-30T11:00:00Z");
     private static final AuthenticatedPrincipal CUSTOMER = new AuthenticatedPrincipal(
@@ -659,7 +661,7 @@ class BookingCapacityReleaseIntegrationTests {
     @TestConfiguration
     static class FixtureConfiguration {
         @Bean @Primary MutableClock mutableClock() { return new MutableClock(); }
-        @Bean TestReadiness readiness() { return new TestReadiness(); }
+        @Bean @Primary TestReadiness readiness() { return new TestReadiness(); }
     }
     static class TestReadiness implements CapacityReleaseReadiness {
         final AtomicBoolean ready = new AtomicBoolean();

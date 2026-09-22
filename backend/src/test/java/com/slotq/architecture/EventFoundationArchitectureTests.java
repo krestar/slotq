@@ -62,6 +62,7 @@ class EventFoundationArchitectureTests {
             "Optional findEventForAppend(EventId)",
             "StoredEvent insertEvent(EventEnvelope,long)",
             "boolean hasActiveRegistration(ConsumerRoute)",
+            "List registrationsFor(String,List)",
             "void insertRegistration(UUID,ConsumerRoute,long)",
             "boolean isRegistrationActive(UUID)",
             "void deactivateRegistration(UUID,long)"

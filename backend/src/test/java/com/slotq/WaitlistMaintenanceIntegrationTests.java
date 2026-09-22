@@ -46,6 +46,8 @@ import static org.mockito.Mockito.*;
     "slotq.waitlist.promotion.discovery-batch-size=2", "slotq.events.delivery.scheduler-enabled=false"})
 @Import(WaitlistMaintenanceIntegrationTests.Configuration.class)
 class WaitlistMaintenanceIntegrationTests {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    com.slotq.integration.waitlist.WaitlistPromotionBootstrap bootstrap;
     static final Instant NOW = Instant.parse("2026-08-30T09:00:00Z"), START = Instant.parse("2026-08-30T11:00:00Z");
     @Container @ServiceConnection static final org.testcontainers.mysql.MySQLContainer MYSQL =
         new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_maintenance")
@@ -529,7 +531,7 @@ class WaitlistMaintenanceIntegrationTests {
     record Entry(UUID id,AuthenticatedPrincipal customer){}
     @TestConfiguration static class Configuration {
         @Bean @Primary MutableClock maintenanceClock(){return new MutableClock();}
-        @Bean Readiness maintenanceReadiness(){return new Readiness();}
+        @Bean @Primary Readiness maintenanceReadiness(){return new Readiness();}
     }
     static class Readiness implements CapacityReleaseReadiness {
         final AtomicBoolean ready=new AtomicBoolean(true);
