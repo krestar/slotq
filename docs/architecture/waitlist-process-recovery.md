@@ -128,4 +128,37 @@ focused regression은 총 **307건 성공**, 기존 opt-in capacity-gap diagnost
 case의 증거로 사용하지 않는다. 실제 outage 판정은 별도 child PID의 gate, production DB 실패 및
 pause 전/복구 직후/최종 DB snapshot에만 근거한다.
 
-전체 Backend test/clean build는 사용자 최종 PR gate이며 이 checkpoint의 focused/process 실행과 구분한다.
+전체 Backend test/clean build는 최종 PR gate이며 이 checkpoint의 focused/process 실행과 구분한다.
+
+## 2026-09-23 최종 integration gate
+
+최신 main `0ee31ab`, 최신 #96(2026-09-21 C3 수정 포함), branch HEAD `30ac7a5`의 여섯 checkpoint를
+다시 대조했다. 아래 실제 구현·MySQL 회귀·architecture/evidence에서 #96 완료를 막는 누락은 발견하지
+않았다. 이는 후속 Customer/Venue flow인 #97 또는 M4 전체 Complete 선언이 아니다.
+
+| 완료 계약 | 구현 / 검증 근거 |
+| --- | --- |
+| 실제 release와 두 exact route의 안전한 활성화 | `ReservationTransitionRecorder`, MANDATORY active-route append, 두 production handler, `WaitlistPromotionBootstrap`; capacity release / activation integration |
+| JPA business/event 및 effect/receipt/notification/DONE 원자성 | `WaitlistPromotionService`, 기존 M3 final flush/fencing; caught failure/outer rollback/lease loss/독립 actual 1213 retry·DEAD·replay 회귀 |
+| #95/#88 current capacity와 eligible FIFO, 중복·역순·no-op | post-Slot dynamic candidate와 locking current read; promotion delivery integration 및 [application/physical lock 구분](waitlist-promotion.md#application-controlled-lock-graph와-physical-lock-분류) |
+| release 없는 기회와 미완료 request identity 보존 | scoped admission/link+append, receipt 완료 oracle; [request discovery](waitlist-promotion-requests.md)의 multiworker/rollback/DEAD/새 관측 회귀 |
+| due/backing/next/restart 자동 수렴 | [bounded maintenance](waitlist-maintenance.md), 실제 production scheduler integration, 위 backlog>batch child-JVM case |
+| 알림 요청 1회와 실제 process recovery | V12 scoped notification identity, effect rollback/중복 회귀, 위 5-case authoritative DB snapshot과 source-hash regression |
+
+이번 gate의 변경은 `HoldIdempotencyScopeMigrationTests`, `SlotqApplicationTests`의 최신 Flyway
+기대값을 V11에서 실제 최신 V14로 맞춘 것과 이 기록뿐이다. `eee4948` 이후 production source diff는
+없으므로 2026-09-22의 5/5 process evidence를 재생성하지 않았다. 기존 focused **307건 성공**과
+process evidence를 전체 Backend 결과로 대체하거나 이번에 process fixture를 다시 실행했다고 주장하지 않는다.
+
+사용자의 명시적 전체 검증 요청에 따라 agent가 `backend/`에서 JDK 25.0.4.1 / Gradle 9.7.1 /
+Spring Boot 4.1.1 / 실제 MySQL Testcontainers로 실행했다. 로컬 실행 옵션은
+`--offline -g C:\Users\cell1\.gradle --console=plain`이며 suite filter는 사용하지 않았다.
+
+- `.\gradlew.bat test`: **BUILD SUCCESSFUL in 8m 58s**. 51 suites, 535건 중 532건 성공,
+  opt-in capacity lock diagnostic 3건 제외, failures/errors 0.
+- `.\gradlew.bat clean build`: **BUILD SUCCESSFUL in 9m 1s**. 8 tasks 모두 실행,
+  재컴파일·JAR 생성 및 같은 51 suites/532건 성공/진단 3건 제외, failures/errors 0.
+
+전체 test에서 추가 실패는 없었다. container 종료 후 cached Spring context의 Hikari connection 경고는
+테스트 실패나 새 DB outage evidence로 분류하지 않았다. Kafka/Redis/외부 notification provider,
+generic Inbox/workflow, human recovery API 및 후속 UI는 추가하지 않았다.
