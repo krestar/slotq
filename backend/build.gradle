@@ -70,6 +70,18 @@ tasks.register('eventProcessRecovery', JavaExec) {
     }
 }
 
+tasks.register('waitlistProcessRecovery', JavaExec) {
+    group = 'verification'
+    description = 'Runs real Booking/Waitlist child-JVM recovery and MySQL outage evidence.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.waitlist.WaitlistProcessRecoveryRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.recovery.gradleVersion', gradle.gradleVersion
+    ['output', 'only'].each { key ->
+        if (project.hasProperty(key)) systemProperty "slotq.waitlist.recovery.${key}", project.property(key)
+    }
+}
+
 tasks.register('concurrencyBaseline', JavaExec) {
     group = 'verification'
     description = 'Runs the MySQL 8.4 Product HOLD concurrency baseline.'

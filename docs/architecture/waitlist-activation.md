@@ -3,7 +3,7 @@
 Issue [#96 §7](https://github.com/krestar/slotq/issues/96)의 다섯 번째 checkpoint다. 기준 HEAD
 `1786a36`의 promotion effect, request admission, bounded maintenance와 #95의 target/Slot-first/
 RR current-read를 변경하지 않고 실제 startup 및 scheduler wiring을 연결한다.
-실제 별도 JVM 강제 종료/재시작 및 DB outage/recovery evidence는 다음 checkpoint 소유다.
+이후 checkpoint의 [실제 JVM/DB outage recovery evidence](waitlist-process-recovery.md)는 별도로 기록한다.
 
 ## 활성화 단위와 기본값
 

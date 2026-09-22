@@ -5,6 +5,7 @@ Issue [#84](https://github.com/krestar/slotq/issues/84)는
 foundation이다. 같은 Product 배포, DataSource, `JpaTransactionManager`를 사용한다.
 Booking capacity release producer와 두 실제 Waitlist promotion handler는
 [durable bootstrap / activation](waitlist-activation.md)으로 연결됐다. scheduler 기본값은 계속 disabled다.
+실제 Booking/Waitlist의 [child-JVM / DB outage recovery](waitlist-process-recovery.md)는 M3 synthetic evidence와 별도로 기록한다.
 실제 effect/receipt/notification과 application lock order는 [Waitlist Promotion](waitlist-promotion.md)을 따른다.
 release 없는 기회의 scoped admission/새 요청 append는 [Waitlist promotion requests](waitlist-promotion-requests.md)를 따른다.
 durable HOLD/Offer/WAITING backlog와 request discovery의 bounded 순회는
