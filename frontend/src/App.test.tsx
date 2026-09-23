@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import {
   CustomerApiError,
@@ -81,6 +81,8 @@ async function createHeldReservation(api: CustomerReservationApi) {
 }
 
 describe('Customer reservation guided flow', () => {
+  afterEach(() => window.history.replaceState(null, '', '/'))
+
   it.each([
     { wallElapsed: HOLD_RETRY_WINDOW_MS - 1, monotonicElapsed: 1_000, retryable: true },
     { wallElapsed: HOLD_RETRY_WINDOW_MS, monotonicElapsed: 1_000, retryable: false },
