@@ -116,8 +116,9 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
   useEffect(() => {
     onSelectionChange?.({ venueId: venueId || undefined, date: date || undefined,
       entryId: selectedEntryId || undefined,
-      offerId: offer?.id ?? (selection?.entryId === selectedEntryId ? selection?.offerId : undefined) })
-  }, [venueId, date, selectedEntryId, offer?.id])
+      offerId: (entry?.id === selectedEntryId ? offer?.id : undefined)
+        ?? (selection?.entryId === selectedEntryId ? selection?.offerId : undefined) })
+  }, [venueId, date, selectedEntryId, entry?.id, offer?.id])
 
   async function loadVenues() {
     const readEpoch = session.getSnapshot().epoch
@@ -215,7 +216,8 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
   useEffect(() => {
     if (operation) return
     exactGeneration.current += 1; setEntry(undefined); setOffer(undefined)
-    if (venueId && selectedEntryId) void readExact(selectedEntryId, selection?.offerId)
+    if (venueId && selectedEntryId) void readExact(selectedEntryId,
+      selection?.entryId === selectedEntryId ? selection.offerId : undefined)
     return () => { exactGeneration.current += 1 }
   }, [venueId, selectedEntryId, api, authEpoch, operation])
   useEffect(() => {

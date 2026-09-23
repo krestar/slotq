@@ -38,7 +38,7 @@ function route(): { surface: Surface; selection: WaitlistSelection } {
 function urlFor(surface: Surface, selection: WaitlistSelection) {
   const url = new URL(window.location.href)
   for (const key of ['view', 'venueId', 'date', 'entryId', 'offerId']) url.searchParams.delete(key)
-  if (surface === 'waitlist') url.searchParams.set('view', surface)
+  if (surface !== 'customer') url.searchParams.set('view', surface)
   if (surface === 'waitlist') {
     for (const field of ['venueId', 'date', 'entryId', 'offerId'] as const) {
       if (selection[field]) url.searchParams.set(field, selection[field])

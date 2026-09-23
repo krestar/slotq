@@ -1,17 +1,25 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
 import { localAuthSession } from '../auth'
-import { WaitlistMutationUnknown, type Entry, type WaitlistApi } from './waitlistApi'
+import { WaitlistMutationUnknown, type Entry, type Offer, type WaitlistApi } from './waitlistApi'
 import type { CustomerReservationApi } from '../customer/customerReservationApi'
+import type { ManagementApi } from '../management/managementApi'
 
 const venue = '10000000-0000-4000-8000-000000000001'
 const slot = '20000000-0000-4000-8000-000000000002'
 const entryId = '30000000-0000-4000-8000-000000000003'
+const otherEntryId = '30000000-0000-4000-8000-000000000005'
+const offerId = '40000000-0000-4000-8000-000000000004'
 const instant = '2099-09-01T09:00:00Z'
 const entry: Entry = { id: entryId, venueId: venue, startsAt: instant, endsAt: instant, partySize: 2,
   joinedAt: instant, state: 'WAITING', observedAt: instant, venueTimezone: 'Asia/Seoul',
   allowedActions: ['CANCEL'], offerId: null }
+const offer: Offer = { id: offerId, entryId, venueId: venue, resourceId: slot, slotInventoryId: slot,
+  state: 'PENDING', terminalReason: null, expiresAt: instant, observedAt: instant,
+  venueTimezone: 'Asia/Seoul', allowedActions: ['ACCEPT', 'REJECT'],
+  reservation: { id: slot, state: 'HELD', startsAt: instant, endsAt: instant,
+    expiresAt: instant, partySize: 2, allocationQuantity: 1, appliedPolicyVersion: 1 } }
 const reservationApi = { listVenues: vi.fn().mockResolvedValue([{ id: venue, name: 'Venue', timezone: 'Asia/Seoul' }]),
   getAvailability: vi.fn().mockResolvedValue({ venueId: venue, timezone: 'Asia/Seoul', date: '2099-09-01',
     items: [{ slotInventoryId: slot, resourceId: slot, resourceName: 'Table', startsAt: instant,
@@ -25,6 +33,39 @@ const makeWaitlist = (overrides: Partial<WaitlistApi> = {}) => ({
 afterEach(() => window.history.replaceState(null, '', '/'))
 
 describe('Waitlist App navigation and auth', () => {
+  it('drops the previous Offer when selecting another Entry from the list', async () => {
+    window.history.replaceState(null, '', `/?view=waitlist&venueId=${venue}&date=2099-09-01&entryId=${entryId}&offerId=${offerId}`)
+    const other = { ...entry, id: otherEntryId, state: 'WAITING' as const }
+    const waitlistApi = makeWaitlist({
+      entries: vi.fn().mockResolvedValue({ items: [{ ...entry, state: 'OFFERED', offerId }, other],
+        nextCursor: null, observedAt: instant, venueTimezone: 'Asia/Seoul' }),
+      entry: vi.fn().mockImplementation((_venue, id) => Promise.resolve(id === entryId
+        ? { ...entry, state: 'OFFERED', offerId, allowedActions: [] } : other)),
+      offer: vi.fn().mockResolvedValue(offer),
+    })
+    render(<App api={reservationApi} waitlistApi={waitlistApi} />)
+    await screen.findByRole('article', { name: 'Offer 현재 상태' })
+    const buttons = await screen.findAllByRole('button', { name: '상세 조회' })
+    fireEvent.click(buttons[1])
+    await waitFor(() => expect(screen.getByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('WAITING'))
+    expect(screen.getByText(`선택한 Entry ${otherEntryId}`)).toBeInTheDocument()
+    expect(window.location.search).toContain(`entryId=${otherEntryId}`)
+    expect(window.location.search).not.toContain(`offerId=${offerId}`)
+    expect(waitlistApi.entry).toHaveBeenCalledWith(venue, otherEntryId)
+  })
+
+  it('restores Management after Customer to Management to Waitlist to Back', async () => {
+    const managementApi = { listVenues: vi.fn().mockResolvedValue([]) } as unknown as ManagementApi
+    render(<App api={reservationApi} managementApi={managementApi} waitlistApi={makeWaitlist()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Venue 운영' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Venue 운영' })).toBeInTheDocument()
+    expect(new URLSearchParams(window.location.search).get('view')).toBe('management')
+    fireEvent.click(screen.getByRole('button', { name: 'Customer 대기' }))
+    expect(await screen.findByRole('heading', { level: 1, name: '대기와 Offer' })).toBeInTheDocument()
+    await act(async () => { window.history.back() })
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Venue 운영' })).toBeInTheDocument())
+  })
+
   it('recovers URL selection through exact server read and keeps URL free of key/body', async () => {
     window.history.replaceState(null, '', `/?view=waitlist&venueId=${venue}&date=2099-09-01&entryId=${entryId}`)
     const waitlistApi = makeWaitlist()
