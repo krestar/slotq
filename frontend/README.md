@@ -2,7 +2,10 @@
 
 SlotQ Product API의 실제 사용자 흐름을 검증하는 React·TypeScript·Vite 기반 thin SPA다.
 Customer는 active Venue 선택, Availability 조회, HOLD, confirm/cancel과 최신 Reservation
-재조회를 단계별 guided flow에서 수행한다. Product 상태와 deadline은 Backend 응답만 사용한다.
+재조회를 단계별 guided flow에서 수행한다. Customer Waitlist는 같은 시간대의 적합한 Table
+수요 등록, 자기 Entry·Offer의 exact 조회와 서버 허용 작업을 제공한다. Venue Waitlist는 서버가
+발견한 Venue scope의 순서·Slot 적합성·Offer 업무 상태를 조회한다. Product 상태와 deadline은
+Backend 응답만 사용한다.
 
 ## Runtime baseline
 
@@ -71,6 +74,24 @@ navigation을 지나 복구한다. 검색 조건 변경은 포기 전까지 잠�
 시스템 시계가 뒤로 조정되어도 monotonic 경계는 연장하지 않는다. 만료 또는 auth invalidate 시
 key/context를 폐기하며 결과를 실패로 단정하지 않는다.
 포기는 서버 예약 취소가 아니다.
+
+Waitlist 등록은 HOLD와 별도의 intent다. UUID `Idempotency-Key`와
+`venueId + slotInventoryId + partySize`를 App memory에만 보관하며 HOLD의 23시간
+client 보존 상한을 적용하지 않는다. 응답을 받지 못하면 같은 key의 registration-request GET을
+먼저 제공하고, 404도 원 요청 실패로 확정하지 않는다. 사용자가 누른 경우에만 같은 key·body를
+다시 보낸다. Entry cancel과 Offer accept/reject에는 key를 붙이지 않는다. unknown 또는
+409 뒤에는 원 Entry/Offer exact GET으로 서버 상태를 확인한다. PENDING이 유지되면 서버가
+허용한 동일 action만 명시적으로 재시도할 수 있다. Poll과 deadline 표시는 read-only이며
+mutation이나 local expiry 전이를 일으키지 않는다.
+
+Waitlist URL은 비밀이 아닌 `view`, `venueId`, `date`, `entryId`, `offerId` 선택값만 담는다.
+Reload와 auth invalidation은 미해결 key/action intent를 폐기한다. 재인증 후 known ID의 exact
+GET 또는 Venue-local date 자기 목록으로 다시 발견하며 이전 intent의 성공을 추측하지 않는다.
+Owner/Manager Waitlist 조회 범위와 작업 가능 여부는 서버의 scoped response와
+`allowedActions`로만 판단한다. Staff의 기존 Reservation 업무는 유지한다.
+
+실제 MySQL 8.4.11·Backend·브라우저에서 확인한 M4 흐름과 재현 절차는
+[Waitlist browser evidence](../docs/architecture/waitlist-browser-evidence.md)에 기록했다.
 
 Reload는 새 runtime auth session이다. 기존 계약에는 인증 주체 연속성 증명이 없으므로 이전
 attempt를 저장·복구하거나 재전송하지 않는다. fixtureKey를 Customer identity 근거로 쓰지 않으며

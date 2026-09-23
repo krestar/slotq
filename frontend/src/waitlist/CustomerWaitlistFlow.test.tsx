@@ -111,6 +111,16 @@ describe('Customer Waitlist flow', () => {
     expect(screen.getByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('CANCELLED')
     expect(screen.queryByRole('button', { name: '대기 취소' })).not.toBeInTheDocument()
   })
+  it('labels a retained list as stale when the next server read fails', async () => {
+    const api = makeApi({ entries: vi.fn().mockResolvedValueOnce(page([entry]))
+      .mockRejectedValueOnce(new WaitlistApiError(500, 'INTERNAL_ERROR')) })
+    render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={createWaitlistSession()}
+      selection={selection} />)
+    await screen.findByText(`Entry ${entryId}`)
+    fireEvent.click(screen.getByRole('button', { name: '현재 상태 다시 조회' }))
+    expect(await screen.findByText('아래 목록은 이전 조회 결과입니다. 최신 상태를 확인할 수 없습니다.')).toBeInTheDocument()
+    expect(screen.getByText(`Entry ${entryId}`)).toBeInTheDocument()
+  })
   it('links accepted Offer to the same Reservation without creating a HOLD', async () => {
     const open = vi.fn()
     const accepted = { ...offer, state: 'ACCEPTED' as const, allowedActions: [],

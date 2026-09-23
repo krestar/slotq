@@ -191,10 +191,14 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
         if (nextOffer.entryId !== nextEntry.id) throw new Error('Offer/Entry mismatch')
         setOffer(nextOffer)
         if (action?.status === 'unknown' && action.command.targetId === nextOffer.id
-          && nextOffer.state !== 'PENDING') session.markAction(action.command, 'ready')
+          && nextOffer.state !== 'PENDING') {
+          session.markAction(action.command, 'ready')
+          setNotice('원래 대상의 현재 상태를 확인했습니다.')
+        }
       } else if (action?.status === 'unknown' && action.command.kind === 'cancel'
         && action.command.targetId === nextEntry.id && nextEntry.state !== 'WAITING') {
         session.markAction(action.command, 'ready')
+        setNotice('원래 대상의 현재 상태를 확인했습니다.')
       }
       setExactState('success')
       setNotice((current) => current === '원래 대상의 현재 상태를 확인할 수 없습니다.' ? '' : current)
@@ -417,6 +421,9 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
         <p>서버의 joinedAt·ID 순서를 그대로 표시합니다. 목록은 현재 상태의 공통 snapshot이 아닙니다.</p>
         <Button variant="secondary" disabled={!venueId || !date || pending} onClick={() => void refresh()}>현재 상태 다시 조회</Button>
         {pageState === 'loading' ? <p role="status">Entry 목록 조회 중…</p> : null}
+        {pageState === 'error' && page ? <p className="notice notice--error" role="status">
+          아래 목록은 이전 조회 결과입니다. 최신 상태를 확인할 수 없습니다.
+        </p> : null}
         {pageState === 'success' && page?.items.length === 0 ? <p className="notice notice--empty" role="status">이 날짜의 Entry가 없습니다.</p> : null}
         {page ? <><ul className="reservation-list" aria-label="내 Entry 목록">
           {page.items.map((item) => <li key={item.id} className="reservation-row">
