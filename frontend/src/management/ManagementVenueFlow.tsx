@@ -22,11 +22,14 @@ import {
   type ReservationState,
   type SlotInventory,
 } from './managementApi'
+import { ManagementWaitlistView } from '../waitlist/ManagementWaitlistView'
+import type { WaitlistApi } from '../waitlist/waitlistApi'
 
 export interface ManagementVenueFlowProps {
   api?: ManagementApi
   navigation?: ReactNode
   onNavigationLockChange?: (locked: boolean) => void
+  waitlistApi?: WaitlistApi
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
@@ -118,6 +121,7 @@ export function ManagementVenueFlow({
   api = managementApi,
   navigation,
   onNavigationLockChange,
+  waitlistApi,
 }: ManagementVenueFlowProps) {
   const [venues, setVenues] = useState<ManagementVenue[]>([])
   const [venueListState, setVenueListState] = useState<LoadState>('loading')
@@ -125,6 +129,7 @@ export function ManagementVenueFlow({
   const [venueId, setVenueId] = useState('')
   const [date, setDate] = useState('')
   const [status, setStatus] = useState<ReservationState | ''>('')
+  const [showWaitlist, setShowWaitlist] = useState(false)
   const [detail, setDetail] = useState<ManagementVenue>()
   const [policy, setPolicy] = useState<Policy>()
   const [resources, setResources] = useState<ManagementResource[]>([])
@@ -608,6 +613,11 @@ export function ManagementVenueFlow({
                 </ul>
               ) : null}
             </section>
+
+            <Button density="compact" variant="secondary" onClick={() => setShowWaitlist((current) => !current)}>
+              {showWaitlist ? 'Waitlist 업무 조회 닫기' : 'Waitlist 업무 조회 열기'}
+            </Button>
+            {showWaitlist ? <ManagementWaitlistView venueId={venueId} date={date} slots={slots} api={waitlistApi} /> : null}
 
             <section className="management-section configuration-section" aria-labelledby="configuration-title">
               <h2 id="configuration-title">3. Venue configuration</h2>

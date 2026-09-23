@@ -18,6 +18,8 @@ export interface CustomerReservationFlowProps {
   holdAttempts: HoldAttemptMemory
   navigation?: ReactNode
   onNavigationLockChange?: (locked: boolean) => void
+  onWaitlistSelect?: (selection: { venueId: string; date: string; slotInventoryId: string; partySize: number }) => void
+  initialReservation?: { venueId: string; reservationId: string }
 }
 
 interface SearchInput {
@@ -146,12 +148,14 @@ function AvailabilityCard({
   selected,
   disabled,
   onSelect,
+  onWaitlist,
 }: {
   item: AvailabilityItem
   timezone: string
   selected: boolean
   disabled: boolean
   onSelect: () => void
+  onWaitlist?: () => void
 }) {
   return (
     <li className={`availability-card${selected ? ' availability-card--selected' : ''}`}>
@@ -164,11 +168,14 @@ function AvailabilityCard({
         </p>
         <p>수용 인원 {item.seatingCapacity}명 · 현재 가능 {item.available}</p>
       </div>
+      <div className="reservation-actions">
       {item.available > 0 ? (
         <Button variant={selected ? 'primary' : 'secondary'} onClick={onSelect} disabled={disabled}>
           {selected ? '선택됨' : '이 시간 선택'}
         </Button>
       ) : <span className="availability-unavailable">예약 불가</span>}
+      {onWaitlist ? <Button variant="secondary" onClick={onWaitlist} disabled={disabled}>이 시간대 대기</Button> : null}
+      </div>
     </li>
   )
 }
@@ -178,6 +185,8 @@ export function CustomerReservationFlow({
   holdAttempts,
   navigation,
   onNavigationLockChange,
+  onWaitlistSelect,
+  initialReservation,
 }: CustomerReservationFlowProps) {
   const holdAttempt = useSyncExternalStore(holdAttempts.subscribe, holdAttempts.getSnapshot)
   const [venues, setVenues] = useState<VenueSummary[]>([])
@@ -399,6 +408,23 @@ export function CustomerReservationFlow({
     }
   }
 
+  useEffect(() => {
+    if (!initialReservation) return
+    const requestGeneration = ++reservationReadGeneration.current
+    setReservationReadState('loading')
+    void api.getReservation(initialReservation.venueId, initialReservation.reservationId).then((result) => {
+      if (requestGeneration !== reservationReadGeneration.current) return
+      setReservation(result)
+      setReservationReadState('success')
+      setReservationReadError(undefined)
+    }).catch((error) => {
+      if (requestGeneration !== reservationReadGeneration.current) return
+      setReservationReadState('error')
+      setReservationReadError(normalizeError(error))
+    })
+    return () => { reservationReadGeneration.current += 1 }
+  }, [api, initialReservation?.venueId, initialReservation?.reservationId])
+
   const reservationVenueId = reservation?.venueId
     ?? ('command' in holdAttempt ? holdAttempt.command.venueId : undefined)
     ?? venueId
@@ -547,6 +573,10 @@ export function CustomerReservationFlow({
                         if (contextLocked) return
                         setSelectedSlotId(item.slotInventoryId)
                       }}
+                      onWaitlist={onWaitlistSelect && lastSearch ? () => onWaitlistSelect({
+                        venueId: lastSearch.venueId, date: lastSearch.date,
+                        slotInventoryId: item.slotInventoryId, partySize: lastSearch.partySize,
+                      }) : undefined}
                     />
                   ))}
                 </ul>
