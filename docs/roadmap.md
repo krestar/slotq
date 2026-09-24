@@ -1,11 +1,12 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 M0 Foundation, M1 Reservation Core, M2 Concurrency & Consistency와
-M3 Reliable Event Foundation까지 완료했다. M3는 #80 전달 경계 결정, #84 production runtime,
-#86 process failure recovery gate와 종료 감사 corrective #88을 포함하며, PR #90에서
-DB unavailable evidence의 실제 production DB access 진입까지 보강했다. 존재하지 않는
-Product 기능이나 검증 명령을 전제로 하지 않는다.
+현재 저장소는 M0 Foundation부터 M4 Waitlist Promotion까지 완료했다. M3는 #80 전달 경계
+결정, #84 production runtime, #86 process failure recovery gate와 종료 감사 corrective #88을
+포함하며 PR #90에서 DB unavailable evidence의 실제 production DB access 진입까지 보강했다.
+M4는 #94~#97로 등록→Promotional HOLD Offer→event 기반 승급·만료·next→Thin UI를 연결했고,
+종료 감사에서 발견된 #97 async-state blocker 3건은 PR #103으로 보정한 뒤 closure 재검토를
+PASS했다. 존재하지 않는 Product 기능이나 검증 명령을 전제로 하지 않는다.
 
 ## 계획 원칙
 
@@ -19,7 +20,7 @@ Product 기능이나 검증 명령을 전제로 하지 않는다.
   도입은 측정된 문제와 대안 비교가 있을 때만 검토한다.
 - Frontend는 React, TypeScript, Vite 기반의 thin SPA로 시작한다. backend API contract를
   먼저 확정하고, UI는 Product 규칙을 복제하지 않고 server state를 표현한다.
-- 완료된 M0~M3 작업은 GitHub Issue와 검증 증거로 관리한다. M4부터 M8까지는 각
+- 완료된 M0~M4 작업은 GitHub Issue와 검증 증거로 관리한다. M5부터 M8까지는 각
   Milestone 착수 전까지 work package 수준으로 유지하고, 선행 조건이 충족된 뒤 필요한
   Issue만 확정한다.
 - Milestone 완료는 문서 작성만으로 판단하지 않는다. 실행 가능한 테스트, 재현 기록,
@@ -61,6 +62,11 @@ Status의 의미는 다음과 같다.
   CONFIRM·replacement HOLD capacity 경합을 보정했고, PR #90은 WP3 DB unavailable case가 실제
   production `runCycle()`의 DB access failure에 진입했음을 deterministic하게 증명하도록
   evidence를 보강했다. 첫 Booking producer와 Waitlist consumer는 M4 ownership으로 남긴다.
+- M4 Waitlist Promotion: Complete. #94~#97이 모두 Done이다. #94는 등록·취소·scoped 조회,
+  #95는 Promotional HOLD-backed Offer lifecycle, #96은 첫 실제 Booking producer와 Waitlist
+  consumer·activation·maintenance·process recovery를 연결했고 #97은 Customer·Venue Thin UI를
+  완성했다. 종료 독립 감사의 #97 async-state blocker 3건은 PR #103에서 보정됐으며, 최종
+  Backend CI·Frontend CI·PR Policy 성공과 closure 재검토 PASS를 확인했다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -112,8 +118,15 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #86 [Chore] Event delivery process failure recovery 종료 검증
 - #88 [Bug] M3 종료 감사 CONFIRM·replacement HOLD capacity 경합 보정
 
-#18, #19, #20과 #45의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는
-후속 UI work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
+### M4
+
+- #94 [Feature] Waitlist 수요 등록·취소와 scoped 조회 구현
+- #95 [Feature] Promotional HOLD 기반 Offer의 원자적 생명주기 구현
+- #96 [Feature] Booking 이벤트 기반 Waitlist 승급과 만료 복구 연결
+- #97 [Feature] Customer·Venue Thin Waitlist UI 구현
+
+#18, #19, #20과 #45, #97의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는
+후속 work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
 
 ### Priority
 
@@ -130,6 +143,8 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 | #15, #16, #70, #78 | P1 | 동시성·lifecycle 정합성과 M2 종료 근거를 보장하는 핵심 구현·보정이다. |
 | #17, #71 | P2 | 중요한 reliability 기능이지만 동시성 전략 적용을 직접 차단하지 않는다. |
 | #80, #84, #86, #88 | P1 | M3 전달 계약, production foundation, process recovery gate와 종료 blocker 보정이다. |
+| #94, #95, #96 | P1 | M4 등록·Offer 원자성·실제 event promotion/recovery를 완성하는 핵심 backend 작업이다. |
+| #97 | P2 | Backend 계약 위에 실제 Customer·Venue thin flow와 browser recovery 경계를 완성한다. |
 
 현재 Issue에는 즉시 대응이 필요한 P0도, 장기 아이디어 성격의 P3도 부여하지 않는다.
 우선순위는 Milestone 번호와 같지 않으며, Ready 여부는 Priority가 아니라 dependency
@@ -174,15 +189,20 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
                                                    v
                                   #88 M3 closure corrective ──> M3 complete
                                                    │
-    M4-WP1 Waitlist model ─────────────────────────┤
                                                    v
-                                      M4-WP2 Promotion·Offer
+                                      #94 Waitlist 등록·조회
                                                    │
                                                    v
-                                      M4-WP3 Accept·Expire·Next
+                                      #95 Promotional HOLD·Offer
                                                    │
                                                    v
-                                      M4-WP4 Thin Waitlist UI
+                                      #96 Event promotion·Expiry·Recovery
+                                                   │
+                                                   v
+                                      #97 Thin Waitlist UI
+                                                   │
+                                                   v
+                              #97 corrective / PR #103 ──> M4 complete
                                                    │
                                                    v
                                       M5-WP1 Logs·Metrics·Trace
@@ -236,8 +256,16 @@ DB delivery, fencing/attempt와 internal replay 계약을 production foundation�
 PASS했다. 종료 감사에서 발견된 CONFIRM·replacement HOLD capacity race는 #88에서 보정했고,
 PR #90은 DB unavailable case가 context startup이나 unrelated exit가 아니라 production
 `EventDeliveryWorker.runCycle()`의 실제 DB access failure를 관측해야만 PASS하도록 evidence를
-보강했다. 이 범위의 focused 재검증 후 M3는 Complete이다. 실제 Booking producer·PII-free
-schema·JPA transaction join과 Waitlist consumer는 M4가 소유한다.
+보강했다. 이 범위의 focused 재검증 후 M3는 Complete이다. 당시 M4 ownership으로 남겼던 실제
+Booking producer·PII-free schema·JPA transaction join과 Waitlist consumer는 #96에서 연결됐다.
+
+M4는 #94에서 normalized Demand/Entry와 registration idempotency·scope를, #95에서 실제
+Promotional HOLD와 Offer lifecycle·capacity/locking 경계를 구현했다. #96은 M3 delivery에 실제
+Booking capacity release producer와 두 promotion route를 연결하고 activation, bounded maintenance,
+5-case child-JVM/DB outage recovery까지 검증했다. #97은 Customer·Venue Thin UI와 실제
+Backend+MySQL browser flow를 연결했다. 종료 독립 감사에서 발견된 OFFERED cancel unknown,
+Venue 전환 late refresh, 지난 deadline read loop의 세 blocker는 PR #103에서 보정했고 관련
+regression과 최종 CI가 통과했다. closure 재검토에서 추가 blocker가 없어 M4는 Complete이다.
 
 ## Release checkpoint
 
@@ -533,6 +561,9 @@ M3 종료 결과를 기준으로 남은 일정, 실제 구현 완성도와 M4·M
 
 ## M4 Waitlist Promotion
 
+M4의 실제 GitHub Issue #94~#97과 종료 감사 corrective PR #103은 모두 Done이며,
+최신 closure 재검토에서 추가 blocker 없음으로 PASS했다.
+
 ### 목표
 
 대기 등록부터 취소 후 offer 승급, 수락·거절·만료와 다음 후보 이동을 구현하고, server
@@ -745,12 +776,12 @@ M7 Model Router & Agent Runtime.
 | 검토 질문 | 결론 |
 | --- | --- |
 | Product Backend와 AI Platform의 비중이 Charter 방향을 유지하는가? | M0~M5를 Product와 운영 신뢰성에 배정하고 M6 이후에만 AI 기반을 시작한다. |
-| AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M3 실제 Issue에는 AI 작업이 없다. |
+| AI가 너무 일찍 등장하는가? | AI 구현은 M5 완료가 선행 조건이며 M0~M4 실제 Issue에는 AI 작업이 없다. |
 | 기술을 사용하기 위한 요구사항이 있는가? | Redis, Kafka, Kubernetes, Distributed Lock, Spring Modulith는 도입 gate가 충족될 때까지 제외한다. M3 messaging 선택도 실제 비교와 ADR-0007 근거로 확정했다. |
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
-| Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 #80 decision gate, #84 production foundation, #86 process recovery gate와 종료 corrective #88로 완료했다. |
-| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M0~M3는 Complete이다. M4 실제 Issue는 M3 종료 뒤 별도 설계·감사를 거쳐 확정하며 work package만으로 Ready를 선언하지 않는다. |
+| Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 #80/#84/#86과 corrective #88, M4는 #94~#97과 #97 corrective PR #103으로 완료했다. |
+| Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71·#97은 P2로 구분한다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0~M4는 Complete이다. M5 실제 Issue는 M4 종료 뒤 별도 설계·감사를 거쳐 확정하며 work package만으로 Ready를 선언하지 않는다. |
 | 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일한다. 동시성과 M3 messaging 선택은 재현 가능한 실험과 ADR에 근거한다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |
