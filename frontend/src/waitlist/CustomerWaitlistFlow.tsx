@@ -40,17 +40,13 @@ function format(value: string, timezone: string) {
   if (!Number.isFinite(date.getTime())) return value
   return `${new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone }).format(date)} (${timezone})`
 }
-function Deadline({ value, timezone, onElapsed }: { value: string; timezone: string; onElapsed: () => void }) {
+function Deadline({ value, timezone }: { value: string; timezone: string }) {
   const [now, setNow] = useState(Date.now)
-  const elapsed = useRef(false)
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
   const remaining = Math.max(0, Math.ceil((Date.parse(value) - now) / 1000))
-  useEffect(() => {
-    if (remaining === 0 && !elapsed.current) { elapsed.current = true; onElapsed() }
-  }, [remaining, onElapsed])
   return <p>서버 기한 <time dateTime={value}>{format(value, timezone)}</time> · {remaining > 0
     ? `표시용 ${Math.floor(remaining / 60)}분 ${String(remaining % 60).padStart(2, '0')}초`
     : '표시 시간이 지났습니다. 서버 상태 확인 중'}</p>
@@ -186,19 +182,20 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
       if (generation !== exactGeneration.current || readEpoch !== session.getSnapshot().epoch || !mounted.current) return
       if (targetOfferId && nextEntry.offerId !== targetOfferId) throw new Error('Offer/Entry mismatch')
       setEntry(nextEntry)
+      let nextOffer: Offer | undefined
       if (nextEntry.offerId) {
-        const nextOffer = await api.offer(targetVenue, nextEntry.offerId)
+        nextOffer = await api.offer(targetVenue, nextEntry.offerId)
         if (generation !== exactGeneration.current || readEpoch !== session.getSnapshot().epoch || !mounted.current) return
         if (nextOffer.entryId !== nextEntry.id) throw new Error('Offer/Entry mismatch')
         setOffer(nextOffer)
-        if (action?.status === 'unknown' && action.command.targetId === nextOffer.id
-          && nextOffer.state !== 'PENDING') {
-          session.markAction(action.command, 'ready')
-          setNotice('원래 대상의 현재 상태를 확인했습니다.')
-        }
-      } else if (action?.status === 'unknown' && action.command.kind === 'cancel'
-        && action.command.targetId === nextEntry.id && nextEntry.state !== 'WAITING') {
-        session.markAction(action.command, 'ready')
+      }
+      const currentAction = session.getSnapshot().action
+      if (currentAction?.status === 'unknown' && (currentAction.command.kind === 'cancel'
+        ? currentAction.command.targetId === nextEntry.id
+          && nextEntry.state !== 'WAITING' && nextEntry.state !== 'OFFERED'
+          && (!nextOffer || nextOffer.state !== 'PENDING')
+        : currentAction.command.targetId === nextOffer?.id && nextOffer.state !== 'PENDING')) {
+        session.markAction(currentAction.command, 'ready')
         setNotice('원래 대상의 현재 상태를 확인했습니다.')
       }
       setExactState('success')
@@ -334,7 +331,9 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
   }
   async function refresh() {
     if (!venueId || !date || pending) return
+    const generation = pageGeneration.current
     if (selectedEntryId) await readExact(selectedEntryId)
+    if (generation !== pageGeneration.current) return
     await loadEntries()
   }
   useEffect(() => {
@@ -455,8 +454,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
           <div className="reservation-summary"><div><span className="field-label">Offer</span><StatusBadge status={offer.state} /></div>
             <div><span className="field-label">Resource / Slot</span><strong>{offer.resourceId} / {offer.slotInventoryId}</strong></div></div>
           <p>Offer {offer.id} · Reservation {offer.reservation.id} · 현재 Reservation {offer.reservation.state}</p>
-          {offer.state === 'PENDING' ? <Deadline value={offer.expiresAt} timezone={offer.venueTimezone}
-            onElapsed={() => { if (!pending) void readExact(entry!.id) }} /> : null}
+          {offer.state === 'PENDING' ? <Deadline value={offer.expiresAt} timezone={offer.venueTimezone} /> : null}
           <p>서버 관측 <time dateTime={offer.observedAt}>{format(offer.observedAt, offer.venueTimezone)}</time></p>
           {offer.allowedActions.includes('ACCEPT') && !action ? <Button disabled={pending}
             onClick={() => startAction('accept', offer.id)}>Offer 수락</Button> : null}
@@ -471,7 +469,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
             onClick={() => void reconcileAction(action.command)}>원래 대상 exact 조회</Button> : null}
           {action.status === 'unknown' && ((actionTargetOffer && offer?.state === 'PENDING'
             && offer.allowedActions.includes(action.command.kind === 'accept' ? 'ACCEPT' : 'REJECT'))
-            || (actionTargetEntry && entry?.state === 'WAITING' && entry.allowedActions.includes('CANCEL'))) ?
+            || (actionTargetEntry && entry?.allowedActions.includes('CANCEL'))) ?
             <Button disabled={operation} onClick={() => { const command = session.retryAction(); if (command) void sendAction(command) }}>
               같은 대상·작업 명시적 재시도</Button> : null}
           {action.status === 'ready' ? <Button variant="secondary" onClick={() => session.clearAction()}>확인된 작업 닫기</Button> : null}

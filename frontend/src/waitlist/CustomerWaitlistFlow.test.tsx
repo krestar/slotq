@@ -6,6 +6,7 @@ import { createWaitlistSession } from './waitlistSession'
 import type { CustomerReservationApi } from '../customer/customerReservationApi'
 
 const venue = '10000000-0000-4000-8000-000000000001'
+const otherVenue = '10000000-0000-4000-8000-000000000005'
 const slot = '20000000-0000-4000-8000-000000000002'
 const entryId = '30000000-0000-4000-8000-000000000003'
 const offerId = '40000000-0000-4000-8000-000000000004'
@@ -95,6 +96,85 @@ describe('Customer Waitlist flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '같은 대상·작업 명시적 재시도' }))
     await waitFor(() => expect(api.offerAction).toHaveBeenCalledTimes(2))
     expect(vi.mocked(api.offerAction).mock.calls).toEqual([[venue, offerId, 'accept'], [venue, offerId, 'accept']])
+  })
+  it('closes an unknown OFFERED Entry cancel from exact terminal Entry and Offer state', async () => {
+    let terminal = false
+    const offered = { ...entry, state: 'OFFERED' as const, offerId, allowedActions: ['CANCEL' as const] }
+    const declined = { ...offered, state: 'DECLINED' as const, allowedActions: [] }
+    const api = makeApi({
+      entry: vi.fn().mockImplementation(() => Promise.resolve(terminal ? declined : offered)),
+      offer: vi.fn().mockImplementation(() => Promise.resolve(terminal
+        ? { ...offer, state: 'DECLINED', terminalReason: 'ENTRY_CANCELLED', allowedActions: [] }
+        : offer)),
+      cancel: vi.fn().mockRejectedValue(new WaitlistMutationUnknown('NETWORK_ERROR')),
+    })
+    const session = createWaitlistSession()
+    render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={session}
+      selection={{ ...selection, entryId }} />)
+    fireEvent.click(await screen.findByRole('button', { name: '대기 취소' }))
+    expect(await screen.findByText(/처리 결과 확인 필요/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '원래 대상 exact 조회' }))
+    expect(await screen.findByRole('button', { name: '같은 대상·작업 명시적 재시도' })).toBeInTheDocument()
+    expect(api.cancel).toHaveBeenCalledOnce()
+    terminal = true
+    fireEvent.click(screen.getByRole('button', { name: '원래 대상 exact 조회' }))
+    expect(await screen.findByRole('button', { name: '확인된 작업 닫기' })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('DECLINED')
+    expect(screen.getByRole('article', { name: 'Offer 현재 상태' })).toHaveTextContent('DECLINED')
+    expect(session.getSnapshot().action?.command.targetId).toBe(entryId)
+    expect(api.cancel).toHaveBeenCalledOnce()
+  })
+  it('does not let an old Venue refresh continuation replace the new Venue list', async () => {
+    let resolveOld!: (value: Entry) => void
+    const oldRead = new Promise<Entry>((resolve) => { resolveOld = resolve })
+    const other = { ...entry, id: slot, venueId: otherVenue }
+    const api = makeApi({
+      entries: vi.fn().mockImplementation((id) => Promise.resolve(page(id === venue ? [entry] : [other]))),
+      entry: vi.fn().mockResolvedValueOnce(entry).mockImplementation(() => oldRead),
+    })
+    const venues = { ...reservationApi, listVenues: vi.fn().mockResolvedValue([
+      { id: venue, name: 'Venue A', timezone: 'Asia/Seoul' },
+      { id: otherVenue, name: 'Venue B', timezone: 'Asia/Seoul' },
+    ]) } as CustomerReservationApi
+    render(<CustomerWaitlistFlow api={api} reservationApi={venues} session={createWaitlistSession()}
+      selection={{ ...selection, entryId }} />)
+    await screen.findByText(`Entry ${entryId}`)
+    await screen.findByRole('article', { name: 'Entry 현재 상태' })
+    fireEvent.click(screen.getByRole('button', { name: '현재 상태 다시 조회' }))
+    await waitFor(() => expect(api.entry).toHaveBeenCalledTimes(2))
+    fireEvent.change(screen.getByLabelText('Venue'), { target: { value: otherVenue } })
+    await screen.findByText(`Entry ${slot}`)
+    await act(async () => { resolveOld(entry) })
+    expect(screen.getByText(`Entry ${slot}`)).toBeInTheDocument()
+    expect(screen.queryByText(`Entry ${entryId}`)).not.toBeInTheDocument()
+    expect(vi.mocked(api.entries).mock.calls.map(([id]) => id)).toEqual([venue, otherVenue])
+  })
+  it('bounds reads when the browser clock passed a server PENDING Offer deadline', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2099-09-01T09:00:01Z'))
+    try {
+      const offered = { ...entry, state: 'OFFERED' as const, offerId, allowedActions: ['CANCEL' as const] }
+      let reads = 0
+      const api = makeApi({
+        entry: vi.fn().mockImplementation(() => {
+          reads += 1
+          return reads > 4 ? new Promise<Entry>(() => {}) : Promise.resolve(offered)
+        }),
+        offer: vi.fn().mockResolvedValue(offer),
+      })
+      render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={createWaitlistSession()}
+        selection={{ ...selection, entryId }} />)
+      await act(async () => { await Promise.resolve() })
+      expect(api.entry).toHaveBeenCalledOnce()
+      expect(screen.getByText(/표시 시간이 지났습니다. 서버 상태 확인 중/)).toBeInTheDocument()
+      await act(async () => { vi.advanceTimersByTime(15_000); await Promise.resolve() })
+      expect(api.entry).toHaveBeenCalledTimes(2)
+      expect(screen.getByRole('article', { name: 'Offer 현재 상태' })).toHaveTextContent('PENDING')
+      expect(api.cancel).not.toHaveBeenCalled()
+      expect(api.offerAction).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
   it('discards the old exact GET after choosing a different Entry', async () => {
     let resolveOld!: (value: Entry) => void
