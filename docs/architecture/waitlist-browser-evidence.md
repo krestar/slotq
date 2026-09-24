@@ -95,3 +95,28 @@ Idempotency-Key 또는 token을 출력하지 않도록 했으며 Product 코드�
 
 이 기록은 위 격리 fixture와 수동 browser 경로의 관측이다. #94~#96의 별도 Backend
 통합·process recovery 검증을 대체하지 않는다. M4를 이 문서만으로 Complete로 표시하지 않는다.
+
+## 2026-09-24 #97 async-state 수정의 browser 확인
+
+`main` `3d0ce1a08d0364de41e31723759623296ccbeb3a`에서 분기한 수정 UI를 실제
+browser와 Vite 5173에서 확인했다. 세 race의 응답 순서를 재현하기 위해 127.0.0.1:8082의
+일시적 로컬 mock API를 사용했다. 아래 관측은 browser UI의 경계 검증이며 위 표의 실제
+Backend/MySQL 결과나 server business 동작의 새 증거가 아니다. mock은 repository에 포함하지
+않았고 실제 key/token 또는 운영 데이터를 사용하지 않았다.
+
+- 이미 지난 deadline(2020-01-01)을 가진 Offer를 서버 응답상 계속 `PENDING`으로 반환했다.
+  화면은 `표시 시간이 지났습니다. 서버 상태 확인 중`과 `PENDING`을 유지했다. 2초 관측에서
+  exact Entry GET 3→3, Offer GET 2→2, mutation 0이었고 즉시 read loop가 없었다.
+  별도 Vitest fake timer는 15초 bounded poll에서만 다음 read가 시작됨을 검증한다.
+- `OFFERED` Entry cancel을 한 번 클릭한 뒤 mock이 Entry/Offer를 `DECLINED`로 바꾸고
+  응답 연결을 끊었다. 화면은 먼저 `unknown`, 뒤이어 원 Entry와 연결 Offer의 exact GET으로
+  두 terminal 상태와 `cancel · ready`/닫기 버튼을 표시했다. UI의 명시적 재시도는 누르지
+  않았다. 연결 종료 상황에서 browser 전송 계층의 POST 재전송이 관측됐으므로 server
+  요청이 단 한 번이었다고 주장하지 않는다.
+- Venue A의 refresh 중 Entry exact GET 응답을 보류하고 Venue B로 전환했다. B Entry
+  `30000000-0000-4000-8000-000000000006`의 WAITING 목록을 본 뒤 A 응답을 풀어도
+  B 목록이 유지됐다. A 목록 GET 계수는 응답 해제 전후 3→3으로, 이전 refresh의 후속
+  A 목록 GET이 시작되지 않았다.
+
+수정 후 `frontend/`에서 `npm run typecheck`, `npm test` (12 files / 210 tests),
+`npm run build`가 통과했다. 이 중 세 focused regression은 수정 전 각각 실패함을 확인했다.
