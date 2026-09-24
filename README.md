@@ -243,7 +243,7 @@ Happy Path뿐 아니라 다음 상황을 설계 대상으로 봅니다.
 | Persistence | MySQL 8.4 LTS, Flyway | **Selected** |
 | Test | JUnit, Testcontainers MySQL | **Selected** |
 | Cache | Redis | 필요성과 측정 결과가 생길 때 검토 |
-| Messaging | Transactional event record와 같은 배포 내 DB 전달, Kafka 보류 | ADR-0007과 #84 production foundation; #86/#90 process·DB failure recovery 검증 완료 |
+| Messaging | Transactional event record와 같은 배포 내 DB 전달, Kafka 보류 | ADR-0007과 #84 foundation; #86/#90 recovery 및 M4 #96 실제 Booking→Waitlist workload 검증 완료 |
 | Observability | Spring Boot Actuator, Micrometer 기반부터 시작 | M5에서 구체화 |
 | Infrastructure | 로컬 container 환경부터 시작 | Kubernetes는 운영상 필요가 생길 때 검토 |
 | AI Platform | MCP, RAG, Model Routing, Agent Runtime, Evaluation | M6 이후 단계적 도입 |
@@ -347,26 +347,23 @@ M3의 event delivery와 Waitlist 비즈니스, 기존 AI Platform 범위를 분�
 
 ## Project Status
 
-> **M3 Reliable Event Foundation — Complete**
+> **M4 Waitlist Promotion — Complete**
 
-M0 Foundation, M1 Reservation Core와 M2 Concurrency & Consistency는 main에 완료 상태로
-반영되었습니다. M2는 Product HOLD 경합과 lifecycle 정합성, Customer-bound idempotency,
-명시적 same-intent retry 계약을 실제 MySQL과 Browser↔Backend 흐름으로 검증했습니다.
+M0 Foundation부터 M3 Reliable Event Foundation까지의 선행 Milestone은 완료 상태를 유지합니다.
+M3에서 선택한 transactional event record와 같은 배포 내 DB delivery 위에 M4의 실제
+Booking→Waitlist business flow를 연결했습니다.
 
-종료 감사 corrective Bug #78에서 clean commit의 optimistic·pessimistic 원시 비교 증거,
-내부 navigation 뒤 Venue timezone 복구, idempotency reliability row의 same-tenant/Venue
-Reservation 참조를 보강했습니다.
+M4의 #94는 Waitlist 수요 등록·취소와 Customer/Venue scoped 조회를, #95는 실제
+Promotional HOLD가 뒷받침하는 Offer lifecycle을 구현했습니다. #96은 Booking capacity release
+event, 두 Waitlist promotion route, durable activation, bounded maintenance와 restart/DB outage
+recovery를 실제 business workload로 검증했습니다. #97은 server-authoritative Customer·Venue
+Thin Waitlist UI와 response loss/navigation/reload 복구를 연결했습니다.
 
-M3의 #80은 실제 MySQL과 JVM crash 비교를 통해 전달 경계와 mechanism-neutral reliability
-계약을 [ADR-0007](docs/adr/0007-use-transactional-event-record-and-db-delivery.md)에 기록했습니다.
-#84에서 transactional append, durable cutover/discovery, bounded delivery와 internal replay를
-구현했고 [Runtime/schema/configuration](docs/architecture/event-delivery.md)에 설정과 경계를
-정리했습니다. #86은 별도 JVM/process에서 materialization, claim, effect transaction,
-commit outcome unknown, stale fencing, crash exhaustion/replay, DB unavailable와 backlog drain을
-검증했습니다. 종료 감사 corrective #88에서 CONFIRM과 replacement HOLD의 capacity 경합을
-보정했고, PR #90에서 DB unavailable case가 실제 production `runCycle()`의 DB access failure에
-진입했음을 deterministic하게 증명하도록 WP3 evidence를 보강했습니다. M3는 Complete이며,
-첫 Booking producer와 Waitlist consumer는 M4가 함께 연결합니다.
+M4 종료 독립 감사에서 발견된 #97 async-state blocker 3건은 PR #103에서 보정했습니다.
+OFFERED Entry cancel의 unknown reconciliation, 이전 Venue refresh의 late continuation,
+지난 deadline의 즉시 read loop에 regression을 추가했고 최종 Backend CI, Frontend CI와
+PR Policy가 모두 통과했습니다. 이후 전체 closure 재검토에서 추가 M4 blocker는 발견하지
+않아 M4를 Complete로 확정했습니다.
 
 상세한 Done/Ready/Backlog와 dependency는 [Roadmap](docs/roadmap.md)에서 관리합니다.
 
