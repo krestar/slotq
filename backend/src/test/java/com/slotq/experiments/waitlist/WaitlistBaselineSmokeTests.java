@@ -19,6 +19,12 @@ class WaitlistBaselineSmokeTests {
             assertThat(raw.path("manifest").path("mysql").path("version").asText()).startsWith("8.4.");
             assertThat(raw.path("manifest").path("workload").path("workerCount").asInt()).isEqualTo(1);
             assertThat(raw.path("observations").size()).isGreaterThan(5);
+            var phases=WaitlistBaselineRunner.JSON.readTree(Files.readString(output.resolve("summary.json"))).path("phases");
+            for (String phase : java.util.List.of("normal", "hot-slot", "independent-slots", "backlog")) {
+                assertThat(phases.path(phase).has("drainObservedUpperBoundMs")).as(phase).isTrue();
+            }
+            assertThat(phases.path("idle").has("drainObservedUpperBoundMs")).isFalse();
+            assertThat(phases.path("idle").has("drainBoundOrigin")).isFalse();
             System.setProperty("slotq.waitlist.baseline.recalculate",output.toString());
             WaitlistBaselineRunner.main(new String[0]);
         } finally {

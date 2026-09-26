@@ -364,8 +364,6 @@
       "workerWindowEndNanos" : 1476953643600,
       "workerWindowMs" : 53.734,
       "claimedAttemptsPerSecond" : 0.0,
-      "drainObservedUpperBoundMs" : 113.0376,
-      "drainBoundOrigin" : "first worker cycle start to first drained observation end in phase; not exact completion/commit time or later drains",
       "firstCounts" : {
         "originalEvents" : 17,
         "originalMembershipTargets" : 17,

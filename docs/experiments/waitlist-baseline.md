@@ -172,7 +172,10 @@ target DONE 증가분이다. receipt outcome 수가 business 완료 분모이고
 있으므로 automatic retry 횟수로 해석하지 않는다. cycle attempts와 replay audit를 따로 대조한다.
 이번 기준선은 replay가 없고 두 값 모두 0이다.
 
-`drainObservedUpperBoundMs`는 첫 worker cycle 시작부터 drained snapshot 조회 끝까지의 상한이다.
+`drainObservedUpperBoundMs`는 해당 phase의 첫 worker 시작 전에 조회가 완료된 마지막 snapshot에서
+`outstandingTargets > 0`이 확인된 경우에만 산출한다. 시작 전 backlog 관측이 없거나 이미 drained인
+idle에는 이 값과 `drainBoundOrigin`을 생략한다. 값은 첫 worker cycle 시작부터 그 phase의 첫
+drained snapshot 조회 끝까지의 상한이다. idle cycle/query overhead와 startup은 business drain이 아니다.
 phase의 모든 command 생성 시간이나 마지막 effect의 정확한 commit latency가 아니다. raw의
 process-local start/end window를 보존하고 startupMillis는 별도로 남긴다. warm-up 없이 실행하는
 작은 유한 cold workload이므로 steady-state throughput, saturation, production capacity/SLO 또는

@@ -81,11 +81,16 @@ final class WaitlistBaselineEvidence {
                 metrics.put("workerWindowEndNanos", end);
                 metrics.put("workerWindowMs", millis(end - start));
                 metrics.put("claimedAttemptsPerSecond", rate(claimed, end - start));
-                phaseObservations.stream().filter(o -> number(counts(o), "outstandingTargets") == 0
-                    && number(o, "endNanos") >= start).findFirst().ifPresent(o -> {
-                        metrics.put("drainObservedUpperBoundMs", millis(number(o, "endNanos") - start));
-                        metrics.put("drainBoundOrigin", "first worker cycle start to first drained observation end in phase; not exact completion/commit time or later drains");
-                    });
+                boolean backlogBeforeWorker = phaseObservations.stream().filter(o -> number(o, "endNanos") <= start)
+                    .max(Comparator.comparingLong(o -> number(o, "endNanos")))
+                    .map(o -> number(counts(o), "outstandingTargets") > 0).orElse(false);
+                if (backlogBeforeWorker) {
+                    phaseObservations.stream().filter(o -> number(counts(o), "outstandingTargets") == 0
+                        && number(o, "endNanos") >= start).findFirst().ifPresent(o -> {
+                            metrics.put("drainObservedUpperBoundMs", millis(number(o, "endNanos") - start));
+                            metrics.put("drainBoundOrigin", "first worker cycle start to first drained observation end in phase; not exact completion/commit time or later drains");
+                        });
+                }
             }
             if (!phaseObservations.isEmpty()) {
                 var first = phaseObservations.getFirst();

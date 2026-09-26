@@ -24,11 +24,58 @@ class WaitlistBaselineEvidenceTests {
         assertThat(summary.get("successfulCommandInvocations")).isEqualTo(1L);
         assertThat(object(summary.get("commandLatency"))).containsEntry("p50", 2.0).containsEntry("p95", 2.0);
         var phase = object(object(summary.get("phases")).get("drain"));
-        assertThat(phase).containsEntry("drainObservedUpperBoundMs", 8.0).containsEntry("claimedAttempts", 2L);
+        assertThat(phase).containsEntry("claimedAttempts", 2L);
         Path csv = directory.resolve("correspondence.csv");
         WaitlistBaselineEvidence.writeCsv(csv, raw);
         assertThat(Files.readString(csv)).contains("NO_CAPACITY", "PROMOTED", "registration", "event-noop");
         assertThat(Files.readAllLines(csv)).hasSize(3);
+    }
+
+    @Test void measuresDrainBoundWhenPreWorkerBacklogBecomesDrained() {
+        var raw = fixture();
+        var before = fixture();
+        table(before, "event_deliveries").removeLast();
+        table(before, "waitlist_promotion_receipts").removeLast();
+        snapshot(before).put("discoveryCursor", 2L);
+        prependObservation(raw, before, 0L, 1_000_000L);
+        var phase = object(object(WaitlistBaselineEvidence.summarize(raw).get("phases")).get("drain"));
+        assertThat(object(phase.get("firstCounts"))).containsEntry("outstandingTargets", 1L);
+        assertThat(object(phase.get("lastCounts"))).containsEntry("outstandingTargets", 0L);
+        assertThat(phase).containsEntry("drainObservedUpperBoundMs", 8.0).containsKey("drainBoundOrigin");
+    }
+
+    @Test void idleWorkerCyclesDoNotCreateDrainLatencyWhenPhaseStartsDrained() {
+        var raw = fixture();
+        prependObservation(raw, fixture(), 0L, 1_000_000L);
+        raw.put("cycles", List.of(row("phase", "drain", "startNanos", 2_000_000L, "endNanos", 8_000_000L, "claimed", 0)));
+        var phase = object(object(WaitlistBaselineEvidence.summarize(raw).get("phases")).get("drain"));
+        assertThat(phase).containsEntry("workerCycles", 1).containsEntry("claimedAttempts", 0L)
+            .containsEntry("workerWindowMs", 6.0).doesNotContainKeys("drainObservedUpperBoundMs", "drainBoundOrigin");
+    }
+
+    @Test void drainBoundRequiresBacklogObservationCompletedBeforeWorkerStart() {
+        var raw = fixture();
+        var before = fixture();
+        table(before, "event_deliveries").removeLast();
+        table(before, "waitlist_promotion_receipts").removeLast();
+        snapshot(before).put("discoveryCursor", 2L);
+        prependObservation(raw, before, 1_000_000L, 3_000_000L);
+        assertThat(object(object(WaitlistBaselineEvidence.summarize(raw).get("phases")).get("drain")))
+            .doesNotContainKeys("drainObservedUpperBoundMs", "drainBoundOrigin");
+        raw = fixture();
+        assertThat(object(object(WaitlistBaselineEvidence.summarize(raw).get("phases")).get("drain")))
+            .doesNotContainKeys("drainObservedUpperBoundMs", "drainBoundOrigin");
+    }
+
+    @Test void alreadyDrainedLatestPreWorkerObservationDoesNotReuseEarlierBacklog() {
+        var raw = fixture();
+        prependObservation(raw, fixture(), 1_000_000L, 1_500_000L);
+        var before = fixture();
+        table(before, "event_deliveries").removeLast(); table(before, "waitlist_promotion_receipts").removeLast();
+        snapshot(before).put("discoveryCursor", 2L);
+        prependObservation(raw, before, 0L, 500_000L);
+        assertThat(object(object(WaitlistBaselineEvidence.summarize(raw).get("phases")).get("drain")))
+            .doesNotContainKeys("drainObservedUpperBoundMs", "drainBoundOrigin");
     }
 
     @Test void undiscoveredMembershipIsOutstandingAndCsvPreservesIt() throws Exception {
@@ -131,6 +178,12 @@ class WaitlistBaselineEvidenceTests {
     }
     private static void fails(Map<String,Object> raw, String message) {
         assertThatThrownBy(() -> WaitlistBaselineEvidence.summarize(raw)).isInstanceOf(IllegalStateException.class).hasMessageContaining(message);
+    }
+    private static void prependObservation(Map<String,Object> raw, Map<String,Object> before, long start, long end) {
+        var observation = object(((List<?>)before.get("observations")).getFirst());
+        observation.put("startNanos", start); observation.put("endNanos", end);
+        var observations = new ArrayList<Object>((List<?>)raw.get("observations"));
+        observations.addFirst(observation); raw.put("observations", observations);
     }
     @SuppressWarnings("unchecked") private static Map<String,Object> object(Object value) { return (Map<String,Object>)value; }
     private static Map<String,Object> counts(Map<String,Object> summary) { return object(summary.get("finalCounts")); }
