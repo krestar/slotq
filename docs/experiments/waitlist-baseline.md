@@ -6,6 +6,8 @@ M4의 실제 Booking→Waitlist 경로와 **DB direct mode, 1-worker**다. Kafka
 현재 Accepted ADR을 대체하지 않는다. production traffic에서 독립 consumer나 fan-out 문제가
 이미 관측됐다는 주장도 하지 않는다.
 
+실측 원자료와 결과: [2026-09-26 DB direct 1-worker run](waitlist-baseline/2026-09-26-db-direct-1worker/summary.md).
+
 ## 실제 Product 경로와 보존 경계
 
 ```text
@@ -164,6 +166,11 @@ nearest-rank다. `finalCounts.originalEvents`와 `committedOriginalEventInputs`�
 다르다. `doneTargetsAdded`와 `observedDoneTargetsPerSecond`는 phase의 first→last snapshot에서
 target DONE 증가분이다. receipt outcome 수가 business 완료 분모이고 `claimedAttemptsPerSecond`는
 시도 rate다. 이 값을 모두 같은 throughput으로 표기하지 않는다.
+
+`retryAttempts`는 target별 `max(lifetime_attempts-1,0)`의 합, `retriedTargets`는 lifetime attempts가
+1보다 큰 target 수다. 후속 replay run에서는 이 값에 새 authorized cycle의 claim도 포함될 수
+있으므로 automatic retry 횟수로 해석하지 않는다. cycle attempts와 replay audit를 따로 대조한다.
+이번 기준선은 replay가 없고 두 값 모두 0이다.
 
 `drainObservedUpperBoundMs`는 첫 worker cycle 시작부터 drained snapshot 조회 끝까지의 상한이다.
 phase의 모든 command 생성 시간이나 마지막 effect의 정확한 commit latency가 아니다. raw의
