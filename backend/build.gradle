@@ -82,6 +82,18 @@ tasks.register('waitlistProcessRecovery', JavaExec) {
     }
 }
 
+tasks.register('waitlistBaseline', JavaExec) {
+    group = 'verification'
+    description = 'Measures the real M4 Product workload with one DB direct worker on MySQL 8.4.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.waitlist.WaitlistBaselineRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.waitlist.baseline.gradleVersion', gradle.gradleVersion
+    ['output', 'seed', 'recalculate'].each { key ->
+        if (project.hasProperty(key)) systemProperty "slotq.waitlist.baseline.${key}", project.property(key)
+    }
+}
+
 tasks.register('concurrencyBaseline', JavaExec) {
     group = 'verification'
     description = 'Runs the MySQL 8.4 Product HOLD concurrency baseline.'

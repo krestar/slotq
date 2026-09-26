@@ -1,0 +1,22 @@
+{
+  "operation": "deterministic-recalculation",
+  "workloadRerun": false,
+  "recalculatedAt": "2026-09-26T04:18:40.3054152+00:00",
+  "measurementRevision": "7ddbf241b91c7ac5597c68476bed92701d4a821d",
+  "measurementDirty": false,
+  "calculatorRevision": "8067fd313cc71a7f9e25a66cc9bc15541aeb5733",
+  "calculatorDirty": true,
+  "calculatorSourcePath": "backend/src/test/java/com/slotq/experiments/waitlist/WaitlistBaselineEvidence.java",
+  "calculatorSourceSha256": "04950b8b78cbf6703c29d7cce3844a53fa21d9dd3427acf5408f5cdfeeb1669a",
+  "inputSha256": {
+    "raw.json": "8872a452ac7a0d6b8e2e7dd8a778f61b7077356b05fbb511d4a6a8dcfb7027b9",
+    "manifest.json": "79ad60fb078b615275958f92e23eac521a0481c50248b636f358883ecc18f2f2"
+  },
+  "outputSha256": {
+    "summary.json": "cda77f5e6a8ea38080fa4b966e9ab5fd77423882f63a3dc73b217c0903a1a689",
+    "correspondence.csv": "d3e2bbe99080b91318e0a301d166f5bd91c312b86c3914fcc0f2a247ed53e56c"
+  },
+  "verification": "WaitlistBaselineRunner recalculates the complete summary tree and correspondence CSV; saved JSON tree equality and exact CSV byte equality PASS",
+  "change": "Omit idle drainObservedUpperBoundMs and drainBoundOrigin; all other derived values unchanged",
+  "provenanceLimit": "Original raw and manifest describe the measured workload at measurementRevision, not this dirty recalculator source. SHA-256 records exact local file bytes."
+}

@@ -192,6 +192,10 @@ runtime/crash recovery gate나 M4 실제 consumer 완료를 대신하지 않는�
 [Measured summary](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/summary.md)와
 [authoritative raw DB evidence](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/raw/report.json)에 기록한다.
 
+#105의 실제 M4 workload와 DB direct 1-worker 기준선 및 M5 후속 전달 계약은
+[Waitlist workload / protocol](waitlist-baseline.md)을 따른다. process recovery 시간과
+steady-state performance를 구별하며 Kafka 기본 transport 채택은 비교 evidence 이후에 결정한다.
+
 ### 질문
 
 - 업무 transaction commit과 event 전달 사이의 crash에서 event를 복구할 수 있는가?
