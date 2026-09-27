@@ -17,6 +17,7 @@ import com.slotq.events.application.EventRecordStore;
 import com.slotq.events.application.EventRegistration;
 import com.slotq.events.application.StoredEvent;
 import com.slotq.tenancy.domain.TenantId;
+import com.slotq.observability.ProductTelemetry;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -49,14 +50,17 @@ public class JdbcEventRecordStore implements EventRecordStore {
 
     @Override
     public StoredEvent insertEvent(EventEnvelope envelope, long boundarySequence) {
+        var origin = ProductTelemetry.currentOrigin();
         requireOne(jdbc.update("""
             INSERT INTO event_records (
                 event_id, tenant_id, aggregate_type, aggregate_id, event_type, schema_version,
-                occurred_at, payload, boundary_sequence, recorded_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(6))
+                occurred_at, payload, boundary_sequence, recorded_at,
+                origin_request_id, origin_trace_id, origin_span_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(6), ?, ?, ?)
             """, bytes(envelope.eventId().value()), bytes(envelope.tenantId().value()), envelope.aggregateType(),
             bytes(envelope.aggregateId()), envelope.eventType(), envelope.schemaVersion(),
-            LocalDateTime.ofInstant(envelope.occurredAt(), ZoneOffset.UTC), envelope.payload(), boundarySequence));
+            LocalDateTime.ofInstant(envelope.occurredAt(), ZoneOffset.UTC), envelope.payload(), boundarySequence,
+            origin.requestId(), origin.traceId(), origin.spanId()));
         return findEventForAppend(envelope.eventId()).orElseThrow();
     }
 

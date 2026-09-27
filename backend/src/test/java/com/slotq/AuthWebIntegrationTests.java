@@ -60,7 +60,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
     "slotq.auth.dev-bootstrap-enabled=true",
-    "slotq.cors.allowed-origins=http://localhost:5173"
+    "slotq.cors.allowed-origins=http://localhost:5173",
+    "slotq.observability.scrape-token=test-only-machine-scrape-credential-106",
+    "management.endpoints.web.exposure.include=prometheus"
 })
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
@@ -239,13 +241,53 @@ class AuthWebIntegrationTests {
         mockMvc.perform(get("/api/v1/venues")
                 .header("Origin", "http://localhost:5173"))
             .andExpect(status().isOk())
-            .andExpect(header().string("Access-Control-Expose-Headers", "Location"));
+            .andExpect(header().string("Access-Control-Expose-Headers", "Location, X-Request-ID"));
         mockMvc.perform(options(holdPath)
                 .header("Origin", "https://attacker.example")
                 .header("Access-Control-Request-Method", "POST")
                 .header("Access-Control-Request-Headers", "Authorization,Content-Type,Idempotency-Key"))
             .andExpect(status().isForbidden())
             .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void machineScrapeCredentialIsSeparateFromProductCredentialsAndDiagnosticsStayDenied() throws Exception {
+        String productToken = bootstrap("customer-a");
+        for (String endpoint : new String[] {"prometheus", "env", "configprops", "heapdump", "threaddump", "health"}) {
+            mockMvc.perform(get("/actuator/" + endpoint))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("X-Request-ID"));
+            mockMvc.perform(get("/actuator/" + endpoint).header("Authorization", "Bearer " + productToken))
+                .andExpect(status().isUnauthorized());
+        }
+        mockMvc.perform(get("/actuator/prometheus")
+                .header("Authorization", "Bearer test-only-machine-scrape-credential-106"))
+            .andExpect(status().isOk());
+        mockMvc.perform(get("/actuator/env")
+                .header("Authorization", "Bearer test-only-machine-scrape-credential-106"))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/actuator/prometheus")
+                .header("Authorization", "Bearer test-only-machine-scrape-credential-106"))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/__test/customer")
+                .header("Authorization", "Bearer test-only-machine-scrape-credential-106"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void serverCorrelationCoversAuthenticationErrorsAndIgnoresForgedCorrelationHeaders() throws Exception {
+        String forged = UUID.randomUUID().toString();
+        String failureId = mockMvc.perform(get("/__test/customer")
+                .header("X-Request-ID", forged)
+                .header("traceparent", "00-11111111111111111111111111111111-2222222222222222-01")
+                .header("baggage", "tenantId=forged,principalId=forged"))
+            .andExpect(status().isUnauthorized())
+            .andReturn().getResponse().getHeader("X-Request-ID");
+        assertThat(UUID.fromString(failureId)).isNotEqualTo(UUID.fromString(forged));
+        String successId = mockMvc.perform(get("/api/v1/venues").header("X-Request-ID", forged))
+            .andExpect(status().isOk()).andReturn().getResponse().getHeader("X-Request-ID");
+        assertThat(UUID.fromString(successId)).isNotEqualTo(UUID.fromString(forged));
+        assertThat(successId).isNotEqualTo(failureId);
     }
 
     private String bootstrap(String fixtureKey) throws Exception {

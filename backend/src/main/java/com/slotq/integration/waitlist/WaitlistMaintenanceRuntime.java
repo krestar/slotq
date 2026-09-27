@@ -27,6 +27,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** Explicit System cycle, not a scheduler. Cursors are advisory and restart from the durable backlog. */
 @Component
 public class WaitlistMaintenanceRuntime {
+    private com.slotq.observability.ProductTelemetry telemetry = com.slotq.observability.ProductTelemetry.noop();
+    private io.micrometer.core.instrument.MeterRegistry meters;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void configureTelemetry(com.slotq.observability.ProductTelemetry telemetry,
+                            io.micrometer.core.instrument.MeterRegistry meters) {
+        this.telemetry = telemetry;
+        this.meters = meters;
+    }
     private final BookingMaintenanceQuery bookingScan;
     private final WaitlistMaintenanceQuery waitlistScan;
     private final ReservationExpiryUseCase expiry;
@@ -57,6 +66,30 @@ public class WaitlistMaintenanceRuntime {
     }
 
     public synchronized Cycle runCycle(SystemPrincipal principal) {
+        long started = System.nanoTime();
+        String outcome = "failure";
+        try (var observation = telemetry.maintenance()) {
+            Cycle result = runObservedCycle(principal);
+            outcome = !policy.enabled() || !promotion.enabled() ? "disabled"
+                : result.failures().isEmpty() ? "success" : "failure";
+            observation.finish(result.failures().isEmpty() ? "success" : "server_error");
+            try {
+                if (meters != null) for (Failure failure : result.failures())
+                    meters.counter("slotq.maintenance.failures", "kind", failure.kind().name().toLowerCase(java.util.Locale.ROOT)).increment();
+            } catch (RuntimeException ignored) { }
+            return result;
+        } finally {
+            try {
+                if (meters != null) {
+                    meters.counter("slotq.maintenance.cycles", "outcome", outcome).increment();
+                    meters.timer("slotq.maintenance.duration", "outcome", outcome)
+                        .record(System.nanoTime() - started, java.util.concurrent.TimeUnit.NANOSECONDS);
+                }
+            } catch (RuntimeException ignored) { }
+        }
+    }
+
+    private Cycle runObservedCycle(SystemPrincipal principal) {
         Objects.requireNonNull(principal, "system principal must not be null");
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("Maintenance must start outside a caller transaction");

@@ -12,6 +12,7 @@ import com.slotq.booking.application.ProductApiException;
 import com.slotq.booking.application.SlotInventoryConflictException;
 import com.slotq.booking.application.SlotInventoryNotAllowedException;
 import com.slotq.management.application.ManagementValidationException;
+import com.slotq.observability.web.RequestOutcome;
 import com.slotq.waitlist.application.WaitlistDemandNotAllowedException;
 import com.slotq.waitlist.application.WaitlistIdempotencyKeyReusedException;
 import com.slotq.waitlist.application.WaitlistTransitionNotAllowedException;
@@ -40,7 +41,7 @@ class ProductApiExceptionHandler {
         for (FieldError error : exception.getBindingResult().getFieldErrors()) {
             fieldErrors.putIfAbsent(error.getField(), error.getDefaultMessage());
         }
-        return problem(ApiProblem.validation("One or more request fields are invalid.",
+        return problem(request, ApiProblem.validation("One or more request fields are invalid.",
             request.getRequestURI(), Map.copyOf(fieldErrors)));
     }
 
@@ -50,7 +51,7 @@ class ProductApiExceptionHandler {
         MissingServletRequestParameterException.class
     })
     ResponseEntity<ApiProblem> malformedRequest(Exception exception, HttpServletRequest request) {
-        return problem(ApiProblem.validation("The request format is invalid.",
+        return problem(request, ApiProblem.validation("The request format is invalid.",
             request.getRequestURI(), Map.of()));
     }
 
@@ -59,7 +60,7 @@ class ProductApiExceptionHandler {
         ManagementValidationException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.validation(
+        return problem(request, ApiProblem.validation(
             "One or more request fields are invalid.",
             request.getRequestURI(),
             exception.fieldErrors()
@@ -71,7 +72,7 @@ class ProductApiExceptionHandler {
         AvailabilityValidationException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.validation(
+        return problem(request, ApiProblem.validation(
             "One or more request fields are invalid.",
             request.getRequestURI(),
             exception.fieldErrors()
@@ -83,7 +84,7 @@ class ProductApiExceptionHandler {
         HoldIdempotencyValidationException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.validation(
+        return problem(request, ApiProblem.validation(
             "One or more request headers are invalid.",
             request.getRequestURI(),
             exception.fieldErrors()
@@ -95,7 +96,7 @@ class ProductApiExceptionHandler {
         WaitlistValidationException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.validation(
+        return problem(request, ApiProblem.validation(
             "One or more request fields or headers are invalid.",
             request.getRequestURI(), exception.fieldErrors()
         ));
@@ -106,7 +107,7 @@ class ProductApiExceptionHandler {
         WaitlistDemandNotAllowedException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.of(409, "Waitlist demand not allowed",
+        return problem(request, ApiProblem.of(409, "Waitlist demand not allowed",
             "The selected time window cannot accept this waitlist demand.",
             request.getRequestURI(), "WAITLIST_DEMAND_NOT_ALLOWED"));
     }
@@ -116,7 +117,7 @@ class ProductApiExceptionHandler {
         WaitlistTransitionNotAllowedException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.of(409, "Waitlist transition not allowed",
+        return problem(request, ApiProblem.of(409, "Waitlist transition not allowed",
             "The requested waitlist entry transition is not allowed.",
             request.getRequestURI(), "WAITLIST_TRANSITION_NOT_ALLOWED"));
     }
@@ -126,7 +127,7 @@ class ProductApiExceptionHandler {
         WaitlistIdempotencyKeyReusedException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.of(409, "Idempotency key reused",
+        return problem(request, ApiProblem.of(409, "Idempotency key reused",
             "The idempotency key was already used for a different waitlist registration request.",
             request.getRequestURI(), "IDEMPOTENCY_KEY_REUSED"));
     }
@@ -135,7 +136,7 @@ class ProductApiExceptionHandler {
     ResponseEntity<ApiProblem> offerExpired(
         OfferExpiredException exception, HttpServletRequest request
     ) {
-        return problem(ApiProblem.of(409, "Offer expired",
+        return problem(request, ApiProblem.of(409, "Offer expired",
             "The promotional hold backing this offer has expired.",
             request.getRequestURI(), "OFFER_EXPIRED"));
     }
@@ -144,7 +145,7 @@ class ProductApiExceptionHandler {
     ResponseEntity<ApiProblem> offerTransitionNotAllowed(
         OfferTransitionNotAllowedException exception, HttpServletRequest request
     ) {
-        return problem(ApiProblem.of(409, "Offer transition not allowed",
+        return problem(request, ApiProblem.of(409, "Offer transition not allowed",
             "The requested offer transition is not allowed.",
             request.getRequestURI(), "OFFER_TRANSITION_NOT_ALLOWED"));
     }
@@ -154,7 +155,7 @@ class ProductApiExceptionHandler {
         SlotInventoryConflictException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.of(409, "Slot inventory conflict",
+        return problem(request, ApiProblem.of(409, "Slot inventory conflict",
             "The requested slot overlaps an existing slot.", request.getRequestURI(),
             "SLOT_INVENTORY_CONFLICT"));
     }
@@ -164,7 +165,7 @@ class ProductApiExceptionHandler {
         SlotInventoryNotAllowedException exception,
         HttpServletRequest request
     ) {
-        return problem(ApiProblem.of(409, "Slot inventory not allowed",
+        return problem(request, ApiProblem.of(409, "Slot inventory not allowed",
             "A slot cannot be created for the selected resource.", request.getRequestURI(),
             "SLOT_INVENTORY_NOT_ALLOWED"));
     }
@@ -172,13 +173,13 @@ class ProductApiExceptionHandler {
     @ExceptionHandler({ResourceNotFoundException.class, NoSuchElementException.class,
         NoResourceFoundException.class})
     ResponseEntity<ApiProblem> notFound(Exception exception, HttpServletRequest request) {
-        return problem(ApiProblem.of(404, "Resource not found",
+        return problem(request, ApiProblem.of(404, "Resource not found",
             "The requested resource was not found.", request.getRequestURI(), "RESOURCE_NOT_FOUND"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiProblem> accessDenied(AccessDeniedException exception, HttpServletRequest request) {
-        return problem(ApiProblem.of(403, "Access denied",
+        return problem(request, ApiProblem.of(403, "Access denied",
             "You do not have permission to access this resource.", request.getRequestURI(),
             "ACCESS_DENIED"));
     }
@@ -186,17 +187,19 @@ class ProductApiExceptionHandler {
     @ExceptionHandler(ProductApiException.class)
     ResponseEntity<ApiProblem> productConflict(ProductApiException exception,
                                                HttpServletRequest request) {
-        return problem(ApiProblem.of(409, exception.error().title(), exception.error().detail(),
+        return problem(request, ApiProblem.of(409, exception.error().title(), exception.error().detail(),
             request.getRequestURI(), exception.error().name()));
     }
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiProblem> internalError(Exception exception, HttpServletRequest request) {
-        return problem(ApiProblem.of(500, "Internal error",
+        RequestOutcome.failure(request, exception);
+        return problem(request, ApiProblem.of(500, "Internal error",
             "An unexpected error occurred.", request.getRequestURI(), "INTERNAL_ERROR"));
     }
 
-    private ResponseEntity<ApiProblem> problem(ApiProblem problem) {
+    private ResponseEntity<ApiProblem> problem(HttpServletRequest request, ApiProblem problem) {
+        RequestOutcome.problem(request, problem.code());
         return ResponseEntity.status(HttpStatus.valueOf(problem.status()))
             .contentType(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON)
             .body(problem);
