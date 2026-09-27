@@ -1,0 +1,20 @@
+{
+  "testedCommit": "98c6f4ac6a547b89262bc7f72521a9859e2846a6",
+  "recordedAt": "2026-09-27T12:56:48.0789543Z",
+  "command": ".\\gradlew.bat clean build",
+  "exitCode": 0,
+  "result": "BUILD SUCCESSFUL",
+  "elapsed": "9m 59s",
+  "allTasksExecuted": 8,
+  "suites": 61,
+  "tests": 579,
+  "passed": 576,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 3,
+  "skippedCondition": "Existing SLOTQ_CAPACITY_LOCK_EVIDENCE=true opt-in diagnostics",
+  "actualSdkQueueWarnings": [
+    "BatchSpanProcessor dropped 2049 span(s) since the last export because the queue is full (maxQueueSize=2048)"
+  ],
+  "bootJarSha256": "ad9b079e76a53121fa45989ded4ad88e1529fcdd01289eb2ca346a24f86461e8"
+}

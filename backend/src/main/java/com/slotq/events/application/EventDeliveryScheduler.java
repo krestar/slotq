@@ -11,6 +11,13 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(name = "slotq.events.delivery.scheduler-enabled", havingValue = "true")
 public final class EventDeliveryScheduler {
+    private com.slotq.observability.ProductTelemetry telemetry = com.slotq.observability.ProductTelemetry.noop();
+    private io.micrometer.core.instrument.MeterRegistry meters;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void configureTelemetry(com.slotq.observability.ProductTelemetry telemetry, io.micrometer.core.instrument.MeterRegistry meters) {
+        this.telemetry = telemetry;
+        this.meters = meters;
+    }
     private final EventDeliveryWorker worker;
     private final Optional<EventDeliveryReadiness> readiness;
 
@@ -25,6 +32,25 @@ public final class EventDeliveryScheduler {
 
     @Scheduled(fixedDelayString = "${slotq.events.delivery.poll-interval:PT1S}")
     public void tick() {
-        if (readiness.map(EventDeliveryReadiness::isReady).orElse(false)) worker.runCycle();
+        if (!readiness.map(EventDeliveryReadiness::isReady).orElse(false)) return;
+        long started = System.nanoTime();
+        String outcome = "failure";
+        try (var observation = telemetry.background("event_delivery")) {
+            worker.runCycle();
+            outcome = "success";
+            observation.finish("success");
+        } catch (RuntimeException failure) {
+            // The scheduler will try a later cycle. Never forward SQL/driver exception text to logs.
+            try { org.slf4j.LoggerFactory.getLogger("slotq.telemetry").warn("operation=event_delivery outcome=failure"); }
+            catch (RuntimeException ignored) { }
+        } finally {
+            try {
+                if (meters != null) {
+                    meters.counter("slotq.delivery.cycles", "outcome", outcome).increment();
+                    meters.timer("slotq.delivery.cycle.duration", "outcome", outcome)
+                        .record(System.nanoTime() - started, java.util.concurrent.TimeUnit.NANOSECONDS);
+                }
+            } catch (RuntimeException ignored) { }
+        }
     }
 }

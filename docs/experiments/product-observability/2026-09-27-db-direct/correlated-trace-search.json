@@ -1,0 +1,106 @@
+{
+  "traces" : [ {
+    "traceID" : "771db1e8c490b264039127c8e4ca75dd",
+    "rootServiceName" : "slotq-product",
+    "rootTraceName" : "product.event.effect",
+    "startTimeUnixNano" : "1790493676483855400",
+    "durationMs" : 57,
+    "spanSet" : {
+      "spans" : [ {
+        "spanID" : "22a4685d5dd1114b",
+        "startTimeUnixNano" : "1790493676483855400",
+        "durationNanos" : "57577300",
+        "attributes" : [ {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ]
+      } ],
+      "matched" : 1
+    },
+    "spanSets" : [ {
+      "spans" : [ {
+        "spanID" : "22a4685d5dd1114b",
+        "startTimeUnixNano" : "1790493676483855400",
+        "durationNanos" : "57577300",
+        "attributes" : [ {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ]
+      } ],
+      "matched" : 1
+    } ],
+    "serviceStats" : {
+      "slotq-product" : {
+        "spanCount" : 1
+      }
+    }
+  }, {
+    "traceID" : "460b48a1781e6162dff0eae90c35018",
+    "rootServiceName" : "slotq-product",
+    "rootTraceName" : "product.request",
+    "startTimeUnixNano" : "1790493577451273000",
+    "durationMs" : 95,
+    "spanSet" : {
+      "spans" : [ {
+        "spanID" : "758955357b0baa18",
+        "startTimeUnixNano" : "1790493577525166700",
+        "durationNanos" : "19541900",
+        "attributes" : [ {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ]
+      }, {
+        "spanID" : "8fba6b75dba92f5b",
+        "startTimeUnixNano" : "1790493577451273000",
+        "durationNanos" : "95190100",
+        "attributes" : [ {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ]
+      } ],
+      "matched" : 2
+    },
+    "spanSets" : [ {
+      "spans" : [ {
+        "spanID" : "758955357b0baa18",
+        "startTimeUnixNano" : "1790493577525166700",
+        "durationNanos" : "19541900",
+        "attributes" : [ {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ]
+      }, {
+        "spanID" : "8fba6b75dba92f5b",
+        "startTimeUnixNano" : "1790493577451273000",
+        "durationNanos" : "95190100",
+        "attributes" : [ {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ]
+      } ],
+      "matched" : 2
+    } ],
+    "serviceStats" : {
+      "slotq-product" : {
+        "spanCount" : 2
+      }
+    }
+  } ],
+  "metrics" : {
+    "inspectedBytes" : "213540",
+    "completedJobs" : 1,
+    "totalJobs" : 1
+  }
+}

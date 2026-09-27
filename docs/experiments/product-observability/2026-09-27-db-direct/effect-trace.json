@@ -1,0 +1,72 @@
+{
+  "batches" : [ {
+    "resource" : {
+      "attributes" : [ {
+        "key" : "service.name",
+        "value" : {
+          "stringValue" : "slotq-product"
+        }
+      } ]
+    },
+    "scopeSpans" : [ {
+      "scope" : {
+        "name" : "com.slotq.product",
+        "version" : "1"
+      },
+      "spans" : [ {
+        "traceId" : "dx2x6MSQsmQDkSfI5Mp13Q==",
+        "spanId" : "IqRoXV3REUs=",
+        "name" : "product.event.effect",
+        "kind" : "SPAN_KIND_CONSUMER",
+        "startTimeUnixNano" : "1790493676483855400",
+        "endTimeUnixNano" : "1790493676541432700",
+        "attributes" : [ {
+          "key" : "slotq.promotion.outcome",
+          "value" : {
+            "stringValue" : "PROMOTED"
+          }
+        }, {
+          "key" : "slotq.delivery.fencing_token",
+          "value" : {
+            "intValue" : "1"
+          }
+        }, {
+          "key" : "slotq.registration.id",
+          "value" : {
+            "stringValue" : "ae7c3ee9-03fd-45a2-ab4c-3942c32d93f3"
+          }
+        }, {
+          "key" : "slotq.delivery.lifetime_attempt",
+          "value" : {
+            "intValue" : "1"
+          }
+        }, {
+          "key" : "slotq.event.id",
+          "value" : {
+            "stringValue" : "f5825301-a037-4dcc-87a3-919cf76e5b7a"
+          }
+        }, {
+          "key" : "slotq.outcome",
+          "value" : {
+            "stringValue" : "committed"
+          }
+        }, {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        }, {
+          "key" : "slotq.delivery.cycle_attempt",
+          "value" : {
+            "intValue" : "1"
+          }
+        } ],
+        "links" : [ {
+          "traceId" : "BGC0iheB5hYt/w6ukMNQGA==",
+          "spanId" : "dYlVNXsLqhg="
+        } ],
+        "status" : { }
+      } ]
+    } ]
+  } ]
+}

@@ -1,0 +1,33 @@
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <!-- Only allowlisted Product telemetry is forwarded. Never block a Product transaction on log I/O. -->
+    <appender name="TELEMETRY_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder><pattern>%msg %kvp%n</pattern></encoder>
+    </appender>
+    <appender name="TELEMETRY" class="ch.qos.logback.classic.AsyncAppender">
+        <filter class="com.slotq.observability.TraceQueueWarningFilter"/>
+        <queueSize>1024</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="TELEMETRY_CONSOLE"/>
+    </appender>
+    <logger name="slotq.telemetry" level="INFO" additivity="false"><appender-ref ref="TELEMETRY"/></logger>
+    <!-- JDBC/ORM/exporter exception messages can contain SQL, parameters or endpoint credentials. -->
+    <logger name="org.hibernate.SQL" level="OFF"/>
+    <logger name="org.hibernate.orm.jdbc" level="OFF"/>
+    <logger name="org.hibernate.engine.jdbc.spi.SqlExceptionHelper" level="OFF"/>
+    <logger name="org.springframework.jdbc" level="OFF"/>
+    <logger name="org.springframework.transaction" level="OFF"/>
+    <logger name="org.springframework.orm.jpa" level="OFF"/>
+    <logger name="com.zaxxer.hikari" level="OFF"/>
+    <logger name="io.opentelemetry.exporter" level="OFF"/>
+    <logger name="io.opentelemetry.sdk.trace.export" level="OFF"/>
+    <!-- This exact SDK logger is filtered before enqueue; exporter throwables stay suppressed. -->
+    <logger name="io.opentelemetry.sdk.trace.export.BatchSpanProcessor" level="WARN" additivity="false">
+        <appender-ref ref="TELEMETRY"/>
+    </logger>
+    <logger name="org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler" level="OFF"/>
+    <root level="INFO"><appender-ref ref="CONSOLE"/></root>
+</configuration>

@@ -28,5 +28,9 @@ public interface EventDeliveryStore {
 
     void replay(DeliverySnapshot previous, String reason, Instant now);
 
-    record Target(StoredEvent event, ConsumerRoute route) { }
+    record Target(StoredEvent event, ConsumerRoute route, com.slotq.observability.ProductTelemetry.Origin origin) {
+        public Target(StoredEvent event, ConsumerRoute route) {
+            this(event, route, com.slotq.observability.ProductTelemetry.Origin.EMPTY);
+        }
+    }
 }

@@ -34,7 +34,8 @@ class WaitlistPromotionEventAdapter {
     void handle(StoredEvent stored, ConsumerRoute route, WaitlistPromotionUseCase.Signal signal) {
         var command = decode(stored.envelope(), route, signal);
         try {
-            promotion.promote(SystemPrincipal.INSTANCE, command);
+            var result = promotion.promote(SystemPrincipal.INSTANCE, command);
+            com.slotq.observability.ProductTelemetry.promotionOutcome(result.outcome().name());
         } catch (PromotionIdentityException conflict) {
             throw new EventHandlingException(DeliveryFailure.IDENTITY_CORRUPTION);
         } catch (PromotionReferenceException invalid) {

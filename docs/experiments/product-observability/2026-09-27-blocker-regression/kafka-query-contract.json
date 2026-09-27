@@ -1,0 +1,132 @@
+{
+  "tests": [
+    {
+      "name": "two-contracted-consumers-and-replica-deduplication",
+      "interval": "1m",
+      "input_series": [
+        {
+          "series": "slotq_kafka_intake_delay_invalid_total{logical_consumer=\"waitlist.promotion\",reason=\"missing_timestamp\"}",
+          "values": "0+1x5"
+        },
+        {
+          "series": "slotq_kafka_intake_delay_invalid_total{logical_consumer=\"operations.event-observation\",reason=\"missing_timestamp\"}",
+          "values": "0+2x5"
+        },
+        {
+          "series": "slotq_kafka_consumer_lag_records{logical_consumer=\"waitlist.promotion\",consumer_group=\"contract-group\",topic=\"contract-topic\",partition=\"0\",instance=\"a\"}",
+          "values": "3+0x5"
+        },
+        {
+          "series": "slotq_kafka_consumer_lag_records{logical_consumer=\"waitlist.promotion\",consumer_group=\"contract-group\",topic=\"contract-topic\",partition=\"0\",instance=\"b\"}",
+          "values": "4+0x5"
+        },
+        {
+          "series": "slotq_kafka_consumer_lag_records{logical_consumer=\"operations.event-observation\",consumer_group=\"contract-group\",topic=\"contract-topic\",partition=\"0\",instance=\"a\"}",
+          "values": "6+0x5"
+        },
+        {
+          "series": "slotq_kafka_consumer_lag_records{logical_consumer=\"operations.event-observation\",consumer_group=\"contract-group\",topic=\"contract-topic\",partition=\"0\",instance=\"b\"}",
+          "values": "7+0x5"
+        }
+      ],
+      "promql_expr_test": [
+        {
+          "expr": "sum by (logical_consumer,reason) (increase(slotq_kafka_intake_delay_invalid_total[5m]))",
+          "exp_samples": [
+            {
+              "labels": "{logical_consumer=\"waitlist.promotion\",reason=\"missing_timestamp\"}",
+              "value": 5
+            },
+            {
+              "labels": "{logical_consumer=\"operations.event-observation\",reason=\"missing_timestamp\"}",
+              "value": 10
+            }
+          ],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "sum by (logical_consumer,consumer_group) (max by (logical_consumer,consumer_group,topic,partition) (slotq_kafka_consumer_lag_records))",
+          "exp_samples": [
+            {
+              "labels": "{logical_consumer=\"waitlist.promotion\",consumer_group=\"contract-group\"}",
+              "value": 4
+            },
+            {
+              "labels": "{logical_consumer=\"operations.event-observation\",consumer_group=\"contract-group\"}",
+              "value": 7
+            }
+          ],
+          "eval_time": "5m"
+        }
+      ]
+    },
+    {
+      "name": "unconnected-kafka-is-missing",
+      "interval": "1m",
+      "input_series": [],
+      "promql_expr_test": [
+        {
+          "expr": "slotq_kafka_publication_ack_total",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "slotq_kafka_intake_total",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "slotq_kafka_consumer_lag_records",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "slotq_kafka_publication_pending_events",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "slotq_kafka_publication_oldest_recorded_age_seconds",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "sum by (event_type,schema_version) (increase(slotq_kafka_publication_retry_total[5m]))",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "sum by (failure_code) (increase(slotq_kafka_publication_failures_total[5m]))",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "slotq_kafka_runtime_state",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le,logical_consumer) (rate(slotq_kafka_durable_intake_observed_delay_seconds_bucket[5m])))",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "sum by (logical_consumer,reason) (increase(slotq_kafka_intake_delay_invalid_total[5m]))",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "sum by (logical_consumer,consumer_group) (max by (logical_consumer,consumer_group,topic,partition) (slotq_kafka_consumer_lag_records))",
+          "exp_samples": [],
+          "eval_time": "5m"
+        },
+        {
+          "expr": "slotq_kafka_lag_sample_healthy or slotq_kafka_lag_sample_truncated",
+          "exp_samples": [],
+          "eval_time": "5m"
+        }
+      ]
+    }
+  ],
+  "evaluation_interval": "1m"
+}

@@ -1,0 +1,1038 @@
+{
+  "uid": "slotq-product",
+  "title": "SlotQ Product — requests, DB delivery and effects",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "slotq",
+    "product"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request rate by server route",
+      "type": "timeseries",
+      "description": "Server route templates only. No tenant, request or raw URL labels.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route,method,status_class) (rate(slotq_http_requests_seconds_count[5m]))",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Request latency p95",
+      "type": "timeseries",
+      "description": "Approximate request p95 using explicit SLO buckets: 100ms, 500ms, 1s, 5s, 10s. Not event commit/effect latency; insufficient observations remain unknown.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le,route) (rate(slotq_http_requests_seconds_bucket[5m])))",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Request failure classification",
+      "type": "timeseries",
+      "description": "Business conflicts, authorization errors, DB deadlock/timeout/connection and internal failure remain distinct.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (increase(slotq_http_requests_seconds_count{status_class=~\"4xx|5xx\"}[5m]))",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Observer freshness",
+      "type": "timeseries",
+      "description": "Two independent domains: events and locks. NaN means no successful sample.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_observation_sample_age_seconds",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Observer healthy",
+      "type": "timeseries",
+      "description": "0 means unavailable/stale. Query panels must not interpret NaN or absent series as healthy 0.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_observation_sample_healthy",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Sample truncation",
+      "type": "timeseries",
+      "description": "1 means cap of 10000 reached. Counts are lower bounds, receipts are inventory and not throughput.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_sample_truncated",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Undiscovered original event records",
+      "type": "timeseries",
+      "description": "Actual event_records above discovery cursor; boundary lifecycle gaps are excluded. All event types; not eligible target count.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_event_undiscovered",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "DB delivery target inventory",
+      "type": "timeseries",
+      "description": "Separate original registration targets: PENDING PROCESSING DONE DEAD. Oldest-first, independently capped per state.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_delivery_targets",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "title": "Oldest outstanding target age",
+      "type": "timeseries",
+      "description": "Age begins at delivery created_at, not event commit. Selection oldest-first per state.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_delivery_oldest_created_age_seconds{delivery_state=~\"PENDING|PROCESSING|DEAD\"}",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Outstanding materialized targets",
+      "type": "timeseries",
+      "description": "Target without completed promotion receipt; count unit remains original target, not unique logical events.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_business_outstanding_targets",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "title": "Promotion receipt outcome inventory",
+      "type": "timeseries",
+      "description": "PROMOTED and successful no-op outcomes are distinct. Capped inventory; never apply rate().",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_promotion_receipts",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 12,
+      "title": "Outstanding promotion requests",
+      "type": "timeseries",
+      "description": "Last admitted event without completed receipt, including undiscovered events. Excludes capacity-release events.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_promotion_requests_outstanding",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 13,
+      "title": "Retry due / attempt inventory",
+      "type": "timeseries",
+      "description": "Attempt inventory and due retry target subset. Not error or business completion counters.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_delivery_retry_due or slotq_db_delivery_lifetime_attempts or slotq_db_delivery_cycle_attempts",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 14,
+      "title": "MySQL current lock waits",
+      "type": "timeseries",
+      "description": "Global performance_schema.data_lock_waits rows, not per tenant. Independently sampled.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_lock_waits",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 15,
+      "title": "MySQL cumulative wait / deadlock values",
+      "type": "timeseries",
+      "description": "MySQL server counters exposed as gauges; reset on DB restart. Do not treat negative delta as improvement.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 56
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_db_lock_waits_cumulative or slotq_db_lock_deadlocks_cumulative",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 16,
+      "title": "Connection pool pressure",
+      "type": "timeseries",
+      "description": "Product pool metrics; observer uses a separate max-one connection pool.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 56
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "hikaricp_connections_pending or hikaricp_connections_active",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 17,
+      "title": "JVM memory",
+      "type": "timeseries",
+      "description": "Standard bounded JVM meter labels.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 64
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "jvm_memory_used_bytes",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 18,
+      "title": "Maintenance cycle outcomes",
+      "type": "timeseries",
+      "description": "Disabled, success and failure are not merged.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 64
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(slotq_maintenance_cycles_total[5m]))",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 19,
+      "title": "Trace exporter failure",
+      "type": "timeseries",
+      "description": "Exporter batch span results; disabled exporter emits no success series.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 72
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (increase(slotq_telemetry_export_spans_total[5m]))",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 20,
+      "title": "Kafka publication — #107 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Reserved #107 publish-attempt broker ack success/failure. Retries may duplicate ack count; not unique original event count. Absent in DB-only mode.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 72
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_kafka_publication_ack_total",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 21,
+      "title": "Kafka intake — #108 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Reserved #108 durable-intake attempt confirmation/failure. Idempotent reuse may be counted; not unique targets, offset progress or business effects.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 80
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_kafka_intake_total",
+          "legendFormat": "{{logical_consumer}} / {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 22,
+      "title": "Kafka lag by group / partition — #108 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Configured group/topic/partition allowlist only, <=128 tuples. Offset values never become labels. Lag=0 does not prove effect completion.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 80
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_kafka_consumer_lag_records",
+          "legendFormat": "{{logical_consumer}} / {{consumer_group}} / {{topic}} / {{partition}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 23,
+      "title": "Active alerts",
+      "type": "table",
+      "description": "Local diagnostic thresholds only; #111 owns comparison and adoption thresholds.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 88
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 24,
+      "title": "Effect attempt duration by transaction outcome",
+      "type": "timeseries",
+      "description": "Mean elapsed from effect start through transaction completion observation. committed includes no-op; rolled_back, unknown, ownership_lost remain distinct. Current production consumer: waitlist.promotion; outcome-only tags.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 88
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(slotq_delivery_effect_duration_seconds_sum[5m])) / sum by (outcome) (rate(slotq_delivery_effect_duration_seconds_count[5m]))",
+          "legendFormat": "{{outcome}}{{failure_code}}{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 25,
+      "title": "Effect attempt completion counts",
+      "type": "timeseries",
+      "description": "Observed attempts by transaction outcome, not unique receipts or PROMOTED counts. Unknown never implies rollback.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 96
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (increase(slotq_delivery_effect_duration_seconds_count[5m]))",
+          "legendFormat": "{{outcome}}{{failure_code}}{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 26,
+      "title": "Kafka publication pending — #107 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Original events still under relay publication responsibility without confirmed ack. Authority and membership stay defined by #105.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 96
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_kafka_publication_pending_events",
+          "legendFormat": "{{outcome}}{{failure_code}}{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 27,
+      "title": "Kafka oldest publication pending — #107 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Pending event recorded_at age. Not occurredAt or exact transaction commit latency.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 104
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_kafka_publication_oldest_recorded_age_seconds",
+          "legendFormat": "{{outcome}}{{failure_code}}{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 28,
+      "title": "Kafka publication retries — #107 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Publish retries after the initial attempt. Fixed two v1 event routes only. Not business retry or effect completion.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 104
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (event_type,schema_version) (increase(slotq_kafka_publication_retry_total[5m]))",
+          "legendFormat": "{{outcome}}{{failure_code}}{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 29,
+      "title": "Kafka publication failures — #107 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Fixed failure codes TIMEOUT CONNECTION AUTHORIZATION SERIALIZATION OTHER. No exception text or broker URL labels.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 112
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (failure_code) (increase(slotq_kafka_publication_failures_total[5m]))",
+          "legendFormat": "{{outcome}}{{failure_code}}{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 30,
+      "title": "Kafka relay / producer state — #107 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "One-hot observed ready/degraded/stopped for configured relay/producer role. Missing installation remains NO SIGNAL, not stopped=1.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 112
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_kafka_runtime_state",
+          "legendFormat": "{{runtime_role}} / {{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 31,
+      "title": "Kafka durable-intake observed delay — #108 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Recorded_at to post-durable-intake fresh DB UTC observation. Observed delay includes publication/intake path, not exact commit latency. Existing-target rechecks excluded.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 120
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le,logical_consumer) (rate(slotq_kafka_durable_intake_observed_delay_seconds_bucket[5m])))",
+          "legendFormat": "{{logical_consumer}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 32,
+      "title": "Kafka intake invalid delay — #108 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Missing timestamps or clock ordering failure produce invalid observations, not zero-second latency.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 120
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (logical_consumer,reason) (increase(slotq_kafka_intake_delay_invalid_total[5m]))",
+          "legendFormat": "{{logical_consumer}} / {{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 33,
+      "title": "Kafka lag by logical consumer / group — #108 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Deduplicate replicas before summing configured partitions. Read only with healthy=1 and truncated=0; lag never substitutes for DB business backlog.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 128
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (logical_consumer,consumer_group) (max by (logical_consumer,consumer_group,topic,partition) (slotq_kafka_consumer_lag_records))",
+          "legendFormat": "{{logical_consumer}} / {{consumer_group}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 34,
+      "title": "Kafka lag sample validity — #108 NOT CONNECTED",
+      "type": "timeseries",
+      "description": "Health/freshness/offset errors and 128 configured tuple cap. Partial or invalid lag cannot prove that backlog is zero.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "slotq-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 128
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slotq_kafka_lag_sample_healthy or slotq_kafka_lag_sample_truncated",
+          "legendFormat": "{{logical_consumer}} / {{consumer_group}} / {{__name__}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO SIGNAL / UNKNOWN"
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

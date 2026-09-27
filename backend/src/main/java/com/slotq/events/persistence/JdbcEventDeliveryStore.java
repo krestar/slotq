@@ -143,7 +143,8 @@ public final class JdbcEventDeliveryStore implements EventDeliveryStore {
                 row.getInt("schema_version"), time(row, "occurred_at"), row.getString("payload")),
                 row.getLong("boundary_sequence"), time(row, "recorded_at")),
                 new ConsumerRoute(row.getString("consumer_id"), row.getString("target_event_type"),
-                    row.getInt("target_version"))),
+                    row.getInt("target_version")), new com.slotq.observability.ProductTelemetry.Origin(
+                    row.getString("origin_request_id"), row.getString("origin_trace_id"), row.getString("origin_span_id"))),
             bytes(key.registrationId()), bytes(key.tenantId().value()), bytes(key.eventId().value()));
     }
 

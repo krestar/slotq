@@ -2,10 +2,13 @@ package com.slotq.events.application;
 
 import java.util.Objects;
 
+import com.slotq.observability.ProductTelemetry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -18,12 +21,20 @@ public class EventAppendService {
     private final EventRecordStore store;
     private final EventCanonicalizer canonicalizer;
     private final TransactionTemplate appendTransaction;
+    private final ProductTelemetry telemetry;
 
     public EventAppendService(
         EventRecordStore store, EventCanonicalizer canonicalizer, PlatformTransactionManager transactionManager
     ) {
+        this(store, canonicalizer, transactionManager, ProductTelemetry.noop());
+    }
+
+    @Autowired
+    public EventAppendService(EventRecordStore store, EventCanonicalizer canonicalizer,
+                              PlatformTransactionManager transactionManager, ProductTelemetry telemetry) {
         this.store = store;
         this.canonicalizer = canonicalizer;
+        this.telemetry = telemetry;
         appendTransaction = new TransactionTemplate(transactionManager);
         appendTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_MANDATORY);
     }
@@ -44,29 +55,40 @@ public class EventAppendService {
                 throw new IllegalStateException("event append requires a writable caller transaction");
             }
             EventEnvelope event = canonicalizer.canonicalize(input);
-            if (requireActiveRoute) {
-                Objects.requireNonNull(requiredRoute, "required route must not be null");
-                EventCanonicalizer.requireIdentifier(requiredRoute.consumerId(), "consumerId");
-                if (!event.eventType().equals(requiredRoute.eventType())
-                    || event.schemaVersion() != requiredRoute.schemaVersion()) {
-                    throw new IllegalArgumentException("required route does not match event");
+            var observation = telemetry.append(event.eventId().value());
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCompletion(int completion) {
+                    observation.finish(completion == STATUS_COMMITTED ? "committed"
+                        : completion == STATUS_ROLLED_BACK ? "rolled_back" : "unknown");
                 }
-            }
-            long boundary = store.lockBoundary();
-            if (requiredRoute != null && !store.hasActiveRegistration(requiredRoute)) {
-                throw new IllegalStateException("required consumer route is not active");
-            }
-            var existing = store.findEventForAppend(event.eventId());
-            if (existing.isPresent()) {
-                StoredEvent stored = existing.orElseThrow();
-                if (!stored.envelope().equals(event)) {
-                    throw new IllegalArgumentException("IDENTITY_CORRUPTION");
+            });
+            try {
+                if (requireActiveRoute) {
+                    Objects.requireNonNull(requiredRoute, "required route must not be null");
+                    EventCanonicalizer.requireIdentifier(requiredRoute.consumerId(), "consumerId");
+                    if (!event.eventType().equals(requiredRoute.eventType())
+                        || event.schemaVersion() != requiredRoute.schemaVersion()) {
+                        throw new IllegalArgumentException("required route does not match event");
+                    }
                 }
-                return stored;
+                long boundary = store.lockBoundary();
+                if (requiredRoute != null && !store.hasActiveRegistration(requiredRoute)) {
+                    throw new IllegalStateException("required consumer route is not active");
+                }
+                var existing = store.findEventForAppend(event.eventId());
+                if (existing.isPresent()) {
+                    StoredEvent stored = existing.orElseThrow();
+                    if (!stored.envelope().equals(event)) {
+                        throw new IllegalArgumentException("IDENTITY_CORRUPTION");
+                    }
+                    return stored;
+                }
+                long nextBoundary = Math.incrementExact(boundary);
+                store.setBoundary(nextBoundary);
+                return store.insertEvent(event, nextBoundary);
+            } finally {
+                observation.detach();
             }
-            long nextBoundary = Math.incrementExact(boundary);
-            store.setBoundary(nextBoundary);
-            return store.insertEvent(event, nextBoundary);
         });
     }
 }
