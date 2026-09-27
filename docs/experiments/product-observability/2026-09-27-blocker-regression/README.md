@@ -46,4 +46,11 @@ warning 역시 log queue 유실·process 종료 전 미출력 가능성을 가�
 이번 변경 후 그 자료를 현재 revision 재실행 결과로 표시하지 않는다. 수정한 query는 Promtool로,
 queue loss와 privacy는 실제 SDK/OTLP focused test로 재검증했다. 기존 Product commit/rollback/effect 및
 DB inventory focused 7개도 통과했다. 기존 DB backlog/DEAD/lock drill은 해당 구현/식이 바뀌지 않아
-반복하지 않았다. 최종 전체 test/clean build 결과는 별도 validation 기록에 남긴다.
+반복하지 않았다.
+
+구현 checkpoint `98c6f4a`에서 [Backend 전체 test](full-test.json)는 9분 47초,
+[clean build](clean-build.json)는 9분 59초에 각각 성공했다. XML report 기준
+두 실행 모두 61 suites / 579 tests 중 576 passed, 0 failures/errors, 3 skipped다.
+skip은 기존 `SLOTQ_CAPACITY_LOCK_EVIDENCE=true` opt-in 진단이다.
+clean build는 전체 8 tasks를 실행했고 artifact hash와 실제 SDK warning도 기록했다.
+이후 commit은 evidence 기록만 보완한다.

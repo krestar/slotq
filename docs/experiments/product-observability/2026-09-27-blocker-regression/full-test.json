@@ -1,0 +1,25 @@
+{
+  "testedCommit": "98c6f4ac6a547b89262bc7f72521a9859e2846a6",
+  "recordedAt": "2026-09-27T12:45:51.4394246Z",
+  "command": ".\\gradlew.bat test",
+  "exitCode": 0,
+  "result": "BUILD SUCCESSFUL",
+  "elapsed": "9m 47s",
+  "suites": 61,
+  "tests": 579,
+  "passed": 576,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 3,
+  "skippedCondition": "Existing SLOTQ_CAPACITY_LOCK_EVIDENCE=true opt-in diagnostics",
+  "skippedSuites": [
+    {
+      "skipped": 2,
+      "name": "com.slotq.BookingCapacityLockEvidenceTests"
+    },
+    {
+      "skipped": 1,
+      "name": "com.slotq.WaitlistPromotionDeliveryIntegrationTests"
+    }
+  ]
+}
