@@ -25,12 +25,19 @@ class ProductTelemetryTests {
         when(tracer.spanBuilder("product.request")).thenThrow(new IllegalStateException("private-exporter-secret"));
         var telemetry = new ProductTelemetry(provider);
         String requestId = UUID.randomUUID().toString();
-        assertThatCode(() -> {
-            try (var request = telemetry.request(requestId)) {
-                assertThat(ProductTelemetry.currentOrigin().requestId()).isEqualTo(requestId);
-                request.requestFinished("/api/reservations/{id}", "GET", 200);
-            }
-        }).doesNotThrowAnyException();
+        var unrelated = io.opentelemetry.api.trace.Span.wrap(io.opentelemetry.api.trace.SpanContext.create(
+            "1".repeat(32), "2".repeat(16), io.opentelemetry.api.trace.TraceFlags.getSampled(),
+            io.opentelemetry.api.trace.TraceState.getDefault()));
+        try (var existing = unrelated.makeCurrent()) {
+            assertThatCode(() -> {
+                try (var request = telemetry.request(requestId)) {
+                    assertThat(ProductTelemetry.currentOrigin().requestId()).isEqualTo(requestId);
+                    assertThat(ProductTelemetry.currentOrigin().hasTrace()).isFalse();
+                    request.requestFinished("/api/reservations/{id}", "GET", 200);
+                }
+            }).doesNotThrowAnyException();
+            assertThat(io.opentelemetry.api.trace.Span.current().getSpanContext()).isEqualTo(unrelated.getSpanContext());
+        }
         assertThat(ProductTelemetry.currentOrigin()).isEqualTo(ProductTelemetry.Origin.EMPTY);
     }
 

@@ -1,0 +1,78 @@
+{
+  "batches" : [ {
+    "resource" : {
+      "attributes" : [ {
+        "key" : "service.name",
+        "value" : {
+          "stringValue" : "slotq-product"
+        }
+      } ]
+    },
+    "scopeSpans" : [ {
+      "scope" : {
+        "name" : "com.slotq.product",
+        "version" : "1"
+      },
+      "spans" : [ {
+        "traceId" : "BGC0iheB5hYt/w6ukMNQGA==",
+        "spanId" : "dYlVNXsLqhg=",
+        "parentSpanId" : "j7prddupL1s=",
+        "name" : "product.event.append",
+        "kind" : "SPAN_KIND_PRODUCER",
+        "startTimeUnixNano" : "1790493577525166700",
+        "endTimeUnixNano" : "1790493577544708600",
+        "attributes" : [ {
+          "key" : "slotq.event.id",
+          "value" : {
+            "stringValue" : "f5825301-a037-4dcc-87a3-919cf76e5b7a"
+          }
+        }, {
+          "key" : "slotq.outcome",
+          "value" : {
+            "stringValue" : "committed"
+          }
+        }, {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ],
+        "status" : { }
+      }, {
+        "traceId" : "BGC0iheB5hYt/w6ukMNQGA==",
+        "spanId" : "j7prddupL1s=",
+        "name" : "product.request",
+        "kind" : "SPAN_KIND_SERVER",
+        "startTimeUnixNano" : "1790493577451273000",
+        "endTimeUnixNano" : "1790493577546463100",
+        "attributes" : [ {
+          "key" : "http.route",
+          "value" : {
+            "stringValue" : "/api/v1/venues/{venueId}/reservations/{reservationId}/cancel"
+          }
+        }, {
+          "key" : "http.response.status_code",
+          "value" : {
+            "intValue" : "200"
+          }
+        }, {
+          "key" : "http.request.method",
+          "value" : {
+            "stringValue" : "POST"
+          }
+        }, {
+          "key" : "slotq.outcome",
+          "value" : {
+            "stringValue" : "success"
+          }
+        }, {
+          "key" : "slotq.request.id",
+          "value" : {
+            "stringValue" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f"
+          }
+        } ],
+        "status" : { }
+      } ]
+    } ]
+  } ]
+}

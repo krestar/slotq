@@ -1,0 +1,35 @@
+{
+  "startedAt" : "2026-09-27T07:19:36.752149Z",
+  "images" : [ "mysql:8.4", "prom/prometheus:v3.5.0", "grafana/grafana:12.1.1", "grafana/tempo:2.8.2", "nginx:1.28-alpine" ],
+  "scope" : "Real HTTP cancellation / original event / real waitlist offer and receipt / DB delivery; local alerts unchanged; no Kafka implementation",
+  "anonymousTelemetryAccess" : "Prometheus=401,Grafana=401,OTLP=401",
+  "deadFault" : "Exact production target processed by a worker with the handler deliberately absent; no state seeding",
+  "lockWait" : "Actual Product cancellation blocked on event_boundary FOR UPDATE; alert fired before lock released",
+  "recovery" : {
+    "offers" : 2,
+    "receipts" : "PROMOTED",
+    "replayAuditRows" : 1,
+    "deadDelivery" : "DONE",
+    "backlogDelivery" : "DONE"
+  },
+  "trace" : {
+    "originTraceId" : "0460b48a1781e6162dff0eae90c35018",
+    "requestId" : "9bdbafc6-2111-4f71-9e4f-e1e6692eac7f",
+    "storedInTempo" : true
+  },
+  "grafana" : {
+    "title" : "SlotQ Product — requests, DB delivery and effects",
+    "queriedPanels" : 34,
+    "uid" : "slotq-product"
+  },
+  "kafkaSignals" : "Empty result: not instrumented, never a fabricated zero",
+  "collectorOutage" : {
+    "mechanism" : "Actual OTLP ingress container paused",
+    "receipt" : "PROMOTED",
+    "offerCount" : 1,
+    "delivery" : "DONE",
+    "failedExportSpans" : 5.0
+  },
+  "completedAt" : "2026-09-27T07:21:30.024349600Z",
+  "result" : "PASS"
+}

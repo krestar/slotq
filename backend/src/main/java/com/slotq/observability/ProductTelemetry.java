@@ -102,6 +102,10 @@ public final class ProductTelemetry {
             scope = (root ? Context.root() : Context.current()).with(span).makeCurrent();
         } catch (RuntimeException ignored) {
             // A broken instrumentation provider must not change Product behavior.
+            // Even on this path a new request/attempt must not inherit an unrelated thread context.
+            if (root && scope == null) {
+                try { scope = Context.root().makeCurrent(); } catch (RuntimeException ignoredScope) { }
+            }
         }
         SpanContext context;
         try { context = span.getSpanContext(); } catch (RuntimeException ignored) { context = SpanContext.getInvalid(); }

@@ -1,0 +1,37 @@
+groups:
+  - name: slotq-product
+    rules:
+      - alert: SlotqTelemetryUnavailable
+        expr: up{job="slotq-product"} == 0
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: "Product scrape unavailable; absent samples are not zero"}
+      - alert: SlotqDatabaseSampleUnavailable
+        expr: slotq_observation_sample_healthy == 0
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: "Database observer failed or stale; business state is unknown"}
+      - alert: SlotqBacklog
+        expr: slotq_db_delivery_oldest_created_age_seconds{delivery_state=~"PENDING|PROCESSING"} > 60
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: "DB target remains outstanding beyond local diagnostic budget"}
+      - alert: SlotqDeadDelivery
+        expr: slotq_db_delivery_targets{delivery_state="DEAD"} > 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "DEAD is terminal target failure, not successful no-op"}
+      - alert: SlotqDatabaseLockWait
+        expr: slotq_db_lock_waits > 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "MySQL currently reports a lock wait"}
+      - alert: SlotqObservationTruncated
+        expr: slotq_db_sample_truncated == 1
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: "Bounded DB sample reached cap; displayed counts are lower bounds"}
+      - alert: SlotqTraceExporterFailure
+        expr: increase(slotq_telemetry_export_spans_total{outcome="failure"}[5m]) > 0
+        labels: {severity: warning}
+        annotations: {summary: "Trace export failed; Product correctness is independent"}
