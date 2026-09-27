@@ -1,0 +1,39 @@
+{
+  "testedCommit": "c3fc40c1d43c4aab6c02d9791f4941f6e547927e",
+  "recordedAt": "2026-09-27T07:45:11.7464059Z",
+  "command": ".\\gradlew.bat clean build",
+  "workingDirectory": "backend",
+  "exitCode": 0,
+  "buildResult": "BUILD SUCCESSFUL",
+  "elapsed": "9m 55s",
+  "allTasksExecuted": 8,
+  "reportSource": "Gradle XML and HTML reports",
+  "suites": 60,
+  "tests": 576,
+  "passed": 573,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 3,
+  "skippedCondition": "SLOTQ_CAPACITY_LOCK_EVIDENCE=true not set; existing opt-in diagnostics",
+  "skippedSuites": [
+    {
+      "name": "com.slotq.BookingCapacityLockEvidenceTests",
+      "skipped": 2
+    },
+    {
+      "name": "com.slotq.WaitlistPromotionDeliveryIntegrationTests",
+      "skipped": 1
+    }
+  ],
+  "finalFocused": {
+    "failures": 0,
+    "result": "BUILD SUCCESSFUL",
+    "command": ".\\gradlew.bat test --tests com.slotq.HoldIdempotencyScopeMigrationTests --tests com.slotq.SlotqApplicationTests --tests com.slotq.observability.ProductTelemetryTests",
+    "elapsed": "39s",
+    "tests": 12,
+    "skipped": 0
+  },
+  "initialFullTest": "Two assertions expected Flyway V14; updated to V15, focused regressions and final clean build passed.",
+  "frontend": "Unchanged; no frontend verification required",
+  "bootJarSha256": "dc20ed8988b90b07a6fbd118b6a25aeed0372b79bf37d69523f770c261227b1a"
+}

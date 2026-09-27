@@ -3,6 +3,12 @@
 2026-09-27 실행 **PASS**. [manifest](manifest.json)의 source hash와 image ID가 실행 provenance다.
 원자료는 synthetic tenant/UUID만 포함하며 credential, HTTP body, business payload와 SQL parameter를 저장하지 않는다.
 
+최종 Backend 검증은 commit `c3fc40c`에서 `./gradlew.bat clean build`로 성공했다.
+XML/HTML report 기준 60 suites, 576 tests 중 573 passed, 0 failures/errors, 3 skipped다.
+skip은 기존 `SLOTQ_CAPACITY_LOCK_EVIDENCE=true` opt-in 진단 테스트이며 일반 correctness 테스트는 통과했다.
+앞선 전체 실행에서 발견한 V14 기대값 두 곳은 V15로 수정하고 관련 12개 테스트를 통과시켰다.
+최종 명령·결과·artifact hash는 [validation](validation.json)에 기록했다. Frontend 변경은 없다.
+
 | 검증 | 실제 결과와 근거 |
 | --- | --- |
 | 외부 telemetry 접근 | 익명 Prometheus/Grafana/OTLP 모두 401, 각 machine/operator credential으로 정상 접근 ([evidence](evidence.json)) |
