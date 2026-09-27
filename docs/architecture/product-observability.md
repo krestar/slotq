@@ -70,6 +70,14 @@ exporter 재시도를 기다리지 않는다. instrumentation/metric 기록의 r
 `slotq.telemetry` log는 queue 1,024개의 `AsyncAppender`와 `neverBlock=true`를 사용한다.
 log queue 또는 trace queue가 가득 차거나 process가 종료되면 관측 기록이 유실될 수 있다.
 export failure counter는 실제 제출 batch의 결과이며 queue 유실 전체를 정확히 세는 지표가 아니다.
+OTel 1.62.0의 queue-full drop은 다음 batch export 시작 때
+`BatchSpanProcessor dropped <count> span(s) since the last export because the queue is full (maxQueueSize=<size>)`
+warning으로 별도 관측한다. 해당 SDK logger만 WARN으로 허용하고, 정확한 문구·양의 정수만 통과시키며
+throwable/다른 SDK 메시지는 차단한다. warning도 기존 nonblocking async log 경로를 사용하므로
+Product thread가 log I/O나 queue 여유를 기다리지 않는다. 이 숫자는 직전 export 이후 local queue drop이며
+export 실패 counter, sampling 제외 또는 business event 유실을 의미하지 않는다. SDK warning 형식이
+바뀌는 dependency update는 saturation/privacy regression과 함께 검토한다. log queue 유실·process 종료
+전 미출력까지 모두 보장하는 durable loss counter는 아니다.
 이 선택은 관측 전송이 Product latency와 transaction 성공을 좌우하지 않도록 하기 위한 것이다.
 trace/log의 누락은 business 유실 evidence가 아니다.
 

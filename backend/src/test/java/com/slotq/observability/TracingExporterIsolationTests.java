@@ -9,12 +9,19 @@ import java.util.concurrent.TimeUnit;
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.annotation.Configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SpringBootTest(classes = TracingExporterIsolationTests.LoggingConfiguration.class)
+@ExtendWith(OutputCaptureExtension.class)
 class TracingExporterIsolationTests {
     @Test
-    void realOtlpExporterTimeoutAndQueueSaturationNeverWaitOnProductThread() throws Exception {
+    void realOtlpExporterTimeoutAndQueueSaturationNeverWaitOnProductThread(CapturedOutput output) throws Exception {
         CountDownLatch collectorEntered = new CountDownLatch(1);
         CountDownLatch collectorRelease = new CountDownLatch(1);
         HttpServer collector = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -52,10 +59,15 @@ class TracingExporterIsolationTests {
             provider.forceFlush().join(15, TimeUnit.SECONDS);
             assertThat(registry.get("slotq.telemetry.export.spans").tag("outcome", "failure").counter().count())
                 .isPositive();
+            assertThat(output.getAll()).containsPattern("BatchSpanProcessor dropped [1-9][0-9]* span\\(s\\).*queue is full");
+            assertThat(output.getAll()).doesNotContain("synthetic-collector-secret", "test.queued", "/v1/traces");
         } finally {
             collectorRelease.countDown();
             collector.stop(0);
             registry.close();
         }
     }
+
+    @Configuration(proxyBeanMethods = false)
+    static class LoggingConfiguration { }
 }

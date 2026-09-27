@@ -14,7 +14,7 @@ public final class ObservationMeterFilter implements MeterFilter {
     private static final Map<String, Set<String>> VALUES = Map.ofEntries(
             Map.entry("transport", Set.of("db", "kafka")),
             Map.entry("runtime_role", Set.of("observer", "delivery", "request", "maintenance", "relay", "consumer")),
-            Map.entry("logical_consumer", Set.of("waitlist.promotion")),
+            Map.entry("logical_consumer", Set.of("waitlist.promotion", "operations.event-observation")),
             Map.entry("delivery_state", DatabaseObservation.STATES),
             Map.entry("promotion_outcome", DatabaseObservation.OUTCOMES),
             Map.entry("sample", Set.of("events", "locks", "receipts", "requests", "deliveries_pending", "deliveries_processing", "deliveries_done", "deliveries_dead")),

@@ -6,6 +6,7 @@
         <encoder><pattern>%msg %kvp%n</pattern></encoder>
     </appender>
     <appender name="TELEMETRY" class="ch.qos.logback.classic.AsyncAppender">
+        <filter class="com.slotq.observability.TraceQueueWarningFilter"/>
         <queueSize>1024</queueSize>
         <discardingThreshold>0</discardingThreshold>
         <neverBlock>true</neverBlock>
@@ -23,6 +24,10 @@
     <logger name="com.zaxxer.hikari" level="OFF"/>
     <logger name="io.opentelemetry.exporter" level="OFF"/>
     <logger name="io.opentelemetry.sdk.trace.export" level="OFF"/>
+    <!-- This exact SDK logger is filtered before enqueue; exporter throwables stay suppressed. -->
+    <logger name="io.opentelemetry.sdk.trace.export.BatchSpanProcessor" level="WARN" additivity="false">
+        <appender-ref ref="TELEMETRY"/>
+    </logger>
     <logger name="org.springframework.scheduling.support.TaskUtils$LoggingErrorHandler" level="OFF"/>
     <root level="INFO"><appender-ref ref="CONSOLE"/></root>
 </configuration>

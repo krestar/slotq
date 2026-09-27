@@ -633,7 +633,7 @@
         {
           "refId": "A",
           "expr": "slotq_kafka_intake_total",
-          "legendFormat": "{{delivery_state}}{{promotion_outcome}}{{outcome}}{{sample}}"
+          "legendFormat": "{{logical_consumer}} / {{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -663,7 +663,7 @@
         {
           "refId": "A",
           "expr": "slotq_kafka_consumer_lag_records",
-          "legendFormat": "{{consumer_group}} / {{topic}} / {{partition}}"
+          "legendFormat": "{{logical_consumer}} / {{consumer_group}} / {{topic}} / {{partition}}"
         }
       ],
       "fieldConfig": {
@@ -962,8 +962,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (reason) (increase(slotq_kafka_intake_delay_invalid_total[5m]))",
-          "legendFormat": "{{reason}}"
+          "expr": "sum by (logical_consumer,reason) (increase(slotq_kafka_intake_delay_invalid_total[5m]))",
+          "legendFormat": "{{logical_consumer}} / {{reason}}"
         }
       ],
       "fieldConfig": {
@@ -1023,7 +1023,7 @@
         {
           "refId": "A",
           "expr": "slotq_kafka_lag_sample_healthy or slotq_kafka_lag_sample_truncated",
-          "legendFormat": "{{__name__}}"
+          "legendFormat": "{{logical_consumer}} / {{consumer_group}} / {{__name__}}"
         }
       ],
       "fieldConfig": {

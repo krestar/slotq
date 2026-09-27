@@ -3,6 +3,10 @@
 2026-09-27 실행 **PASS**. [manifest](manifest.json)의 source hash와 image ID가 실행 provenance다.
 원자료는 synthetic tenant/UUID만 포함하며 credential, HTTP body, business payload와 SQL parameter를 저장하지 않는다.
 
+이 원자료는 당시 manifest revision의 실행 증거다. 이후 PR blocker 수정 후에도 원자료와 source provenance를
+그대로 보존하며 현재 revision에서 재실행된 것으로 간주하지 않는다. 변경된 contract/query와 queue-loss
+경계의 최소 재검증은 [별도 blocker 기록](../2026-09-27-blocker-regression/README.md)을 따른다.
+
 최종 Backend 검증은 commit `c3fc40c`에서 `./gradlew.bat clean build`로 성공했다.
 XML/HTML report 기준 60 suites, 576 tests 중 573 passed, 0 failures/errors, 3 skipped다.
 skip은 기존 `SLOTQ_CAPACITY_LOCK_EVIDENCE=true` opt-in 진단 테스트이며 일반 correctness 테스트는 통과했다.

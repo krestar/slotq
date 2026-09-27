@@ -1,0 +1,44 @@
+{
+  "baseCommit": "798943b6c23149786e12af5b8ef857f49e5e3a3a",
+  "remoteMain": "c694273cb46a0c6246e49dd48514be7246d934f1",
+  "recordedAt": "2026-09-27T12:35:04.0551414Z",
+  "otelSdk": "1.62.0",
+  "before": {
+    "tests": 3,
+    "meaning": "operations.event-observation rejected and queue-full warning hidden",
+    "failures": 2
+  },
+  "finalFocused": {
+    "tests": 5,
+    "classes": [
+      "ObservationMeterFilterTests",
+      "TraceQueueWarningFilterTests",
+      "TracingExporterIsolationTests"
+    ],
+    "elapsed": "23s",
+    "failures": 0,
+    "skipped": 0
+  },
+  "unchangedProductAndDbFocused": {
+    "tests": 7,
+    "failures": 0,
+    "classes": [
+      "ProductObservabilityIntegrationTests",
+      "DatabaseObservationIntegrationTests"
+    ]
+  },
+  "actualSdkQueueWarnings": [
+    "BatchSpanProcessor dropped 2049 span(s) since the last export because the queue is full (maxQueueSize=2048)"
+  ],
+  "productThread": "4096 sampled spans plus request finished within five seconds while collector remained stalled",
+  "privacy": "Captured output excluded collector credential, trace fixture payload/name and endpoint; filter rejects throwable and non-numeric/raw messages",
+  "sourceSha256": {
+    "backend/src/main/java/com/slotq/observability/ObservationMeterFilter.java": "eb2bd89bde7780dac4789a6983afa3d3cdc99e0f707d8b08e04d8238baca95e6",
+    "backend/src/main/java/com/slotq/observability/TraceQueueWarningFilter.java": "9169eda6adae25bb3e27671e3b99aaf9217dd2742c1159a718e08c35aece3546",
+    "backend/src/main/resources/logback-spring.xml": "f74da1db5af1b1628c6ade474466fd8bf56b82f30ee7ffb503148e690f2141fc",
+    "backend/src/test/java/com/slotq/observability/ObservationMeterFilterTests.java": "da423b33be6f98281dc85cd90265db627b6148473d82a117e8c7b9383783237d",
+    "backend/src/test/java/com/slotq/observability/TraceQueueWarningFilterTests.java": "f0767657f673494c4d474306ee98c30fbec0897e09123687de533dcd233dffad",
+    "backend/src/test/java/com/slotq/observability/TracingExporterIsolationTests.java": "8348f7c7e8f6d95cb5f63e37d87cd795eb56c36eff9e17622fed5eedb8a3b6ce",
+    "infra/observability/grafana/dashboards/slotq-product.json": "0349be6b2661187c6953203dbedfda25b6540ead303dbed29684f9ea2344e2c4"
+  }
+}
