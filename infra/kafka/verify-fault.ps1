@@ -5,7 +5,7 @@ $compose = Join-Path $PSScriptRoot 'compose.fault.yml'
 $lines = [Collections.Generic.List[string]]::new()
 function Capture([string]$label, [object[]]$content) {
     $lines.Add("### $label $(Get-Date -Format o)")
-    foreach ($item in $content) { $lines.Add([string]$item) }
+    foreach ($item in $content) { $lines.Add(([string]$item).TrimEnd()) }
 }
 function Describe {
     $result = & docker exec slotq-kafka-fault-kafka-1-1 /opt/kafka/bin/kafka-topics.sh `
