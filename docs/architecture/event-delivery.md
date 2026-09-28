@@ -12,6 +12,9 @@ durable HOLD/Offer/WAITING backlog와 request discovery의 bounded 순회는
 [Waitlist maintenance](waitlist-maintenance.md)를 따른다. production 실행은 두 route를 검증한 공통 readiness로 gated된다.
 `EventRecordQuery.find(tenantId,eventId)`는 원 event/receipt 의미 대조를 위한 nonlocking immutable 조회만
 추가하며 global append/cutover locking port나 delivery protocol은 바꾸지 않는다.
+M5의 opt-in Kafka publication/relay와 별도 transport assignment는
+[Kafka relay foundation](kafka-relay.md)에 기록한다. 기존 DB direct 기본 전달과 이 문서의
+business effect/receipt/DONE 경계는 유지된다.
 
 ## Producer와 durable cutover
 

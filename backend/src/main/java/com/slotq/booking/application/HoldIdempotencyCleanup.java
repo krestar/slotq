@@ -3,11 +3,13 @@ package com.slotq.booking.application;
 import java.time.Clock;
 import java.time.Instant;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@ConditionalOnProperty(name = "slotq.events.runtime-role", havingValue = "product", matchIfMissing = true)
 public class HoldIdempotencyCleanup {
 
     private final HoldIdempotencyStore store;

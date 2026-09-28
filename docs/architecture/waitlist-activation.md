@@ -50,9 +50,10 @@ bootstrap과 분리해 handler → Booking → recorder → readiness의 bean de
 | waitlist.promotion | booking.capacity-released | 1 |
 | waitlist.promotion | waitlist.promotion-requested | 1 |
 
-route는 대소문자를 포함해 exact-match다. 같은 expected consumer 또는 같은 두 event type의 metadata가
-검사 범위다. 현재 slice 밖의 consumer/version/type이 이 범위에 있으면 compatibility 실패이며 임의
-수정/제거하지 않는다. 무관한 consumer+event type의 foundation 사용에는 관여하지 않는다.
+route는 대소문자를 포함해 exact-match다. `waitlist.promotion` consumer의 durable metadata가
+검사 범위다. 같은 event type을 구독하는 다른 logical consumer의 registration은 Waitlist bootstrap을
+막지 않는다. Waitlist consumer의 현재 두 route 밖 version/type은 compatibility 실패이며 임의
+수정/제거하지 않는다.
 activation/deactivation boundary의 양수·순서·현재 fence 이하 여부, 관측한 boundary의 중복 사용과 같은 route의 generation overlap을
 검증한다. inactive 이력만 있는 route를 startup이 새 generation으로 자동 대체하지 않는다. 유효한 과거
 종료 이력과 현재 ACTIVE가 함께 있으면 현재 identity를 보존한다. runtime route 교체/제거 API는 없다.

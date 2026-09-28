@@ -151,16 +151,25 @@ class WaitlistActivationIntegrationTests {
         assertClosedWithoutMutation(fixture());assertThat(snapshot().registrations()).isEmpty();
     }
 
-    @ParameterizedTest @ValueSource(strings={"version","consumer","case","boundary","inactive"})
+    @ParameterizedTest @ValueSource(strings={"version","case","boundary","inactive"})
     void incompatibleOrCorruptDurableMetadataIsNotRepairedByBootstrap(String kind) {
         ConsumerRoute route=switch(kind){case "version" -> new ConsumerRoute("waitlist.promotion",RELEASE.eventType(),2);
-            case "consumer" -> new ConsumerRoute("wrong.consumer",RELEASE.eventType(),1);
             case "case" -> new ConsumerRoute("waitlist.promotion","Booking.capacity-released",1);default -> RELEASE;};
         UUID id=registrations.activate(route);
         if(kind.equals("boundary"))jdbc.update("UPDATE event_registrations SET activation_boundary=100 WHERE registration_id=?",bytes(id));
         if(kind.equals("inactive"))registrations.deactivate(id);
         assertThatThrownBy(() -> bootstrap().activate()).isInstanceOf(IllegalStateException.class);
         assertThat(readiness.isReady()).isFalse();assertThat(count("event_registrations")).isEqualTo(1);
+    }
+
+    @Test void anotherLogicalConsumerOnTheSameEventTypeDoesNotBlockWaitlistBootstrap() {
+        UUID observer = registrations.activate(new ConsumerRoute("operations.event-observation", RELEASE.eventType(), 1));
+        bootstrap().activate();
+        assertThat(readiness.isReady()).isTrue();
+        assertThat(active(RELEASE)).isNotNull();
+        assertThat(active(REQUEST)).isNotNull();
+        assertThat(count("event_registrations")).isEqualTo(3);
+        registrations.deactivate(observer);
     }
 
     @Test void secondRouteDbFailureKeepsPartialBootstrapClosedAndRestartReusesFirstIdentity() {

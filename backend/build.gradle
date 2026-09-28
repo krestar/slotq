@@ -27,6 +27,7 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.opentelemetry:opentelemetry-sdk'
     implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+    implementation 'org.springframework.kafka:spring-kafka'
 
     runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'org.flywaydb:flyway-mysql'
@@ -37,12 +38,19 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
     testImplementation 'org.testcontainers:testcontainers-mysql'
+    testImplementation 'org.testcontainers:testcontainers-kafka'
     testImplementation 'io.opentelemetry:opentelemetry-sdk-testing'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    if (project.hasProperty('secureFixture')) {
+        systemProperty 'slotq.kafka.secure.fixture', project.property('secureFixture')
+    }
+    if (project.hasProperty('kafkaEvidenceDir')) {
+        systemProperty 'slotq.kafka.evidence.dir', project.property('kafkaEvidenceDir')
+    }
 }
 
 tasks.register('observabilityEvidence', JavaExec) {

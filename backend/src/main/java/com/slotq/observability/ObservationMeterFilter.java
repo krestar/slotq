@@ -19,6 +19,8 @@ public final class ObservationMeterFilter implements MeterFilter {
             Map.entry("promotion_outcome", DatabaseObservation.OUTCOMES),
             Map.entry("sample", Set.of("events", "locks", "receipts", "requests", "deliveries_pending", "deliveries_processing", "deliveries_done", "deliveries_dead")),
             Map.entry("kind", Set.of("hold", "offer", "entry", "request")),
+            Map.entry("failure_code", Set.of("TIMEOUT", "CONNECTION", "AUTHORIZATION", "SERIALIZATION", "OTHER")),
+            Map.entry("state", Set.of("ready", "degraded", "stopped")),
             Map.entry("method", Set.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "OTHER")),
             Map.entry("status_class", Set.of("1xx", "2xx", "3xx", "4xx", "5xx")));
     @Override public MeterFilterReply accept(Meter.Id id) {

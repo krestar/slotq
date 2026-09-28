@@ -94,6 +94,8 @@ public final class JdbcEventDeliveryStore implements EventDeliveryStore {
                 ON r.event_type = e.event_type AND r.schema_version = e.schema_version
                AND e.boundary_sequence > r.activation_boundary
                AND (r.deactivation_boundary IS NULL OR e.boundary_sequence < r.deactivation_boundary)
+              JOIN event_transport_assignments a ON a.registration_id = r.registration_id
+               AND a.transport = 'DB_DIRECT' AND a.authority_epoch = 1
              WHERE e.boundary_sequence > ? AND e.boundary_sequence <= ?
                AND NOT EXISTS (SELECT 1 FROM event_deliveries d
                                 WHERE d.registration_id = r.registration_id AND d.event_id = e.event_id)
@@ -105,18 +107,22 @@ public final class JdbcEventDeliveryStore implements EventDeliveryStore {
     @Override
     public List<DeliveryKey> candidates(int batchSize) {
         return db.query("""
-            SELECT tenant_id, event_id, registration_id FROM event_deliveries
-             WHERE (state = 'PENDING' AND next_attempt_at <= UTC_TIMESTAMP(6))
-                OR (state = 'PROCESSING' AND lease_until <= UTC_TIMESTAMP(6))
-             ORDER BY COALESCE(next_attempt_at, lease_until), event_id, registration_id LIMIT ?
+            SELECT d.tenant_id, d.event_id, d.registration_id FROM event_deliveries d
+              JOIN event_transport_assignments a ON a.registration_id = d.registration_id
+             WHERE a.transport = 'DB_DIRECT' AND a.authority_epoch = 1
+               AND ((d.state = 'PENDING' AND d.next_attempt_at <= UTC_TIMESTAMP(6))
+                OR (d.state = 'PROCESSING' AND d.lease_until <= UTC_TIMESTAMP(6)))
+             ORDER BY COALESCE(d.next_attempt_at, d.lease_until), d.event_id, d.registration_id LIMIT ?
             """, (row, n) -> key(row), batchSize);
     }
 
     @Override
     public Optional<DeliverySnapshot> lock(DeliveryKey key) {
         return db.query("""
-            SELECT * FROM event_deliveries
-             WHERE tenant_id = ? AND event_id = ? AND registration_id = ? FOR UPDATE
+            SELECT d.* FROM event_deliveries d
+              JOIN event_transport_assignments a ON a.registration_id = d.registration_id
+             WHERE d.tenant_id = ? AND d.event_id = ? AND d.registration_id = ?
+               AND a.transport = 'DB_DIRECT' AND a.authority_epoch = 1 FOR UPDATE
             """, (row, n) -> new DeliverySnapshot(
                 key(row), DeliverySnapshot.State.valueOf(row.getString("state")), row.getInt("cycle_attempts"),
                 row.getLong("lifetime_attempts"), row.getLong("fencing_token"), time(row, "lease_until"),
