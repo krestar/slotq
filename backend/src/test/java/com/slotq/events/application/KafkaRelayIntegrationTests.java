@@ -248,15 +248,17 @@ class KafkaRelayIntegrationTests {
             bytes(beforeDbOutage.eventId().value()))).isEqualTo("PUBLISHED");
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_records WHERE event_id=?", Integer.class,
             bytes(beforeDbOutage.eventId().value()))).isEqualTo(1);
-        var productGuard = new KafkaRuntimeGuard(db, "product", false, true, true, true, false);
+        var productGuard = new KafkaRuntimeGuard(db, new WaitlistKafkaMessage(true, false),
+            "product", false, true, false, "none");
         productGuard.run(null);
         assertThat(directWorker.materialize()).isEqualTo(4);
         assertThat(directStore.candidates(100)).hasSize(4);
         db.update("UPDATE event_transport_assignments SET transport='KAFKA',authority_epoch=2");
         assertThat(directStore.candidates(100)).isEmpty();
         assertThatThrownBy(() -> productGuard.run(null)).hasMessageContaining("transport authority");
-        assertThatThrownBy(() -> new KafkaRuntimeGuard(db, "relay", true, false, false, false, false).run(null))
-            .hasMessageContaining("two exact durable Waitlist routes");
+        assertThatThrownBy(() -> new KafkaRuntimeGuard(db, mapping,
+            "relay", true, false, false, "none").run(null))
+            .hasMessageContaining("exact durable publication routes");
         db.update("UPDATE event_transport_assignments SET transport='DB_DIRECT',authority_epoch=1");
         assertThat(directStore.candidates(100)).hasSize(4);
         assertThat(meters.find("slotq.kafka.publication.ack").tag("outcome", "success").counter()).isNotNull();

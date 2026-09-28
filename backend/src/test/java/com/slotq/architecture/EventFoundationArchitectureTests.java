@@ -116,7 +116,8 @@ class EventFoundationArchitectureTests {
     @Test
     void foundationDoesNotDependOnBookingWaitlistOrVenueConcreteImplementations() throws Exception {
         List<String> forbidden = List.of(
-            "com/slotq/booking/", "com/slotq/waitlist/", "com/slotq/venue/persistence/",
+            "com/slotq/booking/", "com/slotq/waitlist/", "com/slotq/integration/waitlist/",
+            "com/slotq/venue/persistence/",
             "com/slotq/venue/domain/Venue;", "com/slotq/venue/domain/Resource;",
             "com/slotq/venue/domain/BookingPolicy;"
         );
@@ -130,6 +131,24 @@ class EventFoundationArchitectureTests {
                 if (bytes.contains(dependency)) {
                     violations.add(type.getName() + " -> " + dependency);
                 }
+            }
+        }
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    void kafkaFoundationKeepsConcretePersistenceAndM4RouteKnowledgeOutsideApplication() throws Exception {
+        List<String> violations = new ArrayList<>();
+        for (Class<?> type : mainTypes()) {
+            if (!type.getPackageName().startsWith("com.slotq.events.")) continue;
+            String bytes = bytecode(type);
+            for (String route : List.of("waitlist.promotion", "booking.capacity-released",
+                "waitlist.promotion-requested")) {
+                if (bytes.contains(route)) violations.add(type.getName() + " -> " + route);
+            }
+            if (type.getPackageName().startsWith("com.slotq.events.application.")
+                && bytes.contains("com/slotq/events/persistence/")) {
+                violations.add(type.getName() + " -> concrete event persistence");
             }
         }
         assertThat(violations).isEmpty();

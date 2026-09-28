@@ -6,16 +6,17 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.slotq.events.application.EventEnvelope;
-import com.slotq.events.application.EventId;
+import com.slotq.events.application.ConsumerRoute;
+import com.slotq.events.application.KafkaPublicationFamily;
+import com.slotq.events.application.KafkaPublicationLedger;
 import com.slotq.events.application.KafkaPublicationPolicy;
 import com.slotq.events.application.StoredEvent;
 import com.slotq.observability.ProductTelemetry;
-import com.slotq.tenancy.domain.TenantId;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -24,17 +25,26 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /** Publication ledger and discovery have no DB-delivery cursor, target, or receipt identity. */
 @Component
-public final class JdbcKafkaPublicationLedger {
+public final class JdbcKafkaPublicationLedger implements KafkaPublicationLedger {
     private final JdbcTemplate db;
     private final TransactionTemplate transaction;
+    private final String consumerId;
+    private final List<ConsumerRoute> routes;
 
-    public JdbcKafkaPublicationLedger(JdbcTemplate db, PlatformTransactionManager manager) {
+    public JdbcKafkaPublicationLedger(JdbcTemplate db, PlatformTransactionManager manager,
+                                      KafkaPublicationFamily family) {
         this.db = db;
+        this.consumerId = family.consumerId();
+        this.routes = List.copyOf(family.routes());
+        if (consumerId == null || consumerId.isBlank() || routes.isEmpty()
+            || routes.stream().anyMatch(route -> !consumerId.equals(route.consumerId()))) {
+            throw new IllegalArgumentException("Invalid Kafka publication family routes");
+        }
         transaction = new TransactionTemplate(manager);
         transaction.setTimeout(10);
     }
 
-    public int discover(String destination, int batchSize) {
+    @Override public int discover(String destination, int batchSize) {
         return execute(() -> {
             var cursorRow = db.queryForMap(
                 "SELECT boundary_sequence,destination FROM event_kafka_discovery WHERE singleton_id = 1 FOR UPDATE");
@@ -51,22 +61,33 @@ public final class JdbcKafkaPublicationLedger {
                 """, Long.class, cursor, batchSize);
             if (positions.isEmpty()) return 0;
             long through = positions.getLast();
+            String approvedRoutes = String.join(" OR ", java.util.Collections.nCopies(routes.size(),
+                "(e.event_type = ? AND e.schema_version = ?)"));
+            List<Object> parameters = new ArrayList<>();
+            parameters.add(destination);
+            parameters.add(cursor);
+            parameters.add(through);
+            for (ConsumerRoute route : routes) {
+                parameters.add(route.eventType());
+                parameters.add(route.schemaVersion());
+            }
+            parameters.add(consumerId);
+            parameters.add(destination);
             int inserted = db.update("""
                 INSERT INTO event_kafka_publications
                     (tenant_id, event_id, destination, state, discovered_boundary, next_attempt_at)
                 SELECT e.tenant_id, e.event_id, ?, 'PENDING', e.boundary_sequence, UTC_TIMESTAMP(6)
                   FROM event_records e
                  WHERE e.boundary_sequence > ? AND e.boundary_sequence <= ?
-                   AND ((e.event_type = 'booking.capacity-released' AND e.schema_version = 1)
-                     OR (e.event_type = 'waitlist.promotion-requested' AND e.schema_version = 1))
+                   AND (%s)
                    AND EXISTS (SELECT 1 FROM event_registrations r
-                        WHERE r.consumer_id = 'waitlist.promotion'
+                        WHERE r.consumer_id = ?
                           AND r.event_type = e.event_type AND r.schema_version = e.schema_version
                           AND e.boundary_sequence > r.activation_boundary
                           AND (r.deactivation_boundary IS NULL OR e.boundary_sequence < r.deactivation_boundary))
                    AND NOT EXISTS (SELECT 1 FROM event_kafka_publications p
                         WHERE p.tenant_id = e.tenant_id AND p.event_id = e.event_id AND p.destination = ?)
-                """, destination, cursor, through, destination);
+                """.formatted(approvedRoutes), parameters.toArray());
             one(db.update("UPDATE event_kafka_discovery SET boundary_sequence = ? WHERE singleton_id = 1", through));
             return inserted;
         });
@@ -227,10 +248,6 @@ public final class JdbcKafkaPublicationLedger {
     }
     private static void one(int rows) { if (rows != 1) throw new OwnershipLost(); }
 
-    public record Key(UUID tenantId, UUID eventId, String destination) { }
-    public record Claim(Key key, long token, int attempt) { }
-    public record Publication(StoredEvent event, ProductTelemetry.Origin origin) { }
-    public record Inventory(long pending, Double oldestSeconds) { }
     private record Snapshot(String state, int attempts, long token, Instant leaseUntil, Instant nextAttemptAt) { }
     public static final class OwnershipLost extends IllegalStateException { }
 }

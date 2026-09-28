@@ -1,12 +1,16 @@
 package com.slotq.integration.waitlist;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import com.slotq.events.application.EventEnvelope;
+import com.slotq.events.application.ConsumerRoute;
+import com.slotq.events.application.KafkaPublicationFamily;
 import com.slotq.events.application.StoredEvent;
 import com.slotq.observability.ProductTelemetry;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.DeserializationFeature;
@@ -15,12 +19,28 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** The M4 integration boundary owns the two exact publication schemas and partition key. */
 @Component
-public final class WaitlistKafkaMessage {
+public final class WaitlistKafkaMessage implements KafkaPublicationFamily {
     private static final int MAX_MESSAGE_BYTES = 1_048_576;
+    private static final List<ConsumerRoute> ROUTES = List.of(
+        BookingCapacityReleasedHandler.ROUTE, WaitlistPromotionRequestedHandler.ROUTE);
     private final JsonMapper json = JsonMapper.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
         .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
+    private final boolean localConsumerEnabled;
+    private final boolean localMaintenanceEnabled;
 
-    public Message encode(StoredEvent stored, ProductTelemetry.Origin origin) {
+    public WaitlistKafkaMessage(
+        @Value("${slotq.waitlist.promotion.enabled:false}") boolean localConsumerEnabled,
+        @Value("${slotq.waitlist.promotion.maintenance-enabled:false}") boolean localMaintenanceEnabled) {
+        this.localConsumerEnabled = localConsumerEnabled;
+        this.localMaintenanceEnabled = localMaintenanceEnabled;
+    }
+
+    @Override public String consumerId() { return ROUTES.getFirst().consumerId(); }
+    @Override public List<ConsumerRoute> routes() { return ROUTES; }
+    @Override public boolean localConsumerEnabled() { return localConsumerEnabled; }
+    @Override public boolean localMaintenanceEnabled() { return localMaintenanceEnabled; }
+
+    @Override public Message encode(StoredEvent stored, ProductTelemetry.Origin origin) {
         EventEnvelope event = stored.envelope();
         boolean release = event.eventType().equals(BookingCapacityReleasedHandler.ROUTE.eventType());
         if (event.schemaVersion() != 1 || !(release
@@ -85,5 +105,4 @@ public final class WaitlistKafkaMessage {
 
     private String quote(String value) { return json.writeValueAsString(value); }
 
-    public record Message(String key, String body) { }
 }

@@ -6,8 +6,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.slotq.events.persistence.JdbcKafkaPublicationLedger;
-import com.slotq.integration.waitlist.WaitlistKafkaMessage;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Gauge;
 import org.apache.kafka.common.errors.AuthorizationException;
@@ -23,9 +21,9 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(name = "slotq.events.kafka.relay-enabled", havingValue = "true")
 public final class KafkaRelayWorker {
-    private final JdbcKafkaPublicationLedger ledger;
+    private final KafkaPublicationLedger ledger;
     private final KafkaTemplate<String, String> kafka;
-    private final WaitlistKafkaMessage mapping;
+    private final KafkaPublicationFamily mapping;
     private final KafkaPublicationPolicy policy;
     private final MeterRegistry meters;
     private final KafkaRetentionProbe retention;
@@ -39,8 +37,8 @@ public final class KafkaRelayWorker {
     private boolean gaugesRegistered;
 
     @org.springframework.beans.factory.annotation.Autowired
-    public KafkaRelayWorker(JdbcKafkaPublicationLedger ledger, KafkaTemplate<String, String> kafka,
-        WaitlistKafkaMessage mapping, KafkaPublicationPolicy policy, MeterRegistry meters,
+    public KafkaRelayWorker(KafkaPublicationLedger ledger, KafkaTemplate<String, String> kafka,
+        KafkaPublicationFamily mapping, KafkaPublicationPolicy policy, MeterRegistry meters,
         KafkaRetentionProbe retention, KafkaRuntimeGuard runtime,
         com.slotq.observability.ProductTelemetry telemetry,
         @Value("${slotq.events.kafka.destination:slotq.waitlist.events.v1}") String destination) {
@@ -50,8 +48,8 @@ public final class KafkaRelayWorker {
         this.destination = destination;
     }
 
-    public KafkaRelayWorker(JdbcKafkaPublicationLedger ledger, KafkaTemplate<String, String> kafka,
-        WaitlistKafkaMessage mapping, KafkaPublicationPolicy policy, MeterRegistry meters, String destination) {
+    public KafkaRelayWorker(KafkaPublicationLedger ledger, KafkaTemplate<String, String> kafka,
+        KafkaPublicationFamily mapping, KafkaPublicationPolicy policy, MeterRegistry meters, String destination) {
         this(ledger, kafka, mapping, policy, meters, null, null,
             com.slotq.observability.ProductTelemetry.noop(), destination);
     }
@@ -91,7 +89,7 @@ public final class KafkaRelayWorker {
         }
     }
 
-    public void publish(JdbcKafkaPublicationLedger.Claim claim) {
+    public void publish(KafkaPublicationLedger.Claim claim) {
         if (claim.attempt() > 1) meters.counter("slotq.kafka.publication.retry", "transport", "kafka",
             "runtime_role", "relay").increment();
         try {
@@ -123,7 +121,7 @@ public final class KafkaRelayWorker {
         }
     }
 
-    private void recordFailure(JdbcKafkaPublicationLedger.Claim claim, String code, boolean retryable) {
+    private void recordFailure(KafkaPublicationLedger.Claim claim, String code, boolean retryable) {
         meters.counter("slotq.kafka.publication.ack", "transport", "kafka", "runtime_role", "relay",
             "outcome", "failure").increment();
         meters.counter("slotq.kafka.publication.failures", "transport", "kafka", "runtime_role", "relay",

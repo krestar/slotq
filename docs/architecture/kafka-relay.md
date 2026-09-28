@@ -68,6 +68,12 @@ immutable payload와 identity 바깥에 둔다. 별도 broker header는 쓰지 �
 1 MiB 이하이고 producer의 `max.request.size`도 1 MiB다. Kafka partition ordering은 publication
 순서일 뿐 Waitlist FIFO 또는 effect 완료 순서가 아니다.
 
+`WaitlistKafkaMessage`가 승인된 consumer/route, Product 측 활성 설정과 wire mapping을 소유한다.
+events foundation의 `KafkaPublicationFamily`는 이 값과 mapping을 받는 좁은 port이고,
+`KafkaPublicationLedger`는 relay가 사용하는 durable publication 연산의 port다. JDBC 구현은
+integration에서 받은 route만으로 discovery를 제한한다. events foundation은 M4 concrete 타입이나
+route 문자열을 참조하지 않는다.
+
 ## Durable execution authority와 startup
 
 | Role/configuration | Product append | DB target/executor | Kafka relay | Kafka intake |
@@ -78,6 +84,7 @@ immutable payload와 identity 바깥에 둔다. 별도 broker header는 쓰지 �
 
 `slotq.events.runtime-role=relay`, `slotq.events.kafka.relay-enabled=true`,
 `spring.main.web-application-type=none`, M4 promotion/maintenance/DB scheduler disabled가 relay 조건이다.
+`HoldIdempotencyCleanup`도 product role에서만 등록하여 relay의 Product maintenance 실행을 막는다.
 relay는 두 exact Waitlist registration과 DB_DIRECT/epoch 1을 요구한다. 같은 event type의 다른
 logical consumer 등록은 Waitlist bootstrap을 막지 않는다. Product startup은 활성 Waitlist
 assignment의 누락/KAFKA/epoch 불일치를 거부한다. DB direct discovery, candidate, locking effect는
@@ -116,3 +123,5 @@ nullable metadata로 전달한다. 발행되지 않은 intake/lag metric은 계�
 
 검증 명령, fault별 raw DB/broker snapshot과 한계는
 [Kafka relay evidence](../experiments/kafka-relay/2026-09-28/README.md)에 있다.
+PR #116 blocker 수정 후 재검증은
+[current-run evidence](../experiments/kafka-relay/2026-09-28-blocker-regression/README.md)에 있다.

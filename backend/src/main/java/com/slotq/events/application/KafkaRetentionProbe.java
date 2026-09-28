@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.slotq.events.persistence.JdbcKafkaPublicationLedger;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ListOffsetsOptions;
 import org.apache.kafka.clients.admin.OffsetSpec;
@@ -18,9 +17,9 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "slotq.events.kafka.relay-enabled", havingValue = "true")
 public final class KafkaRetentionProbe {
     private final AdminClient admin;
-    private final JdbcKafkaPublicationLedger ledger;
+    private final KafkaPublicationLedger ledger;
 
-    public KafkaRetentionProbe(AdminClient admin, JdbcKafkaPublicationLedger ledger) {
+    public KafkaRetentionProbe(AdminClient admin, KafkaPublicationLedger ledger) {
         this.admin = admin; this.ledger = ledger;
     }
 
