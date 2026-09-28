@@ -38,8 +38,5 @@ jobs:
           java-version: "25"
           cache: gradle
 
-      - name: Run backend tests
-        run: ./gradlew test
-
       - name: Build backend
         run: ./gradlew clean build
