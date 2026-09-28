@@ -1,0 +1,43 @@
+# Test-only authenticated listener. Generate secrets outside the repository before starting.
+name: slotq-kafka-secure
+services:
+  kafka:
+    image: apache/kafka:4.1.1@sha256:0bc1bb2478f45b6cea78864df86acdc11e8df2c5172477819a4d12942cbe5d40
+    hostname: kafka-secure
+    ports:
+      - 127.0.0.1:59094:9094
+    volumes:
+      - type: bind
+        source: ${SLOTQ_KAFKA_SECRETS_DIR:?Generate secrets outside repository}
+        target: /etc/kafka/secrets
+        read_only: true
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-secure:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,SASL_SSL_HOST:SASL_SSL
+      KAFKA_LISTENERS: PLAINTEXT://:19092,CONTROLLER://:9093,SASL_SSL_HOST://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-secure:19092,SASL_SSL_HOST://localhost:59094
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/secrets/server_jaas.conf
+      KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/broker.p12
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${SLOTQ_KAFKA_STORE_PASSWORD:?Read from ephemeral broker.credentials}
+      KAFKA_SSL_KEY_PASSWORD: ${SLOTQ_KAFKA_STORE_PASSWORD:?Read from ephemeral broker.credentials}
+      KAFKA_SSL_KEYSTORE_TYPE: PKCS12
+      KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.p12
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${SLOTQ_KAFKA_STORE_PASSWORD:?Read from ephemeral broker.credentials}
+      KAFKA_SSL_TRUSTSTORE_TYPE: PKCS12
+      KAFKA_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
+      KAFKA_SUPER_USERS: User:admin;User:ANONYMOUS
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: 'false'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE: 'false'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_LOG_DIRS: /tmp/kraft-secure-logs

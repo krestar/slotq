@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.UUID;
 
 import com.slotq.events.application.ConsumerRoute;
@@ -75,14 +74,12 @@ public class JdbcEventRecordStore implements EventRecordStore {
 
     @Override
     public List<EventRegistration> registrationsFor(String consumerId, List<String> eventTypes) {
-        var args = new ArrayList<Object>(); args.add(consumerId); args.addAll(eventTypes);
         return jdbc.query("SELECT registration_id,consumer_id,event_type,schema_version,activation_boundary,deactivation_boundary"
-            + " FROM event_registrations WHERE consumer_id = ? OR event_type IN ("
-            + String.join(",", java.util.Collections.nCopies(eventTypes.size(), "?"))
-            + ") ORDER BY activation_boundary FOR UPDATE", (row, n) -> new EventRegistration(
+            + " FROM event_registrations WHERE consumer_id = ? ORDER BY activation_boundary FOR UPDATE",
+            (row, n) -> new EventRegistration(
                 uuid(row.getBytes("registration_id")),
                 new ConsumerRoute(row.getString("consumer_id"), row.getString("event_type"), row.getInt("schema_version")),
-                row.getLong("activation_boundary"), row.getObject("deactivation_boundary", Long.class)), args.toArray());
+                row.getLong("activation_boundary"), row.getObject("deactivation_boundary", Long.class)), consumerId);
     }
 
     @Override
@@ -92,6 +89,10 @@ public class JdbcEventRecordStore implements EventRecordStore {
                 registration_id, consumer_id, event_type, schema_version, activation_boundary, created_at
             ) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP(6))
             """, bytes(registrationId), route.consumerId(), route.eventType(), route.schemaVersion(), activationBoundary));
+        requireOne(jdbc.update("""
+            INSERT INTO event_transport_assignments (registration_id, transport, authority_epoch)
+            VALUES (?, 'DB_DIRECT', 1)
+            """, bytes(registrationId)));
     }
 
     @Override

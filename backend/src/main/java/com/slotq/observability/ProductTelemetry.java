@@ -63,6 +63,11 @@ public final class ProductTelemetry {
             fencingToken, cycleAttempt, lifetimeAttempt);
     }
 
+    public Operation publication(Origin original, UUID eventId, long fencingToken, int cycleAttempt) {
+        return start("product.event.publication", SpanKind.PRODUCER, true, original, eventId,
+            fencingToken, cycleAttempt, 0);
+    }
+
     public Operation maintenance() {
         return start("product.maintenance", SpanKind.INTERNAL, true, Origin.EMPTY, null, 0, 0, 0);
     }
@@ -87,7 +92,7 @@ public final class ProductTelemetry {
         try {
             var builder = tracer.spanBuilder(name).setSpanKind(kind);
             if (root) builder.setNoParent();
-            if (kind == SpanKind.CONSUMER && safeOrigin.hasTrace()) {
+            if (root && (kind == SpanKind.CONSUMER || kind == SpanKind.PRODUCER) && safeOrigin.hasTrace()) {
                 builder.addLink(SpanContext.create(safeOrigin.traceId(), safeOrigin.spanId(),
                     TraceFlags.getDefault(), TraceState.getDefault()));
             }
@@ -95,9 +100,11 @@ public final class ProductTelemetry {
             if (safeOrigin.requestId() != null) span.setAttribute("slotq.request.id", safeOrigin.requestId());
             if (eventId != null) span.setAttribute("slotq.event.id", eventId.toString());
             if (fencingToken > 0) {
-                span.setAttribute("slotq.delivery.fencing_token", fencingToken);
-                span.setAttribute("slotq.delivery.cycle_attempt", cycleAttempt);
-                span.setAttribute("slotq.delivery.lifetime_attempt", lifetimeAttempt);
+                String attributePrefix = name.equals("product.event.publication") ? "slotq.publication" : "slotq.delivery";
+                span.setAttribute(attributePrefix + ".fencing_token", fencingToken);
+                span.setAttribute(attributePrefix + ".cycle_attempt", cycleAttempt);
+                if (!name.equals("product.event.publication"))
+                    span.setAttribute(attributePrefix + ".lifetime_attempt", lifetimeAttempt);
             }
             scope = (root ? Context.root() : Context.current()).with(span).makeCurrent();
         } catch (RuntimeException ignored) {
