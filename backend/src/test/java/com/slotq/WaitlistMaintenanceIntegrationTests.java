@@ -499,7 +499,8 @@ class WaitlistMaintenanceIntegrationTests {
     private long scalar(String sql,Object...args){return jdbc.queryForObject(sql,Long.class,args);}
     private String state(String table,UUID id){return jdbc.queryForObject("SELECT state FROM "+table+" WHERE id=?",String.class,bytes(id));}
     private EventDeliveryWorker worker(){var p=new DeliveryPolicy(3,Duration.ofSeconds(8),Duration.ofSeconds(4),Duration.ofSeconds(1),100,List.of(Duration.ZERO,Duration.ZERO));
-        return new EventDeliveryWorker(deliveries,new DeliveryTransactions(manager,deliveries,p),p,new EventHandlers(List.of(requestHandler,releaseHandler)),canonicalizer,emf);}
+        return new EventDeliveryWorker(deliveries,new DeliveryTransactions(manager,deliveries,p),p,new EventHandlers(List.of(requestHandler,releaseHandler)),canonicalizer,emf,
+            new DeliveryExecutionScope(WaitlistPromotionRequestedHandler.ROUTE.consumerId(), "DB_DIRECT", 1));}
     private java.sql.Connection connection() throws Exception{return DriverManager.getConnection(MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword());}
     private List<String> recordLocks(long connection) throws Exception {
         try(var c=DriverManager.getConnection(MYSQL.getJdbcUrl(),"root",MYSQL.getPassword());var q=c.prepareStatement("""

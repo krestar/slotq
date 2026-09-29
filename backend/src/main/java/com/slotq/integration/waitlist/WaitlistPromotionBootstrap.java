@@ -30,14 +30,26 @@ public class WaitlistPromotionBootstrap implements ApplicationRunner {
     private final boolean enabled;
     private final boolean deliveryEnabled;
     private final boolean maintenanceEnabled;
+    private final boolean kafkaBusinessEnabled;
+    private final String runtimeRole;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public WaitlistPromotionBootstrap(EventRegistrationService registrations, EventHandlers handlers,
         WaitlistPromotionReadiness readiness,
         @Value("${slotq.waitlist.promotion.enabled:false}") boolean enabled,
         @Value("${slotq.events.delivery.scheduler-enabled:false}") boolean deliveryEnabled,
-        @Value("${slotq.waitlist.promotion.maintenance-enabled:false}") boolean maintenanceEnabled) {
+        @Value("${slotq.waitlist.promotion.maintenance-enabled:false}") boolean maintenanceEnabled,
+        @Value("${slotq.events.kafka.business-enabled:false}") boolean kafkaBusinessEnabled,
+        @Value("${slotq.events.runtime-role:product}") String runtimeRole) {
         this.registrations = registrations; this.handlers = handlers; this.readiness = readiness;
         this.enabled = enabled; this.deliveryEnabled = deliveryEnabled; this.maintenanceEnabled = maintenanceEnabled;
+        this.kafkaBusinessEnabled = kafkaBusinessEnabled;
+        this.runtimeRole = runtimeRole;
+    }
+    public WaitlistPromotionBootstrap(EventRegistrationService registrations, EventHandlers handlers,
+        WaitlistPromotionReadiness readiness, boolean enabled, boolean deliveryEnabled,
+        boolean maintenanceEnabled) {
+        this(registrations, handlers, readiness, enabled, deliveryEnabled, maintenanceEnabled, false, "product");
     }
     @Override public void run(ApplicationArguments args) { activate(); }
 
@@ -47,12 +59,21 @@ public class WaitlistPromotionBootstrap implements ApplicationRunner {
             throw new IllegalStateException("Bootstrap must start outside a caller transaction");
         }
         if (!enabled) return;
-        if (!deliveryEnabled || !maintenanceEnabled) {
+        if ((runtimeRole.equals("consumer") && !deliveryEnabled)
+            || (!runtimeRole.equals("consumer") && (!maintenanceEnabled
+                || (kafkaBusinessEnabled == deliveryEnabled)))) {
             throw new IllegalStateException("Enabled Waitlist requires delivery and maintenance schedulers");
         }
         requireHandler(BookingCapacityReleasedHandler.ROUTE, BookingCapacityReleasedHandler.class);
         requireHandler(WaitlistPromotionRequestedHandler.ROUTE, WaitlistPromotionRequestedHandler.class);
         var active = inspect();
+        if (runtimeRole.equals("consumer")) {
+            // A running consumer may not create a fresh DB_DIRECT generation after cutover.
+            if (!active.keySet().equals(Set.copyOf(ROUTES)))
+                throw new IllegalStateException("Waitlist consumer requires existing exact registrations");
+            readiness.open();
+            return;
+        }
         for (var route : ROUTES) {
             if (active.containsKey(route)) continue;
             try {

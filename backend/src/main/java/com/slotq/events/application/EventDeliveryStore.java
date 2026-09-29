@@ -10,9 +10,9 @@ public interface EventDeliveryStore {
 
     int materialize(int batchSize);
 
-    List<DeliveryKey> candidates(int batchSize);
+    List<DeliveryKey> candidates(DeliveryExecutionScope scope, int batchSize);
 
-    Optional<DeliverySnapshot> lock(DeliveryKey key);
+    Optional<DeliverySnapshot> lock(DeliveryExecutionScope scope, DeliveryKey key);
 
     Instant databaseNow();
 

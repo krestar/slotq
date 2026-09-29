@@ -3,6 +3,7 @@ package com.slotq.events.application;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.convert.ApplicationConversionService;
@@ -20,11 +21,13 @@ import static org.mockito.Mockito.timeout;
 class EventDeliveryActivationTests {
     private final EventDeliveryWorker worker = mock(EventDeliveryWorker.class);
     private final AtomicBoolean ready = new AtomicBoolean(true);
+    private final DeliveryExecutionScope scope = new DeliveryExecutionScope("waitlist.promotion", "DB_DIRECT", 1);
     private final ApplicationContextRunner context = new ApplicationContextRunner()
         .withInitializer(application -> application.getBeanFactory()
             .setConversionService(ApplicationConversionService.getSharedInstance()))
         .withBean(EventDeliveryWorker.class, () -> worker)
-        .withBean(EventDeliveryReadiness.class, () -> ready::get)
+        .withBean(DeliveryExecutionScope.class, () -> scope)
+        .withBean(EventDeliveryReadiness.class, () -> gate(scope.consumerId(), ready::get))
         .withUserConfiguration(Scheduling.class, EventDeliveryScheduler.class);
 
     @Test
@@ -52,11 +55,28 @@ class EventDeliveryActivationTests {
 
     @Test
     void configuredTickWithoutDeploymentReadinessDoesNotRunTheWorker() {
-        var gate = mock(EventDeliveryReadiness.class);
-        var scheduler = new EventDeliveryScheduler(worker, java.util.Optional.of(gate), java.time.Duration.ofMillis(10));
+        var gate = gate(scope.consumerId(), () -> false);
+        var scheduler = new EventDeliveryScheduler(worker, scope, java.util.List.of(gate),
+            java.time.Duration.ofMillis(10));
         scheduler.tick(); verifyNoInteractions(worker);
-        new EventDeliveryScheduler(worker, java.util.Optional.empty(), java.time.Duration.ofMillis(10)).tick();
+        new EventDeliveryScheduler(worker, scope, java.util.List.of(), java.time.Duration.ofMillis(10)).tick();
         verifyNoInteractions(worker);
+    }
+
+    @Test
+    void readinessOfAnotherLogicalConsumerCannotTriggerTheScopedWorker() {
+        AtomicBoolean selectedReady = new AtomicBoolean(false);
+        EventDeliveryReadiness waitlist = gate(scope.consumerId(), selectedReady::get);
+        EventDeliveryReadiness observer = gate("operations.event-observation", () -> true);
+        var scheduler = new EventDeliveryScheduler(worker, scope, java.util.List.of(waitlist, observer),
+            java.time.Duration.ofMillis(10));
+
+        scheduler.tick();
+        verifyNoInteractions(worker);
+        selectedReady.set(true);
+        scheduler.tick();
+
+        verify(worker).runCycle();
     }
 
     @Test
@@ -72,4 +92,11 @@ class EventDeliveryActivationTests {
     @Configuration(proxyBeanMethods = false)
     @EnableScheduling
     static class Scheduling { }
+
+    private static EventDeliveryReadiness gate(String consumerId, BooleanSupplier state) {
+        return new EventDeliveryReadiness() {
+            @Override public String consumerId() { return consumerId; }
+            @Override public boolean isReady() { return state.getAsBoolean(); }
+        };
+    }
 }

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public final class WaitlistPromotionReadiness implements CapacityReleaseReadiness, EventDeliveryReadiness {
     private volatile boolean ready;
+    @Override public String consumerId() { return "waitlist.promotion"; }
     @Override public boolean isReady() { return ready; }
     void close() { ready = false; }
     void open() { ready = true; }

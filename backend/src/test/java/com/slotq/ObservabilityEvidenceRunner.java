@@ -166,7 +166,8 @@ public final class ObservabilityEvidenceRunner {
         var policy = app.getBean(DeliveryPolicy.class);
         var missingHandler = new EventDeliveryWorker(store,
             new DeliveryTransactions(app.getBean(PlatformTransactionManager.class), store, policy), policy,
-            new EventHandlers(List.of()), app.getBean(EventCanonicalizer.class), app.getBean(EntityManagerFactory.class), app.getBean(ProductTelemetry.class));
+            new EventHandlers(List.of()), app.getBean(EventCanonicalizer.class), app.getBean(EntityManagerFactory.class),
+            app.getBean(ProductTelemetry.class), app.getBean(DeliveryExecutionScope.class));
         DeliveryKey deadKey = key(jdbc, dead.reservation());
         missingHandler.process(missingHandler.claim(deadKey).orElseThrow());
         require(state(jdbc, dead.reservation()).equals("DEAD"), "Fault injection must cause actual DEAD protocol result");

@@ -21,18 +21,21 @@ public final class EventDeliveryWorker {
     private final EventCanonicalizer canonicalizer;
     private final EntityManagerFactory entityManagerFactory;
     private final ProductTelemetry telemetry;
+    private final DeliveryExecutionScope scope;
 
     public EventDeliveryWorker(EventDeliveryStore store, DeliveryTransactions transactions,
                                DeliveryPolicy policy, EventHandlers handlers,
-                               EventCanonicalizer canonicalizer, EntityManagerFactory entityManagerFactory) {
-        this(store, transactions, policy, handlers, canonicalizer, entityManagerFactory, ProductTelemetry.noop());
+                               EventCanonicalizer canonicalizer, EntityManagerFactory entityManagerFactory,
+                               DeliveryExecutionScope scope) {
+        this(store, transactions, policy, handlers, canonicalizer, entityManagerFactory,
+            ProductTelemetry.noop(), scope);
     }
 
     @Autowired
     public EventDeliveryWorker(EventDeliveryStore store, DeliveryTransactions transactions,
                                DeliveryPolicy policy, EventHandlers handlers,
                                EventCanonicalizer canonicalizer, EntityManagerFactory entityManagerFactory,
-                               ProductTelemetry telemetry) {
+                                ProductTelemetry telemetry, DeliveryExecutionScope scope) {
         this.store = store;
         this.transactions = transactions;
         this.policy = policy;
@@ -40,12 +43,13 @@ public final class EventDeliveryWorker {
         this.canonicalizer = canonicalizer;
         this.entityManagerFactory = entityManagerFactory;
         this.telemetry = telemetry;
+        this.scope = scope;
     }
 
     /** Bounded discovery; each candidate is claimed only when the synchronous execution slot is free. */
     public int runCycle() {
         materialize();
-        var candidates = transactions.execute(() -> store.candidates(policy.batchSize()));
+        var candidates = transactions.execute(() -> store.candidates(scope, policy.batchSize()));
         int claimed = 0;
         for (DeliveryKey candidate : candidates) {
             Optional<DeliveryClaim> claim = claim(candidate);
@@ -64,7 +68,7 @@ public final class EventDeliveryWorker {
     /** Exposed internal protocol step for the production crash harness; commit consumes the attempt. */
     public Optional<DeliveryClaim> claim(DeliveryKey key) {
         return transactions.execute(() -> {
-            Optional<DeliverySnapshot> found = store.lock(key);
+            Optional<DeliverySnapshot> found = store.lock(scope, key);
             Instant now = store.databaseNow();
             if (found.isEmpty()) {
                 return Optional.empty();
@@ -87,7 +91,7 @@ public final class EventDeliveryWorker {
     public void process(DeliveryClaim claim) {
         ProductTelemetry.Operation[] observation = {null};
         var outcome = transactions.attempt(() -> {
-            DeliverySnapshot delivery = store.lock(claim.key()).orElseThrow(EventOwnershipLostException::new);
+            DeliverySnapshot delivery = store.lock(scope, claim.key()).orElseThrow(EventOwnershipLostException::new);
             requireOwner(delivery, claim, store.databaseNow());
             EventDeliveryStore.Target target = store.target(claim.key());
             observation[0] = telemetry.delivery(target.origin(), claim.key().eventId().value(),
@@ -124,7 +128,7 @@ public final class EventDeliveryWorker {
         }
         DeliveryFailure failure = DeliveryFailure.classify(outcome.failure());
         transactions.execute(() -> {
-            Optional<DeliverySnapshot> delivery = store.lock(claim.key());
+            Optional<DeliverySnapshot> delivery = store.lock(scope, claim.key());
             Instant now = store.databaseNow();
             if (delivery.isPresent() && delivery.get().ownedBy(claim, now)) {
                 boolean retry = failure.retryable() && delivery.get().cycleAttempts() < policy.maxAttempts();

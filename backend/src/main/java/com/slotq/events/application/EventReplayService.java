@@ -11,10 +11,13 @@ import org.springframework.stereotype.Service;
 public final class EventReplayService {
     private final EventDeliveryStore store;
     private final DeliveryTransactions transactions;
+    private final DeliveryExecutionScope scope;
 
-    public EventReplayService(EventDeliveryStore store, DeliveryTransactions transactions) {
+    public EventReplayService(EventDeliveryStore store, DeliveryTransactions transactions,
+                              DeliveryExecutionScope scope) {
         this.store = store;
         this.transactions = transactions;
+        this.scope = scope;
     }
 
     public void replay(SystemPrincipal authority, DeliveryKey key, String reason) {
@@ -23,7 +26,7 @@ public final class EventReplayService {
             throw new IllegalArgumentException("Replay requires a nonblank reason of at most 500 characters");
         }
         transactions.execute(() -> {
-            DeliverySnapshot delivery = store.lock(key).orElseThrow(NoSuchElementException::new);
+            DeliverySnapshot delivery = store.lock(scope, key).orElseThrow(NoSuchElementException::new);
             var now = store.databaseNow();
             if (delivery.state() != DeliverySnapshot.State.DEAD) {
                 throw new IllegalStateException("Only DEAD deliveries may be replayed");

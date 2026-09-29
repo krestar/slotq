@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import com.slotq.events.application.ConsumerRoute;
 import com.slotq.events.application.DeliveryClaim;
+import com.slotq.events.application.DeliveryExecutionScope;
 import com.slotq.events.application.DeliveryFailure;
 import com.slotq.events.application.DeliveryKey;
 import com.slotq.events.application.DeliveryPolicy;
@@ -95,7 +96,7 @@ public final class JdbcEventDeliveryStore implements EventDeliveryStore {
                AND e.boundary_sequence > r.activation_boundary
                AND (r.deactivation_boundary IS NULL OR e.boundary_sequence < r.deactivation_boundary)
               JOIN event_transport_assignments a ON a.registration_id = r.registration_id
-               AND a.transport = 'DB_DIRECT' AND a.authority_epoch = 1
+               AND a.transport = 'DB_DIRECT'
              WHERE e.boundary_sequence > ? AND e.boundary_sequence <= ?
                AND NOT EXISTS (SELECT 1 FROM event_deliveries d
                                 WHERE d.registration_id = r.registration_id AND d.event_id = e.event_id)
@@ -105,29 +106,32 @@ public final class JdbcEventDeliveryStore implements EventDeliveryStore {
     }
 
     @Override
-    public List<DeliveryKey> candidates(int batchSize) {
+    public List<DeliveryKey> candidates(DeliveryExecutionScope scope, int batchSize) {
         return db.query("""
             SELECT d.tenant_id, d.event_id, d.registration_id FROM event_deliveries d
+              JOIN event_registrations r ON r.registration_id = d.registration_id
               JOIN event_transport_assignments a ON a.registration_id = d.registration_id
-             WHERE a.transport = 'DB_DIRECT' AND a.authority_epoch = 1
+             WHERE r.consumer_id = ? AND a.transport = ? AND a.authority_epoch = ?
                AND ((d.state = 'PENDING' AND d.next_attempt_at <= UTC_TIMESTAMP(6))
                 OR (d.state = 'PROCESSING' AND d.lease_until <= UTC_TIMESTAMP(6)))
              ORDER BY COALESCE(d.next_attempt_at, d.lease_until), d.event_id, d.registration_id LIMIT ?
-            """, (row, n) -> key(row), batchSize);
+            """, (row, n) -> key(row), scope.consumerId(), scope.transport(), scope.authorityEpoch(), batchSize);
     }
 
     @Override
-    public Optional<DeliverySnapshot> lock(DeliveryKey key) {
+    public Optional<DeliverySnapshot> lock(DeliveryExecutionScope scope, DeliveryKey key) {
         return db.query("""
             SELECT d.* FROM event_deliveries d
+              JOIN event_registrations r ON r.registration_id = d.registration_id
               JOIN event_transport_assignments a ON a.registration_id = d.registration_id
              WHERE d.tenant_id = ? AND d.event_id = ? AND d.registration_id = ?
-               AND a.transport = 'DB_DIRECT' AND a.authority_epoch = 1 FOR UPDATE
+               AND r.consumer_id = ? AND a.transport = ? AND a.authority_epoch = ? FOR UPDATE
             """, (row, n) -> new DeliverySnapshot(
                 key(row), DeliverySnapshot.State.valueOf(row.getString("state")), row.getInt("cycle_attempts"),
                 row.getLong("lifetime_attempts"), row.getLong("fencing_token"), time(row, "lease_until"),
                 time(row, "next_attempt_at"), row.getString("failure_code"), row.getString("failure_detail")),
-            scope(key)).stream().findFirst();
+            bytes(key.tenantId().value()), bytes(key.eventId().value()), bytes(key.registrationId()),
+            scope.consumerId(), scope.transport(), scope.authorityEpoch()).stream().findFirst();
     }
 
     @Override
