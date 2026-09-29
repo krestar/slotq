@@ -51,6 +51,9 @@ tasks.named('test') {
     if (project.hasProperty('kafkaEvidenceDir')) {
         systemProperty 'slotq.kafka.evidence.dir', project.property('kafkaEvidenceDir')
     }
+    if (project.hasProperty('kafkaEvidenceRevision')) {
+        systemProperty 'slotq.kafka.evidence.revision', project.property('kafkaEvidenceRevision')
+    }
 }
 
 tasks.register('observabilityEvidence', JavaExec) {

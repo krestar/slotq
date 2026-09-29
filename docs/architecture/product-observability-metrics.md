@@ -29,9 +29,9 @@ DB는 business authority이고 metric은 비동기 advisory sample이다. HTTP s
 
 Count가 0이어도 sample truncated=1 또는 healthy=0이면 global 부재를 주장할 수 없다. DONE target, completed receipt, PROMOTED effect는 서로 다른 집계다. 여러 registration target이 같은 logical receipt를 가리킬 수 있다. 여러 app replica의 global DB inventory를 `sum`하면 중복 합산되므로 instance별 또는 `max`를 사용한다.
 
-## 후속 Kafka contract
+## Kafka publication·consumer contract
 
-현재 아래 metric은 등록/emit하지 않는다. Dashboard는 실제 series를 조회하고 absent 상태를 **NO SIGNAL / UNKNOWN**으로 보여 준다. HTTP API의 오류를 0으로 변환하거나 `or vector(0)`를 쓰지 않는다.
+아래 metric은 해당 relay 또는 consumer runtime이 활성화되어 실제 관측할 때 emit한다. Dashboard는 실제 series를 조회하고 absent 상태를 **NO SIGNAL / UNKNOWN**으로 보여 준다. HTTP API의 오류를 0으로 변환하거나 `or vector(0)`를 쓰지 않는다.
 
 | 예약 signal | ownership / query 의미 |
 | --- | --- |
@@ -46,6 +46,9 @@ Count가 0이어도 sample truncated=1 또는 healthy=0이면 global 부재를 �
 | `slotq_kafka_intake_delay_invalid_total{reason="missing_timestamp\|clock_order"}` | #108. 지연을 정직하게 계산할 수 없는 관측 수. 잘못된 시간을 0초로 clamp하지 않음 |
 | `slotq_kafka_consumer_lag_records{logical_consumer,consumer_group,topic,partition}` | #108. configured group/topic/partition의 log-end offset과 committed durable-intake prefix offset 차이. offset **값**은 label로 금지. group/partition label은 아래 고정 allowlist와 cap 내에서 허용. lag=0은 effect 완료를 증명하지 않음 |
 | `slotq_kafka_lag_sample_healthy`, `slotq_kafka_lag_sample_truncated` | #108. lag 관측의 freshness/권한/offset 범위 오류와 configured series cap 초과를 별도 표시. healthy=0 또는 truncated=1인 부분합을 정상 전체 lag로 주장하지 않음 |
+| `slotq_kafka_delivery_targets{logical_consumer,delivery_state}`, `slotq_kafka_delivery_oldest_created_age_seconds` | #108. Kafka intake 뒤 MySQL 실행 ledger의 consumer별 PENDING/PROCESSING/DONE/DEAD inventory와 상태별 oldest age. offset lag와 독립 |
+| `slotq_kafka_delivery_retry_due`, `slotq_kafka_delivery_retry_backoff` | #108. PENDING이고 기존 attempt가 있는 target의 DB next_attempt_at 기준 즉시 재시도 가능/대기 inventory |
+| `slotq_kafka_delivery_sample_healthy`, `slotq_kafka_delivery_sample_age_seconds`, `slotq_kafka_sample_truncated{sample}` | #108. #106의 별도 read-only pool, timeout, 10,000행 cap을 consumer별 적용한 실행 ledger 표본 유효성. opt-in observer 미설정이면 series 부재 |
 
 이 표의 metric naming, 단위, timestamp source, cardinality 및 missing 의미는 #106 관측 계약이다. 실제 측정/emit, publication 책임 데이터, Kafka client lifecycle은 #107, intake provenance/offset/lag 수집 구현은 #108이 소유한다. 공통 label은 publication에 `transport=kafka,runtime_role=relay`, intake/lag에 `transport=kafka,runtime_role=consumer`를 사용한다. intake/delay/lag/lag sample의 `logical_consumer`는 #108에서 확정한 `waitlist.promotion`, `operations.event-observation` 두 값만 허용한다. 임의 consumer, process/replica/registration UUID는 이 label로 허용하지 않는다. runtime state만 별도 role enum을 사용한다.
 
