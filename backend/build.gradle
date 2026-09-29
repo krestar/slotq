@@ -54,6 +54,11 @@ tasks.named('test') {
     if (project.hasProperty('kafkaEvidenceRevision')) {
         systemProperty 'slotq.kafka.evidence.revision', project.property('kafkaEvidenceRevision')
     }
+    ['kafkaFaultBootstrap', 'kafkaFaultRunId', 'kafkaFaultEvidenceDir'].each { key ->
+        if (project.hasProperty(key)) {
+            systemProperty "slotq.fault.${key}", project.property(key)
+        }
+    }
 }
 
 tasks.register('observabilityEvidence', JavaExec) {

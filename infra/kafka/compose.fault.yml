@@ -29,7 +29,9 @@ services:
       <<: *broker-env
       KAFKA_NODE_ID: 1
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:19092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-1-data:/var/lib/kafka/data
   kafka-2:
     <<: *broker
     hostname: kafka-2
@@ -39,7 +41,9 @@ services:
       <<: *broker-env
       KAFKA_NODE_ID: 2
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:19092,PLAINTEXT_HOST://localhost:39092
-      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-2-data:/var/lib/kafka/data
   kafka-3:
     <<: *broker
     hostname: kafka-3
@@ -49,4 +53,11 @@ services:
       <<: *broker-env
       KAFKA_NODE_ID: 3
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:19092,PLAINTEXT_HOST://localhost:49092
-      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-3-data:/var/lib/kafka/data
+
+volumes:
+  kafka-1-data:
+  kafka-2-data:
+  kafka-3-data:
