@@ -36,6 +36,7 @@ import com.slotq.booking.domain.SlotInventory;
 import com.slotq.booking.domain.SlotInventoryId;
 import com.slotq.events.application.ConsumerRoute;
 import com.slotq.events.application.DeliveryFailure;
+import com.slotq.events.application.DeliveryExecutionScope;
 import com.slotq.events.application.DeliveryKey;
 import com.slotq.events.application.DeliveryPolicy;
 import com.slotq.events.application.DeliveryTransactions;
@@ -113,6 +114,9 @@ class WaitlistPromotionRequestIntegrationTests {
     private static final Instant START = Instant.parse("2026-08-30T11:00:00Z");
     private static final ConsumerRoute REQUEST = WaitlistPromotionRequestedHandler.ROUTE;
     private static final ConsumerRoute RELEASE = BookingCapacityReleasedHandler.ROUTE;
+    private static DeliveryExecutionScope scope() {
+        return new DeliveryExecutionScope(REQUEST.consumerId(), "DB_DIRECT", 1);
+    }
     private static final DeliveryPolicy DELIVERY = new DeliveryPolicy(3, Duration.ofSeconds(8), Duration.ofSeconds(4),
         Duration.ofSeconds(1), 100, List.of(Duration.ZERO, Duration.ZERO));
 
@@ -215,7 +219,8 @@ class WaitlistPromotionRequestIntegrationTests {
         assertThat(deliveryState(event)).isEqualTo("DEAD");
         assertThat(failed.claim(key)).isEmpty();
         assertThat(request(f).eventId()).isEqualTo(event);
-        new EventReplayService(deliveries, transactions()).replay(SystemPrincipal.INSTANCE, key, "request regression recovery");
+        new EventReplayService(deliveries, transactions(), scope())
+            .replay(SystemPrincipal.INSTANCE, key, "request regression recovery");
         process(key);
         assertThat(outcome(event)).isEqualTo("PROMOTED");
         assertThat(request(f).outcome()).isEqualTo(WaitlistPromotionRequestUseCase.Outcome.NO_OP);
@@ -606,7 +611,7 @@ class WaitlistPromotionRequestIntegrationTests {
             @Override public ConsumerRoute route() { return actual.route(); }
             @Override public void handle(StoredEvent event) { before.accept(event); actual.handle(event); after.accept(event); }
         }).toList();
-        return new EventDeliveryWorker(deliveries, transactions(), DELIVERY, new EventHandlers(handlers), canonicalizer, emf);
+        return new EventDeliveryWorker(deliveries, transactions(), DELIVERY, new EventHandlers(handlers), canonicalizer, emf, scope());
     }
     private void process(DeliveryKey key) { var worker = worker(); worker.process(worker.claim(key).orElseThrow()); }
     private Connection connection() throws Exception { return DriverManager.getConnection(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword()); }

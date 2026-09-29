@@ -39,7 +39,9 @@ class WaitlistMaintenanceSchedulerTests {
         for(Duration invalid:List.of(Duration.ZERO,Duration.ofNanos(1),Duration.ofSeconds(-1),Duration.ofDays(1).plusMillis(1))) {
             assertThatThrownBy(() -> new WaitlistMaintenanceScheduler(runtime,readiness,invalid)).isInstanceOf(IllegalArgumentException.class);
             assertThatThrownBy(() -> new com.slotq.events.application.EventDeliveryScheduler(
-                mock(com.slotq.events.application.EventDeliveryWorker.class),java.util.Optional.empty(),invalid)).isInstanceOf(IllegalArgumentException.class);
+                mock(com.slotq.events.application.EventDeliveryWorker.class),
+                new com.slotq.events.application.DeliveryExecutionScope("waitlist.promotion", "DB_DIRECT", 1),
+                List.of(),invalid)).isInstanceOf(IllegalArgumentException.class);
         }
     }
     @Configuration(proxyBeanMethods=false) @EnableScheduling static class Scheduling {}

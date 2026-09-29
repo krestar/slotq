@@ -52,7 +52,7 @@ class HoldIdempotencyScopeMigrationTests {
 
         Flyway current = flyway().load();
         current.migrate();
-        assertThat(current.info().current().getVersion().toString()).isEqualTo("16");
+        assertThat(current.info().current().getVersion().toString()).isEqualTo("19");
 
         try (var connection = DriverManager.getConnection(
             MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword()

@@ -59,6 +59,9 @@ class EventDeliveryBoundaryIntegrationTests {
 
     private JdbcEventDeliveryStore store;
     private ConsumerRoute route;
+    private DeliveryExecutionScope scope() {
+        return new DeliveryExecutionScope(route.consumerId(), "DB_DIRECT", 1);
+    }
     private DeliveryKey key;
 
     @BeforeEach
@@ -108,7 +111,7 @@ class EventDeliveryBoundaryIntegrationTests {
         org.mockito.Mockito.doAnswer(invocation -> {
             locking.countDown();
             return invocation.callRealMethod();
-        }).when(observed).lock(key);
+        }).when(observed).lock(scope(), key);
         EventDeliveryWorker waiting = worker(observed, manager, POLICY, event -> handled.set(true));
         try (Connection blocker = connection(); var threads = Executors.newSingleThreadExecutor()) {
             blocker.setAutoCommit(false);
@@ -327,7 +330,7 @@ class EventDeliveryBoundaryIntegrationTests {
             @Override public void handle(StoredEvent event) { effect.accept(event); }
         };
         return new EventDeliveryWorker(persistence, new DeliveryTransactions(transactions, persistence, policy),
-            policy, new EventHandlers(List.of(handler)), canonicalizer, entityManagerFactory);
+            policy, new EventHandlers(List.of(handler)), canonicalizer, entityManagerFactory, scope());
     }
 
     private void effect(StoredEvent event) {
@@ -339,7 +342,7 @@ class EventDeliveryBoundaryIntegrationTests {
     }
 
     private DeliverySnapshot snapshot() {
-        return new DeliveryTransactions(manager, store, POLICY).execute(() -> store.lock(key).orElseThrow());
+        return new DeliveryTransactions(manager, store, POLICY).execute(() -> store.lock(scope(), key).orElseThrow());
     }
 
     private void shortenLease() {

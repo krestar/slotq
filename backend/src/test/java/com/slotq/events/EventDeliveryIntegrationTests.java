@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 import com.slotq.auth.domain.SystemPrincipal;
 import com.slotq.events.application.ConsumerRoute;
 import com.slotq.events.application.DeliveryClaim;
+import com.slotq.events.application.DeliveryExecutionScope;
 import com.slotq.events.application.DeliveryFailure;
 import com.slotq.events.application.DeliveryKey;
 import com.slotq.events.application.DeliveryPolicy;
@@ -71,6 +72,9 @@ class EventDeliveryIntegrationTests {
         new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_event_delivery");
 
     private static final ConsumerRoute ROUTE = new ConsumerRoute("SyntheticProjection", "SyntheticChanged", 1);
+    private static DeliveryExecutionScope scope() {
+        return new DeliveryExecutionScope(ROUTE.consumerId(), "DB_DIRECT", 1);
+    }
     private static final DeliveryPolicy POLICY = new DeliveryPolicy(3, Duration.ofSeconds(6),
         Duration.ofSeconds(3), Duration.ofSeconds(1), 100, List.of(Duration.ZERO, Duration.ZERO));
 
@@ -91,7 +95,7 @@ class EventDeliveryIntegrationTests {
         assertThat(transactionManager).isInstanceOf(JpaTransactionManager.class);
         transaction = new TransactionTemplate(transactionManager);
         deliveryTransactions = new DeliveryTransactions(transactionManager, store, POLICY);
-        replay = new EventReplayService(store, deliveryTransactions);
+        replay = new EventReplayService(store, deliveryTransactions, scope());
         jdbc.execute("""
             CREATE TABLE IF NOT EXISTS event_delivery_test_owner (
                 owner_id BINARY(16) PRIMARY KEY,
@@ -164,6 +168,79 @@ class EventDeliveryIntegrationTests {
         assertEffect(owner, 1);
         assertThat(receipt(ROUTE.consumerId(), committed.envelope().eventId()))
             .contains(committed.envelope());
+    }
+
+    @Test
+    void oneLogicalConsumerCannotClaimProcessOrReplayAnotherConsumersTarget() {
+        UUID ownRegistration = registrations.activate(ROUTE);
+        ConsumerRoute observer = new ConsumerRoute("OperationsObserver", ROUTE.eventType(), ROUTE.schemaVersion());
+        UUID observerRegistration = registrations.activate(observer);
+        Owner owner = owner();
+        StoredEvent event = append(owner);
+        EventDeliveryWorker ownWorker = worker(handler(ROUTE, this::apply),
+            handler(observer, ignored -> { throw new AssertionError("Observer handler crossed scope"); }));
+
+        assertThat(ownWorker.runCycle()).isEqualTo(1);
+        DeliveryKey ownKey = key(event, ownRegistration);
+        DeliveryKey observerKey = key(event, observerRegistration);
+        assertThat(snapshot(ownKey).state()).isEqualTo(DONE);
+        assertThat(jdbc.queryForObject("SELECT state FROM event_deliveries WHERE registration_id=?",
+            String.class, bytes(observerRegistration))).isEqualTo("PENDING");
+        assertThat(ownWorker.claim(observerKey)).isEmpty();
+        ownWorker.process(new DeliveryClaim(observerKey, 1));
+        assertThat(jdbc.queryForObject("SELECT cycle_attempts FROM event_deliveries WHERE registration_id=?",
+            Integer.class, bytes(observerRegistration))).isZero();
+
+        jdbc.update("UPDATE event_deliveries SET state='DEAD',next_attempt_at=NULL WHERE registration_id=?",
+            bytes(observerRegistration));
+        assertThatThrownBy(() -> replay.replay(SystemPrincipal.INSTANCE, observerKey, "wrong consumer"))
+            .isInstanceOf(NoSuchElementException.class);
+        assertThat(jdbc.queryForObject("SELECT state FROM event_deliveries WHERE registration_id=?",
+            String.class, bytes(observerRegistration))).isEqualTo("DEAD");
+        assertEffect(owner, 1);
+    }
+
+    @Test
+    void kafkaScopedExecutorFindsFirstAttemptPendingWithoutBrokerRedelivery() {
+        UUID registration = registrations.activate(ROUTE);
+        Owner owner = owner();
+        StoredEvent event = append(owner);
+        DeliveryKey key = key(event, registration);
+        jdbc.update("UPDATE event_transport_assignments SET transport='KAFKA', authority_epoch=2 "
+            + "WHERE registration_id=?", bytes(registration));
+        assertThat(worker().materialize()).isZero();
+        jdbc.update("INSERT INTO event_deliveries (tenant_id,event_id,registration_id,state,next_attempt_at) "
+                + "VALUES (?,?,?,'PENDING',UTC_TIMESTAMP(6))",
+            bytes(owner.tenantId().value()), bytes(event.envelope().eventId().value()), bytes(registration));
+
+        EventDeliveryWorker direct = worker(handler(ROUTE, this::apply));
+        assertThat(direct.claim(key)).isEmpty();
+        assertThat(direct.runCycle()).isZero();
+        EventDeliveryWorker kafka = worker(new DeliveryExecutionScope(ROUTE.consumerId(), "KAFKA", 2),
+            handler(ROUTE, this::apply));
+        assertThat(kafka.runCycle()).isEqualTo(1);
+        assertThat(deliveryTransactions.execute(() -> store.lock(
+            new DeliveryExecutionScope(ROUTE.consumerId(), "KAFKA", 2), key).orElseThrow())
+            .state()).isEqualTo(DONE);
+        assertEffect(owner, 1);
+    }
+
+    @Test
+    void sharedDiscoveryMaterializesDbDirectTargetAfterAuthorityEpochAdvances() {
+        UUID registration = registrations.activate(ROUTE);
+        jdbc.update("UPDATE event_transport_assignments SET authority_epoch=3 WHERE registration_id=?",
+            bytes(registration));
+        Owner owner = owner();
+        StoredEvent event = append(owner);
+
+        assertThat(worker().materialize()).isEqualTo(1);
+        assertThat(worker().claim(key(event, registration))).isEmpty();
+        EventDeliveryWorker resumed = worker(new DeliveryExecutionScope(ROUTE.consumerId(), "DB_DIRECT", 3),
+            handler(ROUTE, this::apply));
+        assertThat(resumed.runCycle()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT state FROM event_deliveries WHERE registration_id=?",
+            String.class, bytes(registration))).isEqualTo("DONE");
+        assertEffect(owner, 1);
     }
 
     @Test
@@ -662,8 +739,17 @@ class EventDeliveryIntegrationTests {
     }
 
     private EventDeliveryWorker worker(DeliveryPolicy policy, EventHandler... handlers) {
+        return worker(scope(), policy, handlers);
+    }
+
+    private EventDeliveryWorker worker(DeliveryExecutionScope executionScope, EventHandler... handlers) {
+        return worker(executionScope, POLICY, handlers);
+    }
+
+    private EventDeliveryWorker worker(DeliveryExecutionScope executionScope, DeliveryPolicy policy,
+                                       EventHandler... handlers) {
         return new EventDeliveryWorker(store, new DeliveryTransactions(transactionManager, store, policy), policy,
-            new EventHandlers(List.of(handlers)), canonicalizer, entityManagerFactory);
+            new EventHandlers(List.of(handlers)), canonicalizer, entityManagerFactory, executionScope);
     }
 
     private EventHandler handler(ConsumerRoute route, Consumer<StoredEvent> action) {
@@ -709,7 +795,7 @@ class EventDeliveryIntegrationTests {
     }
 
     private DeliverySnapshot snapshot(DeliveryKey key) {
-        return deliveryTransactions.execute(() -> store.lock(key).orElseThrow());
+        return deliveryTransactions.execute(() -> store.lock(scope(), key).orElseThrow());
     }
 
     private StoredEvent stored(DeliveryKey key) {

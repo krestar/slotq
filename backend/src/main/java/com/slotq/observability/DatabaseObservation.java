@@ -44,6 +44,39 @@ public final class DatabaseObservation {
         return new Snapshot(Map.copyOf(values), Instant.now());
     }
 
+    /** Scoped Kafka execution inventory; a broker offset never supplies this business state. */
+    public Snapshot readKafkaDeliveries(Connection connection, String consumerId) throws SQLException {
+        if (!Set.of("waitlist.promotion", "operations.event-observation").contains(consumerId))
+            throw new IllegalArgumentException("Unknown logical consumer");
+        var values = new LinkedHashMap<Key, Double>();
+        for (String state : STATES) {
+            put(values, "delivery.targets", "delivery_state", state, 0);
+            put(values, "delivery.oldest.created.age.seconds", "delivery_state", state, 0);
+        }
+        put(values, "delivery.retry.due", 0);
+        put(values, "delivery.retry.backoff", 0);
+        for (String state : STATES) {
+            int[] count = {0};
+            query(connection, "SELECT d.lifetime_attempts, "
+                + "TIMESTAMPDIFF(MICROSECOND,d.created_at,UTC_TIMESTAMP(6))/1000000.0, "
+                + "d.next_attempt_at <= UTC_TIMESTAMP(6) "
+                + "FROM event_deliveries d JOIN event_registrations r ON r.registration_id=d.registration_id "
+                + "WHERE r.consumer_id='" + consumerId + "' AND d.state='" + state + "' "
+                + "ORDER BY d.created_at,d.tenant_id,d.event_id,d.registration_id LIMIT " + (LIMIT + 1), rows -> {
+                if (++count[0] > LIMIT) return;
+                increment(values, "delivery.targets", "delivery_state", state);
+                values.merge(new Key("delivery.oldest.created.age.seconds", "delivery_state", state),
+                    Math.max(0, rows.getDouble(2)), Math::max);
+                if ("PENDING".equals(state) && rows.getLong(1) > 0) {
+                    increment(values, rows.getBoolean(3) ? "delivery.retry.due" : "delivery.retry.backoff", "", "");
+                }
+            });
+            put(values, "sample.truncated", "sample", "deliveries_" + state.toLowerCase(java.util.Locale.ROOT),
+                count[0] > LIMIT ? 1 : 0);
+        }
+        return new Snapshot(Map.copyOf(values), Instant.now());
+    }
+
     /** Missing performance_schema grants do not erase the independent event sample. */
     public Snapshot readLocks(Connection connection) throws SQLException {
         var values = new LinkedHashMap<Key, Double>();

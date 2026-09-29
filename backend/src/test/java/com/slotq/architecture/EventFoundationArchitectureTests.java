@@ -22,6 +22,7 @@ import javax.sql.DataSource;
 import com.slotq.auth.domain.SystemPrincipal;
 import com.slotq.events.application.ConsumerRoute;
 import com.slotq.events.application.DeliveryClaim;
+import com.slotq.events.application.DeliveryExecutionScope;
 import com.slotq.events.application.DeliveryKey;
 import com.slotq.events.application.DeliverySnapshot;
 import com.slotq.events.application.EventDeliveryStore;
@@ -79,8 +80,8 @@ class EventFoundationArchitectureTests {
         assertThat(signatures(EventDeliveryStore.class)).containsExactlyInAnyOrder(
             "void configureTimeouts(DeliveryPolicy)",
             "int materialize(int)",
-            "List candidates(int)",
-            "Optional lock(DeliveryKey)",
+            "List candidates(DeliveryExecutionScope,int)",
+            "Optional lock(DeliveryExecutionScope,DeliveryKey)",
             "Instant databaseNow()",
             "Target target(DeliveryKey)",
             "void claim(DeliverySnapshot,Instant,Instant)",
@@ -89,10 +90,10 @@ class EventFoundationArchitectureTests {
             "void exhaust(DeliverySnapshot,Instant)",
             "void replay(DeliverySnapshot,String,Instant)"
         );
-        assertThat(EventDeliveryStore.class.getMethod("candidates", int.class)
+        assertThat(EventDeliveryStore.class.getMethod("candidates", DeliveryExecutionScope.class, int.class)
             .getGenericReturnType().getTypeName())
             .isEqualTo("java.util.List<com.slotq.events.application.DeliveryKey>");
-        assertThat(EventDeliveryStore.class.getMethod("lock", DeliveryKey.class)
+        assertThat(EventDeliveryStore.class.getMethod("lock", DeliveryExecutionScope.class, DeliveryKey.class)
             .getGenericReturnType().getTypeName())
             .isEqualTo("java.util.Optional<com.slotq.events.application.DeliverySnapshot>");
     }

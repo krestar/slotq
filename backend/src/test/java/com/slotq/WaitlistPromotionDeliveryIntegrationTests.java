@@ -36,6 +36,7 @@ import com.slotq.booking.domain.ReservationId;
 import com.slotq.booking.domain.SlotInventory;
 import com.slotq.events.application.ConsumerRoute;
 import com.slotq.events.application.DeliveryClaim;
+import com.slotq.events.application.DeliveryExecutionScope;
 import com.slotq.events.application.DeliveryKey;
 import com.slotq.events.application.DeliveryPolicy;
 import com.slotq.events.application.DeliveryTransactions;
@@ -110,6 +111,9 @@ class WaitlistPromotionDeliveryIntegrationTests {
     private static final Instant START = Instant.parse("2026-08-30T11:00:00Z");
     private static final ConsumerRoute RELEASE = BookingCapacityReleasedHandler.ROUTE;
     private static final ConsumerRoute REQUEST = WaitlistPromotionRequestedHandler.ROUTE;
+    private static DeliveryExecutionScope scope() {
+        return new DeliveryExecutionScope(REQUEST.consumerId(), "DB_DIRECT", 1);
+    }
     private static final DeliveryPolicy POLICY = new DeliveryPolicy(3, Duration.ofSeconds(8),
         Duration.ofSeconds(4), Duration.ofSeconds(1), 100, List.of(Duration.ZERO, Duration.ZERO));
 
@@ -886,7 +890,8 @@ class WaitlistPromotionDeliveryIntegrationTests {
             Integer.class, bytes(key.eventId().value()))).isEqualTo(failures);
         if (failures == 3) {
             assertThat(worker().claim(key)).isEmpty();
-            new EventReplayService(deliveries, deliveryTransactions()).replay(SystemPrincipal.INSTANCE, key, "test 1213 recovery");
+            new EventReplayService(deliveries, deliveryTransactions(), scope())
+                .replay(SystemPrincipal.INSTANCE, key, "test 1213 recovery");
         }
         process(key);
         assertPromoted(fixture, key, entry.id());
@@ -966,7 +971,8 @@ class WaitlistPromotionDeliveryIntegrationTests {
             @Override public ConsumerRoute route() { return actual.route(); }
             @Override public void handle(StoredEvent event) { before.accept(event); actual.handle(event); after.accept(event); }
         }).toList();
-        return new EventDeliveryWorker(deliveries, deliveryTransactions(), POLICY, new EventHandlers(wrapped), canonicalizer, entityManagerFactory);
+        return new EventDeliveryWorker(deliveries, deliveryTransactions(), POLICY, new EventHandlers(wrapped),
+            canonicalizer, entityManagerFactory, scope());
     }
     private DeliveryTransactions deliveryTransactions() { return new DeliveryTransactions(manager, deliveries, POLICY); }
     private TransactionTemplate transaction() { return new TransactionTemplate(manager); }
@@ -974,7 +980,8 @@ class WaitlistPromotionDeliveryIntegrationTests {
         // Test-only transport reset simulates redelivery of a previously applied identity. Production
         // exposes only trusted DEAD replay, never DONE reset or receipt deletion.
         jdbc.update("UPDATE event_deliveries SET state = 'DEAD', lease_until = NULL, next_attempt_at = NULL WHERE event_id = ?", bytes(key.eventId().value()));
-        new EventReplayService(deliveries, deliveryTransactions()).replay(SystemPrincipal.INSTANCE, key, "test identity replay");
+        new EventReplayService(deliveries, deliveryTransactions(), scope())
+            .replay(SystemPrincipal.INSTANCE, key, "test identity replay");
         process(key);
     }
     private String deliveryState(DeliveryKey key) { return jdbc.queryForObject("SELECT state FROM event_deliveries WHERE event_id = ? AND registration_id = ?", String.class, bytes(key.eventId().value()), bytes(key.registrationId())); }

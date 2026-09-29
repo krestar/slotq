@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.slotq.auth.domain.SystemPrincipal;
 import com.slotq.events.application.ConsumerRoute;
 import com.slotq.events.application.DeliveryKey;
+import com.slotq.events.application.DeliveryExecutionScope;
 import com.slotq.events.application.DeliveryPolicy;
 import com.slotq.events.application.DeliverySnapshot;
 import com.slotq.events.application.DeliveryTransactions;
@@ -55,6 +56,9 @@ class EventObservationIntegrationTests {
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
         new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_event_observation");
     private static final ConsumerRoute ROUTE = new ConsumerRoute("ObservationFixture", "ObservationSignal", 1);
+    private static DeliveryExecutionScope scope() {
+        return new DeliveryExecutionScope(ROUTE.consumerId(), "DB_DIRECT", 1);
+    }
     private static final DeliveryPolicy POLICY = new DeliveryPolicy(2, Duration.ofSeconds(6),
         Duration.ofSeconds(3), Duration.ofSeconds(1), 100, List.of(Duration.ZERO));
     @Autowired JdbcTemplate jdbc;
@@ -165,7 +169,8 @@ class EventObservationIntegrationTests {
             worker.runCycle();
             assertThat(snapshot(key).state()).isEqualTo(DeliverySnapshot.State.DEAD);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM observation_effect", Integer.class)).isZero();
-            new EventReplayService(deliveries, transactions()).replay(SystemPrincipal.INSTANCE, key, "private-replay-reason");
+            new EventReplayService(deliveries, transactions(), scope())
+                .replay(SystemPrincipal.INSTANCE, key, "private-replay-reason");
             worker.runCycle();
             assertThat(snapshot(key).state()).isEqualTo(DeliverySnapshot.State.DONE);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM observation_effect", Integer.class)).isEqualTo(1);
@@ -228,10 +233,12 @@ class EventObservationIntegrationTests {
             (row, n) -> new ProductTelemetry.Origin(row.getString(1), row.getString(2), row.getString(3)), bytes(eventId.value()));
     }
     private DeliveryTransactions transactions() { return new DeliveryTransactions(manager, deliveries, POLICY); }
-    private DeliverySnapshot snapshot(DeliveryKey key) { return transactions().execute(() -> deliveries.lock(key).orElseThrow()); }
+    private DeliverySnapshot snapshot(DeliveryKey key) {
+        return transactions().execute(() -> deliveries.lock(scope(), key).orElseThrow());
+    }
     private EventDeliveryWorker worker(ProductTelemetry telemetry, EventHandler handler) {
         return new EventDeliveryWorker(deliveries, transactions(), POLICY, new EventHandlers(List.of(handler)),
-            canonicalizer, entityManagerFactory, telemetry);
+            canonicalizer, entityManagerFactory, telemetry, scope());
     }
     private static SdkTracerProvider provider(InMemorySpanExporter exporter) {
         return SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(exporter)).build();

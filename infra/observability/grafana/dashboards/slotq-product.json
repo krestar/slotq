@@ -616,7 +616,7 @@
     },
     {
       "id": 21,
-      "title": "Kafka intake — #108 NOT CONNECTED",
+      "title": "Kafka durable intake",
       "type": "timeseries",
       "description": "Reserved #108 durable-intake attempt confirmation/failure. Idempotent reuse may be counted; not unique targets, offset progress or business effects.",
       "datasource": {
@@ -646,7 +646,7 @@
     },
     {
       "id": 22,
-      "title": "Kafka lag by group / partition — #108 NOT CONNECTED",
+      "title": "Kafka lag by group / partition",
       "type": "timeseries",
       "description": "Configured group/topic/partition allowlist only, <=128 tuples. Offset values never become labels. Lag=0 does not prove effect completion.",
       "datasource": {
@@ -916,7 +916,7 @@
     },
     {
       "id": 31,
-      "title": "Kafka durable-intake observed delay — #108 NOT CONNECTED",
+      "title": "Kafka durable-intake observed delay",
       "type": "timeseries",
       "description": "Recorded_at to post-durable-intake fresh DB UTC observation. Observed delay includes publication/intake path, not exact commit latency. Existing-target rechecks excluded.",
       "datasource": {
@@ -946,7 +946,7 @@
     },
     {
       "id": 32,
-      "title": "Kafka intake invalid delay — #108 NOT CONNECTED",
+      "title": "Kafka intake invalid delay",
       "type": "timeseries",
       "description": "Missing timestamps or clock ordering failure produce invalid observations, not zero-second latency.",
       "datasource": {
@@ -976,7 +976,7 @@
     },
     {
       "id": 33,
-      "title": "Kafka lag by logical consumer / group — #108 NOT CONNECTED",
+      "title": "Kafka lag by logical consumer / group",
       "type": "timeseries",
       "description": "Deduplicate replicas before summing configured partitions. Read only with healthy=1 and truncated=0; lag never substitutes for DB business backlog.",
       "datasource": {
@@ -1006,7 +1006,7 @@
     },
     {
       "id": 34,
-      "title": "Kafka lag sample validity — #108 NOT CONNECTED",
+      "title": "Kafka lag sample validity",
       "type": "timeseries",
       "description": "Health/freshness/offset errors and 128 configured tuple cap. Partial or invalid lag cannot prove that backlog is zero.",
       "datasource": {
@@ -1033,6 +1033,32 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 35,
+      "title": "Kafka DB execution targets / oldest age",
+      "type": "timeseries",
+      "description": "MySQL execution ledger after durable intake, by stable logical consumer and business state. Offset lag does not represent DONE.",
+      "datasource": { "type": "prometheus", "uid": "slotq-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 136 },
+      "targets": [
+        { "refId": "A", "expr": "slotq_kafka_delivery_targets", "legendFormat": "{{logical_consumer}} / {{delivery_state}} targets" },
+        { "refId": "B", "expr": "slotq_kafka_delivery_oldest_created_age_seconds", "legendFormat": "{{logical_consumer}} / {{delivery_state}} oldest s" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
+    },
+    {
+      "id": 36,
+      "title": "Kafka DB execution retry / sample validity",
+      "type": "timeseries",
+      "description": "Due and backoff PENDING retries from the scoped MySQL ledger; invalid or truncated advisory samples cannot prove zero backlog.",
+      "datasource": { "type": "prometheus", "uid": "slotq-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 136 },
+      "targets": [
+        { "refId": "A", "expr": "slotq_kafka_delivery_retry_due or slotq_kafka_delivery_retry_backoff", "legendFormat": "{{logical_consumer}} / {{__name__}}" },
+        { "refId": "B", "expr": "slotq_kafka_delivery_sample_healthy or slotq_kafka_sample_truncated", "legendFormat": "{{logical_consumer}} / {{__name__}} / {{sample}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
     }
   ]
 }

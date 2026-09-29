@@ -1,7 +1,7 @@
 package com.slotq.events.application;
 
 import java.time.Duration;
-import java.util.Optional;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,20 +19,24 @@ public final class EventDeliveryScheduler {
         this.meters = meters;
     }
     private final EventDeliveryWorker worker;
-    private final Optional<EventDeliveryReadiness> readiness;
+    private final DeliveryExecutionScope scope;
+    private final List<EventDeliveryReadiness> readiness;
 
-    public EventDeliveryScheduler(EventDeliveryWorker worker, Optional<EventDeliveryReadiness> readiness,
+    public EventDeliveryScheduler(EventDeliveryWorker worker, DeliveryExecutionScope scope,
+        List<EventDeliveryReadiness> readiness,
         @Value("${slotq.events.delivery.poll-interval:PT1S}") Duration interval) {
         if (interval.compareTo(Duration.ofMillis(1)) < 0 || interval.compareTo(Duration.ofDays(1)) > 0) {
             throw new IllegalArgumentException("Event poll interval must be positive and bounded");
         }
         this.worker = worker;
-        this.readiness = readiness;
+        this.scope = scope;
+        this.readiness = List.copyOf(readiness);
     }
 
     @Scheduled(fixedDelayString = "${slotq.events.delivery.poll-interval:PT1S}")
     public void tick() {
-        if (!readiness.map(EventDeliveryReadiness::isReady).orElse(false)) return;
+        if (readiness.stream().filter(gate -> scope.consumerId().equals(gate.consumerId()))
+            .noneMatch(EventDeliveryReadiness::isReady)) return;
         long started = System.nanoTime();
         String outcome = "failure";
         try (var observation = telemetry.background("event_delivery")) {

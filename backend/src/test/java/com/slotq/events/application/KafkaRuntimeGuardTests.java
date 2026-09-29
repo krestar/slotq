@@ -17,9 +17,9 @@ class KafkaRuntimeGuardTests {
     private final JdbcTemplate db = mock(JdbcTemplate.class);
     private final KafkaPublicationFamily family = mock(KafkaPublicationFamily.class);
 
-    @Test void kafkaBusinessActivationIsClosedUntilDurableIntakeExists() {
-        var guard = guard("product", false, true, true);
-        assertThatThrownBy(() -> guard.run(null)).hasMessageContaining("#108 durable intake");
+    @Test void kafkaBusinessActivationRequiresApprovedRoutes() {
+        var guard = guard("product", false, false, true);
+        assertThatThrownBy(() -> guard.run(null)).hasMessageContaining("approved M4 routes");
     }
 
     @Test void relayRejectsLocalExecutionAndUnknownRole() {
@@ -48,7 +48,7 @@ class KafkaRuntimeGuardTests {
             Map.of("event_type", "first.changed", "schema_version", 1,
                 "transport", "DB_DIRECT", "authority_epoch", 1)));
         assertThatThrownBy(() -> guard("relay", true, false, false).run(null))
-            .hasMessageContaining("exact durable publication routes");
+            .hasMessageContaining("exact durable publication routes and authority");
     }
 
     @Test void relayAcceptsOnlyTheConfiguredFamilyRoutesWithDbAuthority() {
@@ -63,6 +63,44 @@ class KafkaRuntimeGuardTests {
         var guard = guard("relay", true, false, false);
         guard.run(null);
         assertThat(guard.relayReady()).isTrue();
+    }
+
+    @Test void productCannotRunAnotherLogicalConsumerOrKafkaDbScheduler() {
+        when(family.consumerId()).thenReturn("waitlist.promotion");
+        var foreignScope = new DeliveryExecutionScope("operations.event-observation", "DB_DIRECT", 1);
+        var wrongConsumer = new KafkaRuntimeGuard(db, family, null, foreignScope,
+            "product", false, true, false, false, false, "none");
+        assertThatThrownBy(() -> wrongConsumer.run(null)).hasMessageContaining("another consumer");
+
+        when(db.queryForList(anyString())).thenReturn(List.of(Map.of(
+            "to_transport", "KAFKA", "authority_epoch", 2L, "phase", "READY")));
+        var kafkaProductWithExecutor = new KafkaRuntimeGuard(db, family, null,
+            new DeliveryExecutionScope("waitlist.promotion", "DB_DIRECT", 2),
+            "product", false, true, false, true, false, "none");
+        assertThatThrownBy(() -> kafkaProductWithExecutor.run(null))
+            .hasMessageContaining("cannot run DB direct executor");
+    }
+
+    @Test void consumerCannotStartWithStaleEpochOrIncompleteCutover() {
+        when(family.consumerId()).thenReturn("waitlist.promotion");
+        KafkaConsumerCatalog catalog = () -> List.of(new KafkaConsumerCatalog.ConsumerDefinition(
+            "operations.event-observation", "slotq.operations.event-observation.v1",
+            List.of(new ConsumerRoute("operations.event-observation", "test.changed", 1))));
+        when(db.queryForList(anyString())).thenReturn(List.of(Map.of(
+            "to_transport", "KAFKA", "authority_epoch", 2L, "phase", "READY")));
+        var stale = new KafkaRuntimeGuard(db, family, catalog,
+            new DeliveryExecutionScope("operations.event-observation", "KAFKA", 1),
+            "consumer", false, true, true, false, true, "none");
+        assertThatThrownBy(() -> stale.run(null)).hasMessageContaining("stale transport authority");
+        assertThat(stale.consumerReady()).isFalse();
+
+        when(db.queryForList(anyString())).thenReturn(List.of(Map.of(
+            "to_transport", "KAFKA", "authority_epoch", 2L, "phase", "SCANNING")));
+        var notReady = new KafkaRuntimeGuard(db, family, catalog,
+            new DeliveryExecutionScope("operations.event-observation", "KAFKA", 2),
+            "consumer", false, true, true, false, true, "none");
+        assertThatThrownBy(() -> notReady.run(null)).hasMessageContaining("scan is incomplete");
+        assertThat(notReady.consumerReady()).isFalse();
     }
 
     @Test void nonLoopbackAnonymousAndIncompleteTlsCredentialsAreRejected() {
