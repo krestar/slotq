@@ -104,6 +104,7 @@ class KafkaFaultEvidenceIntegrityTests {
         int partialReceiptDone = 0;
         int unexplainedDead = 0;
         int unexpectedPromotionalReservations = 0;
+        int capacityViolations = 0;
         for (String phase : List.of("two-groups-converged", "observer-recovered", "rebalance-converged",
             "leader-down-converged", "all-brokers-recovered", "db-outage-converged")) {
             Map<String, Object> end = phases.get(phase);
@@ -122,12 +123,26 @@ class KafkaFaultEvidenceIntegrityTests {
             assertThat(deliveries).hasSize(2).allSatisfy(row ->
                 assertThat(row.get("state")).isEqualTo("DONE"));
             assertThat(receipts).hasSize(1);
-            assertThat(receipts.getFirst().get("outcome")).isEqualTo("NO_CANDIDATE");
+            boolean promotion = raw.containsKey("candidate") && phase.equals("db-outage-converged");
+            assertThat(receipts.getFirst().get("outcome"))
+                .isEqualTo(promotion ? "PROMOTED" : "NO_CANDIDATE");
             assertThat(((Number) end.get("projectionCount")).longValue()).isEqualTo(1);
             Map<String, Object> business = map(end.get("business"));
-            unexpectedPromotionalReservations += ((Number) business.get("promotionalReservations")).intValue();
-            assertThat(((Number) business.get("offers")).longValue()).isZero();
-            assertThat(((Number) business.get("notifications")).longValue()).isZero();
+            int promotionalReservations = ((Number) business.get("promotionalReservations")).intValue();
+            int offers = ((Number) business.get("offers")).intValue();
+            if (promotion) {
+                assertThat(end.get("eventId")).isEqualTo(map(raw.get("candidate")).get("eventId"));
+                assertThat(promotionalReservations).isEqualTo(1);
+                assertThat(offers).isEqualTo(1);
+                int active = ((Number) business.get("activeAllocations")).intValue();
+                if (active > ((Number) map(raw.get("candidate")).get("slotCapacity")).intValue())
+                    capacityViolations++;
+                assertThat(active).isEqualTo(1);
+            } else {
+                unexpectedPromotionalReservations += promotionalReservations;
+                assertThat(offers).isZero();
+                assertThat(((Number) business.get("notifications")).longValue()).isZero();
+            }
             for (Map<String, Object> delivery : deliveries) {
                 if ("DEAD".equals(delivery.get("state"))) unexplainedDead++;
                 if ("waitlist.promotion".equals(delivery.get("consumerId")) && receipts.size() != 1)
@@ -141,6 +156,7 @@ class KafkaFaultEvidenceIntegrityTests {
         assertThat(partialReceiptDone).isZero();
         assertThat(unexplainedDead).isZero();
         assertThat(unexpectedPromotionalReservations).isZero();
+        assertThat(capacityViolations).isZero();
         assertThat(map(raw.get("brokerVolumes")).values()).allSatisfy(value ->
             assertThat(value.toString()).contains("slotq-kafka-fault_kafka-"));
         assertThat(raw.get("mysqlVolume").toString()).contains("slotq-fault-109-mysql-" + runId);
@@ -154,6 +170,7 @@ class KafkaFaultEvidenceIntegrityTests {
         recalculated.put("partialReceiptDone", partialReceiptDone);
         recalculated.put("unexplainedDead", unexplainedDead);
         recalculated.put("unexpectedPromotionalReservations", unexpectedPromotionalReservations);
+        recalculated.put("capacityViolations", capacityViolations);
         recalculated.put("observedPhases", required);
         Files.writeString(folder.resolve("recalculated.json"), json.writeValueAsString(recalculated));
     }

@@ -27,6 +27,9 @@ import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 
 import com.slotq.booking.application.SlotInventoryUseCase;
+import com.slotq.auth.application.AccessControlProvisioning;
+import com.slotq.auth.domain.AuthenticatedPrincipal;
+import com.slotq.auth.domain.PrincipalId;
 import com.slotq.events.application.EventAppendService;
 import com.slotq.events.application.EventEnvelope;
 import com.slotq.events.application.EventId;
@@ -42,6 +45,8 @@ import com.slotq.venue.application.VenueConfigurationUseCase;
 import com.slotq.venue.domain.BookingPolicyTerms;
 import com.slotq.venue.domain.DailyOperatingHours;
 import com.slotq.venue.domain.WeeklyOperatingHours;
+import com.slotq.waitlist.application.WaitlistRegistrationKey;
+import com.slotq.waitlist.application.WaitlistUseCase;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -95,10 +100,15 @@ class KafkaFaultProcessIntegrationTests {
     @Autowired VenueConfigurationUseCase venues;
     @Autowired ResourceUseCase resources;
     @Autowired SlotInventoryUseCase slots;
+    @Autowired AccessControlProvisioning access;
+    @Autowired WaitlistUseCase waitlist;
 
     private final List<ManagedProcess> processes = new ArrayList<>();
     private final List<Map<String, Object>> timeline = new ArrayList<>();
     private final List<UUID> originals = new ArrayList<>();
+    private UUID candidateEntry;
+    private UUID candidateSlot;
+    private UUID candidateEvent;
     private final JsonMapper json = new JsonMapper();
     private Path output;
     private Path processLogs;
@@ -278,9 +288,18 @@ class KafkaFaultProcessIntegrationTests {
             tenant.id(), venue.id(), "Table", 4));
         var slot = slots.createSlot(new SlotInventoryUseCase.CreateSlot(
             tenant.id(), venue.id(), resource.id(), start.toString()));
+        if (index == 6) {
+            var customer = new AuthenticatedPrincipal(PrincipalId.newId());
+            access.registerPrincipal(customer.principalId());
+            candidateEntry = waitlist.register(new WaitlistUseCase.CreateRegistration(
+                venue.id(), slot.id(), 2, new WaitlistRegistrationKey(UUID.nameUUIDFromBytes(
+                    "slotq-109-candidate-registration".getBytes(StandardCharsets.UTF_8))), customer)).entry().id();
+            candidateSlot = slot.id().value();
+        }
         String payload = "{\"venueId\":\"%s\",\"resourceId\":\"%s\",\"slotInventoryId\":\"%s\"}"
             .formatted(venue.id().value(), resource.id().value(), slot.id().value());
         UUID eventId = UUID.nameUUIDFromBytes(("slotq-109-" + index).getBytes(StandardCharsets.UTF_8));
+        if (index == 6) candidateEvent = eventId;
         var route = WaitlistPromotionRequestedHandler.ROUTE;
         var event = new EventEnvelope(new EventId(eventId), tenant.id(), "SlotInventory", slot.id().value(),
             route.eventType(), route.schemaVersion(), Instant.now(), payload);
@@ -390,8 +409,11 @@ class KafkaFaultProcessIntegrationTests {
             snapshot.put("business", Map.of(
                 "offers", count("SELECT COUNT(*) FROM waitlist_offers WHERE tenant_id="
                     + "(SELECT tenant_id FROM event_records WHERE event_id=?)", eventId),
-                "promotionalReservations", count("SELECT COUNT(*) FROM reservations WHERE promotional_request_id="
-                    + "?", eventId),
+                "promotionalReservations", count("SELECT COUNT(*) FROM reservations r JOIN"
+                    + " waitlist_promotion_receipts w ON w.reservation_id=r.id WHERE w.event_id=?", eventId),
+                "activeAllocations", count("SELECT COUNT(*) FROM capacity_allocations a JOIN reservations r"
+                    + " ON r.id=a.reservation_id JOIN waitlist_promotion_receipts w"
+                    + " ON w.reservation_id=r.id WHERE w.event_id=? AND a.active=TRUE", eventId),
                 "notifications", count("SELECT COUNT(*) FROM waitlist_notification_requests WHERE tenant_id="
                     + "(SELECT tenant_id FROM event_records WHERE event_id=?)", eventId)));
             snapshot.put("durablePositions", db.queryForList("""
@@ -487,6 +509,17 @@ class KafkaFaultProcessIntegrationTests {
             .isZero();
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_kafka_intake_records WHERE disposition='QUARANTINED'",
             Long.class)).isZero();
+        assertThat(db.queryForObject("SELECT outcome FROM waitlist_promotion_receipts WHERE event_id=?",
+            String.class, bytes(candidateEvent))).isEqualTo("PROMOTED");
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_offers WHERE entry_id=?",
+            Long.class, bytes(candidateEntry))).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM reservations WHERE promotional_request_id=?",
+            Long.class, bytes(candidateEntry))).isEqualTo(1);
+        assertThat(db.queryForObject("""
+            SELECT COUNT(*) FROM capacity_allocations a
+              JOIN reservations r ON r.id=a.reservation_id
+             WHERE r.slot_inventory_id=? AND a.active=TRUE
+            """, Long.class, bytes(candidateSlot))).isEqualTo(1);
     }
 
     private void writeEvidence() throws Exception {
@@ -519,6 +552,9 @@ class KafkaFaultProcessIntegrationTests {
             "process", "separate product, two relays, waitlist replicas, and observer JVMs",
             "window", "each event must reach two DONE targets within 120s"));
         raw.put("originalEventIds", originals.stream().map(UUID::toString).toList());
+        raw.put("candidate", Map.of("eventId", candidateEvent.toString(),
+            "entryId", candidateEntry.toString(), "slotId", candidateSlot.toString(),
+            "slotCapacity", 1));
         raw.put("timeline", timeline);
         Files.writeString(output.resolve("process-raw.json"), json.writeValueAsString(raw));
     }
