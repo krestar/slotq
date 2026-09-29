@@ -1,8 +1,10 @@
 package com.slotq.events.persistence;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -66,6 +68,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.core.type.TypeReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -128,7 +131,8 @@ class KafkaIntakeCrashIntegrationTests {
         String payload = new JsonMapper().writeValueAsString(Map.of(
             "venueId", venue.id().value().toString(), "resourceId", resource.id().value().toString(),
             "slotInventoryId", slot.id().value().toString()));
-        var event = new EventEnvelope(EventId.newId(), tenant.id(), "SlotInventory", slot.id().value(),
+        var event = new EventEnvelope(new EventId(UUID.nameUUIDFromBytes(
+            "slotq-109-intake-109".getBytes(StandardCharsets.UTF_8))), tenant.id(), "SlotInventory", slot.id().value(),
             REQUEST.eventType(), 1, Instant.now(), payload);
         new TransactionTemplate(manager).execute(status -> append.appendForActiveRoute(event, REQUEST));
         var stored = new TransactionTemplate(manager).execute(status ->
@@ -154,9 +158,17 @@ class KafkaIntakeCrashIntegrationTests {
         TopicPartition location = new TopicPartition(TOPIC, partition);
         var consumer = catalog.definition("waitlist.promotion");
         List<Map<String, Object>> windows = new ArrayList<>();
+        List<Map<String, Object>> faultCases = new ArrayList<>();
         for (String mode : List.of("BEFORE_INTAKE", "AFTER_INTAKE", "AFTER_OFFSET")) {
-            int exit = crashChild(mode, event.eventId().value());
+            Map<String, Object> before = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
+            CrashResult crash = crashChild(mode, event.eventId().value());
+            int exit = crash.exit();
             assertThat(exit).isEqualTo(mode.equals("BEFORE_INTAKE") ? 81 : mode.equals("AFTER_INTAKE") ? 82 : 83);
+            assertThat(crash.entrypoint().get("stage")).isEqualTo(mode);
+            assertThat(((Number) crash.entrypoint().get("partition")).intValue()).isEqualTo(partition);
+            assertThat(((Number) crash.entrypoint().get("offset")).longValue()).isEqualTo(offset);
+            assertThat(((List<?>) crash.entrypoint().get("assignment")).stream().map(Object::toString).toList())
+                .contains(location.toString());
             Long brokerNext = committed(consumer.groupId(), location);
             long targets = db.queryForObject("SELECT COUNT(*) FROM event_deliveries WHERE event_id=?", Long.class,
                 bytes(event.eventId().value()));
@@ -166,6 +178,15 @@ class KafkaIntakeCrashIntegrationTests {
                 """, Long.class, consumer.consumerId(), TOPIC, partition, offset);
             windows.add(Map.of("window", mode, "exit", exit, "targets", targets,
                 "coordinateRows", coordinates, "brokerCommittedNext", brokerNext == null ? -1 : brokerNext));
+            Map<String, Object> caseEvidence = new LinkedHashMap<>();
+            caseEvidence.put("fault", mode);
+            caseEvidence.put("before", before);
+            caseEvidence.put("entrypoint", crash.entrypoint());
+            caseEvidence.put("exit", exit);
+            caseEvidence.put("during", windowSnapshot(event.eventId().value(), consumer.groupId(), location));
+            caseEvidence.put("firstRecoveryOpportunity", Map.of("at", Instant.now().toString(),
+                "authority", mode.equals("AFTER_OFFSET") ? "DB_EXECUTOR" : "KAFKA_REDELIVERY"));
+            faultCases.add(caseEvidence);
             if (mode.equals("BEFORE_INTAKE")) {
                 assertThat(targets).isZero(); assertThat(coordinates).isZero(); assertThat(brokerNext).isNull();
             } else if (mode.equals("AFTER_INTAKE")) {
@@ -205,6 +226,9 @@ class KafkaIntakeCrashIntegrationTests {
             bytes(event.eventId().value()))).isEqualTo("NO_CANDIDATE");
         assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_offers WHERE venue_id=?", Long.class,
             bytes(venue.id().value()))).isZero();
+        for (Map<String, Object> caseEvidence : faultCases)
+            caseEvidence.put("finalConvergence",
+                windowSnapshot(event.eventId().value(), consumer.groupId(), location));
 
         // Three different transport failures are durable, payload-free decisions, not business DEAD.
         var invalidBodies = List.of("{bad",
@@ -245,13 +269,26 @@ class KafkaIntakeCrashIntegrationTests {
             Path output = Path.of(evidence).resolve("intake-crash-raw.json");
             Files.createDirectories(output.getParent());
             Map<String, Object> raw = new LinkedHashMap<>();
-            raw.put("schemaVersion", "slotq-kafka-intake-crash/v1");
+            raw.put("schemaVersion", "slotq-kafka-intake-crash/v2");
             raw.put("mysqlVersion", db.queryForObject("SELECT VERSION()", String.class));
             raw.put("mysqlIsolation", db.queryForObject("SELECT @@transaction_isolation", String.class));
             raw.put("brokerImage", "apache/kafka:4.1.1");
+            raw.put("brokerProfile", "single broker development profile; intake crash windows only");
             raw.put("eventId", event.eventId().value().toString());
             raw.put("partition", partition); raw.put("offset", offset); raw.put("topicId", topicId);
             raw.put("windows", windows);
+            raw.put("faultCases", faultCases);
+            raw.put("seed", 109);
+            raw.put("revision", System.getProperty("slotq.kafka.evidence.revision", "unrecorded"));
+            raw.put("workingTreeStatus", git("status", "--short"));
+            raw.put("intakeClassSha256", sha256(JdbcKafkaIntakeStore.class));
+            raw.put("childClassSha256", sha256(KafkaIntakeCrashChild.class));
+            raw.put("clientVersion", org.apache.kafka.common.utils.AppInfoParser.getVersion());
+            raw.put("parentPid", ProcessHandle.current().pid());
+            raw.put("consumerGroup", consumer.groupId());
+            raw.put("settings", Map.of("autoOffsetReset", "none", "autoCommit", false,
+                "childSessionTimeoutMs", 8000, "childHeartbeatMs", 2000,
+                "deliveryTransport", "KAFKA", "authorityEpoch", 2));
             raw.put("target", db.queryForMap("""
                 SELECT state,cycle_attempts,lifetime_attempts,fencing_token,failure_code
                   FROM event_deliveries WHERE event_id=?
@@ -273,9 +310,10 @@ class KafkaIntakeCrashIntegrationTests {
         }
     }
 
-    private int crashChild(String mode, UUID eventId) throws Exception {
+    private CrashResult crashChild(String mode, UUID eventId) throws Exception {
         Path argumentFile = Files.createTempFile("slotq-intake-child-", ".args");
         Path log = Files.createTempFile("slotq-intake-child-", ".log");
+        Path marker = Files.createTempFile("slotq-intake-child-", ".json");
         Files.writeString(argumentFile, "-cp\n\"" + System.getProperty("java.class.path").replace('\\', '/')
             + "\"\n" + KafkaIntakeCrashChild.class.getName() + "\n" + mode + "\n");
         var process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
@@ -286,6 +324,7 @@ class KafkaIntakeCrashIntegrationTests {
         process.environment().put("SLOTQ_INTAKE_TEST_JDBC", MYSQL.getJdbcUrl());
         process.environment().put("SLOTQ_INTAKE_TEST_USER", MYSQL.getUsername());
         process.environment().put("SLOTQ_INTAKE_TEST_PASSWORD", MYSQL.getPassword());
+        process.environment().put("SLOTQ_INTAKE_TEST_MARKER", marker.toString());
         var child = process.start();
         if (!child.waitFor(90, TimeUnit.SECONDS)) {
             child.destroyForcibly();
@@ -294,10 +333,48 @@ class KafkaIntakeCrashIntegrationTests {
         int exit = child.exitValue();
         if (exit < 81 || exit > 83)
             throw new AssertionError("Kafka intake child failed: " + Files.readString(log).lines().limit(30).toList());
+        Map<String, Object> entrypoint = new JsonMapper().readValue(Files.readString(marker),
+            new TypeReference<>() { });
+        assertThat(((Number) entrypoint.get("pid")).longValue()).isEqualTo(child.pid());
         Files.deleteIfExists(argumentFile);
         Files.deleteIfExists(log);
-        return exit;
+        Files.deleteIfExists(marker);
+        return new CrashResult(child.pid(), exit, entrypoint);
     }
+
+    private Map<String, Object> windowSnapshot(UUID eventId, String group, TopicPartition partition) {
+        Map<String, Object> state = new LinkedHashMap<>();
+        state.put("at", Instant.now().toString());
+        state.put("original", db.queryForList("""
+            SELECT HEX(tenant_id) tenantId,HEX(event_id) eventId,boundary_sequence boundarySequence
+              FROM event_records WHERE event_id=?
+            """, bytes(eventId)));
+        state.put("publication", db.queryForList("""
+            SELECT state,ack_partition ackPartition,ack_offset ackOffset
+              FROM event_kafka_publications WHERE event_id=?
+            """, bytes(eventId)));
+        state.put("intake", db.queryForList("""
+            SELECT consumer_id consumerId,partition_id partitionId,record_offset recordOffset,
+                   disposition,HEX(record_sha256) recordSha256
+              FROM event_kafka_intake_records WHERE event_id=?
+            """, bytes(eventId)));
+        state.put("targets", db.queryForList("""
+            SELECT state,cycle_attempts cycleAttempts,lifetime_attempts lifetimeAttempts,
+                   fencing_token fencingToken FROM event_deliveries WHERE event_id=?
+            """, bytes(eventId)));
+        state.put("receipt", db.queryForList("""
+            SELECT consumer_id consumerId,outcome FROM waitlist_promotion_receipts WHERE event_id=?
+            """, bytes(eventId)));
+        state.put("durablePrefix", db.queryForList("""
+            SELECT last_durable_offset FROM event_kafka_consumer_positions
+             WHERE consumer_id='waitlist.promotion' AND topic=? AND partition_id=?
+            """, Long.class, partition.topic(), partition.partition()));
+        Long next = committed(group, partition);
+        state.put("brokerCommittedNext", next == null ? -1 : next);
+        return state;
+    }
+
+    private record CrashResult(long pid, int exit, Map<String, Object> entrypoint) { }
 
     private Long committed(String group, TopicPartition partition) {
         try (KafkaConsumer<byte[], byte[]> reader = reader(group)) {
@@ -319,5 +396,22 @@ class KafkaIntakeCrashIntegrationTests {
 
     private static byte[] bytes(UUID value) {
         return ByteBuffer.allocate(16).putLong(value.getMostSignificantBits()).putLong(value.getLeastSignificantBits()).array();
+    }
+
+    private static String sha256(Class<?> type) throws Exception {
+        String resource = type.getSimpleName() + ".class";
+        try (var input = type.getResourceAsStream(resource)) {
+            return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(input.readAllBytes()));
+        }
+    }
+
+    private static String git(String... args) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git", "-c", "safe.directory=C:/dev/slotq"));
+        command.addAll(List.of(args));
+        Process process = new ProcessBuilder(command).directory(Path.of("..").toFile()).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(process.waitFor()).isZero();
+        return output.strip();
     }
 }
