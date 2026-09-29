@@ -79,7 +79,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 @SpringBootTest(properties = {"slotq.events.delivery.scheduler-enabled=false",
-    "slotq.waitlist.promotion.enabled=false"})
+    "slotq.waitlist.promotion.enabled=false", "spring.datasource.hikari.connection-timeout=3000",
+    "spring.datasource.hikari.data-source-properties.socketTimeout=3000"})
 class KafkaIntakeCrashIntegrationTests {
     private static final String TOPIC = "slotq.waitlist.events.v1";
     private static final ConsumerRoute REQUEST = WaitlistPromotionRequestedHandler.ROUTE;
@@ -285,6 +286,54 @@ class KafkaIntakeCrashIntegrationTests {
             Long.class, bytes(event.eventId().value()))).isEqualTo(1);
         Map<String, Object> relayDeduplicated = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
 
+        // Failure to durably record a poison decision must leave the broker offset untouched.
+        long failedQuarantineOffset;
+        try (KafkaProducer<String, String> publisher = new KafkaProducer<>(producer)) {
+            failedQuarantineOffset = publisher.send(new ProducerRecord<>(TOPIC, partition,
+                message.key(), "{bad")).get(15, TimeUnit.SECONDS).offset();
+        }
+        Map<String, Object> beforeQuarantineFailure = windowSnapshot(event.eventId().value(),
+            consumer.groupId(), location);
+        List<String> quarantineFailure;
+        boolean mysqlPausedDuringFailure;
+        try (KafkaConsumer<byte[], byte[]> reader = reader(consumer.groupId())) {
+            reader.assign(List.of(location));
+            reader.seek(location, failedQuarantineOffset);
+            org.apache.kafka.clients.consumer.ConsumerRecord<byte[], byte[]> poison = null;
+            long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+            while (poison == null && System.nanoTime() < deadline) {
+                for (var record : reader.poll(Duration.ofMillis(250))) poison = record;
+            }
+            assertThat(poison).isNotNull();
+            var docker = org.testcontainers.DockerClientFactory.instance().client();
+            docker.pauseContainerCmd(MYSQL.getContainerId()).exec();
+            try {
+                mysqlPausedDuringFailure = Boolean.TRUE.equals(docker.inspectContainerCmd(
+                    MYSQL.getContainerId()).exec().getState().getPaused());
+                assertThat(mysqlPausedDuringFailure).isTrue();
+                try {
+                    intakes.intake(poison, consumer, 2);
+                    throw new AssertionError("Expected JDBC failure while quarantine persistence is unavailable");
+                } catch (RuntimeException failure) {
+                    quarantineFailure = new ArrayList<>();
+                    for (Throwable cause = failure; cause != null; cause = cause.getCause())
+                        quarantineFailure.add(cause.getClass().getName());
+                }
+            } finally {
+                docker.unpauseContainerCmd(MYSQL.getContainerId()).exec();
+            }
+            assertThat(committed(consumer.groupId(), location)).isEqualTo(failedQuarantineOffset);
+            assertThat(db.queryForObject("""
+                SELECT COUNT(*) FROM event_kafka_intake_records
+                 WHERE consumer_id=? AND topic=? AND partition_id=? AND record_offset=?
+                """, Long.class, consumer.consumerId(), TOPIC, partition, failedQuarantineOffset)).isZero();
+            assertThat(intakes.intake(poison, consumer, 2))
+                .isEqualTo(JdbcKafkaIntakeStore.Outcome.QUARANTINED);
+            reader.commitSync(Map.of(location, new OffsetAndMetadata(poison.offset() + 1)));
+        }
+        Map<String, Object> afterQuarantineRecovery = windowSnapshot(event.eventId().value(),
+            consumer.groupId(), location);
+
         // Three different transport failures are durable, payload-free decisions, not business DEAD.
         var invalidBodies = List.of("{bad",
             message.body().replace(event.eventId().value().toString(), UUID.randomUUID().toString()),
@@ -318,7 +367,8 @@ class KafkaIntakeCrashIntegrationTests {
              WHERE consumer_id=? AND topic=? AND partition_id=? AND disposition='QUARANTINED'
              ORDER BY record_offset
             """, String.class, consumer.consumerId(), TOPIC, partition))
-            .containsExactly("MALFORMED_WIRE", "UNKNOWN_ORIGINAL", "CANONICAL_CORRUPTION");
+            .containsExactly("MALFORMED_WIRE", "MALFORMED_WIRE", "UNKNOWN_ORIGINAL",
+                "CANONICAL_CORRUPTION");
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_deliveries WHERE event_id=?", Long.class,
             bytes(event.eventId().value()))).isEqualTo(1);
 
@@ -340,6 +390,11 @@ class KafkaIntakeCrashIntegrationTests {
                 "entrypoint", relayCrash.entrypoint(), "exit", relayCrash.exit(),
                 "during", afterRelayCrash, "firstRecoveryOpportunity", relayConverged,
                 "finalConvergence", relayDeduplicated));
+            raw.put("quarantinePersistenceFailure", Map.of("before", beforeQuarantineFailure,
+                "entrypoint", "JdbcKafkaIntakeStore.intake", "exceptionChain", quarantineFailure,
+                "mysqlPaused", mysqlPausedDuringFailure,
+                "failedOffset", failedQuarantineOffset, "firstRecoveryOpportunity",
+                "same record after MySQL unpause", "finalConvergence", afterQuarantineRecovery));
             raw.put("seed", 109);
             raw.put("revision", System.getProperty("slotq.kafka.evidence.revision", "unrecorded"));
             raw.put("workingTreeStatus", git("status", "--short"));

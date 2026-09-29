@@ -60,7 +60,7 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
             postOffset.get("targets")).getFirst().get("state")).isEqualTo("PENDING");
         assertThat(((Number) map(raw.get("target")).get("cycle_attempts")).intValue()).isEqualTo(1);
         assertThat(map(raw.get("receipt")).get("outcome")).isEqualTo("NO_CANDIDATE");
-        assertThat(list(raw.get("quarantine"))).hasSize(3);
+        assertThat(list(raw.get("quarantine"))).hasSize(raw.containsKey("quarantinePersistenceFailure") ? 4 : 3);
 
         if (raw.containsKey("relayAckCrash")) {
             Map<String, Object> relay = map(raw.get("relayAckCrash"));
@@ -86,6 +86,22 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
             assertThat(((Number) KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
                 relayEnd.get("targets")).getFirst().get("cycleAttempts")).intValue()).isEqualTo(1);
         }
+        if (raw.containsKey("quarantinePersistenceFailure")) {
+            Map<String, Object> fault = map(raw.get("quarantinePersistenceFailure"));
+            assertThat(fault.get("entrypoint")).isEqualTo("JdbcKafkaIntakeStore.intake");
+            assertThat(fault.get("mysqlPaused")).isEqualTo(true);
+            assertThat(KafkaIntakeCrashEvidenceIntegrityTests.<String>list(fault.get("exceptionChain")))
+                .anySatisfy(type -> assertThat(type).containsAnyOf("SQLException", "CommunicationsException"));
+            long failedOffset = ((Number) fault.get("failedOffset")).longValue();
+            Map<String, Object> beforeFailure = map(fault.get("before"));
+            Map<String, Object> afterRecovery = map(fault.get("finalConvergence"));
+            assertThat(((Number) beforeFailure.get("brokerCommittedNext")).longValue())
+                .isEqualTo(failedOffset);
+            assertThat(((Number) afterRecovery.get("brokerCommittedNext")).longValue())
+                .isEqualTo(failedOffset + 1);
+            assertThat(list(afterRecovery.get("targets"))).hasSize(1);
+            assertThat(list(afterRecovery.get("receipt"))).hasSize(1);
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("schemaVersion", "slotq-kafka-intake-recalculation/v1");
@@ -97,6 +113,7 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
         result.put("finalReceiptCount", 1);
         result.put("quarantineCount", list(raw.get("quarantine")).size());
         result.put("relayAckCrashDeduplicated", raw.containsKey("relayAckCrash"));
+        result.put("quarantinePersistenceRecovered", raw.containsKey("quarantinePersistenceFailure"));
         Files.writeString(folder.resolve("intake-crash-recalculated.json"), json.writeValueAsString(result));
     }
 
