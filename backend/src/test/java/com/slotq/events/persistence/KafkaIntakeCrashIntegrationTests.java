@@ -48,6 +48,7 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -92,6 +93,7 @@ class KafkaIntakeCrashIntegrationTests {
     @Autowired ResourceUseCase resources;
     @Autowired SlotInventoryUseCase slots;
     @Autowired KafkaConsumerCatalog catalog;
+    @Autowired JdbcKafkaIntakeStore intakes;
     @Autowired WaitlistKafkaMessage wire;
     @Autowired WaitlistPromotionRequestedHandler requestHandler;
     @Autowired EventDeliveryStore deliveries;
@@ -204,6 +206,40 @@ class KafkaIntakeCrashIntegrationTests {
         assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_offers WHERE venue_id=?", Long.class,
             bytes(venue.id().value()))).isZero();
 
+        // Three different transport failures are durable, payload-free decisions, not business DEAD.
+        var invalidBodies = List.of("{bad",
+            message.body().replace(event.eventId().value().toString(), UUID.randomUUID().toString()),
+            message.body().replace("\"eventType\":\"waitlist.promotion-requested\"",
+                "\"eventType\":\"booking.capacity-released\""));
+        try (KafkaProducer<String, String> publisher = new KafkaProducer<>(producer)) {
+            for (String invalid : invalidBodies)
+                publisher.send(new ProducerRecord<>(TOPIC, partition, message.key(), invalid))
+                    .get(15, TimeUnit.SECONDS);
+        }
+        try (KafkaConsumer<byte[], byte[]> reader = reader(consumer.groupId())) {
+            reader.assign(List.of(location));
+            reader.seek(location, offset + 1);
+            long deadline = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+            int processed = 0;
+            while (processed < invalidBodies.size() && System.nanoTime() < deadline) {
+                for (var record : reader.poll(Duration.ofMillis(250))) {
+                    assertThat(intakes.intake(record, consumer, 2))
+                        .isEqualTo(JdbcKafkaIntakeStore.Outcome.QUARANTINED);
+                    reader.commitSync(Map.of(location, new OffsetAndMetadata(record.offset() + 1)));
+                    processed++;
+                }
+            }
+            assertThat(processed).isEqualTo(invalidBodies.size());
+        }
+        assertThat(db.queryForList("""
+            SELECT failure_code FROM event_kafka_intake_records
+             WHERE consumer_id=? AND topic=? AND partition_id=? AND record_offset>?
+             ORDER BY record_offset
+            """, String.class, consumer.consumerId(), TOPIC, partition, offset))
+            .containsExactly("MALFORMED_WIRE", "UNKNOWN_ORIGINAL", "CANONICAL_CORRUPTION");
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM event_deliveries WHERE event_id=?", Long.class,
+            bytes(event.eventId().value()))).isEqualTo(1);
+
         String evidence = System.getProperty("slotq.kafka.evidence.dir");
         if (evidence != null) {
             Path output = Path.of(evidence).resolve("intake-crash-raw.json");
@@ -224,6 +260,11 @@ class KafkaIntakeCrashIntegrationTests {
                 SELECT consumer_id,topic,partition_id,record_offset,disposition,failure_code
                   FROM event_kafka_intake_records WHERE event_id=?
                 """, bytes(event.eventId().value())));
+            raw.put("quarantine", db.queryForList("""
+                SELECT consumer_id,topic,partition_id,record_offset,disposition,failure_code
+                  FROM event_kafka_intake_records WHERE consumer_id=? AND disposition='QUARANTINED'
+                 ORDER BY partition_id,record_offset
+                """, consumer.consumerId()));
             raw.put("receipt", db.queryForMap("""
                 SELECT consumer_id,outcome FROM waitlist_promotion_receipts WHERE event_id=?
                 """, bytes(event.eventId().value())));
