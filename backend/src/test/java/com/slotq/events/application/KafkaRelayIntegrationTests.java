@@ -1,8 +1,10 @@
 package com.slotq.events.application;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -72,6 +74,7 @@ class KafkaRelayIntegrationTests {
 
     @Test
     void realMysqlKafkaRollbackCrashDuplicateClaimFencingAndCanonicalWire() throws Exception {
+        List<Map<String, Object>> faultTimeline = new ArrayList<>();
         try (AdminClient admin = AdminClient.create(Map.of("bootstrap.servers", KAFKA.getBootstrapServers()))) {
             admin.createTopics(List.of(new NewTopic(TOPIC, 3, (short) 1))).all().get(30, TimeUnit.SECONDS);
         }
@@ -86,11 +89,13 @@ class KafkaRelayIntegrationTests {
         TransactionTemplate tx = new TransactionTemplate(manager);
         EventEnvelope rolledBack = event(tenant);
         tx.executeWithoutResult(status -> { append.appendForActiveRoute(rolledBack, ROUTE); status.setRollbackOnly(); });
+        faultTimeline.add(publicationSnapshot("business-rollback", rolledBack.eventId().value()));
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_records WHERE event_id=?", Integer.class,
             bytes(rolledBack.eventId().value()))).isZero();
 
         EventEnvelope original = event(tenant);
         tx.executeWithoutResult(status -> append.appendForActiveRoute(original, ROUTE));
+        faultTimeline.add(publicationSnapshot("committed-before-relay", original.eventId().value()));
         // Event committed while relay was down: the independent cursor still starts at zero.
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_kafka_publications", Integer.class)).isZero();
         assertThat(ledger.discover(TOPIC, 100)).isEqualTo(1);
@@ -105,6 +110,7 @@ class KafkaRelayIntegrationTests {
             var a = first.get(10, TimeUnit.SECONDS);
             var b = second.get(10, TimeUnit.SECONDS);
             assertThat((a.isPresent() ? 1 : 0) + (b.isPresent() ? 1 : 0)).isEqualTo(1);
+            faultTimeline.add(publicationSnapshot("two-relay-claim", original.eventId().value()));
             var stale = a.orElseGet(b::get);
             var published = ledger.load(stale);
             var wire = mapping.encode(published.event(), published.origin());
@@ -113,10 +119,12 @@ class KafkaRelayIntegrationTests {
 
             // An ack is observed, but no MySQL mark is committed. Lease recovery republishes.
             template.send(TOPIC, wire.key(), wire.body()).get(20, TimeUnit.SECONDS);
+            faultTimeline.add(publicationSnapshot("ack-before-mark", original.eventId().value()));
             Thread.sleep(800);
             worker.runCycle();
             assertThatThrownBy(() -> ledger.published(stale, 0, 0))
                 .isInstanceOf(JdbcKafkaPublicationLedger.OwnershipLost.class);
+            faultTimeline.add(publicationSnapshot("stale-mark-rejected", original.eventId().value()));
         }
         assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?", String.class,
             bytes(original.eventId().value()))).isEqualTo("PUBLISHED");
@@ -124,6 +132,7 @@ class KafkaRelayIntegrationTests {
             bytes(original.eventId().value()))).isEqualTo(2);
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_records WHERE event_id=?", Integer.class,
             bytes(original.eventId().value()))).isEqualTo(1);
+        faultTimeline.add(publicationSnapshot("ack-mark-recovered", original.eventId().value()));
         assertThatThrownBy(() -> ledger.discover("other.destination", 100))
             .hasMessageContaining("destination changed without cutover");
 
@@ -160,12 +169,19 @@ class KafkaRelayIntegrationTests {
             admin.deleteRecords(Map.of(new TopicPartition(TOPIC, partition),
                 RecordsToDelete.beforeOffset(ackOffset + 1))).all().get(20, TimeUnit.SECONDS);
             assertThatThrownBy(() -> probe.verify(TOPIC)).hasMessageContaining("log-start gap");
+            faultTimeline.add(Map.of("phase", "retention-gap", "at", Instant.now().toString(),
+                "eventId", original.eventId().value().toString(), "partition", partition,
+                "ackOffset", ackOffset, "logStartAfterDelete", admin.listOffsets(Map.of(
+                    new TopicPartition(TOPIC, partition), org.apache.kafka.clients.admin.OffsetSpec.earliest()))
+                    .all().get(10, TimeUnit.SECONDS).get(new TopicPartition(TOPIC, partition)).offset(),
+                "incident", "KafkaRetentionProbe: log-start gap"));
             assertThatThrownBy(() -> ledger.verifyTopic(TOPIC, "changed-topic-id", Map.of()))
                 .hasMessageContaining("topic identity changed");
         }
 
         EventEnvelope ackLost = event(tenant);
         tx.executeWithoutResult(status -> append.appendForActiveRoute(ackLost, ROUTE));
+        faultTimeline.add(publicationSnapshot("before-ack-response-loss", ackLost.eventId().value()));
         assertThat(ledger.discover(TOPIC, 100)).isEqualTo(1);
         @SuppressWarnings("unchecked") KafkaTemplate<String, String> lostAck = mock(KafkaTemplate.class);
         when(lostAck.send(anyString(), anyString(), anyString())).thenAnswer(invocation -> {
@@ -178,7 +194,9 @@ class KafkaRelayIntegrationTests {
         new KafkaRelayWorker(ledger, lostAck, mapping, policy, meters, TOPIC).runCycle();
         assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?", String.class,
             bytes(ackLost.eventId().value()))).isEqualTo("PENDING");
+        faultTimeline.add(publicationSnapshot("ack-response-lost", ackLost.eventId().value()));
         worker.runCycle();
+        faultTimeline.add(publicationSnapshot("ack-response-recovered", ackLost.eventId().value()));
         assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?", String.class,
             bytes(ackLost.eventId().value()))).isEqualTo("PUBLISHED");
         Properties ackReaderConfig = new Properties();
@@ -202,6 +220,7 @@ class KafkaRelayIntegrationTests {
 
         EventEnvelope duringOutage = event(tenant);
         tx.executeWithoutResult(status -> append.appendForActiveRoute(duringOutage, ROUTE));
+        faultTimeline.add(publicationSnapshot("before-broker-pause", duringOutage.eventId().value()));
         assertThat(ledger.discover(TOPIC, 100)).isEqualTo(1);
         var outagePolicy = new KafkaPublicationPolicy(5, Duration.ofSeconds(30), Duration.ofMillis(500),
             100, List.of(Duration.ZERO, Duration.ZERO, Duration.ZERO, Duration.ZERO));
@@ -212,6 +231,7 @@ class KafkaRelayIntegrationTests {
             outageWorker.runCycle();
             assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?", String.class,
                 bytes(duringOutage.eventId().value()))).isEqualTo("PENDING");
+            faultTimeline.add(publicationSnapshot("broker-paused", duringOutage.eventId().value()));
         } finally {
             docker.unpauseContainerCmd(KAFKA.getContainerId()).exec();
         }
@@ -225,12 +245,21 @@ class KafkaRelayIntegrationTests {
         }
         assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?", String.class,
             bytes(duringOutage.eventId().value()))).isEqualTo("PUBLISHED");
+        faultTimeline.add(publicationSnapshot("broker-recovered", duringOutage.eventId().value()));
 
         EventEnvelope beforeDbOutage = event(tenant);
         tx.executeWithoutResult(status -> append.appendForActiveRoute(beforeDbOutage, ROUTE));
+        faultTimeline.add(publicationSnapshot("before-db-pause", beforeDbOutage.eventId().value()));
         docker.pauseContainerCmd(MYSQL.getContainerId()).exec();
         try {
-            assertThatThrownBy(() -> ledger.discover(TOPIC, 100)).isInstanceOf(RuntimeException.class);
+            try {
+                ledger.discover(TOPIC, 100);
+                throw new AssertionError("Expected JDBC failure during MySQL pause");
+            } catch (RuntimeException failure) {
+                faultTimeline.add(Map.of("phase", "db-paused-entrypoint-failure",
+                    "at", Instant.now().toString(), "entrypoint", "JdbcKafkaPublicationLedger.discover",
+                    "exception", failure.getClass().getName()));
+            }
         } finally {
             docker.unpauseContainerCmd(MYSQL.getContainerId()).exec();
         }
@@ -246,6 +275,7 @@ class KafkaRelayIntegrationTests {
         outageWorker.runCycle();
         assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?", String.class,
             bytes(beforeDbOutage.eventId().value()))).isEqualTo("PUBLISHED");
+        faultTimeline.add(publicationSnapshot("db-recovered", beforeDbOutage.eventId().value()));
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_records WHERE event_id=?", Integer.class,
             bytes(beforeDbOutage.eventId().value()))).isEqualTo(1);
         var productGuard = new KafkaRuntimeGuard(db, new WaitlistKafkaMessage(true, false),
@@ -280,7 +310,20 @@ class KafkaRelayIntegrationTests {
             raw.put("mysqlVersion", db.queryForObject("SELECT VERSION()", String.class));
             raw.put("mysqlIsolation", db.queryForObject("SELECT @@transaction_isolation", String.class));
             raw.put("brokerImage", "apache/kafka:4.1.1");
+            raw.put("brokerProfile", "single-broker development profile; publication ambiguity only");
+            raw.put("brokerContainer", KAFKA.getContainerId());
+            raw.put("mysqlContainer", MYSQL.getContainerId());
             raw.put("javaVersion", System.getProperty("java.version"));
+            raw.put("seed", 109);
+            raw.put("revision", git("rev-parse", "HEAD"));
+            raw.put("workingTreeStatus", git("status", "--short"));
+            raw.put("relayClassSha256", classSha256(KafkaRelayWorker.class));
+            raw.put("harnessClassSha256", classSha256(KafkaRelayIntegrationTests.class));
+            raw.put("pid", ProcessHandle.current().pid());
+            raw.put("clientVersion", org.apache.kafka.common.utils.AppInfoParser.getVersion());
+            raw.put("settings", Map.of("acks", "all", "claimLeaseMs", 700,
+                "retryDelayMs", 200, "brokerProfile", "single broker", "mysqlPoolTimeoutMs", 3000));
+            raw.put("faultTimeline", faultTimeline);
             raw.put("fixtureEventIds", Map.of("rolledBack", rolledBack.eventId().value().toString(),
                 "markingCrash", original.eventId().value().toString(), "ackLost", ackLost.eventId().value().toString(),
                 "brokerOutage", duringOutage.eventId().value().toString(),
@@ -303,9 +346,6 @@ class KafkaRelayIntegrationTests {
                 "kafkaPublication", db.queryForObject(
                     "SELECT boundary_sequence FROM event_kafka_discovery WHERE singleton_id=1", Long.class)));
             raw.put("brokerRecordsObservedBeforeAndAfterAckLoss", brokerRecords);
-            raw.put("faultsVerified", List.of("business_rollback", "pre_relay_commit", "ack_loss",
-                "post_ack_pre_mark_crash", "duplicate_physical_record", "two_relay_claim", "stale_mark",
-                "broker_pause_recovery", "db_pause_recovery", "retention_gap", "topic_id_mismatch"));
             Files.writeString(output, new tools.jackson.databind.json.JsonMapper().writeValueAsString(raw));
         }
         assertThat(registrations.deactivate(waitlistRegistration)).isTrue();
@@ -327,6 +367,39 @@ class KafkaRelayIntegrationTests {
                 + "\",\"resourceId\":\"" + UUID.randomUUID() + "\",\"slotInventoryId\":\"" + slot + "\"}");
     }
     private UUID slotId(EventEnvelope event) { return event.aggregateId(); }
+    private static String classSha256(Class<?> type) throws Exception {
+        try (var input = type.getResourceAsStream(type.getSimpleName() + ".class")) {
+            return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(input.readAllBytes()));
+        }
+    }
+    private static String git(String... args) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git", "-c", "safe.directory=C:/dev/slotq"));
+        command.addAll(List.of(args));
+        Process process = new ProcessBuilder(command).directory(Path.of("..").toFile()).start();
+        String status = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(process.waitFor()).isZero();
+        return status.strip();
+    }
+    private Map<String, Object> publicationSnapshot(String phase, UUID eventId) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("phase", phase);
+        snapshot.put("at", Instant.now().toString());
+        snapshot.put("eventId", eventId.toString());
+        snapshot.put("original", db.queryForList("""
+            SELECT HEX(tenant_id) tenantId,HEX(event_id) eventId,boundary_sequence boundarySequence
+              FROM event_records WHERE event_id=?
+            """, bytes(eventId)));
+        snapshot.put("publication", db.queryForList("""
+            SELECT state,cycle_attempts cycleAttempts,lifetime_attempts lifetimeAttempts,
+                   fencing_token fencingToken,ack_partition ackPartition,ack_offset ackOffset
+              FROM event_kafka_publications WHERE event_id=?
+            """, bytes(eventId)));
+        snapshot.put("targets", db.queryForList("""
+            SELECT state,cycle_attempts cycleAttempts FROM event_deliveries WHERE event_id=?
+            """, bytes(eventId)));
+        return snapshot;
+    }
     private static byte[] bytes(UUID value) {
         return ByteBuffer.allocate(16).putLong(value.getMostSignificantBits()).putLong(value.getLeastSignificantBits()).array();
     }

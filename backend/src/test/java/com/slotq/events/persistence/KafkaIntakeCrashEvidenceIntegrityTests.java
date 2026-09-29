@@ -62,6 +62,31 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
         assertThat(map(raw.get("receipt")).get("outcome")).isEqualTo("NO_CANDIDATE");
         assertThat(list(raw.get("quarantine"))).hasSize(3);
 
+        if (raw.containsKey("relayAckCrash")) {
+            Map<String, Object> relay = map(raw.get("relayAckCrash"));
+            Map<String, Object> relayBefore = map(relay.get("before"));
+            Map<String, Object> relayDuring = map(relay.get("during"));
+            Map<String, Object> relayEnd = map(relay.get("finalConvergence"));
+            Map<String, Object> ack = map(relay.get("entrypoint"));
+            assertThat(ack.get("stage")).isEqualTo("ACK_AFTER_SEND_BEFORE_MARK");
+            assertThat(((Number) relay.get("exit")).intValue()).isEqualTo(91);
+            assertThat(KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                relayBefore.get("publication")).getFirst().get("state")).isEqualTo("PENDING");
+            assertThat(KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                relayDuring.get("publication")).getFirst().get("state")).isEqualTo("PROCESSING");
+            Map<String, Object> published = KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                relayEnd.get("publication")).getFirst();
+            assertThat(published.get("state")).isEqualTo("PUBLISHED");
+            assertThat(((Number) ack.get("offset")).longValue())
+                .isLessThan(((Number) published.get("ackOffset")).longValue());
+            assertThat(list(relayEnd.get("intake"))).hasSize(3);
+            assertThat(list(relayEnd.get("targetIntake"))).hasSize(1);
+            assertThat(list(relayEnd.get("targets"))).hasSize(1);
+            assertThat(list(relayEnd.get("receipt"))).hasSize(1);
+            assertThat(((Number) KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                relayEnd.get("targets")).getFirst().get("cycleAttempts")).intValue()).isEqualTo(1);
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("schemaVersion", "slotq-kafka-intake-recalculation/v1");
         result.put("rawSha256", java.util.HexFormat.of().formatHex(
@@ -71,6 +96,7 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
         result.put("finalTargetCount", 1);
         result.put("finalReceiptCount", 1);
         result.put("quarantineCount", list(raw.get("quarantine")).size());
+        result.put("relayAckCrashDeduplicated", raw.containsKey("relayAckCrash"));
         Files.writeString(folder.resolve("intake-crash-recalculated.json"), json.writeValueAsString(result));
     }
 

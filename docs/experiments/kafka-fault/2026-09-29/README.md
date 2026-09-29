@@ -6,6 +6,9 @@
 `KafkaFaultEvidenceIntegrityTests`가 재계산했다.
 `run-20260929-intake-b/intake-crash-raw.json`은 세 독립 JVM intake crash window를
 기록하며 `intake-crash-recalculated.json`은 별도 integrity test가 재계산했다.
+`../2026-09-30/run-20260930-intake-relay-d`는 동일 intake window 뒤 독립 relay JVM을
+실제 ACK 직후 종료하고 새 physical coordinate가 기존 logical target을 재사용하는지를 검증한다.
+`run-20260929-relay-c`는 single-broker relay 미시 fault의 MySQL/Kafka snapshot이다.
 
 ## 실행 구성
 
@@ -34,6 +37,10 @@ Set-Location backend
 .\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests -PkafkaFaultRunId=run-20260929-h -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29 --no-daemon --offline --console=plain
 .\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-intake-b -PkafkaEvidenceRevision=888233aaa93f6947b141d4786edffdf7c7a83826 --no-daemon --offline --console=plain
 .\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-intake-b --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-relay-c --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-relay-c --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-intake-relay-d --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-intake-relay-d --no-daemon --offline --console=plain
 ```
 
 같은 run ID를 재사용하면 이미 생성된 Kafka topic과 MySQL volume 때문에 실패한다.
@@ -53,6 +60,9 @@ Set-Location backend
 | 정상 기동 후 MySQL outage | `before-db-outage`→`db-unavailable-after-intake-entrypoint`: 실제 `JdbcKafkaIntakeStore.startOffset`의 JDBC exception, broker record는 존재. DB 복구/consumer 재시작 뒤 두 target `DONE` |
 | 물리 중복 허용 | DB outage record와 relay 재발행이 두 group에서 각 2개 intake coordinate로 관측됐으나 original target 각 1개, Waitlist receipt 1개 |
 | intake 세 crash window | `run-20260929-intake-b`의 `BEFORE_INTAKE`는 offset/target 모두 없음; `AFTER_INTAKE`는 durable target 1·offset 미진행; `AFTER_OFFSET`은 offset 진행·target `PENDING` attempts=0. Broker 재전달 없이 DB executor가 `DONE`·receipt 1로 수렴 |
+| relay ACK 후 marking 전 JVM 종료 | `2026-09-30/run-20260930-intake-relay-d`: child JVM 91 종료와 ACK partition/offset, publication `PROCESSING`→lease 재claim→`PUBLISHED` attempts=2. 같은 original의 physical intake 3, target intake 1, delivery/receipt 1, business attempts=1 |
+| relay ACK 응답 손실·claim 경쟁·stale mark | `run-20260929-relay-c`: 실제 MySQL ledger와 Kafka producer에서 2-way claim, ACK response loss, stale marking 거부, physical record 2개. fault phase DB snapshot과 raw 재계산 포함. 이 미시 fault는 single-broker profile이며 ACK 직후 실제 JVM 종료는 위 별도 run이 담당 |
+| retention log-start gap | `run-20260929-relay-c`: broker `deleteRecords` 후 log start가 ACK offset을 초과했고 `KafkaRetentionProbe`가 incident로 거부. 자동 offset reset/recovery는 실행하지 않음 |
 
 각 phase에는 가능한 DB original/publication/intake/target/delivery/receipt/business state와
 broker offset/assignment/ISR를 함께 기록했다. DB가 멈춘 phase는 DB snapshot의 불가 상태를
@@ -67,8 +77,7 @@ Raw SHA-256: `ec7eb78a2fccb12d9417e102516e8ebc29e965458e52ec3a11a796e3889f4913`
 
 ## 아직 별도 검증이 필요한 #109 matrix
 
-이 checkpoint는 #109 완료 판정이 아니다. relay ACK/mark crash·response loss와 stale
-publisher, claim/effect commit crash·unknown outcome,
+이 checkpoint는 #109 완료 판정이 아니다. claim/effect commit crash·unknown outcome,
 slow intake의 실제 poll timeout, poison/DEAD, retention gap, authority mismatch,
 quarantine persistence failure의 새 raw evidence와 전체 Backend test/clean build를
 후속 workstream에서 추가한다. 기존 #107·#108 evidence를 이 항목의 새 PASS로 세지 않는다.

@@ -35,6 +35,9 @@ import com.slotq.events.application.EventId;
 import com.slotq.events.application.EventRegistrationService;
 import com.slotq.events.application.EventRecordStore;
 import com.slotq.events.application.KafkaConsumerCatalog;
+import com.slotq.events.application.KafkaPublicationPolicy;
+import com.slotq.events.application.KafkaRelayConfiguration;
+import com.slotq.events.application.KafkaRelayWorker;
 import com.slotq.integration.waitlist.WaitlistKafkaMessage;
 import com.slotq.integration.waitlist.WaitlistPromotionRequestedHandler;
 import com.slotq.observability.ProductTelemetry;
@@ -46,6 +49,7 @@ import com.slotq.venue.domain.DailyOperatingHours;
 import com.slotq.venue.domain.WeeklyOperatingHours;
 import com.slotq.booking.application.SlotInventoryUseCase;
 import jakarta.persistence.EntityManagerFactory;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -62,6 +66,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
@@ -97,6 +102,8 @@ class KafkaIntakeCrashIntegrationTests {
     @Autowired SlotInventoryUseCase slots;
     @Autowired KafkaConsumerCatalog catalog;
     @Autowired JdbcKafkaIntakeStore intakes;
+    @Autowired JdbcKafkaPublicationLedger publications;
+    @Autowired MeterRegistry meters;
     @Autowired WaitlistKafkaMessage wire;
     @Autowired WaitlistPromotionRequestedHandler requestHandler;
     @Autowired EventDeliveryStore deliveries;
@@ -230,19 +237,70 @@ class KafkaIntakeCrashIntegrationTests {
             caseEvidence.put("finalConvergence",
                 windowSnapshot(event.eventId().value(), consumer.groupId(), location));
 
+        // The ACK itself is durable at the broker. A different JVM dies inside the production
+        // KafkaRelayWorker.publish path before its MySQL PUBLISHED transition can commit.
+        assertThat(publications.discover(TOPIC, 10)).isEqualTo(1);
+        Map<String, Object> beforeRelayCrash = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
+        CrashResult relayCrash = relayAckCrashChild();
+        assertThat(relayCrash.exit()).isEqualTo(91);
+        assertThat(relayCrash.entrypoint().get("stage")).isEqualTo("ACK_AFTER_SEND_BEFORE_MARK");
+        Map<String, Object> afterRelayCrash = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
+        assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?",
+            String.class, bytes(event.eventId().value()))).isEqualTo("PROCESSING");
+        Thread.sleep(3200);
+        var relayPolicy = new KafkaPublicationPolicy(3, Duration.ofSeconds(3), Duration.ofSeconds(2),
+            100, List.of(Duration.ZERO, Duration.ZERO));
+        KafkaTemplate<String, String> relayTemplate = new KafkaRelayConfiguration().publicationTemplate(
+            new KafkaRelayConfiguration.ClientSettings(KAFKA.getBootstrapServers(),
+                "PLAINTEXT", "", "", "", ""));
+        try {
+            new KafkaRelayWorker(publications, relayTemplate, wire, relayPolicy, meters, TOPIC).runCycle();
+        } finally {
+            ((org.springframework.kafka.core.DefaultKafkaProducerFactory<?, ?>)
+                relayTemplate.getProducerFactory()).destroy();
+        }
+        assertThat(db.queryForObject("SELECT state FROM event_kafka_publications WHERE event_id=?",
+            String.class, bytes(event.eventId().value()))).isEqualTo("PUBLISHED");
+        assertThat(db.queryForObject("SELECT lifetime_attempts FROM event_kafka_publications WHERE event_id=?",
+            Integer.class, bytes(event.eventId().value()))).isEqualTo(2);
+        Map<String, Object> relayConverged = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
+        int extraPhysicalRecords = 0;
+        try (KafkaConsumer<byte[], byte[]> reader = reader(consumer.groupId())) {
+            reader.assign(List.of(location));
+            reader.seek(location, offset + 1);
+            long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+            while (extraPhysicalRecords < 2 && System.nanoTime() < deadline) {
+                for (var record : reader.poll(Duration.ofMillis(250))) {
+                    assertThat(intakes.intake(record, consumer, 2))
+                        .isEqualTo(JdbcKafkaIntakeStore.Outcome.TARGET);
+                    reader.commitSync(Map.of(location, new OffsetAndMetadata(record.offset() + 1)));
+                    extraPhysicalRecords++;
+                }
+            }
+        }
+        assertThat(extraPhysicalRecords).isEqualTo(2);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM event_deliveries WHERE event_id=?", Long.class,
+            bytes(event.eventId().value()))).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_promotion_receipts WHERE event_id=?",
+            Long.class, bytes(event.eventId().value()))).isEqualTo(1);
+        Map<String, Object> relayDeduplicated = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
+
         // Three different transport failures are durable, payload-free decisions, not business DEAD.
         var invalidBodies = List.of("{bad",
             message.body().replace(event.eventId().value().toString(), UUID.randomUUID().toString()),
             message.body().replace("\"eventType\":\"waitlist.promotion-requested\"",
                 "\"eventType\":\"booking.capacity-released\""));
+        long invalidStart = -1;
         try (KafkaProducer<String, String> publisher = new KafkaProducer<>(producer)) {
-            for (String invalid : invalidBodies)
-                publisher.send(new ProducerRecord<>(TOPIC, partition, message.key(), invalid))
-                    .get(15, TimeUnit.SECONDS);
+            for (String invalid : invalidBodies) {
+                long sentOffset = publisher.send(new ProducerRecord<>(TOPIC, partition,
+                    message.key(), invalid)).get(15, TimeUnit.SECONDS).offset();
+                if (invalidStart < 0) invalidStart = sentOffset;
+            }
         }
         try (KafkaConsumer<byte[], byte[]> reader = reader(consumer.groupId())) {
             reader.assign(List.of(location));
-            reader.seek(location, offset + 1);
+            reader.seek(location, invalidStart);
             long deadline = System.nanoTime() + Duration.ofSeconds(15).toNanos();
             int processed = 0;
             while (processed < invalidBodies.size() && System.nanoTime() < deadline) {
@@ -257,9 +315,9 @@ class KafkaIntakeCrashIntegrationTests {
         }
         assertThat(db.queryForList("""
             SELECT failure_code FROM event_kafka_intake_records
-             WHERE consumer_id=? AND topic=? AND partition_id=? AND record_offset>?
+             WHERE consumer_id=? AND topic=? AND partition_id=? AND disposition='QUARANTINED'
              ORDER BY record_offset
-            """, String.class, consumer.consumerId(), TOPIC, partition, offset))
+            """, String.class, consumer.consumerId(), TOPIC, partition))
             .containsExactly("MALFORMED_WIRE", "UNKNOWN_ORIGINAL", "CANONICAL_CORRUPTION");
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_deliveries WHERE event_id=?", Long.class,
             bytes(event.eventId().value()))).isEqualTo(1);
@@ -278,6 +336,10 @@ class KafkaIntakeCrashIntegrationTests {
             raw.put("partition", partition); raw.put("offset", offset); raw.put("topicId", topicId);
             raw.put("windows", windows);
             raw.put("faultCases", faultCases);
+            raw.put("relayAckCrash", Map.of("before", beforeRelayCrash,
+                "entrypoint", relayCrash.entrypoint(), "exit", relayCrash.exit(),
+                "during", afterRelayCrash, "firstRecoveryOpportunity", relayConverged,
+                "finalConvergence", relayDeduplicated));
             raw.put("seed", 109);
             raw.put("revision", System.getProperty("slotq.kafka.evidence.revision", "unrecorded"));
             raw.put("workingTreeStatus", git("status", "--short"));
@@ -342,6 +404,36 @@ class KafkaIntakeCrashIntegrationTests {
         return new CrashResult(child.pid(), exit, entrypoint);
     }
 
+    private CrashResult relayAckCrashChild() throws Exception {
+        Path arguments = Files.createTempFile("slotq-relay-child-", ".args");
+        Path log = Files.createTempFile("slotq-relay-child-", ".log");
+        Path marker = Files.createTempFile("slotq-relay-child-", ".json");
+        Files.writeString(arguments, "-cp\n\"" + System.getProperty("java.class.path").replace('\\', '/')
+            + "\"\n" + KafkaRelayAckCrashChild.class.getName() + "\n");
+        ProcessBuilder process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java")
+            .toString(), "@" + arguments).redirectErrorStream(true).redirectOutput(log.toFile());
+        process.environment().put("SLOTQ_RELAY_TEST_TOPIC", TOPIC);
+        process.environment().put("SLOTQ_RELAY_TEST_BROKER", KAFKA.getBootstrapServers());
+        process.environment().put("SLOTQ_RELAY_TEST_JDBC", MYSQL.getJdbcUrl());
+        process.environment().put("SLOTQ_RELAY_TEST_USER", MYSQL.getUsername());
+        process.environment().put("SLOTQ_RELAY_TEST_PASSWORD", MYSQL.getPassword());
+        process.environment().put("SLOTQ_RELAY_TEST_MARKER", marker.toString());
+        Process child = process.start();
+        if (!child.waitFor(60, TimeUnit.SECONDS)) {
+            child.destroyForcibly();
+            throw new AssertionError("Relay ACK child timed out: " + Files.readString(log));
+        }
+        if (child.exitValue() != 91)
+            throw new AssertionError("Relay ACK child failed: " + Files.readString(log).lines().limit(30).toList());
+        Map<String, Object> entrypoint = new JsonMapper().readValue(Files.readString(marker),
+            new TypeReference<>() { });
+        assertThat(((Number) entrypoint.get("pid")).longValue()).isEqualTo(child.pid());
+        Files.deleteIfExists(arguments);
+        Files.deleteIfExists(log);
+        Files.deleteIfExists(marker);
+        return new CrashResult(child.pid(), child.exitValue(), entrypoint);
+    }
+
     private Map<String, Object> windowSnapshot(UUID eventId, String group, TopicPartition partition) {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("at", Instant.now().toString());
@@ -357,6 +449,11 @@ class KafkaIntakeCrashIntegrationTests {
             SELECT consumer_id consumerId,partition_id partitionId,record_offset recordOffset,
                    disposition,HEX(record_sha256) recordSha256
               FROM event_kafka_intake_records WHERE event_id=?
+            """, bytes(eventId)));
+        state.put("targetIntake", db.queryForList("""
+            SELECT consumer_id consumerId,partition_id partitionId,first_offset firstOffset,
+                   first_materialization firstMaterialization
+              FROM event_kafka_target_intakes WHERE event_id=?
             """, bytes(eventId)));
         state.put("targets", db.queryForList("""
             SELECT state,cycle_attempts cycleAttempts,lifetime_attempts lifetimeAttempts,
