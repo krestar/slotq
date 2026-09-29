@@ -387,7 +387,7 @@ class KafkaWaitlistVerticalSliceIntegrationTests {
             """));
         raw.put("offers", db.queryForList("""
             SELECT HEX(id) AS offer_id,HEX(entry_id) AS entry_id,state,
-                   HEX(reservation_id) AS reservation_id FROM waitlist_offers ORDER BY created_at,id
+                    HEX(reservation_id) AS reservation_id FROM waitlist_offers ORDER BY expires_at,id
             """));
         Files.writeString(output, new JsonMapper().writeValueAsString(raw));
     }
