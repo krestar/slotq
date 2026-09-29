@@ -125,7 +125,8 @@ public final class JdbcEventDeliveryStore implements EventDeliveryStore {
               JOIN event_registrations r ON r.registration_id = d.registration_id
               JOIN event_transport_assignments a ON a.registration_id = d.registration_id
              WHERE d.tenant_id = ? AND d.event_id = ? AND d.registration_id = ?
-               AND r.consumer_id = ? AND a.transport = ? AND a.authority_epoch = ? FOR UPDATE
+               AND r.consumer_id = ? AND a.transport = ? AND a.authority_epoch = ?
+             FOR UPDATE OF d,a
             """, (row, n) -> new DeliverySnapshot(
                 key(row), DeliverySnapshot.State.valueOf(row.getString("state")), row.getInt("cycle_attempts"),
                 row.getLong("lifetime_attempts"), row.getLong("fencing_token"), time(row, "lease_until"),
