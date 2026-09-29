@@ -102,6 +102,58 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
             assertThat(list(afterRecovery.get("targets"))).hasSize(1);
             assertThat(list(afterRecovery.get("receipt"))).hasSize(1);
         }
+        if (raw.containsKey("deliveryFaultCases")) {
+            List<Map<String, Object>> delivery = list(raw.get("deliveryFaultCases"));
+            assertThat(delivery.stream().map(row -> row.get("fault"))).containsExactly(
+                "WRONG_SCOPE", "CLAIM_HALT", "EFFECT_HALT", "COMMIT_UNKNOWN");
+            int[] attempts = {0, 1, 2, 3};
+            String[] states = {"PENDING", "PROCESSING", "PROCESSING", "DONE"};
+            int[] exits = {0, 91, 92, 93};
+            for (int index = 0; index < delivery.size(); index++) {
+                Map<String, Object> caseEvidence = delivery.get(index);
+                assertThat(map(caseEvidence.get("entrypoint")).get("stage"))
+                    .isEqualTo(caseEvidence.get("fault"));
+                assertThat(((Number) caseEvidence.get("exit")).intValue()).isEqualTo(exits[index]);
+                Map<String, Object> during = map(caseEvidence.get("during"));
+                assertThat(map(caseEvidence.get("entrypoint")).get("eventId"))
+                    .isEqualTo(raw.get("deliveryEventId"));
+                Map<String, Object> target = KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                    during.get("targets")).getFirst();
+                assertThat(target.get("state")).isEqualTo(states[index]);
+                assertThat(((Number) target.get("cycleAttempts")).intValue()).isEqualTo(attempts[index]);
+                assertThat(list(during.get("receipt"))).hasSize(index == 3 ? 1 : 0);
+                assertThat(list(during.get("targetIntake"))).hasSize(1);
+            }
+            Map<String, Object> finalState = map(delivery.getLast().get("finalConvergence"));
+            assertThat(KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                finalState.get("receipt")).getFirst().get("outcome")).isEqualTo("NO_CANDIDATE");
+        }
+        if (raw.containsKey("poisonCrash")) {
+            Map<String, Object> poison = map(raw.get("poisonCrash"));
+            assertThat(KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                map(poison.get("before")).get("targets")).getFirst().get("state")).isEqualTo("PENDING");
+            List<Map<String, Object>> attempts = list(poison.get("attempts"));
+            assertThat(attempts).hasSize(3);
+            for (int index = 0; index < attempts.size(); index++) {
+                Map<String, Object> claim = attempts.get(index);
+                assertThat(map(claim.get("entrypoint")).get("stage")).isEqualTo("CLAIM_HALT");
+                assertThat(((Number) claim.get("exit")).intValue()).isEqualTo(91);
+                Map<String, Object> during = map(claim.get("durable"));
+                Map<String, Object> target = KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                    during.get("targets")).getFirst();
+                assertThat(target.get("state")).isEqualTo("PROCESSING");
+                assertThat(((Number) target.get("cycleAttempts")).intValue()).isEqualTo(index + 1);
+                assertThat(list(during.get("receipt"))).isEmpty();
+            }
+            Map<String, Object> end = map(poison.get("finalConvergence"));
+            Map<String, Object> target = KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                end.get("targets")).getFirst();
+            assertThat(target.get("state")).isEqualTo("DEAD");
+            assertThat(target.get("failureCode")).isEqualTo("CRASH_EXHAUSTED");
+            assertThat(((Number) target.get("cycleAttempts")).intValue()).isEqualTo(3);
+            assertThat(list(end.get("receipt"))).isEmpty();
+            assertThat(list(end.get("targetIntake"))).hasSize(1);
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("schemaVersion", "slotq-kafka-intake-recalculation/v1");
@@ -114,6 +166,8 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
         result.put("quarantineCount", list(raw.get("quarantine")).size());
         result.put("relayAckCrashDeduplicated", raw.containsKey("relayAckCrash"));
         result.put("quarantinePersistenceRecovered", raw.containsKey("quarantinePersistenceFailure"));
+        result.put("deliveryCrashWindows", raw.containsKey("deliveryFaultCases") ? 3 : 0);
+        result.put("intentionalCrashExhaustedDead", raw.containsKey("poisonCrash") ? 1 : 0);
         Files.writeString(folder.resolve("intake-crash-recalculated.json"), json.writeValueAsString(result));
     }
 

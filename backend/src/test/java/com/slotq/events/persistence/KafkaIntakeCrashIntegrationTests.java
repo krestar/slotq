@@ -282,6 +282,65 @@ class KafkaIntakeCrashIntegrationTests {
         assertThat(extraPhysicalRecords).isEqualTo(2);
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_deliveries WHERE event_id=?", Long.class,
             bytes(event.eventId().value()))).isEqualTo(1);
+
+        UUID deliveryEvent = appendAndIntake("delivery-fault", event, consumer.consumerId(), producer, location);
+        Map<String, Object> deliveryBefore = windowSnapshot(deliveryEvent, consumer.groupId(), location);
+        CrashResult wrongScope = deliveryChild("WRONG_SCOPE", deliveryEvent);
+        assertThat(wrongScope.exit()).isZero();
+        assertThat(windowSnapshot(deliveryEvent, consumer.groupId(), location).get("targets"))
+            .isEqualTo(deliveryBefore.get("targets"));
+        CrashResult claimCrash = deliveryChild("CLAIM_HALT", deliveryEvent);
+        assertThat(claimCrash.exit()).isEqualTo(91);
+        Map<String, Object> afterClaimCrash = windowSnapshot(deliveryEvent, consumer.groupId(), location);
+        assertDelivery(deliveryEvent, "PROCESSING", 1, 0);
+        awaitLease(deliveryEvent);
+        Map<String, Object> firstClaimRecovery = windowSnapshot(deliveryEvent, consumer.groupId(), location);
+        CrashResult effectCrash = deliveryChild("EFFECT_HALT", deliveryEvent);
+        assertThat(effectCrash.exit()).isEqualTo(92);
+        Map<String, Object> afterEffectCrash = windowSnapshot(deliveryEvent, consumer.groupId(), location);
+        assertDelivery(deliveryEvent, "PROCESSING", 2, 0);
+        awaitLease(deliveryEvent);
+        Map<String, Object> firstEffectRecovery = windowSnapshot(deliveryEvent, consumer.groupId(), location);
+        CrashResult unknownCommit = deliveryChild("COMMIT_UNKNOWN", deliveryEvent);
+        assertThat(unknownCommit.exit()).isEqualTo(93);
+        Map<String, Object> afterUnknownCommit = windowSnapshot(deliveryEvent, consumer.groupId(), location);
+        assertDelivery(deliveryEvent, "DONE", 3, 1);
+        assertThat(db.queryForObject("SELECT outcome FROM waitlist_promotion_receipts WHERE event_id=?",
+            String.class, bytes(deliveryEvent))).isEqualTo("NO_CANDIDATE");
+        List<Map<String, Object>> deliveryFaultCases = List.of(
+            Map.of("fault", "WRONG_SCOPE", "before", deliveryBefore, "entrypoint", wrongScope.entrypoint(),
+                "exit", wrongScope.exit(), "during", deliveryBefore,
+                "firstRecoveryOpportunity", deliveryBefore, "finalConvergence", afterUnknownCommit),
+            Map.of("fault", "CLAIM_HALT", "before", deliveryBefore, "entrypoint", claimCrash.entrypoint(),
+                "exit", claimCrash.exit(), "during", afterClaimCrash,
+                "firstRecoveryOpportunity", firstClaimRecovery, "finalConvergence", afterUnknownCommit),
+            Map.of("fault", "EFFECT_HALT", "before", firstClaimRecovery,
+                "entrypoint", effectCrash.entrypoint(), "exit", effectCrash.exit(),
+                "during", afterEffectCrash, "firstRecoveryOpportunity", firstEffectRecovery,
+                "finalConvergence", afterUnknownCommit),
+            Map.of("fault", "COMMIT_UNKNOWN", "before", firstEffectRecovery,
+                "entrypoint", unknownCommit.entrypoint(), "exit", unknownCommit.exit(),
+                "during", afterUnknownCommit, "firstRecoveryOpportunity", afterUnknownCommit,
+                "finalConvergence", afterUnknownCommit));
+
+        UUID deadEvent = appendAndIntake("claim-exhaustion", event, consumer.consumerId(), producer, location);
+        Map<String, Object> deadBefore = windowSnapshot(deadEvent, consumer.groupId(), location);
+        List<Map<String, Object>> exhaustedClaims = new ArrayList<>();
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            CrashResult stopped = deliveryChild("CLAIM_HALT", deadEvent);
+            assertThat(stopped.exit()).isEqualTo(91);
+            Map<String, Object> during = windowSnapshot(deadEvent, consumer.groupId(), location);
+            assertDelivery(deadEvent, "PROCESSING", attempt, 0);
+            exhaustedClaims.add(Map.of("attempt", attempt, "entrypoint", stopped.entrypoint(),
+                "exit", stopped.exit(), "durable", during));
+            awaitLease(deadEvent);
+        }
+        CrashResult exhausted = deliveryChild("CLAIM_ONLY", deadEvent);
+        assertThat(exhausted.exit()).isZero();
+        Map<String, Object> deadFinal = windowSnapshot(deadEvent, consumer.groupId(), location);
+        assertDelivery(deadEvent, "DEAD", 3, 0);
+        assertThat(db.queryForObject("SELECT failure_code FROM event_deliveries WHERE event_id=?",
+            String.class, bytes(deadEvent))).isEqualTo("CRASH_EXHAUSTED");
         assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_promotion_receipts WHERE event_id=?",
             Long.class, bytes(event.eventId().value()))).isEqualTo(1);
         Map<String, Object> relayDeduplicated = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
@@ -395,6 +454,11 @@ class KafkaIntakeCrashIntegrationTests {
                 "mysqlPaused", mysqlPausedDuringFailure,
                 "failedOffset", failedQuarantineOffset, "firstRecoveryOpportunity",
                 "same record after MySQL unpause", "finalConvergence", afterQuarantineRecovery));
+            raw.put("deliveryEventId", deliveryEvent.toString());
+            raw.put("deliveryFaultCases", deliveryFaultCases);
+            raw.put("poisonCrash", Map.of("eventId", deadEvent.toString(), "before", deadBefore,
+                "attempts", exhaustedClaims, "entrypoint", exhausted.entrypoint(),
+                "exit", exhausted.exit(), "finalConvergence", deadFinal));
             raw.put("seed", 109);
             raw.put("revision", System.getProperty("slotq.kafka.evidence.revision", "unrecorded"));
             raw.put("workingTreeStatus", git("status", "--short"));
@@ -489,6 +553,91 @@ class KafkaIntakeCrashIntegrationTests {
         return new CrashResult(child.pid(), child.exitValue(), entrypoint);
     }
 
+    private UUID appendAndIntake(String suffix, EventEnvelope source,
+        String consumerId, Properties producer, TopicPartition partition) throws Exception {
+        var consumer = catalog.definition(consumerId);
+        UUID eventId = UUID.nameUUIDFromBytes(("slotq-109-" + suffix).getBytes(StandardCharsets.UTF_8));
+        var event = new EventEnvelope(new EventId(eventId), source.tenantId(), source.aggregateType(),
+            source.aggregateId(), source.eventType(), source.schemaVersion(), Instant.now(), source.payload());
+        new TransactionTemplate(manager).executeWithoutResult(status -> append.appendForActiveRoute(event, REQUEST));
+        var stored = new TransactionTemplate(manager).execute(status -> records.findEventForAppend(event.eventId())
+            .orElseThrow());
+        var row = db.queryForMap("""
+            SELECT origin_request_id,origin_trace_id,origin_span_id FROM event_records WHERE event_id=?
+            """, bytes(eventId));
+        var origin = new ProductTelemetry.Origin((String) row.get("origin_request_id"),
+            (String) row.get("origin_trace_id"), (String) row.get("origin_span_id"));
+        var message = wire.encode(stored, origin);
+        long offset;
+        try (KafkaProducer<String, String> publisher = new KafkaProducer<>(producer)) {
+            offset = publisher.send(new ProducerRecord<>(TOPIC, partition.partition(),
+                message.key(), message.body())).get(15, TimeUnit.SECONDS).offset();
+        }
+        try (KafkaConsumer<byte[], byte[]> reader = reader(consumer.groupId())) {
+            reader.assign(List.of(partition));
+            reader.seek(partition, offset);
+            long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+            boolean found = false;
+            while (!found && System.nanoTime() < deadline) {
+                for (var record : reader.poll(Duration.ofMillis(250))) {
+                    assertThat(record.offset()).isEqualTo(offset);
+                    assertThat(intakes.intake(record, consumer, 2)).isEqualTo(JdbcKafkaIntakeStore.Outcome.TARGET);
+                    reader.commitSync(Map.of(partition, new OffsetAndMetadata(record.offset() + 1)));
+                    found = true;
+                }
+            }
+            assertThat(found).isTrue();
+        }
+        assertDelivery(eventId, "PENDING", 0, 0);
+        return eventId;
+    }
+
+    private CrashResult deliveryChild(String mode, UUID eventId) throws Exception {
+        Path arguments = Files.createTempFile("slotq-delivery-child-", ".args");
+        Path log = Files.createTempFile("slotq-delivery-child-", ".log");
+        Path marker = Files.createTempFile("slotq-delivery-child-", ".json");
+        Files.writeString(arguments, "-cp\n\"" + System.getProperty("java.class.path").replace('\\', '/')
+            + "\"\n" + KafkaDeliveryFaultChild.class.getName() + "\n" + mode + "\n" + eventId + "\n");
+        ProcessBuilder process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java")
+            .toString(), "@" + arguments).redirectErrorStream(true).redirectOutput(log.toFile());
+        process.environment().put("SPRING_DATASOURCE_URL", MYSQL.getJdbcUrl());
+        process.environment().put("SPRING_DATASOURCE_USERNAME", MYSQL.getUsername());
+        process.environment().put("SPRING_DATASOURCE_PASSWORD", MYSQL.getPassword());
+        process.environment().put("SLOTQ_DELIVERY_TEST_MARKER", marker.toString());
+        Process child = process.start();
+        if (!child.waitFor(60, TimeUnit.SECONDS)) {
+            child.destroyForcibly();
+            throw new AssertionError("Delivery child timed out: " + Files.readString(log));
+        }
+        if (!Files.isRegularFile(marker) || Files.size(marker) == 0)
+            throw new AssertionError("Delivery child failed before marker: "
+                + Files.readString(log).lines().limit(40).toList());
+        Map<String, Object> entrypoint = new JsonMapper().readValue(Files.readString(marker),
+            new TypeReference<>() { });
+        assertThat(((Number) entrypoint.get("pid")).longValue()).isEqualTo(child.pid());
+        Files.deleteIfExists(arguments);
+        Files.deleteIfExists(log);
+        Files.deleteIfExists(marker);
+        return new CrashResult(child.pid(), child.exitValue(), entrypoint);
+    }
+
+    private void awaitLease(UUID eventId) throws Exception {
+        Long micros = db.queryForObject("""
+            SELECT GREATEST(TIMESTAMPDIFF(MICROSECOND,UTC_TIMESTAMP(6),lease_until),0)
+              FROM event_deliveries WHERE event_id=?
+            """, Long.class, bytes(eventId));
+        if (micros != null && micros > 0) Thread.sleep(micros / 1000 + 200);
+    }
+
+    private void assertDelivery(UUID eventId, String state, int attempts, int receipts) {
+        assertThat(db.queryForObject("SELECT state FROM event_deliveries WHERE event_id=?", String.class,
+            bytes(eventId))).isEqualTo(state);
+        assertThat(db.queryForObject("SELECT cycle_attempts FROM event_deliveries WHERE event_id=?",
+            Integer.class, bytes(eventId))).isEqualTo(attempts);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_promotion_receipts WHERE event_id=?",
+            Long.class, bytes(eventId))).isEqualTo(receipts);
+    }
+
     private Map<String, Object> windowSnapshot(UUID eventId, String group, TopicPartition partition) {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("at", Instant.now().toString());
@@ -512,7 +661,8 @@ class KafkaIntakeCrashIntegrationTests {
             """, bytes(eventId)));
         state.put("targets", db.queryForList("""
             SELECT state,cycle_attempts cycleAttempts,lifetime_attempts lifetimeAttempts,
-                   fencing_token fencingToken FROM event_deliveries WHERE event_id=?
+                   fencing_token fencingToken,failure_code failureCode
+              FROM event_deliveries WHERE event_id=?
             """, bytes(eventId)));
         state.put("receipt", db.queryForList("""
             SELECT consumer_id consumerId,outcome FROM waitlist_promotion_receipts WHERE event_id=?
