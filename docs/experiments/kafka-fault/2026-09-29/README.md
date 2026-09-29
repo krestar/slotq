@@ -12,8 +12,10 @@
 quarantine persistence 실패와 offset 정지, 동일 record의 복구 후 durable 판정을 기록한다.
 `../2026-09-30/run-20260930-j`는 별도 JVM·3-node broker·MySQL outage 뒤 실제
 Waitlist 후보가 `PROMOTED`로 수렴한 run이다.
-`../2026-09-30/run-20260930-delivery-b`는 Kafka scope의 DB executor가 실제
+`../2026-09-30/run-20260930-delivery-c`는 Kafka scope의 DB executor가 실제
 자식 JVM 종료 뒤 lease/fencing/receipt/DONE과 bounded `DEAD`를 유지하는지 기록한다.
+`../2026-09-30/run-20260930-cutover-a`는 DB authority epoch 변경과 rollback의
+durable target 보존을 검사한 별도 MySQL 회귀다. 이 단위에는 broker가 없다.
 `run-20260929-relay-c`는 single-broker relay 미시 fault의 MySQL/Kafka snapshot이다.
 
 ## 실행 구성
@@ -51,8 +53,10 @@ Set-Location backend
 .\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-quarantine-b --no-daemon --offline --console=plain
 .\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultProcessIntegrationTests -PkafkaFaultBootstrap=localhost:29092,localhost:39092,localhost:49092 -PkafkaFaultRunId=run-20260930-j -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
 .\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests -PkafkaFaultRunId=run-20260930-j -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-delivery-b --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-delivery-b --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-delivery-c --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-delivery-c --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.EventTransportCutoverIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-a -PkafkaEvidenceRevision=560311f741dea48088563c4dd222f7f25be25ac7 --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-a --no-daemon --offline --console=plain
 ```
 
 같은 run ID를 재사용하면 이미 생성된 Kafka topic과 MySQL volume 때문에 실패한다.
@@ -77,8 +81,10 @@ Set-Location backend
 | retention log-start gap | `run-20260929-relay-c`: broker `deleteRecords` 후 log start가 ACK offset을 초과했고 `KafkaRetentionProbe`가 incident로 거부. 자동 offset reset/recovery는 실행하지 않음 |
 | quarantine persistence failure | `2026-09-30/run-20260930-quarantine-b`: 이미 기동한 production `JdbcKafkaIntakeStore.intake`에서 MySQL pause로 `CommunicationsException`이 관측됨. Broker committed next가 실패 record offset에서 멈췄고 intake row 0, 복구 뒤 같은 record를 `QUARANTINED`로 기록하고 offset을 한 칸 진행 |
 | Waitlist business effect / capacity | `2026-09-30/run-20260930-j`: DB outage 전에 등록한 실제 후보가 복구 후 `PROMOTED`, receipt/Offer/Reservation/active Allocation 각각 1. Slot capacity 1, active Allocation 1. raw integrity 재계산에서 6 original 전부 설명 가능, 중복 target·partial receipt/DONE·unexplained DEAD·capacity violation 0 |
-| DB executor process crash / outcome unknown | `2026-09-30/run-20260930-delivery-b`: Kafka scope target에서 wrong consumer claim 거부, claim 직후 PID 종료 후 `PROCESSING` attempts=1, effect transaction 중 종료 후 attempts=2·receipt 0, after-commit 종료 후 `DONE` attempts=3·receipt 1. 실제 M4 handler와 production `EventDeliveryWorker` 사용 |
+| DB executor process crash / outcome unknown | `2026-09-30/run-20260930-delivery-c`: Kafka scope target에서 wrong consumer claim 거부, claim 직후 PID 종료 후 `PROCESSING` attempts=1, effect transaction 중 종료 후 attempts=2·receipt 0, after-commit 종료 후 `DONE` attempts=3·receipt 1. 실제 M4 handler와 production `EventDeliveryWorker` 사용 |
 | repeated claim crash / durable DEAD | 같은 run에서 별도 original을 3개 독립 JVM claim 뒤 종료시켜 attempts 1→2→3, 매 단계 effect/receipt 0. lease 후 재판정에서 `DEAD`·`CRASH_EXHAUSTED`, 자동 재실행 없음 |
+| stale DB owner | 같은 run에서 JVM A claim token 1→lease 만료→JVM B token 2·`DONE`/receipt 1→JVM A의 지연 처리. B 완료 전후 durable target/receipt 동일 |
+| transport authority mismatch / rollback | `2026-09-30/run-20260930-cutover-a`: DB_DIRECT epoch1→KAFKA epoch2→DB_DIRECT epoch3. epoch1 worker는 두 변경 뒤 모두 claim 불가, KAFKA 도중 original은 DB_DIRECT materialize 없이 남고 rollback scan 뒤 2 originals / 4 targets, attempts·receipt 0. Broker process 검증과 구분되는 MySQL authority 회귀 |
 
 각 phase에는 가능한 DB original/publication/intake/target/delivery/receipt/business state와
 broker offset/assignment/ISR를 함께 기록했다. DB가 멈춘 phase는 DB snapshot의 불가 상태를
@@ -96,6 +102,6 @@ Raw SHA-256: `ec7eb78a2fccb12d9417e102516e8ebc29e965458e52ec3a11a796e3889f4913`
 ## 아직 별도 검증이 필요한 #109 matrix
 
 이 checkpoint는 #109 완료 판정이 아니다. slow intake의 실제 poll timeout과
-old/new member의 동일 record 관측, stale DB owner, transport authority mismatch / rollback,
+old/new member의 동일 record 관측,
 전체 Backend test/clean build를
 후속 workstream에서 추가한다. 기존 #107·#108 evidence를 이 항목의 새 PASS로 세지 않는다.

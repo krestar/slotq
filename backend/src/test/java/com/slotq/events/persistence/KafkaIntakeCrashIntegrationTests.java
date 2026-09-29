@@ -19,6 +19,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 
 import com.slotq.auth.domain.SystemPrincipal;
 import com.slotq.events.application.ConsumerRoute;
@@ -341,6 +342,46 @@ class KafkaIntakeCrashIntegrationTests {
         assertDelivery(deadEvent, "DEAD", 3, 0);
         assertThat(db.queryForObject("SELECT failure_code FROM event_deliveries WHERE event_id=?",
             String.class, bytes(deadEvent))).isEqualTo("CRASH_EXHAUSTED");
+
+        UUID staleEvent = appendAndIntake("stale-owner", event, consumer.consumerId(), producer, location);
+        Map<String, Object> staleBefore = windowSnapshot(staleEvent, consumer.groupId(), location);
+        Path readyGate = Files.createTempFile("slotq-stale-ready-", ".gate");
+        Path releaseGate = Files.createTempFile("slotq-stale-release-", ".gate");
+        Files.deleteIfExists(readyGate);
+        Files.deleteIfExists(releaseGate);
+        Map<String, Object> staleOwnerEvidence;
+        try {
+            CompletableFuture<CrashResult> oldOwner = CompletableFuture.supplyAsync(() -> {
+                try { return deliveryChild("CLAIM_WAIT_PROCESS", staleEvent, readyGate, releaseGate); }
+                catch (Exception failure) { throw new RuntimeException(failure); }
+            });
+            long gateDeadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+            while (!Files.exists(readyGate) && System.nanoTime() < gateDeadline) {
+                if (oldOwner.isDone()) oldOwner.join();
+                Thread.sleep(50);
+            }
+            assertThat(Files.exists(readyGate)).isTrue();
+            Map<String, Object> oldClaimed = windowSnapshot(staleEvent, consumer.groupId(), location);
+            assertDelivery(staleEvent, "PROCESSING", 1, 0);
+            awaitLease(staleEvent);
+            CrashResult newOwner = deliveryChild("DRAIN", staleEvent);
+            assertThat(newOwner.exit()).isZero();
+            Map<String, Object> newDone = windowSnapshot(staleEvent, consumer.groupId(), location);
+            assertDelivery(staleEvent, "DONE", 2, 1);
+            Files.createFile(releaseGate);
+            CrashResult staleFinished = oldOwner.get(30, TimeUnit.SECONDS);
+            assertThat(staleFinished.exit()).isZero();
+            Map<String, Object> afterStale = windowSnapshot(staleEvent, consumer.groupId(), location);
+            assertThat(afterStale.get("targets")).isEqualTo(newDone.get("targets"));
+            assertThat(afterStale.get("receipt")).isEqualTo(newDone.get("receipt"));
+            staleOwnerEvidence = Map.of("eventId", staleEvent.toString(), "before", staleBefore,
+                "oldClaimed", oldClaimed, "oldEntrypoint", staleFinished.entrypoint(),
+                "newEntrypoint", newOwner.entrypoint(), "newDone", newDone,
+                "oldAfterNew", afterStale);
+        } finally {
+            Files.deleteIfExists(readyGate);
+            Files.deleteIfExists(releaseGate);
+        }
         assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_promotion_receipts WHERE event_id=?",
             Long.class, bytes(event.eventId().value()))).isEqualTo(1);
         Map<String, Object> relayDeduplicated = windowSnapshot(event.eventId().value(), consumer.groupId(), location);
@@ -459,6 +500,7 @@ class KafkaIntakeCrashIntegrationTests {
             raw.put("poisonCrash", Map.of("eventId", deadEvent.toString(), "before", deadBefore,
                 "attempts", exhaustedClaims, "entrypoint", exhausted.entrypoint(),
                 "exit", exhausted.exit(), "finalConvergence", deadFinal));
+            raw.put("staleOwner", staleOwnerEvidence);
             raw.put("seed", 109);
             raw.put("revision", System.getProperty("slotq.kafka.evidence.revision", "unrecorded"));
             raw.put("workingTreeStatus", git("status", "--short"));
@@ -593,6 +635,10 @@ class KafkaIntakeCrashIntegrationTests {
     }
 
     private CrashResult deliveryChild(String mode, UUID eventId) throws Exception {
+        return deliveryChild(mode, eventId, null, null);
+    }
+
+    private CrashResult deliveryChild(String mode, UUID eventId, Path readyGate, Path releaseGate) throws Exception {
         Path arguments = Files.createTempFile("slotq-delivery-child-", ".args");
         Path log = Files.createTempFile("slotq-delivery-child-", ".log");
         Path marker = Files.createTempFile("slotq-delivery-child-", ".json");
@@ -604,6 +650,8 @@ class KafkaIntakeCrashIntegrationTests {
         process.environment().put("SPRING_DATASOURCE_USERNAME", MYSQL.getUsername());
         process.environment().put("SPRING_DATASOURCE_PASSWORD", MYSQL.getPassword());
         process.environment().put("SLOTQ_DELIVERY_TEST_MARKER", marker.toString());
+        if (readyGate != null) process.environment().put("SLOTQ_DELIVERY_TEST_READY", readyGate.toString());
+        if (releaseGate != null) process.environment().put("SLOTQ_DELIVERY_TEST_RELEASE", releaseGate.toString());
         Process child = process.start();
         if (!child.waitFor(60, TimeUnit.SECONDS)) {
             child.destroyForcibly();

@@ -154,6 +154,27 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
             assertThat(list(end.get("receipt"))).isEmpty();
             assertThat(list(end.get("targetIntake"))).hasSize(1);
         }
+        if (raw.containsKey("staleOwner")) {
+            Map<String, Object> stale = map(raw.get("staleOwner"));
+            Map<String, Object> old = map(stale.get("oldClaimed"));
+            Map<String, Object> newest = map(stale.get("newDone"));
+            Map<String, Object> after = map(stale.get("oldAfterNew"));
+            assertThat(map(stale.get("oldEntrypoint")).get("stage")).isEqualTo("CLAIM_WAIT_PROCESS");
+            assertThat(map(stale.get("newEntrypoint")).get("stage")).isEqualTo("DRAIN");
+            assertThat(map(stale.get("oldEntrypoint")).get("pid"))
+                .isNotEqualTo(map(stale.get("newEntrypoint")).get("pid"));
+            Map<String, Object> first = KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                old.get("targets")).getFirst();
+            Map<String, Object> last = KafkaIntakeCrashEvidenceIntegrityTests.<Map<String, Object>>list(
+                newest.get("targets")).getFirst();
+            assertThat(first.get("state")).isEqualTo("PROCESSING");
+            assertThat(((Number) first.get("fencingToken")).longValue()).isEqualTo(1);
+            assertThat(last.get("state")).isEqualTo("DONE");
+            assertThat(((Number) last.get("fencingToken")).longValue()).isEqualTo(2);
+            assertThat(newest.get("targets")).isEqualTo(after.get("targets"));
+            assertThat(newest.get("receipt")).isEqualTo(after.get("receipt"));
+            assertThat(list(after.get("receipt"))).hasSize(1);
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("schemaVersion", "slotq-kafka-intake-recalculation/v1");
@@ -168,6 +189,7 @@ class KafkaIntakeCrashEvidenceIntegrityTests {
         result.put("quarantinePersistenceRecovered", raw.containsKey("quarantinePersistenceFailure"));
         result.put("deliveryCrashWindows", raw.containsKey("deliveryFaultCases") ? 3 : 0);
         result.put("intentionalCrashExhaustedDead", raw.containsKey("poisonCrash") ? 1 : 0);
+        result.put("staleOwnerRejected", raw.containsKey("staleOwner"));
         Files.writeString(folder.resolve("intake-crash-recalculated.json"), json.writeValueAsString(result));
     }
 

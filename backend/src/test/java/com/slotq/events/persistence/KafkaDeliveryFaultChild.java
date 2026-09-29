@@ -103,6 +103,21 @@ public final class KafkaDeliveryFaultChild {
                 marker(mode, eventId);
                 Runtime.getRuntime().halt(91);
             }
+            if (mode.equals("CLAIM_WAIT_PROCESS")) {
+                marker(mode, eventId);
+                Files.createFile(Path.of(System.getenv("SLOTQ_DELIVERY_TEST_READY")));
+                Path release = Path.of(System.getenv("SLOTQ_DELIVERY_TEST_RELEASE"));
+                long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+                while (!Files.exists(release) && System.nanoTime() < deadline) Thread.sleep(50);
+                if (!Files.exists(release)) throw new AssertionError("Stale owner release timed out");
+                worker.process(claim.get());
+                return;
+            }
+            if (mode.equals("DRAIN")) {
+                worker.process(claim.get());
+                marker(mode, eventId);
+                return;
+            }
             worker.process(claim.get());
             throw new AssertionError("Fault did not halt the child: " + mode);
         }
