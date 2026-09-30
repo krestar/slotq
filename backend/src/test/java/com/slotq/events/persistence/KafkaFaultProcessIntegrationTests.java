@@ -85,7 +85,7 @@ class KafkaFaultProcessIntegrationTests {
 
     @Container @ServiceConnection
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_fault_109")
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_fault_109")
             .withCreateContainerCmdModifier(command -> command.getHostConfig().withBinds(
                 new Bind("slotq-fault-109-mysql-" + RUN_ID, new Volume("/var/lib/mysql"))));
 

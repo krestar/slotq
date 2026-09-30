@@ -80,7 +80,7 @@ class AuthWebIntegrationTests {
 
     @Container
     @ServiceConnection
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1")
         .withDatabaseName("slotq");
 
     @Autowired
@@ -156,7 +156,11 @@ class AuthWebIntegrationTests {
                 + "AND NOT (data_type = 'bigint' AND ("
                 + "(table_name = 'event_deliveries' AND column_name = 'fencing_token') OR "
                 + "(table_name = 'event_replay_audit' AND column_name = 'prior_fencing_token') OR "
-                + "(table_name = 'event_kafka_publications' AND column_name = 'fencing_token')))",
+                + "(table_name = 'event_kafka_publications' AND column_name = 'fencing_token'))) "
+                // Human credentials persist only a public UUID and SHA-256, never a Product/dev token.
+                + "AND NOT (table_name = 'operations_credentials' AND data_type = 'binary' AND ("
+                + "(column_name = 'credential_id' AND character_maximum_length = 16) OR "
+                + "(column_name = 'token_hash' AND character_maximum_length = 32)))",
             Integer.class
         );
         assertThat(credentialColumns).isZero();

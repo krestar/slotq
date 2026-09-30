@@ -42,7 +42,7 @@ class WaitlistProductionActivationIntegrationTests {
     }
     static final Instant NOW=Instant.parse("2026-08-30T09:00:00Z"), START=Instant.parse("2026-08-30T11:00:00Z");
     @Container @ServiceConnection static final org.testcontainers.mysql.MySQLContainer MYSQL=
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_activation_live");
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_activation_live");
     @Autowired WaitlistPromotionReadiness readiness;
     @Autowired EventRegistrationService registrations;
     @Autowired TenantUseCase tenants;

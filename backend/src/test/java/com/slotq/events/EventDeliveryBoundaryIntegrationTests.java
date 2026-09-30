@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 class EventDeliveryBoundaryIntegrationTests {
     @Container @ServiceConnection
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1")
         .withDatabaseName("event_delivery_boundaries");
 
     private static final DeliveryPolicy POLICY = new DeliveryPolicy(3, Duration.ofSeconds(6),

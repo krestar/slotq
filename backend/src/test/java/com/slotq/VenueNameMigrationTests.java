@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class VenueNameMigrationTests {
 
     @Container
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1")
         .withDatabaseName("slotq_migration");
 
     @Test

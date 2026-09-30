@@ -54,7 +54,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventObservationIntegrationTests {
     @Container @ServiceConnection
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_event_observation");
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_event_observation");
     private static final ConsumerRoute ROUTE = new ConsumerRoute("ObservationFixture", "ObservationSignal", 1);
     private static DeliveryExecutionScope scope() {
         return new DeliveryExecutionScope(ROUTE.consumerId(), "DB_DIRECT", 1);

@@ -99,7 +99,7 @@ class KafkaWaitlistVerticalSliceIntegrationTests {
     private static final String TOPIC = "slotq.waitlist.events.v1";
     @Container @ServiceConnection
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_kafka_m4_slice");
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_kafka_m4_slice");
     @Container
     static final KafkaContainer KAFKA = new KafkaContainer("apache/kafka:4.1.1");
 

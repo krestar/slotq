@@ -61,7 +61,7 @@ class SlotqApplicationTests {
 
     @Container
     @ServiceConnection
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1")
         .withDatabaseName("slotq");
 
     @Autowired
@@ -85,7 +85,7 @@ class SlotqApplicationTests {
     @Test
     void emptyMySqlAppliesMigrationsAndValidatesJpaMappings() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("19");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("20");
 
         String characterSet = jdbcTemplate.queryForObject(
             "SELECT DEFAULT_CHARACTER_SET_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE()",
