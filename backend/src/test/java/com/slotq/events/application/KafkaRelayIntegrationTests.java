@@ -35,6 +35,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -92,6 +93,20 @@ class KafkaRelayIntegrationTests {
         faultTimeline.add(publicationSnapshot("business-rollback", rolledBack.eventId().value()));
         assertThat(db.queryForObject("SELECT COUNT(*) FROM event_records WHERE event_id=?", Integer.class,
             bytes(rolledBack.eventId().value()))).isZero();
+
+        UUID failedBusiness = UUID.randomUUID();
+        EventEnvelope appendFailed = event(failedBusiness);
+        assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+            db.update("INSERT INTO tenants (id,status) VALUES (?, 'ACTIVE')", bytes(failedBusiness));
+            assertThatThrownBy(() -> append.appendForActiveRoute(appendFailed,
+                new ConsumerRoute(ROUTE.consumerId(), "booking.capacity-released", 1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        })).isInstanceOf(UnexpectedRollbackException.class);
+        Map<String, Object> failed = publicationSnapshot("append-failure", appendFailed.eventId().value());
+        failed.put("businessRows", db.queryForObject("SELECT COUNT(*) FROM tenants WHERE id=?",
+            Integer.class, bytes(failedBusiness)));
+        faultTimeline.add(failed);
+        assertThat(failed.get("businessRows")).isEqualTo(0);
 
         EventEnvelope original = event(tenant);
         tx.executeWithoutResult(status -> append.appendForActiveRoute(original, ROUTE));
@@ -169,12 +184,14 @@ class KafkaRelayIntegrationTests {
             admin.deleteRecords(Map.of(new TopicPartition(TOPIC, partition),
                 RecordsToDelete.beforeOffset(ackOffset + 1))).all().get(20, TimeUnit.SECONDS);
             assertThatThrownBy(() -> probe.verify(TOPIC)).hasMessageContaining("log-start gap");
-            faultTimeline.add(Map.of("phase", "retention-gap", "at", Instant.now().toString(),
-                "eventId", original.eventId().value().toString(), "partition", partition,
-                "ackOffset", ackOffset, "logStartAfterDelete", admin.listOffsets(Map.of(
+            Map<String, Object> gap = publicationSnapshot("retention-gap", original.eventId().value());
+            gap.put("partition", partition);
+            gap.put("ackOffset", ackOffset);
+            gap.put("logStartAfterDelete", admin.listOffsets(Map.of(
                     new TopicPartition(TOPIC, partition), org.apache.kafka.clients.admin.OffsetSpec.earliest()))
-                    .all().get(10, TimeUnit.SECONDS).get(new TopicPartition(TOPIC, partition)).offset(),
-                "incident", "KafkaRetentionProbe: log-start gap"));
+                    .all().get(10, TimeUnit.SECONDS).get(new TopicPartition(TOPIC, partition)).offset());
+            gap.put("incident", "KafkaRetentionProbe: log-start gap");
+            faultTimeline.add(gap);
             assertThatThrownBy(() -> ledger.verifyTopic(TOPIC, "changed-topic-id", Map.of()))
                 .hasMessageContaining("topic identity changed");
         }
@@ -325,6 +342,7 @@ class KafkaRelayIntegrationTests {
                 "retryDelayMs", 200, "brokerProfile", "single broker", "mysqlPoolTimeoutMs", 3000));
             raw.put("faultTimeline", faultTimeline);
             raw.put("fixtureEventIds", Map.of("rolledBack", rolledBack.eventId().value().toString(),
+                "appendFailed", appendFailed.eventId().value().toString(),
                 "markingCrash", original.eventId().value().toString(), "ackLost", ackLost.eventId().value().toString(),
                 "brokerOutage", duringOutage.eventId().value().toString(),
                 "dbOutage", beforeDbOutage.eventId().value().toString()));

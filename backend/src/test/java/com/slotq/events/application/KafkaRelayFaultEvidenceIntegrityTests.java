@@ -30,12 +30,16 @@ class KafkaRelayFaultEvidenceIntegrityTests {
         Map<String, Map<String, Object>> phases = new HashMap<>();
         for (Map<String, Object> phase : KafkaRelayFaultEvidenceIntegrityTests.<Map<String, Object>>list(
             raw.get("faultTimeline"))) phases.put((String) phase.get("phase"), phase);
-        assertThat(phases.keySet()).containsAll(List.of("business-rollback", "committed-before-relay",
+        assertThat(phases.keySet()).containsAll(List.of("business-rollback", "append-failure",
+            "committed-before-relay",
             "two-relay-claim", "ack-before-mark", "stale-mark-rejected", "ack-mark-recovered",
             "retention-gap", "before-ack-response-loss", "ack-response-lost",
             "ack-response-recovered", "before-broker-pause", "broker-paused", "broker-recovered",
             "before-db-pause", "db-paused-entrypoint-failure", "db-recovered"));
         assertThat(list(phases.get("business-rollback").get("original"))).isEmpty();
+        assertThat(list(phases.get("append-failure").get("original"))).isEmpty();
+        assertThat(list(phases.get("append-failure").get("publication"))).isEmpty();
+        assertThat(((Number) phases.get("append-failure").get("businessRows")).intValue()).isZero();
         assertThat(list(phases.get("committed-before-relay").get("original"))).hasSize(1);
         assertThat(list(phases.get("committed-before-relay").get("publication"))).isEmpty();
         assertPublication(phases, "two-relay-claim", "PROCESSING", 1, 1);
@@ -52,6 +56,9 @@ class KafkaRelayFaultEvidenceIntegrityTests {
         Map<String, Object> retention = phases.get("retention-gap");
         assertThat(((Number) retention.get("logStartAfterDelete")).longValue())
             .isGreaterThan(((Number) retention.get("ackOffset")).longValue());
+        assertThat(list(retention.get("original"))).hasSize(1);
+        assertThat(list(retention.get("publication"))).hasSize(1);
+        assertThat(retention.get("incident")).isEqualTo("KafkaRetentionProbe: log-start gap");
 
         Map<String, Object> ids = map(raw.get("fixtureEventIds"));
         List<Map<String, Object>> brokerRecords = list(raw.get("brokerRecordsObservedBeforeAndAfterAckLoss"));
@@ -59,6 +66,8 @@ class KafkaRelayFaultEvidenceIntegrityTests {
             .contains(ids.get("markingCrash").toString())).count();
         long responseLostPhysical = brokerRecords.stream().filter(row -> row.get("value").toString()
             .contains(ids.get("ackLost").toString())).count();
+        assertThat(brokerRecords.stream().filter(row -> row.get("value").toString()
+            .contains(ids.get("appendFailed").toString()))).isEmpty();
         assertThat(postMarkPhysical).isEqualTo(2);
         assertThat(responseLostPhysical).isEqualTo(2);
         assertThat(list(raw.get("eventRecords"))).hasSize(4);
@@ -69,10 +78,12 @@ class KafkaRelayFaultEvidenceIntegrityTests {
         result.put("rawSha256", java.util.HexFormat.of().formatHex(
             MessageDigest.getInstance("SHA-256").digest(bytes)));
         result.put("committedOriginals", list(raw.get("eventRecords")).size());
+        result.put("appendFailureRolledBack", true);
         result.put("publishedOriginals", list(raw.get("publications")).size());
         result.put("physicalRecordsAfterMarkCrash", postMarkPhysical);
         result.put("physicalRecordsAfterAckLoss", responseLostPhysical);
         result.put("retentionGapIncident", true);
+        result.put("retentionGapOriginalDurable", true);
         Files.writeString(folder.resolve("fault-recalculated.json"), json.writeValueAsString(result));
     }
 
