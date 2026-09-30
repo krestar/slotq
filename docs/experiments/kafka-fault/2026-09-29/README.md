@@ -1,4 +1,4 @@
-# #109 Kafka 독립 JVM / broker / DB fault checkpoint
+# #109 Kafka 독립 JVM / broker / DB fault evidence
 
 이 디렉터리는 #109의 fault workstream에서 생성한 새 raw evidence다. #107·#108의 과거
 결과를 이번 실행으로 재표기하지 않았다. `run-20260929-h/process-raw.json`은 production
@@ -12,11 +12,18 @@
 quarantine persistence 실패와 offset 정지, 동일 record의 복구 후 durable 판정을 기록한다.
 `../2026-09-30/run-20260930-j`는 별도 JVM·3-node broker·MySQL outage 뒤 실제
 Waitlist 후보가 `PROMOTED`로 수렴한 run이다.
+`../2026-09-30/run-20260930-q`는 실제 300초 poll timeout 뒤 old/new member가
+동일 intake position의 MySQL 잠금을 기다린 rebalance, 별도 maintenance JVM 둘의
+admission·expiry/release와 전체 original 수렴을 기록한다.
 `../2026-09-30/run-20260930-delivery-c`는 Kafka scope의 DB executor가 실제
 자식 JVM 종료 뒤 lease/fencing/receipt/DONE과 bounded `DEAD`를 유지하는지 기록한다.
 `../2026-09-30/run-20260930-cutover-a`는 DB authority epoch 변경과 rollback의
 durable target 보존을 검사한 별도 MySQL 회귀다. 이 단위에는 broker가 없다.
 `run-20260929-relay-c`는 single-broker relay 미시 fault의 MySQL/Kafka snapshot이다.
+`../2026-09-30/run-20260930-relay-d`는 caught append failure의 business rollback과
+retention gap 시 원본 event/publication의 durable state를 추가한 새 relay run이다.
+`../2026-09-30/run-20260930-cutover-b`는 같은 cutover 회귀에 source/class hash,
+working tree, MySQL container/volume provenance를 추가한 새 run이다.
 
 ## 실행 구성
 
@@ -28,7 +35,7 @@ durable target 보존을 검사한 별도 MySQL 회귀다. 이 단위에는 brok
   RF=3, min ISR=2, unclean leader election off, `acks=all`을 사용했다. 세 노드는 한 Docker
   host의 공통 failure domain이다. broker image digest, 실제 volume mount, ISR, leader,
   controller quorum 상태는 raw에 있다.
-- 별도 JVM: Product API·maintenance 1, relay 2, Waitlist consumer 최대 4,
+- 별도 JVM: Product API 1, maintenance 2, relay 2, Waitlist consumer 최대 4,
   operations observer 1. 두 logical consumer의 group은 서로 다르다. 각 PID/exit,
   실제 group assignment/offset과 runtime 설정은 raw에 기록했다.
 - Test coordinator의 fault 조작과 수동 canonical wire 전송만 test source에 있다.
@@ -57,13 +64,19 @@ Set-Location backend
 .\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-delivery-c --no-daemon --offline --console=plain
 .\gradlew.bat test --tests com.slotq.events.EventTransportCutoverIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-a -PkafkaEvidenceRevision=560311f741dea48088563c4dd222f7f25be25ac7 --no-daemon --offline --console=plain
 .\gradlew.bat test --tests com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-a --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultProcessIntegrationTests -PkafkaFaultBootstrap=localhost:29092,localhost:39092,localhost:49092 -PkafkaFaultRunId=run-20260930-q -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests -PkafkaFaultRunId=run-20260930-q -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-relay-d -PkafkaEvidenceRevision=79d4825640ec687a4655d316feca3adf9abba69a --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-relay-d --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.EventTransportCutoverIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-b -PkafkaEvidenceRevision=79d4825640ec687a4655d316feca3adf9abba69a --no-daemon --offline --console=plain
+.\gradlew.bat test --tests com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-b --no-daemon --offline --console=plain
 ```
 
 같은 run ID를 재사용하면 이미 생성된 Kafka topic과 MySQL volume 때문에 실패한다.
 새 실험에는 새 run ID를 지정해야 한다. Docker Compose를 재기동할 때 `down -v`를
 사용하지 않아야 broker volume이 보존된다.
 
-## 이 checkpoint에서 직접 확인한 fault
+## 직접 확인한 fault
 
 | Fault / 경계 | raw phase / durable oracle |
 | --- | --- |
@@ -85,6 +98,11 @@ Set-Location backend
 | repeated claim crash / durable DEAD | 같은 run에서 별도 original을 3개 독립 JVM claim 뒤 종료시켜 attempts 1→2→3, 매 단계 effect/receipt 0. lease 후 재판정에서 `DEAD`·`CRASH_EXHAUSTED`, 자동 재실행 없음 |
 | stale DB owner | 같은 run에서 JVM A claim token 1→lease 만료→JVM B token 2·`DONE`/receipt 1→JVM A의 지연 처리. B 완료 전후 durable target/receipt 동일 |
 | transport authority mismatch / rollback | `2026-09-30/run-20260930-cutover-a`: DB_DIRECT epoch1→KAFKA epoch2→DB_DIRECT epoch3. epoch1 worker는 두 변경 뒤 모두 claim 불가, KAFKA 도중 original은 DB_DIRECT materialize 없이 남고 rollback scan 뒤 2 originals / 4 targets, attempts·receipt 0. Broker process 검증과 구분되는 MySQL authority 회귀 |
+| 실제 poll timeout / old-new intake | `2026-09-30/run-20260930-q`: 300초 poll timeout 전 waiter 1, 이후 동일 `event_kafka_consumer_positions` partition에 waiter 3; group member 2→1, partition 0 owner 변경. 잠금 중 target intake 0, 해제 후 original target 1·receipt 1·두 consumer `DONE` |
+| 별도 maintenance JVM admission / expiry | 같은 run에서 maintenance JVM 둘이 대기 후보의 request event 1개를 admission하고 `PROMOTED`·Offer/Reservation/active Allocation 각 1로 수렴. 첫 후보 HOLD는 만료 뒤 capacity release event 1개와 `NO_CANDIDATE`, Offer/Reservation `EXPIRED`, active Allocation 0으로 수렴 |
+| caught append failure rollback | `2026-09-30/run-20260930-relay-d`: MANDATORY append의 route mismatch를 caller가 catch해도 outer business transaction rollback. event/publication/business row 모두 0 |
+| retention gap의 원본 보존 | 같은 run에서 log-start gap은 `KafkaRetentionProbe` incident로 판정되고 original event와 publication row 각 1을 raw에서 확인. 자동 latest reset 없음 |
+| cutover provenance | `2026-09-30/run-20260930-cutover-b`: epoch 변경/rollback 결과는 raw에서 original 2, target 4, unauthorized attempt 0으로 재계산. MySQL container와 class hash 기록 |
 
 각 phase에는 가능한 DB original/publication/intake/target/delivery/receipt/business state와
 broker offset/assignment/ISR를 함께 기록했다. DB가 멈춘 phase는 DB snapshot의 불가 상태를
@@ -98,10 +116,32 @@ Raw SHA-256: `ec7eb78a2fccb12d9417e102516e8ebc29e965458e52ec3a11a796e3889f4913`
 (`process-raw.json`; `recalculated.json`의 `rawSha256`과 동일).
 2026-09-30 candidate run raw SHA-256은
 `7d5149feb413b09437dff4b942d4ab5e2f89f60b1ee74745e9872a6817535f94`다.
+2026-09-30 slow-intake·maintenance run raw SHA-256은
+`7328a8f847442fb4a4755e8ecc57a873fab603e6abf58a67628165645680c60c`다.
+새 relay/cutover raw SHA-256은 각각
+`972b03fb6a8e77ebbd4e3cbcbbb5c958390a357af51e79927aa9c69bf2662d07`,
+`8befe125cb58a128d6c70fa9a00ca5a9f5e7c2416d04cfda36fc4c1b05a912b4`다.
 
-## 아직 별도 검증이 필요한 #109 matrix
+## 검증 경계
 
-이 checkpoint는 #109 완료 판정이 아니다. slow intake의 실제 poll timeout과
-old/new member의 동일 record 관측,
-전체 Backend test/clean build를
-후속 workstream에서 추가한다. 기존 #107·#108 evidence를 이 항목의 새 PASS로 세지 않는다.
+`run-20260930-q/recalculated.json`은 raw에서 9개 original event 전부를 설명하고,
+duplicate logical target·partial receipt/DONE·unexplained DEAD·capacity violation을
+각각 0으로 재계산한다. Broker는 한 Docker host의 3개 persistent volume이며
+broker data loss나 MySQL HA를 실험하지 않았다. Retention gap은 infrastructure incident로
+판정하고 #110의 사람 operator recovery는 실행하지 않았다. 기존 #107·#108 evidence를
+이번 실행의 PASS로 세지 않는다.
+
+## 최종 로컬 검증
+
+2026-09-30에 `backend/`에서 다음을 직접 실행했다.
+
+```powershell
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests --tests com.slotq.KafkaWaitlistVerticalSliceIntegrationTests --tests com.slotq.KafkaBookingPublicationIntegrationTests --no-daemon --offline --console=plain
+.\gradlew.bat test --no-daemon --offline --console=plain
+```
+
+대상 regression 3개 test가 통과했다. Backend 전체 test는 76개 suite,
+610개 test 중 실패 0·오류 0·skip 9로 통과했다. Opt-in #109 process 및 raw integrity는
+위 개별 명령으로 실행했고, 전체 test의 skip을 별도 PASS로 계산하지 않았다.
+로컬 `clean build`는 사용자의 지시에 따라 실행하지 않았다. GitHub CI 결과는
+이 문서의 검증 결과에 포함하지 않는다.
