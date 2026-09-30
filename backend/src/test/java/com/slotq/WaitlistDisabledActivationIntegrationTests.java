@@ -34,7 +34,7 @@ class WaitlistDisabledActivationIntegrationTests {
         scheduler.shutdown();
     }
     @Container @ServiceConnection static final org.testcontainers.mysql.MySQLContainer MYSQL=
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_activation_disabled");
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_activation_disabled");
     @Autowired WaitlistPromotionBootstrap bootstrap;
     @Autowired WaitlistPromotionReadiness readiness;
     @Autowired EventRegistrationService registrations;

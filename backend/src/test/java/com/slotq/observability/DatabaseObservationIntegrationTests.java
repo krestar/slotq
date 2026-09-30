@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DatabaseObservationIntegrationTests {
     @Container @ServiceConnection
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
-            new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_observation");
+            new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_observation");
     @Autowired JdbcTemplate jdbc;
     private final DatabaseObservation observation = new DatabaseObservation();
     private final byte[] tenant = bytes(UUID.randomUUID());

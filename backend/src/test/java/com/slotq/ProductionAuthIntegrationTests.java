@@ -29,7 +29,7 @@ class ProductionAuthIntegrationTests {
 
     @Container
     @ServiceConnection
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1")
         .withDatabaseName("slotq");
 
     @Autowired
@@ -37,6 +37,16 @@ class ProductionAuthIntegrationTests {
 
     @Autowired
     ApplicationContext applicationContext;
+
+    @Test
+    void operationsRecoveryIsDisabledByDefaultEvenForSecureRequests() throws Exception {
+        mockMvc.perform(get("/internal/operations/tenants/" + java.util.UUID.randomUUID()
+                + "/consumers/waitlist.promotion/deliveries").secure(true)
+                .header("Authorization", "Bearer runtime-dev-token"))
+            .andExpect(status().isNotFound())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                .string("Cache-Control", "no-store"));
+    }
 
     @Test
     void productionHasNoBootstrapOrDevResolverAndRejectsDevCredentials() throws Exception {

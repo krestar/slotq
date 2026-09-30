@@ -42,7 +42,7 @@ class OperationsObservationIntegrationTests {
         "operations.event-observation", "DB_DIRECT", 1);
     @Container @ServiceConnection
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_operations_observation");
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_operations_observation");
 
     @Autowired EventRegistrationService registrations;
     @Autowired EventAppendService append;

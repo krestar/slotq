@@ -79,7 +79,8 @@ public final class WaitlistBaselineRunner {
         long seed = Long.parseLong(System.getProperty("slotq.waitlist.baseline.seed", "10501"));
         Path output = Path.of(System.getProperty("slotq.waitlist.baseline.output", "build/reports/experiments/waitlist-baseline/" + UUID.randomUUID())).toAbsolutePath();
         require(!Files.exists(output), "Use a fresh evidence directory: " + output);
-        try (var mysql = new MySQLContainer("mysql:8.4").withDatabaseName("slotq_baseline")) {
+        try (var mysql = new MySQLContainer("mysql:8.4").withDatabaseName("slotq_baseline")
+                .withCommand("--log-bin-trust-function-creators=1")) {
             mysql.start();
             long startup = System.nanoTime();
             try (var context = new SpringApplicationBuilder(SlotqApplication.class, Configuration.class).run(

@@ -46,7 +46,7 @@ class EventAppendIntegrationTests {
     @Container
     @ServiceConnection
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("slotq_event_append");
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("slotq_event_append");
 
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactionManager;

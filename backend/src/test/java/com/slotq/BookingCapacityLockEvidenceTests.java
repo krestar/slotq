@@ -72,7 +72,7 @@ class BookingCapacityLockEvidenceTests {
     static final Instant START = Instant.parse("2026-08-30T11:00:00Z");
     @Container @ServiceConnection
     static final org.testcontainers.mysql.MySQLContainer MYSQL =
-        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withDatabaseName("capacity_lock_evidence");
+        new org.testcontainers.mysql.MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1").withDatabaseName("capacity_lock_evidence");
     @Autowired TenantUseCase tenants;
     @Autowired VenueConfigurationUseCase venues;
     @Autowired ResourceUseCase resources;

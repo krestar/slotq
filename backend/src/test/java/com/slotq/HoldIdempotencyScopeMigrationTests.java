@@ -34,7 +34,7 @@ class HoldIdempotencyScopeMigrationTests {
     private static final String RESERVATION_B = "60000000000000000000000000000003";
 
     @Container
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1")
         .withDatabaseName("slotq_hold_idempotency_scope_migration");
 
     @Test
@@ -52,7 +52,7 @@ class HoldIdempotencyScopeMigrationTests {
 
         Flyway current = flyway().load();
         current.migrate();
-        assertThat(current.info().current().getVersion().toString()).isEqualTo("19");
+        assertThat(current.info().current().getVersion().toString()).isEqualTo("20");
 
         try (var connection = DriverManager.getConnection(
             MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword()
