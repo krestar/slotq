@@ -1,0 +1,1 @@
+{"schemaVersion":"slotq-kafka-relay-recalculation/v1","rawSha256":"e6b1098319741a0ef9943c12ec8410dc396df8c2bbff4a9e531bbcc67a2a4e21","committedOriginals":4,"publishedOriginals":4,"physicalRecordsAfterMarkCrash":2,"physicalRecordsAfterAckLoss":2,"retentionGapIncident":true}

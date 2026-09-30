@@ -1,0 +1,1 @@
+{"schemaVersion":"slotq-kafka-intake-recalculation/v1","rawSha256":"44a3ce95aa1790cc8884c66069f36f81b4c584bd4cb81d02da2ad50e90c7fa2c","verifiedCrashWindows":["BEFORE_INTAKE","AFTER_INTAKE","AFTER_OFFSET"],"postOffsetPendingAttempts":0,"finalTargetCount":1,"finalReceiptCount":1,"quarantineCount":4,"relayAckCrashDeduplicated":true,"quarantinePersistenceRecovered":true}

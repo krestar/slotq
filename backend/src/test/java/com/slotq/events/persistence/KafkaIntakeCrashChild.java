@@ -1,6 +1,9 @@
 package com.slotq.events.persistence;
 
 import java.time.Duration;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -10,10 +13,12 @@ import com.slotq.events.application.KafkaConsumerCatalog;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Opt-in process-crash fixture; exit codes identify the exact durable window. */
 public final class KafkaIntakeCrashChild {
@@ -53,17 +58,41 @@ public final class KafkaIntakeCrashChild {
                 while (System.nanoTime() < deadline) {
                     for (var record : consumer.poll(Duration.ofMillis(250))) {
                         if (!new String(record.value(), java.nio.charset.StandardCharsets.UTF_8).contains(eventId)) continue;
-                        if (mode.equals("BEFORE_INTAKE")) Runtime.getRuntime().halt(81);
+                        if (mode.equals("BEFORE_INTAKE")) {
+                            checkpoint(mode, consumer, record);
+                            Runtime.getRuntime().halt(81);
+                        }
                         store.intake(record, definition, 2);
-                        if (mode.equals("AFTER_INTAKE")) Runtime.getRuntime().halt(82);
+                        if (mode.equals("AFTER_INTAKE")) {
+                            checkpoint(mode, consumer, record);
+                            Runtime.getRuntime().halt(82);
+                        }
                         TopicPartition partition = new TopicPartition(record.topic(), record.partition());
                         consumer.commitSync(Map.of(partition, new OffsetAndMetadata(record.offset() + 1)));
-                        if (mode.equals("AFTER_OFFSET")) Runtime.getRuntime().halt(83);
+                        if (mode.equals("AFTER_OFFSET")) {
+                            checkpoint(mode, consumer, record);
+                            Runtime.getRuntime().halt(83);
+                        }
                         throw new IllegalArgumentException("Unknown crash mode");
                     }
                 }
                 throw new IllegalStateException("Crash fixture did not observe the original Kafka event");
             }
+        }
+    }
+
+    private static void checkpoint(String mode, KafkaConsumer<byte[], byte[]> consumer,
+                                   ConsumerRecord<byte[], byte[]> record) {
+        String target = System.getenv("SLOTQ_INTAKE_TEST_MARKER");
+        if (target == null || target.isBlank()) return;
+        try {
+            Files.writeString(Path.of(target), new JsonMapper().writeValueAsString(Map.of(
+                "at", Instant.now().toString(), "stage", mode,
+                "pid", ProcessHandle.current().pid(), "topic", record.topic(),
+                "partition", record.partition(), "offset", record.offset(),
+                "assignment", consumer.assignment().stream().map(TopicPartition::toString).sorted().toList())));
+        } catch (java.io.IOException failure) {
+            throw new IllegalStateException("Cannot persist test-only crash checkpoint", failure);
         }
     }
 }
