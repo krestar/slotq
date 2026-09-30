@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "slotq-m5-progress/v1",
+  "status": "DRAFT_INCOMPLETE",
+  "issue": 111,
+  "baseRevision": "7a3890116514c7d84b17391c08f98a041ae844de",
+  "comparison": {
+    "result": "PASS_FOR_RECORDED_SOURCE",
+    "cohort": "2026-10-01-comparison",
+    "profiles": 5,
+    "repetitionsPerProfile": 3,
+    "originalEvents": 615,
+    "businessTargets": 1230,
+    "unexplainedCorrectnessViolations": 0,
+    "canonicalRecalculation": "PASS_15_RAW_SUMMARY_CSV_ROUND_TRIPS",
+    "provenance": "Measured before the empty-partition lag observation correction. Manifest source hashes remain unchanged; this is not a measurement of the latest source."
+  },
+  "targetedVerification": {
+    "intakeCorrection": "See intake-correction.json: 3/3 deadlock reproductions before correction, then 80 test cases across eight relevant suites passed.",
+    "latest": {
+      "command": "gradlew.bat test --tests '*KafkaIntakeObservabilityTests' --tests '*ObservationMeterFilterTests' --tests '*M5CanonicalEvidenceTests' --tests '*M5TransportEvidenceTests' --offline --no-daemon --console=plain",
+      "result": "PASS",
+      "testCases": 13,
+      "logSha256": "150586c6956ae1491bad43cac3ab75fefea0f92aec9acc7411a59dee5fb011ba",
+      "suites": [
+        {
+          "tests": 3,
+          "suite": "com.slotq.events.persistence.KafkaIntakeObservabilityTests",
+          "failures": 0,
+          "skipped": 0,
+          "errors": 0
+        },
+        {
+          "tests": 3,
+          "suite": "com.slotq.experiments.waitlist.M5CanonicalEvidenceTests",
+          "failures": 0,
+          "skipped": 0,
+          "errors": 0
+        },
+        {
+          "tests": 4,
+          "suite": "com.slotq.experiments.waitlist.M5TransportEvidenceTests",
+          "failures": 0,
+          "skipped": 0,
+          "errors": 0
+        },
+        {
+          "tests": 3,
+          "suite": "com.slotq.observability.ObservationMeterFilterTests",
+          "failures": 0,
+          "skipped": 0,
+          "errors": 0
+        }
+      ]
+    }
+  },
+  "lagCorrection": {
+    "failure": "A broker-observed absolute end offset 0 with no first committed offset kept the lag sample unhealthy after successful broker/business recovery.",
+    "before": {
+      "command": "gradlew.bat test --tests '*KafkaIntakeObservabilityTests' --offline --no-daemon --console=plain",
+      "tests": 3,
+      "failures": 1,
+      "observedFailure": "realEmptyPartitionNeedsNoCommittedOffsetToBeKnownHealthyZeroLag",
+      "logSha256": "e88a1680b4697f066a6ced323d8e421fb00de06908d7a477690daaab52637157"
+    },
+    "after": "Three KafkaIntakeObservabilityTests passed. Only broker-proven absolute end 0 permits a missing committed offset; nonempty/missing/unavailable provenance remains unknown. No offset mutation or client-position substitution.",
+    "freshIntegratedDrill": "NOT_RUN_AFTER_CORRECTION"
+  },
+  "integratedDrill": {
+    "overallResult": "FAIL_NOT_GATE_EVIDENCE",
+    "attempts": [
+      {
+        "correction": "Fixed loopback broker endpoint in the test harness; separate restart probe confirmed unchanged endpoint.",
+        "result": "FAIL",
+        "reason": "Kafka Testcontainers dynamic mapped endpoint changed across stop/start, preventing broker reconnection.",
+        "elapsed": "6m 8s",
+        "logSha256": "5a1138f8ba62fbea50e1a5e5d461231b4b3e4c43bdc09a2ddbaa43ebe0f25763"
+      },
+      {
+        "correction": "Empty-partition lag sampling corrected; latest targeted tests passed; fresh complete drill pending.",
+        "result": "FAIL",
+        "reason": "Timed out waiting for SlotqKafkaLagUnavailable to clear after broker/business recovery.",
+        "elapsed": "4m 19s",
+        "logSha256": "9b23843258234bfaf75643d16df97ff21a18f08e6153825a4a42dbbc67483634"
+      }
+    ],
+    "observedBeforeFailure": [
+      "Actual protected scrape, Grafana queries and Tempo trace lookup executed.",
+      "Kafka observer process failure/restart and Waitlist DEAD/cause correction with authenticated HTTPS human replay executed.",
+      "Second attempt recovered broker publication/intake and DB business completion, then failed while waiting for the unavailable-lag alert to clear."
+    ],
+    "notCompleted": [
+      "Publication ACK-unknown detection/redelivery and integrated audit/durable convergence",
+      "Actual MySQL outage after durable Kafka intake, telemetry continuity and DB executor recovery",
+      "Quiesced Kafka-to-DB rollback with receipt/attempt preservation and post-rollback DB isolation/recovery",
+      "Full alert firing/clearing, detection/recovery timing and escalation evidence"
+    ],
+    "canonicalSuccessDataset": "NONE"
+  },
+  "remainingGates": [
+    "Run and recalculate a fresh complete integrated operations drill after the lag correction; investigate in-scope failures.",
+    "Assess the latest observation change against the frozen comparison source and perform required fresh comparison verification without relabeling existing measurements.",
+    "Run required cumulative Backend regression, full Backend test and clean build, plus the Issue-required Frontend typecheck/test/build.",
+    "Determine default transport independently from Kafka adoption and repository/runtime status, using correctness/isolation/recovery/resource/operational evidence.",
+    "Finalize DB direct support horizon, supported roles, broker/DB retention and recovery horizon, shared failure domains and regression costs.",
+    "Write a new Accepted ADR preserving historical ADR decisions and update the ADR Register, README and roadmap only after evidence supports the decisions.",
+    "Reconcile the actual #105-#110 completion conditions and merged evidence before deciding whether M5 can close."
+  ],
+  "openEngineeringQuestions": [
+    {
+      "source": "backend/src/main/java/com/slotq/events/persistence/JdbcKafkaPublicationLedger.java: verifyTopic",
+      "observation": "The current retention guard considers the minimum acknowledged offset of all PUBLISHED rows, including completed targets. Broker retention can therefore cause conservative fail-closed publication even after business completion.",
+      "requiredDecision": "Assess the authenticated publication-recovery operational burden and recovery horizon; do not silently weaken the guard or claim continuous production adoption. Classify any required correction against #111 scope before implementation."
+    },
+    {
+      "observation": "DB direct Product bootstrap currently requires its local Waitlist executor/maintenance. The comparison/drill timer adapter does not verify a DB producer-only deployment.",
+      "requiredDecision": "Record the actual supported roles and shared-DB/shared-host limits when evaluating independent processes and scale-out."
+    }
+  ],
+  "notRun": [
+    "Backend full test",
+    "Backend clean build",
+    "Frontend typecheck",
+    "Frontend test",
+    "Frontend build"
+  ],
+  "architectureDecision": "UNDECIDED",
+  "m5Closure": "NOT_COMPLETE",
+  "evidenceSelection": "Only manifests, lossless canonical comparison raw, root summary/integrity, focused correction results and this progress record are retained. Failed full logs, debug snapshots, warmups and exploratory output remain ignored locally. Existing historical evidence is preserved.",
+  "safeWrapVerification": {
+    "diffCheck": "PASS",
+    "artifactReview": "PASS: 32 comparison files only; no full logs/debug dumps; new text and decompressed raw reviewed for private context and credential fields",
+    "dashboardJsonAndUniqueAlerts": "PASS",
+    "runtimeCleanup": "No experiment JVM or running Docker container found at safe wrap",
+    "canonicalRecalculation": {
+      "command": "gradlew.bat m5CanonicalEvidence '-Precalculate=../docs/experiments/m5-transport/2026-10-01-comparison' --offline --no-daemon --console=plain",
+      "result": "PASS_15_DATASETS",
+      "logSha256": "073b1e3b9dad52c776d930130b11b27f77e059b57cf0744dfc9694b6aa7809b8"
+    }
+  }
+}

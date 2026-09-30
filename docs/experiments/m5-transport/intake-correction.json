@@ -1,0 +1,90 @@
+{
+  "contract": "Two independent consumers insert cold delivery targets under MySQL REPEATABLE-READ",
+  "baseRevision": "7a3890116514c7d84b17391c08f98a041ae844de",
+  "before": {
+    "command": "gradlew.bat test --tests '*KafkaIntakeConcurrencyIntegrationTests' --offline --no-daemon --console=plain",
+    "expectedFailure": true,
+    "observedLogExcerpt": [
+      "KafkaIntakeConcurrencyIntegrationTests > simultaneousColdTargetsKeepBothPrefixesAndFirstMaterializationWithoutGapDeadlock() > repetition 1 of 3 FAILED",
+      "        Caused by: org.springframework.dao.CannotAcquireLockException at KafkaIntakeConcurrencyIntegrationTests.java:45",
+      "            Caused by: com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException at KafkaIntakeConcurrencyIntegrationTests.java:45",
+      "KafkaIntakeConcurrencyIntegrationTests > simultaneousColdTargetsKeepBothPrefixesAndFirstMaterializationWithoutGapDeadlock() > repetition 2 of 3 FAILED",
+      "        Caused by: org.springframework.dao.CannotAcquireLockException at KafkaIntakeConcurrencyIntegrationTests.java:45",
+      "            Caused by: com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException at KafkaIntakeConcurrencyIntegrationTests.java:45",
+      "KafkaIntakeConcurrencyIntegrationTests > simultaneousColdTargetsKeepBothPrefixesAndFirstMaterializationWithoutGapDeadlock() > repetition 3 of 3 FAILED",
+      "        Caused by: org.springframework.dao.CannotAcquireLockException at KafkaIntakeConcurrencyIntegrationTests.java:45",
+      "            Caused by: com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException at KafkaIntakeConcurrencyIntegrationTests.java:45",
+      "3 tests completed, 3 failed"
+    ],
+    "logSha256": "2a9cc647bc215a8ab02268bf648a3ea5dd3bc07a7e5af06e117fdd7b72541def"
+  },
+  "after": {
+    "result": "PASS",
+    "suites": [
+      {
+        "suite": "com.slotq.events.application.KafkaRuntimeGuardTests",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.712
+      },
+      {
+        "suite": "com.slotq.events.persistence.KafkaIntakeConcurrencyIntegrationTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 32.656
+      },
+      {
+        "suite": "com.slotq.experiments.waitlist.M5CanonicalEvidenceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.084
+      },
+      {
+        "suite": "com.slotq.experiments.waitlist.M5TransportEvidenceTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.016
+      },
+      {
+        "suite": "com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests",
+        "tests": 53,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 34.836
+      },
+      {
+        "suite": "com.slotq.KafkaWaitlistVerticalSliceIntegrationTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 34.141
+      },
+      {
+        "suite": "com.slotq.observability.DatabaseObservationIntegrationTests",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 17.277
+      },
+      {
+        "suite": "com.slotq.observability.web.MetricOnlyRuntimeFilterTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.001
+      }
+    ]
+  }
+}
