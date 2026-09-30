@@ -1,8 +1,10 @@
 package com.slotq.events;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -108,6 +110,11 @@ class EventTransportCutoverIntegrationTests {
             raw.put("mysqlVersion", db.queryForObject("SELECT VERSION()", String.class));
             raw.put("mysqlIsolation", db.queryForObject("SELECT @@transaction_isolation", String.class));
             raw.put("revision", System.getProperty("slotq.kafka.evidence.revision", "unrecorded"));
+            raw.put("workingTreeStatus", gitStatus());
+            raw.put("harnessClassSha256", classSha256());
+            raw.put("mysqlContainer", MYSQL.getContainerId());
+            raw.put("mysqlVolume", "ephemeral Testcontainers volume; DB authority regression only");
+            raw.put("javaVersion", System.getProperty("java.version"));
             raw.put("pid", ProcessHandle.current().pid());
             raw.put("originals", List.of(before.eventId().value().toString(),
                 duringKafka.eventId().value().toString()));
@@ -151,6 +158,22 @@ class EventTransportCutoverIntegrationTests {
         state.put("dbDeliveryCursor", db.queryForObject(
             "SELECT boundary_sequence FROM event_discovery WHERE singleton_id=1", Long.class));
         return state;
+    }
+
+    private static String classSha256() throws Exception {
+        try (var input = EventTransportCutoverIntegrationTests.class.getResourceAsStream(
+            "EventTransportCutoverIntegrationTests.class")) {
+            return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(input.readAllBytes()));
+        }
+    }
+
+    private static String gitStatus() throws Exception {
+        Process process = new ProcessBuilder("git", "-c", "safe.directory=C:/dev/slotq", "status", "--short")
+            .directory(Path.of("..").toFile()).start();
+        String body = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(process.waitFor()).isZero();
+        return body.strip();
     }
 
     private static EventEnvelope event(UUID tenant) {
