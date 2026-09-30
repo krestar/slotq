@@ -50,6 +50,52 @@ class KafkaFaultEvidenceIntegrityTests {
             "db-unavailable-after-intake-entrypoint",
             "first-db-recovery", "db-outage-converged");
         assertThat(phases.keySet()).containsAll(required);
+        boolean initialFailStop = phases.containsKey("initial-consumer-fail-stop");
+        if (initialFailStop) {
+            assertThat(phases).containsKey("initial-consumer-restart");
+            Map<String, Object> stalled = phases.get("initial-consumer-fail-stop");
+            assertThat(list(stalled.get("event"))).hasSize(1);
+            assertThat(list(stalled.get("publication"))).hasSize(1);
+            int waitlistMembers = list(group(stalled, "waitlist.promotion").get("members")).size();
+            int observerMembers = list(group(stalled, "operations.event-observation").get("members")).size();
+            assertThat(waitlistMembers == 0 || observerMembers == 0).isTrue();
+            assertThat(KafkaFaultEvidenceIntegrityTests.<Map<String, Object>>list(
+                phases.get("initial-consumer-restart").get("processes")))
+                .anySatisfy(process -> assertThat(process.get("label").toString())
+                    .contains("initial-recovered"));
+        }
+        boolean slowIntake = phases.containsKey("slow-intake-converged");
+        if (slowIntake) {
+            assertThat(phases.keySet()).containsAll(List.of("slow-intake-before-lock",
+                "slow-intake-record-produced", "slow-intake-jdbc-entrypoint-waiting",
+                "slow-intake-locked", "slow-intake-old-new-jdbc-entrypoints-waiting",
+                "slow-intake-poll-timeout-rebalance", "slow-intake-first-db-opportunity",
+                "slow-intake-converged"));
+            assertThat(((Number) phases.get("slow-intake-jdbc-entrypoint-waiting")
+                .get("waiters")).intValue()).isGreaterThanOrEqualTo(1);
+            assertThat(((Number) phases.get("slow-intake-old-new-jdbc-entrypoints-waiting")
+                .get("waiters")).intValue()).isGreaterThanOrEqualTo(2);
+            Map<String, Object> locked = phases.get("slow-intake-locked");
+            Map<String, Object> rebalanced = phases.get("slow-intake-poll-timeout-rebalance");
+            assertThat(KafkaFaultEvidenceIntegrityTests.<Map<String, Object>>list(locked.get("targetIntake"))
+                .stream().filter(row -> "waitlist.promotion".equals(row.get("consumerId"))).toList()).isEmpty();
+            assertThat(KafkaFaultEvidenceIntegrityTests.<Map<String, Object>>list(rebalanced.get("targetIntake"))
+                .stream().filter(row -> "waitlist.promotion".equals(row.get("consumerId"))).toList()).isEmpty();
+            List<Map<String, Object>> oldMembers = list(group(locked, "waitlist.promotion").get("members"));
+            List<Map<String, Object>> newMembers = list(group(rebalanced, "waitlist.promotion").get("members"));
+            assertThat(oldMembers).hasSize(2);
+            assertThat(newMembers).hasSize(1);
+            int partition = ((Number) map(phases.get("slow-intake-record-produced")
+                .get("coordinate")).get("partition")).intValue();
+            String oldOwner = oldMembers.stream().filter(member -> KafkaFaultEvidenceIntegrityTests.<Number>list(
+                member.get("assignedPartitions")).stream().anyMatch(value -> value.intValue() == partition))
+                .map(member -> member.get("memberId").toString()).findFirst().orElseThrow();
+            String newOwner = newMembers.stream().filter(member -> KafkaFaultEvidenceIntegrityTests.<Number>list(
+                member.get("assignedPartitions")).stream().anyMatch(value -> value.intValue() == partition))
+                .map(member -> member.get("memberId").toString()).findFirst().orElseThrow();
+            assertThat(newOwner).isNotEqualTo(oldOwner);
+            assertOffsetsDoNotExceedDurablePrefix(phases.get("slow-intake-converged"));
+        }
 
         Map<String, Object> before = phases.get("before-relay");
         assertThat(list(before.get("event"))).hasSize(1);
@@ -105,8 +151,11 @@ class KafkaFaultEvidenceIntegrityTests {
         int unexplainedDead = 0;
         int unexpectedPromotionalReservations = 0;
         int capacityViolations = 0;
-        for (String phase : List.of("two-groups-converged", "observer-recovered", "rebalance-converged",
-            "leader-down-converged", "all-brokers-recovered", "db-outage-converged")) {
+        List<String> convergedPhases = new java.util.ArrayList<>(List.of("two-groups-converged",
+            "observer-recovered", "rebalance-converged", "leader-down-converged",
+            "all-brokers-recovered", "db-outage-converged"));
+        if (slowIntake) convergedPhases.add("slow-intake-converged");
+        for (String phase : convergedPhases) {
             Map<String, Object> end = phases.get(phase);
             assertThat(list(end.get("event"))).hasSize(1);
             assertThat(list(end.get("publication"))).hasSize(1);
@@ -151,6 +200,62 @@ class KafkaFaultEvidenceIntegrityTests {
             assertOffsetsDoNotExceedDurablePrefix(end);
             explained++;
         }
+        boolean maintenance = phases.containsKey("maintenance-release-converged");
+        if (slowIntake) assertThat(maintenance).isTrue();
+        if (maintenance) {
+            assertThat(phases.keySet()).containsAll(List.of("maintenance-before-admission-and-expiry",
+                "maintenance-first-opportunity", "maintenance-admission-converged",
+                "maintenance-release-converged", "product-http-with-maintenance"));
+            assertThat(phases.get("product-http-with-maintenance").get("status")).isEqualTo(200);
+            Map<String, Object> beforeMaintenance = map(
+                phases.get("maintenance-before-admission-and-expiry").get("maintenance"));
+            assertThat(list(beforeMaintenance.get("slotEvents"))).isEmpty();
+            assertThat(list(beforeMaintenance.get("slotOffers"))).isEmpty();
+            assertThat(list(beforeMaintenance.get("firstCandidate"))).hasSize(1);
+            for (String phase : List.of("maintenance-admission-converged",
+                "maintenance-release-converged")) {
+                Map<String, Object> end = phases.get(phase);
+                assertThat(list(end.get("event"))).hasSize(1);
+                assertThat(KafkaFaultEvidenceIntegrityTests.<Map<String, Object>>list(
+                    end.get("publication")).getFirst().get("state")).isEqualTo("PUBLISHED");
+                List<Map<String, Object>> targets = list(end.get("targetIntake"));
+                assertThat(targets).hasSize(2);
+                assertThat(targets.stream().map(row -> row.get("consumerId")).toList())
+                    .containsExactlyInAnyOrder("waitlist.promotion", "operations.event-observation");
+                duplicateTargets += targets.size() - (int) targets.stream().map(row -> row.get("consumerId"))
+                    .distinct().count();
+                assertThat(KafkaFaultEvidenceIntegrityTests.<Map<String, Object>>list(end.get("delivery")))
+                    .hasSize(2).allSatisfy(row -> assertThat(row.get("state")).isEqualTo("DONE"));
+                assertThat(list(end.get("receipt"))).hasSize(1);
+                assertOffsetsDoNotExceedDurablePrefix(end);
+                explained++;
+            }
+            Map<String, Object> admitted = phases.get("maintenance-admission-converged");
+            Map<String, Object> released = phases.get("maintenance-release-converged");
+            assertThat(KafkaFaultEvidenceIntegrityTests.<Map<String, Object>>list(
+                admitted.get("receipt")).getFirst().get("outcome")).isEqualTo("PROMOTED");
+            assertThat(KafkaFaultEvidenceIntegrityTests.<Map<String, Object>>list(
+                released.get("receipt")).getFirst().get("outcome")).isEqualTo("NO_CANDIDATE");
+            Map<String, Object> finalMaintenance = map(released.get("maintenance"));
+            assertThat(list(finalMaintenance.get("slotEvents"))).hasSize(1);
+            List<Map<String, Object>> slotOffers = list(finalMaintenance.get("slotOffers"));
+            assertThat(slotOffers).hasSize(1);
+            assertThat(slotOffers.getFirst().get("allocationActive")).isEqualTo(true);
+            List<Map<String, Object>> firstCandidate = list(finalMaintenance.get("firstCandidate"));
+            assertThat(firstCandidate).hasSize(1);
+            assertThat(firstCandidate.getFirst().get("offerState")).isEqualTo("EXPIRED");
+            assertThat(firstCandidate.getFirst().get("allocationActive")).isEqualTo(false);
+            assertThat(((Number) finalMaintenance.get("allOriginalCount")).intValue()).isEqualTo(explained);
+            List<Map<String, Object>> allOriginals = list(raw.get("allOriginals"));
+            assertThat(allOriginals).hasSize(explained);
+            assertThat(allOriginals.stream().map(row -> row.get("eventId")).toList())
+                .containsExactlyInAnyOrderElementsOf(KafkaFaultEvidenceIntegrityTests.<String>list(
+                    raw.get("originalEventIds")).stream().map(id -> id.replace("-", "")
+                    .toUpperCase(java.util.Locale.ROOT)).toList());
+            Map<String, Object> identities = map(raw.get("maintenance"));
+            assertThat(admitted.get("eventId")).isEqualTo(identities.get("admissionEventId"));
+            assertThat(released.get("eventId")).isEqualTo(identities.get("releaseEventId"));
+        }
         assertThat(list(raw.get("originalEventIds"))).hasSize(explained);
         assertThat(duplicateTargets).isZero();
         assertThat(partialReceiptDone).isZero();
@@ -172,6 +277,9 @@ class KafkaFaultEvidenceIntegrityTests {
         recalculated.put("unexpectedPromotionalReservations", unexpectedPromotionalReservations);
         recalculated.put("capacityViolations", capacityViolations);
         recalculated.put("observedPhases", required);
+        recalculated.put("realPollTimeoutRebalance", slowIntake);
+        recalculated.put("initialFailStopRecovered", initialFailStop);
+        recalculated.put("multiProcessMaintenance", maintenance);
         Files.writeString(folder.resolve("recalculated.json"), json.writeValueAsString(recalculated));
     }
 

@@ -9,6 +9,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.sql.DriverManager;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -109,6 +110,10 @@ class KafkaFaultProcessIntegrationTests {
     private UUID candidateEntry;
     private UUID candidateSlot;
     private UUID candidateEvent;
+    private UUID maintenanceEntry;
+    private UUID maintenanceSlot;
+    private UUID maintenanceEvent;
+    private UUID maintenanceRelease;
     private final JsonMapper json = new JsonMapper();
     private Path output;
     private Path processLogs;
@@ -131,7 +136,30 @@ class KafkaFaultProcessIntegrationTests {
             ManagedProcess product = start("product-1", "product");
             await("two independent groups", Duration.ofSeconds(90), () ->
                 members(WAITLIST) == 1 && members(OBSERVER) == 1);
-            awaitConvergence(first);
+            try {
+                awaitConvergence(first);
+            } catch (AssertionError stalled) {
+                if (stalled.getMessage() == null
+                    || !stalled.getMessage().startsWith("Timed out waiting for both durable targets DONE"))
+                    throw stalled;
+                // A consumer can fail closed during simultaneous initial intake. Preserve its
+                // broker/DB state, then exercise the ordinary process-restart recovery path.
+                capture("initial-consumer-fail-stop", first);
+                boolean restarted = false;
+                if (members(WAITLIST) == 0) {
+                    waitlist1.kill();
+                    waitlist1 = start("waitlist-initial-recovered", WAITLIST);
+                    restarted = true;
+                }
+                if (members(OBSERVER) == 0) {
+                    observer1.kill();
+                    observer1 = start("observer-initial-recovered", OBSERVER);
+                    restarted = true;
+                }
+                if (!restarted) throw stalled;
+                capture("initial-consumer-restart", first);
+                awaitConvergence(first);
+            }
             capture("two-groups-converged", first);
             await("Product HTTP admission", Duration.ofSeconds(90), () -> publicVenueStatus(product) == 200);
             recordProductHttp("product-http-with-both-groups", product);
@@ -248,9 +276,100 @@ class KafkaFaultProcessIntegrationTests {
                 if (process.label.startsWith("waitlist-") || process.label.startsWith("observer-")) process.kill();
             start("waitlist-recovered", WAITLIST);
             start("observer-recovered", OBSERVER);
-            start("relay-after-db", "relay");
+            ManagedProcess relayAfterDb = start("relay-after-db", "relay");
             awaitConvergence(fifth);
             capture("db-outage-converged", fifth);
+
+            // The production consumer uses a fixed 300s max.poll.interval. Hold its existing
+            // durable-position row long enough to force a real group rebalance, without changing
+            // runtime semantics or broker durability settings.
+            relayAfterDb.kill();
+            processes.stream().filter(p -> p.label.equals("waitlist-recovered"))
+                .findFirst().orElseThrow().kill();
+            start("waitlist-slow-1", WAITLIST, true);
+            start("waitlist-slow-2", WAITLIST, true);
+            await("two slow-intake replicas", Duration.ofSeconds(90), () -> members(WAITLIST) == 2);
+            int slowPartition = db.queryForObject("""
+                SELECT partition_id FROM event_kafka_consumer_positions
+                 WHERE consumer_id=? AND topic=? ORDER BY partition_id LIMIT 1
+                """, Integer.class, WAITLIST, TOPIC);
+            UUID slow = appendRequest(8);
+            var slowStored = new TransactionTemplate(manager).execute(status ->
+                records.findEventForAppend(new EventId(slow)).orElseThrow());
+            var slowOriginRow = db.queryForMap("""
+                SELECT origin_request_id,origin_trace_id,origin_span_id FROM event_records WHERE event_id=?
+                """, bytes(slow));
+            var slowOrigin = new ProductTelemetry.Origin((String) slowOriginRow.get("origin_request_id"),
+                (String) slowOriginRow.get("origin_trace_id"), (String) slowOriginRow.get("origin_span_id"));
+            var slowWire = mapping.encode(slowStored, slowOrigin);
+            capture("slow-intake-before-lock", slow);
+            try (var lock = DriverManager.getConnection(MYSQL.getJdbcUrl(), MYSQL.getUsername(),
+                MYSQL.getPassword())) {
+                lock.setAutoCommit(false);
+                try (var query = lock.prepareStatement("""
+                    SELECT last_durable_offset FROM event_kafka_consumer_positions
+                     WHERE consumer_id=? AND topic=? AND partition_id=? FOR UPDATE
+                    """)) {
+                    query.setString(1, WAITLIST);
+                    query.setString(2, TOPIC);
+                    query.setInt(3, slowPartition);
+                    try (var rows = query.executeQuery()) { assertThat(rows.next()).isTrue(); }
+                }
+                Map<String, Object> sent = sendWire(slowWire.key(), slowWire.body(), slowPartition);
+                timeline.add(Map.of("phase", "slow-intake-record-produced", "at", Instant.now().toString(),
+                    "coordinate", sent, "lockedPartition", slowPartition));
+                await("production intake waiting on MySQL position lock", Duration.ofSeconds(30), () ->
+                    intakePositionLockWaiters() >= 1);
+                timeline.add(Map.of("phase", "slow-intake-jdbc-entrypoint-waiting",
+                    "at", Instant.now().toString(), "waiters", intakePositionLockWaiters(),
+                    "table", "event_kafka_consumer_positions", "partition", slowPartition));
+                capture("slow-intake-locked", slow);
+                Thread.sleep(Duration.ofSeconds(310));
+                await("poll timeout group reassignment", Duration.ofSeconds(45), () ->
+                    members(WAITLIST) == 1);
+                await("old and new JVMs waiting on the same intake position", Duration.ofSeconds(60),
+                    () -> intakePositionLockWaiters() >= 2);
+                timeline.add(Map.of("phase", "slow-intake-old-new-jdbc-entrypoints-waiting",
+                    "at", Instant.now().toString(), "waiters", intakePositionLockWaiters(),
+                    "table", "event_kafka_consumer_positions", "partition", slowPartition));
+                capture("slow-intake-poll-timeout-rebalance", slow);
+                lock.rollback();
+            }
+            capture("slow-intake-first-db-opportunity", slow);
+            await("slow intake durable target", Duration.ofSeconds(120), () ->
+                count("SELECT COUNT(*) FROM event_kafka_target_intakes WHERE event_id=?"
+                    + " AND consumer_id='waitlist.promotion'", slow) == 1);
+            start("relay-after-slow-intake", "relay");
+            awaitConvergence(slow);
+            capture("slow-intake-converged", slow);
+
+            // The long poll timeout has also made the first promotional HOLD expire.
+            // Run two independent maintenance JVMs against that durable backlog and a
+            // fresh waiting slot to observe expiry/release and request-admission races.
+            prepareMaintenanceCandidate();
+            byte[] candidateReservationBytes = db.queryForObject(
+                "SELECT reservation_id FROM waitlist_offers WHERE entry_id=?", byte[].class,
+                bytes(candidateEntry));
+            UUID candidateReservation = uuid(candidateReservationBytes);
+            captureMaintenance("maintenance-before-admission-and-expiry", candidateEvent);
+            start("maintenance-1", "maintenance");
+            start("maintenance-2", "maintenance");
+            captureMaintenance("maintenance-first-opportunity", candidateEvent);
+            await("one maintenance request admission", Duration.ofSeconds(120), () ->
+                count("SELECT COUNT(*) FROM event_records WHERE event_type='waitlist.promotion-requested'"
+                    + " AND aggregate_id=?", maintenanceSlot) >= 1);
+            maintenanceEvent = eventForAggregate("waitlist.promotion-requested", maintenanceSlot);
+            originals.add(maintenanceEvent);
+            awaitConvergence(maintenanceEvent);
+            captureMaintenance("maintenance-admission-converged", maintenanceEvent);
+            await("one expired HOLD release", Duration.ofSeconds(120), () ->
+                count("SELECT COUNT(*) FROM event_records WHERE event_type='booking.capacity-released'"
+                    + " AND aggregate_id=?", candidateReservation) >= 1);
+            maintenanceRelease = eventForAggregate("booking.capacity-released", candidateReservation);
+            originals.add(maintenanceRelease);
+            awaitConvergence(maintenanceRelease);
+            captureMaintenance("maintenance-release-converged", maintenanceRelease);
+            recordProductHttp("product-http-with-maintenance", product);
             assertFinalOracle();
         } finally {
             for (ManagedProcess process : processes) {
@@ -308,12 +427,78 @@ class KafkaFaultProcessIntegrationTests {
         return eventId;
     }
 
+    private void prepareMaintenanceCandidate() {
+        var tenant = tenants.createTenant();
+        Instant start = java.time.LocalDate.now(ZoneOffset.UTC)
+            .with(TemporalAdjusters.next(DayOfWeek.SUNDAY)).atTime(11, 0).toInstant(ZoneOffset.UTC);
+        var venue = venues.createVenue(new VenueConfigurationUseCase.CreateVenue(tenant.id(),
+            "Kafka maintenance admission", "UTC", new WeeklyOperatingHours(Map.of(DayOfWeek.SUNDAY,
+            new DailyOperatingHours(LocalTime.of(9, 0), LocalTime.of(14, 0)))),
+            new BookingPolicyTerms(30, 30, 20, 10)));
+        var resource = resources.createResource(new ResourceUseCase.CreateResource(
+            tenant.id(), venue.id(), "Table", 4));
+        var slot = slots.createSlot(new SlotInventoryUseCase.CreateSlot(
+            tenant.id(), venue.id(), resource.id(), start.toString()));
+        var customer = new AuthenticatedPrincipal(PrincipalId.newId());
+        access.registerPrincipal(customer.principalId());
+        maintenanceEntry = waitlist.register(new WaitlistUseCase.CreateRegistration(
+            venue.id(), slot.id(), 2, new WaitlistRegistrationKey(UUID.nameUUIDFromBytes(
+                "slotq-109-maintenance-registration".getBytes(StandardCharsets.UTF_8))), customer)).entry().id();
+        maintenanceSlot = slot.id().value();
+    }
+
+    private UUID eventForAggregate(String eventType, UUID aggregate) {
+        List<byte[]> matches = db.queryForList("""
+            SELECT event_id FROM event_records WHERE event_type=? AND aggregate_id=?
+            """, byte[].class, eventType, bytes(aggregate));
+        assertThat(matches).hasSize(1);
+        return uuid(matches.getFirst());
+    }
+
+    private static UUID uuid(byte[] value) {
+        ByteBuffer buffer = ByteBuffer.wrap(value);
+        return new UUID(buffer.getLong(), buffer.getLong());
+    }
+
+    private Map<String, Object> captureMaintenance(String phase, UUID referenceEvent) {
+        Map<String, Object> snapshot = capture(phase, referenceEvent);
+        Map<String, Object> maintenance = new LinkedHashMap<>();
+        maintenance.put("slotId", maintenanceSlot.toString());
+        maintenance.put("entryId", maintenanceEntry.toString());
+        maintenance.put("slotEvents", db.queryForList("""
+            SELECT HEX(event_id) eventId,event_type eventType,boundary_sequence boundarySequence
+              FROM event_records WHERE aggregate_id=? ORDER BY boundary_sequence
+            """, bytes(maintenanceSlot)));
+        maintenance.put("slotOffers", db.queryForList("""
+            SELECT o.state offerState,r.state reservationState,a.active allocationActive,
+                   HEX(r.id) reservationId
+              FROM waitlist_offers o JOIN reservations r ON r.id=o.reservation_id
+              JOIN capacity_allocations a ON a.reservation_id=r.id
+             WHERE o.entry_id=?
+            """, bytes(maintenanceEntry)));
+        maintenance.put("firstCandidate", db.queryForList("""
+            SELECT o.state offerState,r.state reservationState,a.active allocationActive,
+                   HEX(r.id) reservationId
+              FROM waitlist_offers o JOIN reservations r ON r.id=o.reservation_id
+              JOIN capacity_allocations a ON a.reservation_id=r.id
+             WHERE o.entry_id=?
+            """, bytes(candidateEntry)));
+        maintenance.put("allOriginalCount", db.queryForObject("SELECT COUNT(*) FROM event_records", Long.class));
+        snapshot.put("maintenance", maintenance);
+        return snapshot;
+    }
+
     private ManagedProcess start(String label, String role) throws Exception {
+        return start(label, role, false);
+    }
+
+    private ManagedProcess start(String label, String role, boolean slowIntake) throws Exception {
         boolean relay = role.equals("relay");
-        boolean product = role.equals("product");
+        boolean product = role.equals("product") || role.equals("maintenance");
+        boolean api = role.equals("product");
         List<String> args = new ArrayList<>(List.of("-cp", System.getProperty("java.class.path"),
             "com.slotq.SlotqApplication", "--spring.main.web-application-type="
-                + (product ? "servlet" : "none"),
+                + (api ? "servlet" : "none"),
             "--server.port=0",
             "--spring.kafka.bootstrap-servers=" + BOOTSTRAP,
             "--slotq.events.kafka.destination=" + TOPIC,
@@ -327,9 +512,14 @@ class KafkaFaultProcessIntegrationTests {
             "--slotq.events.delivery.consumer-id=" + (relay || product ? WAITLIST : role),
             "--slotq.waitlist.promotion.enabled=" + (product || role.equals(WAITLIST)),
             "--slotq.waitlist.promotion.maintenance-enabled=" + product,
+            "--slotq.waitlist.promotion.maintenance-interval="
+                + (role.equals("maintenance") ? "PT1S" : "PT1H"),
             "--slotq.operations.observation.enabled=" + role.equals(OBSERVER),
             "--spring.datasource.hikari.connection-timeout=3000",
-            "--spring.datasource.hikari.data-source-properties.socketTimeout=3000"));
+            "--spring.datasource.hikari.data-source-properties.socketTimeout="
+                + (slowIntake ? "400000" : "3000")));
+        if (slowIntake)
+            args.add("--spring.datasource.hikari.connection-init-sql=SET SESSION innodb_lock_wait_timeout=400");
         Path argfile = processLogs.resolve(label + ".args");
         StringBuilder content = new StringBuilder();
         for (String arg : args) content.append('"').append(arg.replace("\\", "/")).append('"').append('\n');
@@ -452,6 +642,11 @@ class KafkaFaultProcessIntegrationTests {
                             positions.put(partition.topic() + ":" + partition.partition(), offset.offset());
                     });
                     groups.put(consumer, Map.of("groupId", group,
+                        "members", description.members().stream().map(member -> Map.of(
+                            "memberId", member.consumerId(),
+                            "assignedPartitions", member.assignment().topicPartitions().stream()
+                                .filter(partition -> partition.topic().equals(TOPIC))
+                                .map(TopicPartition::partition).sorted().toList())).toList(),
                         "memberPartitionCounts", description.members().stream().map(member ->
                             member.assignment().topicPartitions().size()).toList(), "offsets", positions));
                 } catch (Exception absent) {
@@ -471,6 +666,24 @@ class KafkaFaultProcessIntegrationTests {
             return admin.describeConsumerGroups(List.of(group)).describedGroups().get(group)
                 .get(5, TimeUnit.SECONDS).members().size();
         } catch (Exception unavailable) { return -1; }
+    }
+
+    private int intakePositionLockWaiters() {
+        // The application user intentionally has no performance_schema access.
+        // Only this test coordinator observes InnoDB's actual lock wait graph.
+        try (var monitor = DriverManager.getConnection(MYSQL.getJdbcUrl(), "root", MYSQL.getPassword());
+             var query = monitor.prepareStatement("""
+                 SELECT COUNT(*) FROM performance_schema.data_lock_waits w
+                   JOIN performance_schema.data_locks l
+                     ON l.ENGINE_LOCK_ID=w.REQUESTING_ENGINE_LOCK_ID
+                  WHERE l.OBJECT_NAME='event_kafka_consumer_positions'
+                 """);
+             var rows = query.executeQuery()) {
+            assertThat(rows.next()).isTrue();
+            return rows.getInt(1);
+        } catch (java.sql.SQLException failure) {
+            throw new IllegalStateException("test coordinator cannot observe MySQL lock waits", failure);
+        }
     }
 
     private int leaderFor(UUID eventId) {
@@ -494,6 +707,8 @@ class KafkaFaultProcessIntegrationTests {
     }
 
     private void assertFinalOracle() {
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM event_records", Long.class))
+            .isEqualTo((long) originals.size());
         for (UUID eventId : originals) {
             assertThat(count("SELECT COUNT(*) FROM event_records WHERE event_id=?", eventId)).isEqualTo(1);
             assertThat(count("SELECT COUNT(*) FROM event_kafka_publications WHERE event_id=? AND state='PUBLISHED'",
@@ -515,11 +730,22 @@ class KafkaFaultProcessIntegrationTests {
             Long.class, bytes(candidateEntry))).isEqualTo(1);
         assertThat(db.queryForObject("SELECT COUNT(*) FROM reservations WHERE promotional_request_id=?",
             Long.class, bytes(candidateEntry))).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT state FROM waitlist_offers WHERE entry_id=?",
+            String.class, bytes(candidateEntry))).isEqualTo("EXPIRED");
         assertThat(db.queryForObject("""
             SELECT COUNT(*) FROM capacity_allocations a
               JOIN reservations r ON r.id=a.reservation_id
              WHERE r.slot_inventory_id=? AND a.active=TRUE
-            """, Long.class, bytes(candidateSlot))).isEqualTo(1);
+            """, Long.class, bytes(candidateSlot))).isZero();
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM waitlist_offers WHERE entry_id=?",
+            Long.class, bytes(maintenanceEntry))).isEqualTo(1);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM reservations WHERE promotional_request_id=?",
+            Long.class, bytes(maintenanceEntry))).isEqualTo(1);
+        assertThat(db.queryForObject("""
+            SELECT COUNT(*) FROM capacity_allocations a
+              JOIN reservations r ON r.id=a.reservation_id
+             WHERE r.slot_inventory_id=? AND a.active=TRUE
+            """, Long.class, bytes(maintenanceSlot))).isEqualTo(1);
     }
 
     private void writeEvidence() throws Exception {
@@ -550,11 +776,23 @@ class KafkaFaultProcessIntegrationTests {
                 + " session.timeout.ms=15000; heartbeat.interval.ms=5000; auto.offset.reset=none; auto.commit=false",
             "jdbc", "Hikari connection timeout 3000ms; MySQL socketTimeout 3000ms; REPEATABLE-READ",
             "process", "separate product, two relays, waitlist replicas, and observer JVMs",
-            "window", "each event must reach two DONE targets within 120s"));
+            "window", "each event must reach two DONE targets within 120s",
+            "slowIntake", "production max.poll.interval.ms=300000; test-only MySQL position row lock 315s;"
+                + " two Waitlist JVMs with session lock wait 400s and socket timeout 400000ms",
+            "maintenance", "Product API scan interval PT1H; two separate maintenance JVMs PT1S;"
+                + " production expiry and request-admission paths"));
         raw.put("originalEventIds", originals.stream().map(UUID::toString).toList());
-        raw.put("candidate", Map.of("eventId", candidateEvent.toString(),
-            "entryId", candidateEntry.toString(), "slotId", candidateSlot.toString(),
-            "slotCapacity", 1));
+        raw.put("candidate", candidateEvent == null ? Map.of("status", "not-created")
+            : Map.of("eventId", candidateEvent.toString(), "entryId", candidateEntry.toString(),
+                "slotId", candidateSlot.toString(), "slotCapacity", 1));
+        raw.put("maintenance", maintenanceRelease == null ? Map.of("status", "not-converged")
+            : Map.of("entryId", maintenanceEntry.toString(), "slotId", maintenanceSlot.toString(),
+                "admissionEventId", maintenanceEvent.toString(),
+                "releaseEventId", maintenanceRelease.toString(), "slotCapacity", 1));
+        if (maintenanceRelease != null) raw.put("allOriginals", db.queryForList("""
+            SELECT HEX(event_id) eventId,event_type eventType,HEX(aggregate_id) aggregateId,
+                   boundary_sequence boundarySequence FROM event_records ORDER BY boundary_sequence
+            """));
         raw.put("timeline", timeline);
         Files.writeString(output.resolve("process-raw.json"), json.writeValueAsString(raw));
     }
@@ -586,12 +824,17 @@ class KafkaFaultProcessIntegrationTests {
     }
 
     private Map<String, Object> sendWire(String key, String body) throws Exception {
+        return sendWire(key, body, null);
+    }
+
+    private Map<String, Object> sendWire(String key, String body, Integer partition) throws Exception {
         Map<String, Object> config = Map.of(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP,
             ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
             ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
             ProducerConfig.ACKS_CONFIG, "all", ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(config)) {
-            var sent = producer.send(new ProducerRecord<>(TOPIC, key, body)).get(20, TimeUnit.SECONDS);
+            var sent = producer.send(partition == null ? new ProducerRecord<>(TOPIC, key, body)
+                : new ProducerRecord<>(TOPIC, partition, key, body)).get(20, TimeUnit.SECONDS);
             return Map.of("topic", sent.topic(), "partition", sent.partition(), "offset", sent.offset());
         }
     }
