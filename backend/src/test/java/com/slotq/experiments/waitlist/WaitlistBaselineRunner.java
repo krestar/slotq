@@ -50,14 +50,20 @@ public final class WaitlistBaselineRunner {
     private final List<Fixture> fixtures = new ArrayList<>();
     private final JdbcTemplate jdbc;
     private final EventDeliveryWorker worker;
+    private final WorkloadDriver driver;
     private String phase;
 
     private WaitlistBaselineRunner(ConfigurableApplicationContext context, long seed) {
+        this(context, seed, null);
+    }
+
+    WaitlistBaselineRunner(ConfigurableApplicationContext context, long seed, WorkloadDriver driver) {
         this.context = context;
         clock = (WaitlistProcessRecoveryRunner.MutableClock) context.getBean("baselineClock");
         random = new SplittableRandom(seed);
         jdbc = context.getBean(JdbcTemplate.class);
         worker = context.getBean(EventDeliveryWorker.class);
+        this.driver = driver;
     }
 
     public static void main(String[] args) throws Exception {
@@ -203,11 +209,19 @@ public final class WaitlistBaselineRunner {
         phase = "independent-slots";
         for(int i=0;i<2;i++) { Fixture f=i==0?first:second; SlotInventory slot=f.slot(4); f.entry(slot,2); request(f,slot); }
         observe();drain();observe();
+        if (driver != null) {
+            phase = "steady-load";
+            for (int i=0;i<24;i++) {
+                Fixture f=i%2==0?first:second;
+                SlotInventory slot=f.slot(4); f.entry(slot,2); request(f,slot); drain();
+            }
+            observe();
+        }
         phase = "backlog";
         for(int i=0;i<GROUPS;i++) { Fixture f=i%2==0?first:second; SlotInventory slot=f.slot(4); f.entry(slot,2); request(f,slot); }
         observe();
-        require(fixtures.stream().mapToLong(f -> list(new WaitlistRecoveryDatabase(jdbc).snapshot(f.tenant.id().value(),clock.instant()),"event_records").size()
-            - stat(new WaitlistRecoveryDatabase(jdbc).snapshot(f.tenant.id().value(),clock.instant()),"done")).sum() > BATCH, "backlog must exceed batch");
+        require(fixtures.stream().mapToLong(f -> list(snapshot(f,clock.instant()),"event_records").size()
+            - stat(snapshot(f,clock.instant()),"done")).sum() > BATCH, "backlog must exceed batch");
         drain(); observe();
         phase = "idle";
         for(int i=0;i<3;i++) require(cycle()==0,"idle cycle claimed work");
@@ -218,8 +232,8 @@ public final class WaitlistBaselineRunner {
     }
 
     private void duplicateProbe() {
-        var before = fixtures.stream().map(f -> new WaitlistRecoveryDatabase(jdbc).snapshot(f.tenant.id().value(),clock.instant())).toList();
-        for(Fixture f:fixtures) for(var row:list(new WaitlistRecoveryDatabase(jdbc).snapshot(f.tenant.id().value(),clock.instant()),"event_deliveries")) {
+        var before = fixtures.stream().map(f -> snapshot(f,clock.instant())).toList();
+        for(Fixture f:fixtures) for(var row:list(snapshot(f,clock.instant()),"event_deliveries")) {
             var key=new DeliveryKey(f.tenant.id(),new EventId(hexUuid(row.get("event_id"))),hexUuid(row.get("registration_id")));
             command("duplicate-handler-probe",()->context.getBean(DeliveryTransactions.class).execute(()->{
                 var target=context.getBean(EventDeliveryStore.class).target(key);
@@ -227,13 +241,22 @@ public final class WaitlistBaselineRunner {
             }));
             require(worker.claim(key).isEmpty(),"DONE became claimable");
         }
-        var after=fixtures.stream().map(f -> new WaitlistRecoveryDatabase(jdbc).snapshot(f.tenant.id().value(),clock.instant())).toList();
+        var after=fixtures.stream().map(f -> snapshot(f,clock.instant())).toList();
         for(int i=0;i<before.size();i++) for(String table:TABLES) require(before.get(i).get(table).equals(after.get(i).get(table)),"duplicate changed "+table);
     }
     private void request(Fixture f,SlotInventory slot) { var result=command("promotion-request",()->context.getBean(WaitlistPromotionRequestUseCase.class).request(SystemPrincipal.INSTANCE,f.venue.id(),slot.id())); require(result.outcome()==WaitlistPromotionRequestUseCase.Outcome.APPENDED,"request not admitted"); }
-    private int cycle() { long start=System.nanoTime();String wallStart=Instant.now().toString();int claimed=worker.runCycle();cycles.add(Map.of("phase",phase,"startNanos",start,"endNanos",System.nanoTime(),"hostStartAt",wallStart,"hostEndAt",Instant.now().toString(),"claimed",claimed));return claimed; }
-    private void drain() { observe(); for(int i=0;i<100;i++) { cycle(); if(fixtures.stream().allMatch(f->drained(new WaitlistRecoveryDatabase(jdbc).snapshot(f.tenant.id().value(),clock.instant())))) {observe();return;} } throw new IllegalStateException("baseline did not drain"); }
-    private void observe() { long start=System.nanoTime();String wallStart=Instant.now().toString();Instant now=clock.instant();var tenants=fixtures.stream().map(f->new WaitlistRecoveryDatabase(jdbc).snapshot(f.tenant.id().value(),now)).toList();observations.add(Map.of("phase",phase,"startNanos",start,"endNanos",System.nanoTime(),"hostStartAt",wallStart,"hostEndAt",Instant.now().toString(),"verificationNow",now.toString(),"tenants",tenants)); }
+    private int cycle() { long start=System.nanoTime();String wallStart=Instant.now().toString();int claimed=driver==null?worker.runCycle():driver.runCycle();cycles.add(Map.of("phase",phase,"startNanos",start,"endNanos",System.nanoTime(),"hostStartAt",wallStart,"hostEndAt",Instant.now().toString(),"claimed",claimed));return claimed; }
+    private void drain() { observe(); for(int i=0;i<100;i++) { cycle(); if(fixtures.stream().allMatch(f->drained(snapshot(f,clock.instant())))) {observe();return;} } throw new IllegalStateException("baseline did not drain"); }
+    private void observe() { long start=System.nanoTime();String wallStart=Instant.now().toString();Instant now=clock.instant();var tenants=fixtures.stream().map(f->snapshot(f,now)).toList();long end=System.nanoTime();observations.add(Map.of("phase",phase,"startNanos",start,"endNanos",end,"hostStartAt",wallStart,"hostEndAt",Instant.now().toString(),"verificationNow",now.toString(),"tenants",tenants));if(driver!=null)driver.observe(phase,start,end,now); }
+    private Map<String,Object> snapshot(Fixture fixture,Instant now) {
+        var full=new WaitlistRecoveryDatabase(jdbc).snapshot(fixture.tenant.id().value(),now);
+        return driver==null?full:driver.waitlistView(full);
+    }
+    interface WorkloadDriver {
+        int runCycle();
+        Map<String,Object> waitlistView(Map<String,Object> full);
+        void observe(String phase,long start,long end,Instant verificationNow);
+    }
     private <T> T command(String type,Supplier<T> action) {
         long start=System.nanoTime();String wallStart=Instant.now().toString();Instant business=clock.instant();
         try {T result=action.get();commands.add(Map.of("phase",phase,"type",type,"startNanos",start,"endNanos",System.nanoTime(),"hostStartAt",wallStart,"hostEndAt",Instant.now().toString(),"businessNow",business.toString(),"committed",true,"result",String.valueOf(result)));return result;}
@@ -265,7 +288,7 @@ public final class WaitlistBaselineRunner {
         AuthenticatedPrincipal offerCustomer(SlotInventory slot) {return customers.get(offerEntry(this,slot));}
     }
 
-    private Map<String,Object> manifest(MySQLContainer mysql,long seed,long startup,long ready) throws Exception {
+    Map<String,Object> manifest(MySQLContainer mysql,long seed,long startup,long ready) throws Exception {
         var result=new LinkedHashMap<String,Object>();
         result.put("revision",git("rev-parse","HEAD"));result.put("dirty",!git("status","--porcelain").isBlank());result.put("workingTreeStatus",git("status","--porcelain"));
         var hashes=new TreeMap<String,String>();

@@ -124,6 +124,42 @@ tasks.register('waitlistBaseline', JavaExec) {
     }
 }
 
+tasks.register('m5TransportComparison', JavaExec) {
+    group = 'verification'
+    description = 'Repeats the #105 public-command workload with two scoped consumers over DB direct and Kafka.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.waitlist.M5TransportComparisonRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    jvmArgs '-Xmx768m'
+    systemProperty 'slotq.waitlist.baseline.gradleVersion', gradle.gradleVersion
+    ['output', 'only', 'repeats', 'recalculate', 'hostStorage'].each { key ->
+        if (project.hasProperty(key)) systemProperty "slotq.m5.${key}", project.property(key)
+    }
+}
+
+tasks.register('m5CanonicalEvidence', JavaExec) {
+    group = 'verification'
+    description = 'Exports lossless canonical raw row versions and verifies summaries without duplicate dumps/logs.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.waitlist.M5CanonicalEvidence'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    ['input', 'export', 'recalculate'].each { key ->
+        if (project.hasProperty(key)) systemProperty "slotq.m5.${key}", project.property(key)
+    }
+}
+
+tasks.register('m5OperationsDrill', JavaExec) {
+    group = 'verification'
+    description = 'Runs fresh independent-role fault/recovery, protected HTTPS operator and Prometheus alert integration.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.experiments.waitlist.M5OperationsDrillRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    jvmArgs '-Xmx768m'
+    ['output', 'recalculate'].each { key ->
+        if (project.hasProperty(key)) systemProperty "slotq.m5.${key}", project.property(key)
+    }
+}
+
 tasks.register('concurrencyBaseline', JavaExec) {
     group = 'verification'
     description = 'Runs the MySQL 8.4 Product HOLD concurrency baseline.'
