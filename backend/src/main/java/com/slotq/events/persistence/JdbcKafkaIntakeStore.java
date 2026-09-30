@@ -130,14 +130,17 @@ public class JdbcKafkaIntakeStore {
             """, Long.class, consumer.consumerId(), record.topic(), record.partition());
         if (record.offset() > position + 1)
             throw new IllegalStateException("Kafka intake partition gap");
-        List<String> existing = db.query("""
+        // The locked partition prefix admits only its next coordinate. A new coordinate is
+        // inserted strictly at finish(); pre-locking a missing row would create RR gap locks
+        // shared by independent consumers and deadlock their first insertions.
+        List<String> existing = record.offset() <= position ? db.query("""
             SELECT disposition,record_sha256 FROM event_kafka_intake_records
              WHERE consumer_id=? AND topic=? AND partition_id=? AND record_offset=? FOR UPDATE
             """, (row, n) -> {
             if (!Arrays.equals(hash, row.getBytes("record_sha256")))
                 throw new IllegalStateException("Kafka coordinate content changed");
             return row.getString("disposition");
-        }, consumer.consumerId(), record.topic(), record.partition(), record.offset());
+        }, consumer.consumerId(), record.topic(), record.partition(), record.offset()) : List.of();
         if (!existing.isEmpty()) {
             if (record.offset() > position) throw new IllegalStateException("Intake coordinate without durable prefix");
             return existing.getFirst().equals("TARGET") ? Outcome.REUSED_TARGET : Outcome.valueOf(existing.getFirst());
@@ -202,15 +205,23 @@ public class JdbcKafkaIntakeStore {
         UUID tenant = event.tenantId().value();
         UUID eventId = event.eventId().value();
         UUID registrationId = registration.id();
-        boolean newTarget = db.queryForList("""
-            SELECT 1 FROM event_deliveries
-             WHERE tenant_id=? AND event_id=? AND registration_id=? FOR UPDATE
-            """, Integer.class, bytes(tenant), bytes(eventId), bytes(registrationId)).isEmpty();
-        db.update("""
-            INSERT INTO event_deliveries (tenant_id,event_id,registration_id,state,next_attempt_at)
-            VALUES (?,?,?,'PENDING',UTC_TIMESTAMP(6))
-            ON DUPLICATE KEY UPDATE event_id=event_id
-            """, bytes(tenant), bytes(eventId), bytes(registrationId));
+        boolean newTarget;
+        try {
+            db.update("""
+                INSERT INTO event_deliveries (tenant_id,event_id,registration_id,state,next_attempt_at)
+                VALUES (?,?,?,'PENDING',UTC_TIMESTAMP(6))
+                """, bytes(tenant), bytes(eventId), bytes(registrationId));
+            newTarget = true;
+        } catch (org.springframework.dao.DuplicateKeyException duplicate) {
+            // Only the exact existing target is reusable. A conflicting unique target in
+            // another tenant remains corruption; attempts/fence/state are never rewritten.
+            if (db.queryForList("""
+                SELECT 1 FROM event_deliveries
+                 WHERE tenant_id=? AND event_id=? AND registration_id=? FOR UPDATE
+                """, Integer.class, bytes(tenant), bytes(eventId), bytes(registrationId)).size() != 1)
+                throw duplicate;
+            newTarget = false;
+        }
         db.update("""
             INSERT INTO event_kafka_target_intakes
                 (tenant_id,event_id,registration_id,consumer_id,topic,partition_id,first_offset,
