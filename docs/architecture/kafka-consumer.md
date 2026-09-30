@@ -30,6 +30,14 @@ DB executor는 선택된 logical consumer, transport, epoch의 target만 claim/e
 Kafka consumer poll은 동기·유한 batch이며 business retry는 기존 MySQL delivery policy만
 사용한다. Kafka partition 순서는 M4 FIFO/capacity 근거가 아니다.
 
+#111의 실제 two-consumer RR 측정에서 cold target의 absent-row `FOR UPDATE` 후 UPSERT가
+gap-lock deadlock을 일으켰다. Intake는 locked partition prefix의 **새 next coordinate**를
+strict INSERT로 기록하며, 재전달된 기존 coordinate만 locking current read로 검증한다.
+Target도 strict INSERT를 우선하고 duplicate key일 때 정확한 tenant/event/registration row를
+locking current read로 확인한다. 잘못된 unique target 충돌은 rollback한다. Original membership과
+assignment의 current lock, prefix/coordinate/canonical 검증, first materialization 의미 및
+target state/attempt/fence 불변은 유지한다. 별도 자동 intake retry나 transport fallback은 추가하지 않는다.
+
 Observer projection은 자기 effect transaction에서 DONE과 함께 commit한다. 저장하는 것은
 원 event reference/type/schema, intake와 projection 시각, v1 transition 또는 promotion
 request activity다. 별도 release reason이나 고객 알림 성공을 추론하지 않는다. 관리 조회는
@@ -70,6 +78,12 @@ DB direct observer 비교 mode는 같은 observer consumer role을 쓰되 `deliv
 Kafka intake disabled로 둔다. Product는 observer registration 준비를 위한 DB direct bootstrap을
 수행할 수 있지만, observer target을 claim하지 않는다.
 
+Scrape가 필요한 isolated relay/consumer는 #111에서 `web=servlet`과
+`slotq.events.management-only=true`를 함께 명시할 수 있다. TLS 및 별도 machine bearer로
+보호된 `GET /actuator/prometheus`만 노출하며 Product/recovery/diagnostic HTTP는 차단한다.
+Product/cutover에 management-only를 적용하면 startup이 거부된다. 정확한 durable scope와
+producer·maintenance·intake·executor ownership guard는 그대로 적용한다.
+
 ## 관측과 후속 범위
 
 Kafka consumer는 고정 logical consumer별 durable intake/지연, group/partition lag,
@@ -79,6 +93,14 @@ consumer role에 설정하면, 선택된 logical consumer의 DB target PENDING/P
 oldest age, due retry와 backoff를 `slotq_kafka_delivery_*`로 별도 표본화한다. 표본 timeout,
 staleness, 10,000행 cap은 #106과 같으며 sample health/truncation을 함께 확인한다.
 128개 lag tuple 상한은 두 consumer의 configured partition allowlist 합계다.
+
+실제 broker의 absolute end offset이 0인 빈 partition은 첫 committed offset이 없어도 known
+lag 0이다. Nonempty partition의 committed provenance 누락, end 조회 실패·범위 오류는 unknown이며
+sample health 0을 유지한다. Client position/seek로 durable committed offset을 대신하지 않는다.
+
+DB direct scoped consumer는 같은 ledger를 `slotq_db_delivery_*`, `transport=db`로 표본화한다.
+Product의 read-only publication inventory와 expired claim 신호는 publisher process가 죽은
+ACK unknown도 탐지한다. Expired lease를 유실이나 business DEAD로 해석하지 않는다.
 
 독립 JVM 전체 fault matrix는 #109, 사람 권한의 business DEAD/publication recovery와 audit은
 #110, DB direct 대비 정량 비교와 transport adoption 결정은 #111 소유다. Mixed-version 무중단

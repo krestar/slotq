@@ -26,10 +26,24 @@ class DatabaseObservationIntegrationTests {
     private final byte[] tenant = bytes(UUID.randomUUID());
     private final byte[] registration = bytes(UUID.randomUUID());
 
+    @Test void scopedDbDirectObserverDoesNotFabricateKafkaMetricsOrWaitlistOwnership() throws Exception {
+        var registry=new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+        var sampler=new DatabaseObservationSampler(registry,MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword(),
+                java.time.Duration.ofSeconds(1),java.time.Duration.ofSeconds(3),"consumer","operations.event-observation","DB_DIRECT");
+        try {
+            long until=System.nanoTime()+java.time.Duration.ofSeconds(5).toNanos();
+            while(registry.get("slotq.db.delivery.sample.healthy").gauge().value()!=1&&System.nanoTime()<until)Thread.sleep(50);
+            assertThat(registry.get("slotq.db.delivery.sample.healthy").gauge().value()).isEqualTo(1);
+            assertThat(registry.get("slotq.db.delivery.targets").tag("logical_consumer","operations.event-observation").tag("transport","db").tag("delivery_state","DONE").gauge().value()).isZero();
+            assertThat(registry.getMeters()).noneMatch(m->m.getId().getName().startsWith("slotq.kafka.")||"waitlist.promotion".equals(m.getId().getTag("logical_consumer")));
+        } finally {sampler.close();}
+    }
+
     @BeforeEach void prepare() {
         jdbc.update("DELETE FROM waitlist_promotion_requests");
         jdbc.update("DELETE FROM waitlist_promotion_receipts");
         jdbc.update("DELETE FROM event_deliveries");
+        jdbc.update("DELETE FROM event_kafka_publications");
         jdbc.update("DELETE FROM event_records");
         jdbc.update("DELETE FROM event_registrations");
         jdbc.update("UPDATE event_discovery SET boundary_sequence=0");
@@ -90,6 +104,19 @@ class DatabaseObservationIntegrationTests {
             writer.rollback();
         }
         assertThat(jdbc.queryForObject("SELECT state FROM event_deliveries WHERE event_id=?", String.class, event)).isEqualTo("PENDING");
+    }
+
+    @Test void orphanPublicationClaimIsObservableWithoutPublisherAndIsNotReportedAsLoss() throws Exception {
+        byte[] event=insertEvent(1);
+        jdbc.update("INSERT INTO event_kafka_publications(tenant_id,event_id,destination,state,discovered_boundary,cycle_attempts,lifetime_attempts,fencing_token,lease_until) VALUES (?,?,'slotq.waitlist.events.v1','PROCESSING',1,1,1,1,TIMESTAMPADD(SECOND,-1,UTC_TIMESTAMP(6)))",tenant,event);
+        var snapshot=read();
+        assertThat(value(snapshot,"publication.expired.claims")).isEqualTo(1);
+        assertThat(value(snapshot,"publication.targets","publication_state","PROCESSING")).isEqualTo(1);
+        assertThat(value(snapshot,"publication.targets","publication_state","PUBLISHED")).isZero();
+        assertThat(value(snapshot,"publication.targets","publication_state","DEAD")).isZero();
+        assertThat(value(snapshot,"delivery.targets","delivery_state","DONE")).isZero();
+        assertThat(jdbc.queryForObject("SELECT state FROM event_kafka_publications",String.class)).isEqualTo("PROCESSING");
+        assertThat(snapshot.values().keySet().toString()).doesNotContain("tenant_id","event_id","destination");
     }
 
     private DatabaseObservation.Snapshot read() throws Exception {

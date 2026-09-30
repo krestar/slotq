@@ -27,6 +27,7 @@ public final class DatabaseObservation {
         put(values, "event.undiscovered", Math.min(undiscovered[0], LIMIT));
         put(values, "sample.truncated", "sample", "events", undiscovered[0] > LIMIT ? 1 : 0);
         readDeliveries(connection, values);
+        readPublications(connection, values);
         for (String outcome : OUTCOMES) put(values, "promotion.receipts", "promotion_outcome", outcome, 0);
         int[] receiptCount = {0};
         query(connection, "SELECT outcome FROM waitlist_promotion_receipts ORDER BY occurred_at, tenant_id, consumer_id, event_id LIMIT " + (LIMIT + 1), rows -> {
@@ -42,6 +43,26 @@ public final class DatabaseObservation {
         put(values, "promotion.requests.outstanding", Math.min(outstandingCount[0], LIMIT));
         put(values, "sample.truncated", "sample", "requests", outstandingCount[0] > LIMIT ? 1 : 0);
         return new Snapshot(Map.copyOf(values), Instant.now());
+    }
+
+    private void readPublications(Connection connection, Map<Key,Double> values) throws SQLException {
+        for(String state:Set.of("PENDING","PROCESSING","PUBLISHED","DEAD")) {
+            put(values,"publication.targets","publication_state",state,0);
+            put(values,"publication.oldest.recorded.age.seconds","publication_state",state,0);
+            int[] count={0};
+            query(connection,"SELECT TIMESTAMPDIFF(MICROSECOND,e.recorded_at,UTC_TIMESTAMP(6))/1000000.0 "
+                + "FROM event_kafka_publications p JOIN event_records e ON e.tenant_id=p.tenant_id AND e.event_id=p.event_id "
+                + "WHERE p.state='"+state+"' ORDER BY p.discovered_boundary LIMIT "+(LIMIT+1),rows->{
+                    if(++count[0]>LIMIT)return;
+                    increment(values,"publication.targets","publication_state",state);
+                    values.merge(new Key("publication.oldest.recorded.age.seconds","publication_state",state),Math.max(0,rows.getDouble(1)),Math::max);
+                });
+            put(values,"sample.truncated","sample","publications_"+state.toLowerCase(java.util.Locale.ROOT),count[0]>LIMIT?1:0);
+        }
+        int[] expired={0};
+        query(connection,"SELECT 1 FROM event_kafka_publications WHERE state='PROCESSING' AND lease_until<=UTC_TIMESTAMP(6) LIMIT "+(LIMIT+1),rows->expired[0]++);
+        put(values,"publication.expired.claims",Math.min(expired[0],LIMIT));
+        put(values,"sample.truncated","sample","publication_expired",expired[0]>LIMIT?1:0);
     }
 
     /** Scoped Kafka execution inventory; a broker offset never supplies this business state. */

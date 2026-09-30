@@ -33,6 +33,7 @@ GRANT SELECT ON slotq.event_records TO 'slotq_observer'@'%';
 GRANT SELECT ON slotq.event_discovery TO 'slotq_observer'@'%';
 GRANT SELECT ON slotq.event_deliveries TO 'slotq_observer'@'%';
 GRANT SELECT ON slotq.event_registrations TO 'slotq_observer'@'%';
+GRANT SELECT ON slotq.event_kafka_publications TO 'slotq_observer'@'%';
 GRANT SELECT ON slotq.waitlist_promotion_receipts TO 'slotq_observer'@'%';
 GRANT SELECT ON slotq.waitlist_promotion_requests TO 'slotq_observer'@'%';
 GRANT SELECT ON performance_schema.data_lock_waits TO 'slotq_observer'@'%';
@@ -57,6 +58,18 @@ Grafana 로그인 후 **SlotQ Product — requests, DB delivery and effects**가
 3. 기존 event failure/replay 테스트 경로로 DEAD target을 만들고 `SlotqDeadDelivery` firing 및 recovery 후 resolved를 확인한다. 정상 no-op receipt는 DEAD에 포함하지 않는다.
 4. 두 DB connection으로 같은 synthetic row를 갱신해 lock wait를 유지한다. `slotq_db_lock_waits > 0` 및 10초 `for` 뒤 `SlotqDatabaseLockWait` firing, lock 해제 후 resolved를 확인한다. Product row를 운영 중 강제로 잠그지 않는다.
 5. 관측 DB credential/collector를 중단하고 sample healthy=0/NaN 또는 export failure와 Product commit/rollback 독립성을 확인한다. scrape request는 DB sample을 실행하지 않는다.
-6. 예약된 Kafka publication pending/retry/failure, relay/producer state, intake delay, group/partition lag panel이 모두 **NO SIGNAL / UNKNOWN**으로 남는지 확인한다. `or vector(0)`/null-to-zero transformation은 사용하지 않는다. 실제 signal은 #107/#108이 연결하며 group/topic/partition label은 배포 allowlist와 128개 조합 상한 안에서만 허용한다.
+6. Kafka relay/intake가 활성화되면 publication pending/retry/failure, runtime state, intake delay와 group/partition lag를 조회한다. 비활성·미수집 panel은 **NO SIGNAL / UNKNOWN**이다. `or vector(0)`/null-to-zero transformation은 사용하지 않는다. Group/topic/partition label은 배포 allowlist와 128개 조합 상한 안에서만 허용한다.
+
+Relay/consumer의 독립 JVM은 기본 web none이다. Scrape가 필요한 배치는 명시적으로
+`spring.main.web-application-type=servlet`, `slotq.events.management-only=true`와 TLS/별도 machine
+scrape bearer를 설정한다. 이 role은 `GET /actuator/prometheus`만 통과시키며 Product·operator·diagnostic
+경로와 다른 method는 404다. 정확한 consumer/transport/epoch와 기존 scheduler guard도 유지한다.
+Read-only telemetry 계정은 각 JVM에 별도로 설정한다. Human recovery는 Product의 #110 private TLS
+boundary만 사용한다. Management-only flag는 Product/cutover role에서 거부된다.
+
+`SlotqExecutionRuntimeUnavailable`, consumer DEAD/backlog/sample, Kafka lag unavailable과 publication
+expired claim/DEAD alert를 분리한다. Publisher가 죽은 뒤 ACK unknown은 Product read-only publication
+inventory로 탐지한다. 미수집 metric을 0으로 만들지 않는다. 실제 #111 drill 명령·결과는
+[M5 비교 및 통합 drill](../../docs/experiments/m5-transport/README.md)을 따른다.
 
 알림 임계값은 위 재현을 위한 local diagnostic budget이며 #111 transport 선택/production SLO 임계값을 확정하지 않는다. Alertmanager 외부 notification 채널은 추가하지 않는다. Prometheus `/api/v1/alerts`와 dashboard가 firing/resolved evidence다.
