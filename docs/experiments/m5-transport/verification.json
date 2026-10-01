@@ -1,0 +1,251 @@
+{
+  "schemaVersion": "slotq-m5-final-verification/v1",
+  "result": "PASS_LOCAL_ISSUE_111_EXIT_GATE",
+  "date": "2026-10-01",
+  "baseRevision": "7a3890116514c7d84b17391c08f98a041ae844de",
+  "verifiedCodeRevision": "452f6b87d7ffd4b616fe489122e2995b79cfdf7a",
+  "provenance": "Full test ran with the same code before commit 452f6b8; clean build compiled that code before the commit and completed after it. No code changed between final validations. Source hashes identify the exact worktree bytes; subsequent changes are documentation only.",
+  "environment": {
+    "java": "25.0.4.1+1-LTS",
+    "gradle": "9.7.1",
+    "node": "24.20.0",
+    "npm": "11.19.0",
+    "gradleMode": "offline, no-daemon, shared existing dependency cache via -g",
+    "containers": "real Testcontainers MySQL/Kafka on local Docker Desktop; benchmark/drill manifests remain authoritative"
+  },
+  "targeted": {
+    "testCases": 94.0,
+    "suites": [
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 9,
+        "suite": "com.slotq.events.application.KafkaRuntimeGuardTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 1,
+        "suite": "com.slotq.events.EventTransportCutoverIntegrationTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 3,
+        "suite": "com.slotq.events.persistence.KafkaIntakeConcurrencyIntegrationTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 3,
+        "suite": "com.slotq.events.persistence.KafkaIntakeObservabilityTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 3,
+        "suite": "com.slotq.experiments.waitlist.M5CanonicalEvidenceTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 3,
+        "suite": "com.slotq.experiments.waitlist.M5DrillRoleTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 6,
+        "suite": "com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 4,
+        "suite": "com.slotq.experiments.waitlist.M5TransportEvidenceTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 53,
+        "suite": "com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 1,
+        "suite": "com.slotq.KafkaWaitlistVerticalSliceIntegrationTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 6,
+        "suite": "com.slotq.observability.DatabaseObservationIntegrationTests",
+        "skipped": 0
+      },
+      {
+        "errors": 0,
+        "failures": 0,
+        "tests": 2,
+        "suite": "com.slotq.observability.web.MetricOnlyRuntimeFilterTests",
+        "skipped": 0
+      }
+    ],
+    "result": "PASS",
+    "command": "gradlew.bat test --tests '*M5DrillRoleTests' --tests '*M5OperationsDrillEvidenceTests' --tests '*M5CanonicalEvidenceTests' --tests '*M5TransportEvidenceTests' --tests '*KafkaIntakeObservabilityTests' --tests '*KafkaIntakeConcurrencyIntegrationTests' --tests '*KafkaRuntimeGuardTests' --tests '*MetricOnlyRuntimeFilterTests' --tests '*DatabaseObservationIntegrationTests' --tests '*HumanRecoveryIntegrationTests' --tests '*KafkaWaitlistVerticalSliceIntegrationTests' --tests '*EventTransportCutoverIntegrationTests' m5CanonicalEvidence '-Precalculate=../docs/experiments/m5-transport/2026-10-01-comparison' --offline --no-daemon --console=plain",
+    "logSha256": "72b22f2b8aed2012bc4d0484963b0820f58163a743ba2eda3e16558a42c9c30d"
+  },
+  "backendFullTest": {
+    "result": "PASS",
+    "command": "gradlew.bat test --offline --no-daemon --console=plain -g C:/Users/cell1/.gradle",
+    "elapsed": "17m 52s",
+    "exitCode": 0,
+    "logSha256": "6b88206426d445fdf6fea8c9d7c54c4cfceadf586a54d0ea28571e9cb4458f9f",
+    "junitInventory": "Collected from subsequent clean build of identical source; separate command result retained here.",
+    "skippedTests": [
+      "BookingCapacityLockEvidenceTests: 2 cases, SLOTQ_CAPACITY_LOCK_EVIDENCE",
+      "WaitlistPromotionDeliveryIntegrationTests: diagnosticBaselineCapacityGapIsEngineTransient, SLOTQ_CAPACITY_LOCK_EVIDENCE",
+      "KafkaRelayFaultEvidenceIntegrityTests: slotq.kafka.evidence.dir",
+      "KafkaSecurityProfileTests: slotq.kafka.secure.fixture",
+      "KafkaCutoverFaultEvidenceIntegrityTests: slotq.kafka.evidence.dir",
+      "KafkaFaultEvidenceIntegrityTests: slotq.fault.kafkaFaultEvidenceDir",
+      "KafkaFaultProcessIntegrationTests: slotq.fault.kafkaFaultBootstrap",
+      "KafkaIntakeCrashEvidenceIntegrityTests: slotq.kafka.evidence.dir"
+    ]
+  },
+  "backendCleanBuild": {
+    "result": "PASS",
+    "command": "gradlew.bat clean build m5OperationsDrill '-Precalculate=../docs/experiments/m5-transport/2026-10-01-drill' --offline --no-daemon --console=plain -g C:/Users/cell1/.gradle",
+    "elapsed": "17m 58s",
+    "exitCode": 0,
+    "startedAt": "2026-10-01T07:39:46.1316145Z",
+    "finishedAt": "2026-10-01T07:57:44.6083991Z",
+    "logSha256": "8dcefbb77fb4398316c34e71b850acd7e751ea9a5bf463b262d2fad795d417ff",
+    "junit": {
+      "suiteCount": 84,
+      "testCases": 691,
+      "passed": 682,
+      "skipped": 9,
+      "failures": 0,
+      "errors": 0
+    },
+    "skippedTests": [
+      {
+        "suite": "com.slotq.BookingCapacityLockEvidenceTests",
+        "test": "narrowingLockToSlotOrDiscoveringIdsWithSnapshotMissesCommittedCapacity()"
+      },
+      {
+        "suite": "com.slotq.BookingCapacityLockEvidenceTests",
+        "test": "differentSlotsRecordHeldGapsAndActualOrmInsertCycle(Scenario)"
+      },
+      {
+        "suite": "com.slotq.events.application.KafkaRelayFaultEvidenceIntegrityTests",
+        "test": "recalculatesRollbackAckAmbiguityFencingOutageAndRetentionGap()"
+      },
+      {
+        "suite": "com.slotq.events.application.KafkaSecurityProfileTests",
+        "test": "tlsAuthenticationAndRoleAclAreEnforced()"
+      },
+      {
+        "suite": "com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests",
+        "test": "oldDbOwnerCannotConsumeKafkaOrLaterRollbackEpoch()"
+      },
+      {
+        "suite": "com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests",
+        "test": "recalculatesProcessFaultOraclesFromRawSnapshots()"
+      },
+      {
+        "suite": "com.slotq.events.persistence.KafkaFaultProcessIntegrationTests",
+        "test": "realGroupsScaleRebalanceLeaderRestartAndOutageRecover()"
+      },
+      {
+        "suite": "com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests",
+        "test": "brokerOffsetNeverOutrunsDurableIntakeAndPendingTargetRunsWithoutRedelivery()"
+      },
+      {
+        "suite": "com.slotq.WaitlistPromotionDeliveryIntegrationTests",
+        "test": "diagnosticBaselineCapacityGapIsEngineTransient()"
+      }
+    ],
+    "skipInterpretation": "Nine existing opt-in historical evidence/security/diagnostic cases require explicit fixture properties or SLOTQ_CAPACITY_LOCK_EVIDENCE. They are skipped, not fresh PASS. The representative #111 live drill and current 94 targeted cases ran separately; the #109 full matrix was not repeated."
+  },
+  "frontend": {
+    "result": "PASS",
+    "files": 12,
+    "testCases": 210,
+    "checks": [
+      {
+        "exitCode": 0,
+        "task": "typecheck",
+        "seconds": 12.6359682,
+        "command": "npm run typecheck",
+        "logSha256": "b40ba6e83188ceff12a410a8d0477dc2d9dbd4cb8cc796b4c0e2cc1f850e0c14"
+      },
+      {
+        "exitCode": 0,
+        "task": "test",
+        "seconds": 48.2722464,
+        "command": "npm run test",
+        "logSha256": "9f1c63ed44c687a3db5e5f1b77313792d68340435781dc7a6ba4b5597f88dc65"
+      },
+      {
+        "exitCode": 0,
+        "task": "build",
+        "seconds": 2.1646574,
+        "command": "npm run build",
+        "logSha256": "992b8832487dd2ddb5e0b93e1139dc9acc29a839e519e8214dc1d9c102183e68"
+      }
+    ]
+  },
+  "freshDrill": {
+    "result": "PASS",
+    "command": "gradlew.bat m5OperationsDrill '-Poutput=build/reports/m5-drill/20261001-resume-b' --offline --no-daemon --console=plain -g C:/Users/cell1/.gradle",
+    "elapsed": "10m 49s",
+    "logSha256": "b078493713a0c20c72a0ff827ed0f4de0b945f428f3833c37d95e2d4f255eda9",
+    "canonical": "2026-10-01-drill",
+    "sourceAssessment": "Manifest HEAD 114d2da plus exact uncommitted harness hashes identify the executed source. Later verifier change only prevents rewriting existing integrity; criteria/summary unchanged. Current negative/byte-preservation tests and final read-only recalculation passed.",
+    "recalculation": "PASS in final clean build; all four original canonical files byte-identical before/after"
+  },
+  "comparisonSourceAssessment": {
+    "manifestsChecked": 15,
+    "filesCheckedPerManifest": 304,
+    "scope": "Production src/main, build.gradle, #105 public trace/oracle and M5 comparison runner/calculator",
+    "differences": [
+      {
+        "path": "src/main/java/com/slotq/events/persistence/KafkaIntakeObservability.java",
+        "measuredSha256": "e75297d8c8f58dc146d13f953b4db2538e857b47e7af859b05dd180f0b23af22",
+        "currentSha256": "7e345e9d4b19b7fad7315d4c44d61abf88a8d00b56cde318528ea78dc22adb4d"
+      }
+    ],
+    "assessment": "Only existing broker-result empty-partition classification differs; no extra broker/DB I/O or business/trace/oracle/retry change. Frozen measured source retained; latest sampler regression and fresh broker outage/alert recovery passed.",
+    "canonicalRecalculation": "PASS_15_RAW_SUMMARY_CSV_AND_ROUND_TRIPS_IN_TARGETED_COMMAND",
+    "cohort": "2026-10-01-comparison"
+  },
+  "sourceSha256": {
+    "src/test/java/com/slotq/experiments/waitlist/M5DrillRole.java": "353649d77a50cafd8ab79afdf7b692789c9ef0e7eff9c11604a0e714d1f3b00e",
+    "src/test/java/com/slotq/experiments/waitlist/M5DrillRoleTests.java": "47d6f41490c14fb28a1d94d21fb0014e1e82507f74be3999a8e4ad978558b9e3",
+    "src/test/java/com/slotq/experiments/waitlist/M5OperationsDrillRunner.java": "baa47b96d624823014d8a7cdb1bf1ac8e7e7d672e38c3fa8510355edadfbb049",
+    "src/test/java/com/slotq/experiments/waitlist/M5OperationsDrillEvidence.java": "053f7b57b452b7534f1698a70fce0192d33c365a485eae86f81d1f65ed9b9ce3",
+    "src/test/java/com/slotq/experiments/waitlist/M5OperationsDrillEvidenceTests.java": "ca29ef8baacf06cc79ef50e976e5d371ee5b6fffe923c4d978005286eb754f0c"
+  },
+  "evidenceHygiene": "Only canonical environment/workload manifests, lossless raw, final summaries/integrity and necessary verification/correction/closure retained. Full logs/JUnit XML, duplicate dumps and exploratory output remain ignored; log hashes are provenance only. Historical main evidence unchanged.",
+  "m5Closure": "LOCAL_EXIT_GATE_PASS; main Complete requires PR #122 merge; no merge/remote CI tracking performed",
+  "finalArtifactChecks": {
+    "canonicalDrillBytePreservation": "PASS_4_FILES",
+    "stagedCanonicalByteEquality": "PASS_4_FILES",
+    "credentialFieldReview": "PASS: decompressed fresh raw has no credential/password/authorization/private-key fields or Bearer header",
+    "textPolicyReview": "PASS",
+    "runtimeCleanup": "No Java process or running Docker container remained after clean build",
+    "historicalEvidence": "Unmodified"
+  }
+}

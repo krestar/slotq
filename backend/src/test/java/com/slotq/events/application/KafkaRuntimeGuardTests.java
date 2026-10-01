@@ -81,6 +81,21 @@ class KafkaRuntimeGuardTests {
             .hasMessageContaining("cannot run DB direct executor");
     }
 
+    @Test void isolatedServletRequiresExplicitMetricsOnlyModeAndKeepsRoleGuards() {
+        when(family.consumerId()).thenReturn("test.consumer");
+        when(family.routes()).thenReturn(List.of(new ConsumerRoute("test.consumer","first.changed",1)));
+        when(db.queryForList(anyString(),eq("test.consumer"))).thenReturn(List.of(Map.of(
+            "event_type","first.changed","schema_version",1,"transport","DB_DIRECT","authority_epoch",1)));
+        var unsafe=new KafkaRuntimeGuard(db,family,null,null,"relay",true,false,false,false,false,"servlet");
+        assertThatThrownBy(()->unsafe.run(null)).hasMessageContaining("cannot execute Product");
+        var observed=new KafkaRuntimeGuard(db,family,null,null,"relay",true,false,false,false,false,"servlet",true);
+        observed.run(null);assertThat(observed.relayReady()).isTrue();
+        var mixed=new KafkaRuntimeGuard(db,family,null,null,"relay",true,true,false,false,false,"servlet",true);
+        assertThatThrownBy(()->mixed.run(null)).hasMessageContaining("cannot execute Product");
+        var product=new KafkaRuntimeGuard(db,family,null,null,"product",false,false,false,false,false,"servlet",true);
+        assertThatThrownBy(()->product.run(null)).hasMessageContaining("limited to isolated");
+    }
+
     @Test void consumerCannotStartWithStaleEpochOrIncompleteCutover() {
         when(family.consumerId()).thenReturn("waitlist.promotion");
         KafkaConsumerCatalog catalog = () -> List.of(new KafkaConsumerCatalog.ConsumerDefinition(

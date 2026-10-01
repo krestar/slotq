@@ -1,7 +1,8 @@
 # ADR-0002: 단일 배포형 Modular Monolith로 시작
 
-- 상태: `Accepted`
+- 상태: `Superseded`
 - 결정일: 2026-08-25
+- 대체: [ADR-0008](0008-m5-event-transport-and-runtime-status.md). 초기 단일 runtime 배포 조항을 대체하고 module/transaction 경계는 보존한다. 아래 본문은 당시 결정 기록이다.
 
 ## 맥락
 

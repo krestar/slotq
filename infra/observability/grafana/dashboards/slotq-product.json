@@ -1059,6 +1059,32 @@
         { "refId": "B", "expr": "slotq_kafka_delivery_sample_healthy or slotq_kafka_sample_truncated", "legendFormat": "{{logical_consumer}} / {{__name__}} / {{sample}}" }
       ],
       "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
+    },
+    {
+      "id": 37,
+      "title": "Shared publication durable inventory / expired claim",
+      "type": "timeseries",
+      "description": "Read-only MySQL publication responsibility survives publisher JVM death. Expired claim may be ACK unknown; it does not prove loss. Check sample health/truncation.",
+      "datasource": { "type": "prometheus", "uid": "slotq-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 144 },
+      "targets": [
+        { "refId": "A", "expr": "slotq_db_publication_targets", "legendFormat": "{{job}} / {{publication_state}} targets" },
+        { "refId": "B", "expr": "slotq_db_publication_expired_claims", "legendFormat": "{{job}} expired claims" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
+    },
+    {
+      "id": 38,
+      "title": "DB direct scoped consumer backlog / sample validity",
+      "type": "timeseries",
+      "description": "DB direct uses the same logical-consumer execution boundary. Scope labels and freshness distinguish Waitlist from operations observer; no Kafka intake is inferred.",
+      "datasource": { "type": "prometheus", "uid": "slotq-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 144 },
+      "targets": [
+        { "refId": "A", "expr": "slotq_db_delivery_targets{job=~\"slotq-waitlist|slotq-observer\"}", "legendFormat": "{{logical_consumer}} / {{delivery_state}} targets" },
+        { "refId": "B", "expr": "slotq_db_delivery_sample_healthy", "legendFormat": "{{logical_consumer}} sample health" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
     }
   ]
 }

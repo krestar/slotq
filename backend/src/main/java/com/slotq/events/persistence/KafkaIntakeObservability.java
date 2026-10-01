@@ -105,7 +105,11 @@ final class KafkaIntakeObservability {
             for (TopicPartition partition : partitions) {
                 var position = committed.get(partition);
                 Long end = ends.get(partition);
-                if (position == null || end == null || position.offset() > end) { complete = false; continue; }
+                // An observed absolute log end 0 proves this partition has never contained a
+                // record. Its known lag is zero even before a first offset commit. Nonempty
+                // partitions without durable committed provenance remain unknown.
+                if (end == null || end < 0 || (position == null && end != 0)
+                    || (position != null && position.offset() > end)) { complete = false; continue; }
                 AtomicLong holder = lag.computeIfAbsent(partition, key -> {
                     AtomicLong created = new AtomicLong();
                     Gauge.builder("slotq.kafka.consumer.lag.records", created, AtomicLong::get)
@@ -113,7 +117,7 @@ final class KafkaIntakeObservability {
                         .tag("partition", Integer.toString(key.partition())).register(registry);
                     return created;
                 });
-                holder.set(end - position.offset());
+                holder.set(position == null ? 0 : end - position.offset());
             }
             lagHealthy.set(complete ? 1 : 0);
         } catch (RuntimeException unavailable) {

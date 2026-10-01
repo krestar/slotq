@@ -32,6 +32,7 @@ public final class DatabaseObservationSampler {
     private volatile boolean locksHealthy;
     private final Duration staleAfter;
     private final String kafkaConsumerId;
+    private final String consumerTransport;
 
     public DatabaseObservationSampler(MeterRegistry registry,
             @Value("${slotq.observability.database.jdbc-url}") String url,
@@ -40,13 +41,17 @@ public final class DatabaseObservationSampler {
             @Value("${slotq.observability.database.interval:PT15S}") Duration interval,
             @Value("${slotq.observability.database.stale-after:PT45S}") Duration staleAfter,
             @Value("${slotq.events.runtime-role:product}") String runtimeRole,
-            @Value("${slotq.events.delivery.consumer-id:}") String consumerId) {
+            @Value("${slotq.events.delivery.consumer-id:}") String consumerId,
+            @Value("${slotq.events.delivery.transport:DB_DIRECT}") String transport) {
         if (interval.compareTo(Duration.ofSeconds(1)) < 0 || staleAfter.compareTo(interval) <= 0) {
             throw new IllegalArgumentException("Observation interval/staleness bounds are invalid");
         }
         this.registry = registry;
         this.staleAfter = staleAfter;
         this.kafkaConsumerId = runtimeRole.equals("consumer") ? consumerId : null;
+        if (!java.util.Set.of("DB_DIRECT", "KAFKA").contains(transport))
+            throw new IllegalArgumentException("Unknown observation transport");
+        this.consumerTransport = transport.equals("KAFKA") ? "kafka" : "db";
         if (kafkaConsumerId != null && !java.util.Set.of("waitlist.promotion",
                 "operations.event-observation").contains(kafkaConsumerId))
             throw new IllegalArgumentException("Kafka observation requires an approved logical consumer");
@@ -74,11 +79,11 @@ public final class DatabaseObservationSampler {
                         .tag("sample", sample).register(registry);
             }
         } else {
-            var tags = Tags.of("transport", "kafka", "runtime_role", "observer",
+            var tags = Tags.of("transport", consumerTransport, "runtime_role", "observer",
                 "logical_consumer", kafkaConsumerId);
-            Gauge.builder("slotq.kafka.delivery.sample.healthy", this, sampler -> sampler.healthy("events") ? 1 : 0)
+            Gauge.builder("slotq." + consumerTransport + ".delivery.sample.healthy", this, sampler -> sampler.healthy("events") ? 1 : 0)
                 .tags(tags).register(registry);
-            Gauge.builder("slotq.kafka.delivery.sample.age.seconds", this, sampler -> sampler.age("events"))
+            Gauge.builder("slotq." + consumerTransport + ".delivery.sample.age.seconds", this, sampler -> sampler.age("events"))
                 .tags(tags).register(registry);
         }
         this.scheduler = Executors.newSingleThreadScheduledExecutor(task -> {
@@ -122,10 +127,10 @@ public final class DatabaseObservationSampler {
 
     private void registerKafka(DatabaseObservation.Snapshot snapshot) {
         for (var key : snapshot.values().keySet()) {
-            var tags = Tags.of("transport", "kafka", "runtime_role", "observer",
+            var tags = Tags.of("transport", consumerTransport, "runtime_role", "observer",
                 "logical_consumer", kafkaConsumerId);
             if (!key.dimension().isEmpty()) tags = tags.and(key.dimension(), key.value());
-            Gauge.builder("slotq.kafka." + key.metric(), this, sampler -> sampler.value("events", key))
+            Gauge.builder("slotq." + consumerTransport + "." + key.metric(), this, sampler -> sampler.value("events", key))
                 .tags(tags).register(registry);
         }
     }

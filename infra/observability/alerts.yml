@@ -35,3 +35,38 @@ groups:
         expr: increase(slotq_telemetry_export_spans_total{outcome="failure"}[5m]) > 0
         labels: {severity: warning}
         annotations: {summary: "Trace export failed; Product correctness is independent"}
+      - alert: SlotqExecutionRuntimeUnavailable
+        expr: up{job=~"slotq-waitlist|slotq-observer|slotq-relay"} == 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "Scoped runtime scrape unavailable; inspect process and exact durable responsibility"}
+      - alert: SlotqConsumerDeadDelivery
+        expr: slotq_kafka_delivery_targets{delivery_state="DEAD"} > 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "Consumer business target is DEAD; offset progress is not effect completion"}
+      - alert: SlotqConsumerBacklog
+        expr: slotq_kafka_delivery_oldest_created_age_seconds{delivery_state=~"PENDING|PROCESSING"} > 60
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: "Consumer-scoped DB responsibility exceeds local diagnostic budget"}
+      - alert: SlotqConsumerDatabaseSampleUnavailable
+        expr: slotq_kafka_delivery_sample_healthy == 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "Consumer DB sample unavailable; missing business state is not zero"}
+      - alert: SlotqPublicationClaimExpired
+        expr: slotq_db_publication_expired_claims > 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "Expired publication claim requires durable/ack reconciliation; publication may be unknown"}
+      - alert: SlotqPublicationDead
+        expr: slotq_db_publication_targets{publication_state="DEAD"} > 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "Shared publication exhausted; separate authorized publication recovery required"}
+      - alert: SlotqKafkaLagUnavailable
+        expr: slotq_kafka_lag_sample_healthy == 0
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "Kafka lag unavailable; broker/intake progress is unknown, inspect durable DB responsibility separately"}

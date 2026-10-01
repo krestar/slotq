@@ -52,7 +52,24 @@ Count가 0이어도 sample truncated=1 또는 healthy=0이면 global 부재를 �
 
 이 표의 metric naming, 단위, timestamp source, cardinality 및 missing 의미는 #106 관측 계약이다. 실제 측정/emit, publication 책임 데이터, Kafka client lifecycle은 #107, intake provenance/offset/lag 수집 구현은 #108이 소유한다. 공통 label은 publication에 `transport=kafka,runtime_role=relay`, intake/lag에 `transport=kafka,runtime_role=consumer`를 사용한다. intake/delay/lag/lag sample의 `logical_consumer`는 #108에서 확정한 `waitlist.promotion`, `operations.event-observation` 두 값만 허용한다. 임의 consumer, process/replica/registration UUID는 이 label로 허용하지 않는다. runtime state만 별도 role enum을 사용한다.
 
-현재 DB direct sampler는 계속 `waitlist.promotion`의 delivery/promotion만 emit한다. 이 allowlist 보완은 observer projection, intake 또는 consumer runtime을 추가하지 않는다. Kafka panel은 각 consumer를 legend에 표시하고 delay/invalid-delay/lag 집계에도 `logical_consumer`를 보존한다. 한 consumer의 지연·오류·lag를 다른 consumer와 합쳐 정상 상태처럼 표시하지 않는다. 128개 lag tuple 상한은 두 consumer를 합한 전체 관측 상한이다.
+Product sampler는 `waitlist.promotion` delivery/promotion을 emit한다. #111에서 isolated consumer의
+DB direct 표본은 `slotq_db_delivery_*`, `transport=db`, 선택된 `logical_consumer`를 사용한다.
+Kafka consumer 표본은 기존 `slotq_kafka_delivery_*`, `transport=kafka`를 보존한다.
+DB direct observer를 Kafka intake로 표현하지 않는다. Panel은 각 consumer를 legend에 표시하며
+한 consumer의 지연·오류·lag를 다른 consumer와 합쳐 정상 상태처럼 표시하지 않는다.
+128개 lag tuple 상한은 두 consumer를 합한 전체 관측 상한이다.
+
+Broker에서 실제 조회한 absolute end offset 0은 record가 없는 partition의 known lag 0이다.
+이때만 첫 committed offset 부재를 허용한다. Nonempty partition의 committed offset 누락이나
+broker 조회 실패는 sample unhealthy/unknown이며 client position을 durable offset으로 사용하지 않는다.
+
+#111의 별도 read-only Product/relay DB sampler는 `slotq_db_publication_targets{publication_state}`와
+`slotq_db_publication_oldest_recorded_age_seconds{publication_state}`를 제공한다. 각 상태별 oldest-first
+10,000행 cap이며 recorded_at은 event insert 시각이다. `slotq_db_publication_expired_claims`는
+PROCESSING이고 DB lease가 만료된 표본 수다. Publisher JVM이 죽어도 이 관측은 가능하다.
+Expired claim은 ACK unknown 가능성을 탐지하는 신호이며 loss나 DEAD를 증명하지 않는다.
+`slotq_db_sample_truncated{sample="publications_pending|publications_processing|publications_published|publications_dead|publication_expired"}`와
+events sample health를 함께 읽는다. 이 sampler는 recovery 상태를 변경하지 않는다.
 
 event별 metric을 분해할 때 `event_type`은 현재 확정된 `booking.capacity-released`, `waitlist.promotion-requested` 두 값, `schema_version`은 문자열 `1`만 허용한다. 현재 두 production route의 v1 vocabulary를 #106에서 고정한다. 임의 event type/version 문자열을 label로 등록하지 않는다. 향후 event/version 추가는 명시적인 allowlist 및 series budget 변경으로 처리한다. publication inventory/ack/retry/failure 및 intake/delay에만 필요한 event dimension을 사용하고 runtime state/lag에 무조건 교차곱으로 추가하지 않는다.
 

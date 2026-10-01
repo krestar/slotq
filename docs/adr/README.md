@@ -21,12 +21,13 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | ADR | 제목 | 상태 |
 | --- | --- | --- |
 | [0001](0001-use-java.md) | Backend 언어로 Java 사용 | `Superseded` |
-| [0002](0002-start-with-modular-monolith.md) | 단일 배포형 Modular Monolith로 시작 | `Accepted` |
+| [0002](0002-start-with-modular-monolith.md) | 단일 배포형 Modular Monolith로 시작 | `Superseded` (runtime 조항은 0008, module 경계 보존) |
 | [0003](0003-use-react-typescript-vite.md) | Thin SPA에 React, TypeScript, Vite 사용 | `Accepted` |
 | [0004](0004-use-java-25.md) | Java 25 LTS를 Backend 기준선으로 사용 | `Accepted` |
 | [0005](0005-use-mysql-hold-idempotency-record.md) | MySQL reliability record로 HOLD command idempotency 보장 | `Accepted` |
 | [0006](0006-use-targeted-pessimistic-locks-for-reservation-consistency.md) | Reservation 정합성 경계에 대상 row pessimistic lock 사용 | `Accepted` |
-| [0007](0007-use-transactional-event-record-and-db-delivery.md) | Transactional event record와 DB 기반 전달 경계 사용 | `Accepted` |
+| [0007](0007-use-transactional-event-record-and-db-delivery.md) | Transactional event record와 DB 기반 전달 경계 사용 | `Superseded` (초기 transport/runtime은 0008, transactional 계약 보존) |
+| [0008](0008-m5-event-transport-and-runtime-status.md) | DB direct 기본 전달과 Kafka experimental topology 유지 | `Accepted` |
 
 ## 후보 등록부
 
@@ -45,10 +46,10 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | 후보 | 상태 | 검토를 시작할 증거 또는 선행 조건 |
 | --- | --- | --- |
 | HOLD 만료 처리 방식 | `Deferred` | HOLD 요구사항과 허용 만료 오차, 복구 목표, 예상 부하가 구체화되어야 합니다. |
-| Transactional Outbox | `Accepted` | #80의 MySQL 비교와 실제 JVM crash evidence에 따라 ADR-0007에서 선택했습니다. Production 구현은 후속 M3 Issue가 소유합니다. |
-| Kafka | `Deferred` | 단순한 DB 기반 처리나 애플리케이션 내부 이벤트로 충족할 수 없는 전달량, 소비자 분리 또는 보존 요구가 측정되어야 합니다. |
+| Transactional Outbox | `Accepted` | #80/ADR-0007의 MySQL atomic append와 receipt/fencing 계약을 M3~M5 구현 및 ADR-0008에서 보존합니다. |
+| Kafka 상시 운영 adoption | `Deferred` | #107~#109 구현과 #111 실제 비교/drill은 experimental topology로 유지합니다. Default와 repository/runtime 지위를 별도로 확정했으며 retention/장기 운영 부담과 추가 요구/evidence 없이 supported production alternative로 채택하지 않습니다. |
 | Redis | `Deferred` | DB만으로 충족하지 못하는 지연·부하·분산 조정 문제가 측정되어야 하며 캐시 정합성 비용을 비교해야 합니다. |
-| Observability stack | `Deferred` | 서비스 수준 목표와 추적할 실패·지연 신호가 정의된 뒤 필요한 metrics, logs, traces 범위를 결정합니다. |
+| Observability stack | `Accepted` (local/container) | #106/#111의 Actuator/Micrometer, protected scrape/read-only inventory, Prometheus/Grafana/Tempo 및 실제 alert/trace/drill. Production SLO/HA 승인은 아닙니다. |
 | MCP Gateway | `Deferred` | Product API와 권한 경계가 안정되고 둘 이상의 AI 기능이 공통 tool 실행 기반을 요구해야 합니다. |
 | RAG | `Deferred` | 비정형 지식 corpus, 갱신 주기, 검색 품질 기준과 transactional state와의 책임 분리가 정의되어야 합니다. |
 | Model Router | `Deferred` | 복수 모델을 비교할 실제 traffic과 cost, latency, quality, security 평가 결과가 있어야 합니다. |

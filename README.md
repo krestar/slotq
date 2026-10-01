@@ -6,7 +6,7 @@
 
 **동시 예약 · 상태 전이 · 이벤트 기반 대기열 · 멀티테넌시 · 장애 복구**
 
-**현재 상태: M4 Waitlist Promotion 완료**
+**현재 상태: M0~M4 완료 · M5 종료 gate PASS / PR #122**
 
 </div>
 
@@ -156,6 +156,23 @@ flowchart TB
 
 현재 이벤트 전달의 기준선은 **Transactional event record + DB 전달**입니다. Booking transaction과 이벤트 기록의 원자성을 보존하고, 재시도·중복·프로세스 재시작·DB 장애 복구를 검증했습니다.
 
+M5의 [ADR-0008](docs/adr/0008-m5-event-transport-and-runtime-status.md)은 **DB direct를 permanent
+supported default와 수동 rollback target**으로 유지합니다. Kafka는 실제 두 logical consumer,
+독립 JVM/group, replica assignment, broker/DB 장애와 human recovery를 검증한 opt-in
+experimental/comparison topology로 보존합니다. 상시 운영 alternative 채택과 code 삭제는
+default 선택과 별개의 결정입니다. 자동 fallback은 없으며 transport 전환은 quiesced 수동
+cutover/rollback입니다.
+
+Product DB direct는 API와 local Waitlist executor/maintenance를 공유하고 observer를 별도
+scoped runtime으로 실행할 수 있습니다. Kafka 역할 분리도 shared MySQL/host 장애를 제거하지
+않습니다. 24h broker retention은 실험 설정이며 DB event/receipt/audit 자동 삭제는 없습니다.
+실제 지원 role, retention guard와 recovery horizon의 한계는 ADR을 따릅니다.
+
+[15회 비교와 원자료](docs/experiments/m5-transport/README.md),
+[fresh 통합 drill](docs/experiments/m5-transport/2026-10-01-drill/summary.json),
+[운영 runbook](docs/runbooks/event-operations.md),
+[M5 종료 대조](docs/experiments/m5-transport/closure.md)를 함께 제공합니다.
+
 중요한 아키텍처 결정은 [ADR Register](docs/adr/README.md), 세부 구조는 [Architecture 문서](docs/architecture/)에서 관리합니다.
 
 ---
@@ -205,8 +222,8 @@ AI Platform은 현재 Product Backend 위에 추가할 후속 범위입니다. �
 | 데이터베이스 | MySQL 8.4 LTS, Flyway | **채택** |
 | 테스트 | JUnit, Testcontainers MySQL | **채택** |
 | 캐시 | Redis | 필요성과 측정 결과가 생길 때 검토 |
-| 이벤트 전달 | Transactional event record + DB 전달 | ADR-0007과 M3 구현으로 채택, M4 실제 Booking→Waitlist 흐름 검증 완료 |
-| 관측 | Spring Boot Actuator, Micrometer부터 시작 | M5에서 구체화 |
+| 이벤트 전달 | Transactional event record + DB direct 기본, Kafka experimental opt-in | ADR-0008; MySQL source/receipt/fencing 보존, 상시 Kafka adoption 보류 |
+| 관측 | Actuator/Micrometer, Prometheus/Grafana/Tempo | protected scrape, read-only inventory, alert/trace와 actual local/container drill |
 | 인프라 | 로컬 container 환경부터 시작 | Kubernetes는 운영상 필요가 생길 때 검토 |
 | AI Platform | MCP, RAG, Model Router, Agent Runtime, Evaluation | M6 이후 단계적 도입 |
 
@@ -256,7 +273,7 @@ flowchart LR
 ```
 
 - **M0~M4:** 완료
-- **M5:** Reliability & Observability
+- **M5:** Reliability & Observability local 종료 gate PASS / [PR #122](https://github.com/krestar/slotq/pull/122), main 반영 후 Complete
 - **M6~M8:** AI Access & Knowledge → Model Router & Agent Runtime → Evaluation & Production Hardening
 
 M0부터 M5까지 Product Backend와 운영 신뢰성을 먼저 완성하고, M6 이후 AI Platform 범위로 이동합니다.

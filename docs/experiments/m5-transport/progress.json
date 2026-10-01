@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "slotq-m5-progress/v1",
+  "status": "PASS_LOCAL_EXIT_GATE",
+  "issue": 111,
+  "baseRevision": "7a3890116514c7d84b17391c08f98a041ae844de",
+  "comparison": {
+    "result": "PASS_FOR_RECORDED_SOURCE",
+    "cohort": "2026-10-01-comparison",
+    "profiles": 5,
+    "repetitionsPerProfile": 3,
+    "originalEvents": 615,
+    "businessTargets": 1230,
+    "unexplainedCorrectnessViolations": 0,
+    "canonicalRecalculation": "PASS_15_RAW_SUMMARY_CSV_ROUND_TRIPS",
+    "provenance": "Frozen measured source retained. All 15 manifests compared with current production/public-trace/runner/calculator/build source: 304 files per manifest, only KafkaIntakeObservability differs. Existing broker queries remain unchanged; only empty-partition known-zero classification changed. Fresh sampler regression and broker outage/alert recovery passed."
+  },
+  "targetedVerification": {
+    "intakeCorrection": "See intake-correction.json: 3/3 deadlock reproductions before correction, then 80 test cases across eight relevant suites passed.",
+    "latest": {
+      "result": "PASS",
+      "reference": "verification.json",
+      "testCases": 94,
+      "suites": 12,
+      "description": "Current cumulative targeted regression and 15 canonical comparison recalculations. Historical correction results remain in intake-correction.json."
+    }
+  },
+  "lagCorrection": {
+    "failure": "A broker-observed absolute end offset 0 with no first committed offset kept the lag sample unhealthy after successful broker/business recovery.",
+    "before": {
+      "command": "gradlew.bat test --tests '*KafkaIntakeObservabilityTests' --offline --no-daemon --console=plain",
+      "tests": 3,
+      "failures": 1,
+      "observedFailure": "realEmptyPartitionNeedsNoCommittedOffsetToBeKnownHealthyZeroLag",
+      "logSha256": "e88a1680b4697f066a6ced323d8e421fb00de06908d7a477690daaab52637157"
+    },
+    "after": "Three KafkaIntakeObservabilityTests passed. Only broker-proven absolute end 0 permits a missing committed offset; nonempty/missing/unavailable provenance remains unknown. No offset mutation or client-position substitution.",
+    "freshIntegratedDrill": "PASS_2026-10-01_DRILL"
+  },
+  "integratedDrill": {
+    "overallResult": "PASS_FRESH_COMPLETE_RUN",
+    "attempts": [
+      {
+        "correction": "Fixed loopback broker endpoint in the test harness; separate restart probe confirmed unchanged endpoint.",
+        "result": "FAIL",
+        "reason": "Kafka Testcontainers dynamic mapped endpoint changed across stop/start, preventing broker reconnection.",
+        "elapsed": "6m 8s",
+        "logSha256": "5a1138f8ba62fbea50e1a5e5d461231b4b3e4c43bdc09a2ddbaa43ebe0f25763"
+      },
+      {
+        "correction": "Empty-partition lag sampling corrected; latest targeted tests passed; fresh complete drill pending.",
+        "result": "FAIL",
+        "reason": "Timed out waiting for SlotqKafkaLagUnavailable to clear after broker/business recovery.",
+        "elapsed": "4m 19s",
+        "logSha256": "9b23843258234bfaf75643d16df97ff21a18f08e6153825a4a42dbbc67483634"
+      },
+      {
+        "result": "FAIL",
+        "reason": "Actual paused MySQL reached, but test harness searched redacted production scheduler logs for SQL stack text.",
+        "elapsed": "8m 14s",
+        "correction": "Test-only child probe invokes the actual scoped production cycle during paused MySQL and retains JDBC class/entrypoint only; scheduler redaction preserved.",
+        "logSha256": "d33e476e345a138103694dbf373d11f77cd6202b9b211dbe142c68c4f9601234"
+      },
+      {
+        "result": "PASS",
+        "elapsed": "10m 49s",
+        "canonical": "2026-10-01-drill",
+        "logSha256": "b078493713a0c20c72a0ff827ed0f4de0b945f428f3833c37d95e2d4f255eda9",
+        "description": "Fresh complete integrated flow, all required alerts fire/clear, protected operator audit, durable intake after actual DB outage, quiesced Kafka-to-DB rollback and post-rollback scoped recovery."
+      }
+    ],
+    "notCompleted": [],
+    "canonicalSuccessDataset": "2026-10-01-drill: manifest.json, raw.json.gz, summary.json, integrity.json"
+  },
+  "remainingGates": [],
+  "openEngineeringQuestions": [
+    {
+      "source": "backend/src/main/java/com/slotq/events/persistence/JdbcKafkaPublicationLedger.java: verifyTopic",
+      "observation": "The current retention guard considers the minimum acknowledged offset of all PUBLISHED rows, including completed targets. Broker retention can therefore cause conservative fail-closed publication even after business completion.",
+      "decision": "Known Kafka long-lived adoption constraint; no guard weakening or unconditional expired-prefix recovery. Default DB_DIRECT remains supported; Kafka status is reproducible experimental/comparison topology. See ADR-0008."
+    },
+    {
+      "observation": "DB direct Product bootstrap currently requires its local Waitlist executor/maintenance. The comparison/drill timer adapter does not verify a DB producer-only deployment.",
+      "decision": "Product-local Waitlist runtime explicitly retained; DB producer-only/complete process isolation is not claimed. See ADR-0008 and integrated runbook."
+    }
+  ],
+  "notRun": [],
+  "architectureDecision": {
+    "adr": "../../adr/0008-m5-event-transport-and-runtime-status.md",
+    "defaultTransport": "DB_DIRECT",
+    "kafkaRuntimeStatus": "REPRODUCIBLE_EXPERIMENTAL_COMPARISON",
+    "kafkaProductionAdoption": "DEFERRED",
+    "dbDirectStatus": "PERMANENT_SUPPORTED_DEFAULT_AND_QUIESCED_MANUAL_ROLLBACK_TARGET",
+    "automaticFallback": false
+  },
+  "m5Closure": "LOCAL_EXIT_GATE_PASS; MAIN_COMPLETE_REQUIRES_PR_122_MERGE",
+  "evidenceSelection": "Existing historical evidence retained. Frozen comparison 32 files unchanged; fresh representative drill only 4 canonical files, current verification/progress/closure and reproducible harness retained. Full logs, intermediate/debug/warm-up/failed-run dumps remain ignored.",
+  "safeWrapVerification": {
+    "diffCheck": "PASS",
+    "artifactReview": "PASS at prior safe wrap: 32 comparison files only; no full logs/debug dumps; canonical byte integrity and credential field review",
+    "dashboardJsonAndUniqueAlerts": "PASS",
+    "runtimeCleanup": "No experiment JVM or running Docker container found at safe wrap",
+    "canonicalRecalculation": {
+      "command": "gradlew.bat m5CanonicalEvidence '-Precalculate=../docs/experiments/m5-transport/2026-10-01-comparison' --offline --no-daemon --console=plain",
+      "result": "PASS_15_DATASETS",
+      "logSha256": "073b1e3b9dad52c776d930130b11b27f77e059b57cf0744dfc9694b6aa7809b8"
+    }
+  },
+  "verifierCorrection": {
+    "beforeResult": "FAIL_EXPECTED_1_OF_1",
+    "beforeLogSha256": "b1c1f35aa92575253e3e7ba28c433e78e17a7c2d8508c132c9c5e25450b56663",
+    "description": "Valid existing integrity JSON was needlessly rewritten by verification. Existing artifacts now checked without mutation; initial absent integrity is generated. Six evidence reconciliation/negative/byte-preservation tests passed."
+  },
+  "running": [],
+  "finalVerification": "verification.json: current targeted, Backend full test/clean build, Frontend full verification, canonical recalculation and artifact hygiene all passed"
+}
