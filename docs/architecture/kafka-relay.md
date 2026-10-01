@@ -1,8 +1,9 @@
 # M5 Kafka publication foundation (#107)
 
 이 문서는 [#107](https://github.com/krestar/slotq/issues/107)의 opt-in relay 경계다.
-기본 Product deployment는 [ADR-0007](../adr/0007-use-transactional-event-record-and-db-delivery.md)의
-DB direct 전달을 유지한다. Kafka를 기본 transport로 채택하는 결정은 #111의 비교 evidence 이후다.
+최종 [ADR-0008](../adr/0008-m5-event-transport-and-runtime-status.md)은 DB direct를 기본으로
+유지하고 Kafka 구현을 reproducible experimental/comparison topology로 보존한다. 아래 #107
+구현 계약은 상시 운영 supported alternative 채택을 의미하지 않는다.
 
 ## 원본, identity, transaction
 
@@ -104,10 +105,12 @@ local 3-node KRaft profile은 RF=3/min ISR=2/unclean election off, retention 24h
 검증용이며 HA 근거가 아니다.
 
 `KafkaRetentionProbe`는 실제 topic ID를 durable하게 묶고 partition log-start를 이미 ack된
-publication offset 중 가장 오래된 위치와 대조한다. topic 재생성 또는 intake 전 gap은 relay를
-fail closed한다. #108의 durable intake/committed position이 아직 없으므로 모든 PUBLISHED record를
-잠재적 필요 record로 보수적으로 취급한다. 소비자 offset expiry, 안전한 recovery inventory와
-handoff는 #108/#110에 남긴다. silent `latest` reset은 쓰지 않는다.
+publication offset 중 가장 오래된 위치와 대조한다. topic 재생성 또는 log-start gap은 relay를
+fail closed한다. #107에서 선택한 보수적 guard는 #108 intake 구현 이후에도 모든 PUBLISHED
+record를 잠재적 필요 record로 취급하며 완료된 target도 제외하지 않는다. #110 publication
+recovery가 expired consumer prefix/group까지 복구하는 것은 아니다. 이 장기 운영 제약과
+MySQL source 기반 quiesced DB rollback/re-entry 조건은 ADR-0008과 통합 runbook을 따른다.
+Silent `latest` reset은 쓰지 않는다.
 
 local anonymous plaintext는 loopback에만 bind한다. 비-local relay는 `SASL_SSL`과 외부에서
 주입한 JAAS/truststore가 없으면 startup 실패한다. [secure profile](../../infra/kafka/compose.secure.yml)은

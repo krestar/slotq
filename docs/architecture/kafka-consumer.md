@@ -1,5 +1,9 @@
 # M5 Kafka consumer와 transport 전환 (#108)
 
+최종 지위는 [ADR-0008](../adr/0008-m5-event-transport-and-runtime-status.md)을 따른다.
+DB direct가 supported default이며 이 Kafka 경로는 reproducible experimental/comparison topology다.
+아래 구현 계약은 유지하지만 상시 운영 supported alternative 채택을 의미하지 않는다.
+
 이 문서는 [#108](https://github.com/krestar/slotq/issues/108)의 첫 production 경계다. MySQL
 `event_records`가 원본이고 `event_transport_assignments`의 registration별 transport/epoch가
 실행 권한을 정한다. Kafka offset은 business 완료가 아니라 `event_deliveries` target과

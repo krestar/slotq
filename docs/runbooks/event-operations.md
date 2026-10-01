@@ -1,8 +1,10 @@
 # Event operations 통합 runbook
 
-**검증 중인 draft다.** 새 통합 drill은 아직 전체 PASS가 아니며 이 문서의 모든 절차를
-이번 실행에서 검증한 것으로 해석하지 않는다. 실제 실행·실패와 남은 gate는
-[M5 진행 기록](../experiments/m5-transport/progress.json)을 따른다.
+2026-10-01 fresh 통합 drill에서 아래 대표 탐지/authorized recovery/rollback flow가 PASS했다.
+[원자료와 실제 timing](../experiments/m5-transport/README.md#fresh-integrated-operations-drill)을
+따른다. 전체 production 배포, HA 또는 모든 recovery 상황을 검증한 runbook은 아니다.
+[ADR-0008](../adr/0008-m5-event-transport-and-runtime-status.md)에 따라 기본값은 DB direct,
+Kafka role은 opt-in experimental/comparison topology다.
 
 MySQL business state와 immutable original event가 복구 source다. Kafka lag/offset은 durable
 intake의 진행이고 DB delivery DONE/consumer receipt는 business 완료다. 두 inventory를 따로 확인한다.
@@ -43,6 +45,14 @@ Sample health가 0이거나 cap/truncation이 있으면 count/age를 완전한 i
    Topic identity·retention/authorization과 consumer routes를 먼저 확인한다. 자동 fallback 또는
    mixed-version 무중단 cutover는 지원하지 않는다.
 
+현재 retention guard는 완료된 target의 PUBLISHED ack offset도 확인한다. Broker retention 전진은
+relay를 fail closed할 수 있으며 #110 publication recovery만으로 expired consumer prefix/group을
+복구하지 않는다. MySQL original/target/receipt가 보존된 상태에서 quiesced DB rollback을 판단한다.
+Kafka 재전환은 topic/group/prefix admission이 가능한 경우에만 수행한다. 임의 offset/prefix reset,
+SQL 수정 또는 자동 fallback으로 우회하지 않는다. 장기 Kafka adoption은 이 제약의 별도 계약과
+evidence가 필요하다. DB event/receipt/audit에는 자동 TTL이 없으며 실제 보존 source와 호환 schema/
+authority가 recovery horizon의 조건이다.
+
 DB direct Product는 현재 Waitlist executor/maintenance를 함께 활성화한다. 별도 Waitlist DB consumer
 replica와 observer는 같은 consumer-scoped execution guard를 사용한다. DB producer-only 배치를
 검증한 것으로 해석하지 않는다. Kafka Product의 produce-only 실행과 relay/intake/executor process
@@ -52,7 +62,9 @@ replica와 observer는 같은 consumer-scoped execution guard를 사용한다. D
 
 `backend`의 `m5OperationsDrill`은 disposable MySQL/Kafka와 독립 JVM을 사용해 위 대표 flow를 실행한다.
 Fault advice/ACK halt, synthetic Product credential, 개인 operator fixture provisioning과
-maintenance 타이머 제어는 test-only다. 실제 HTTPS operator credential hash/grant/security chain,
+maintenance 타이머 제어는 test-only다. 실제 MySQL pause 중 scoped production `runCycle`을 한 번
+호출하는 probe도 test-only이며 실제 JDBC exception class/entrypoint만 보존한다. Scheduler의
+redacted log를 SQL/stack trace 전문으로 바꾸지 않는다. 실제 HTTPS operator credential hash/grant/security chain,
 production intake/DB executor/cutover, Prometheus alert·Grafana query·Tempo trace가 실행된다.
 Secret/전체 log는 로컬 `build/`에만 남으며 성공한 canonical raw와 summary만 보존한다.
 

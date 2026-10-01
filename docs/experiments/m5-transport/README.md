@@ -1,14 +1,15 @@
 # #111 M5 transport 비교와 operations 통합 evidence
 
-**진행 중인 draft다. #111과 M5는 완료되지 않았다.** 비교 15회와 canonical 재계산은 통과했지만,
-통합 operations drill은 두 번 실행해 모두 실패했다. 마지막 lag 관측 수정 뒤 전체 drill은
-재실행하지 않았다. 전체 Backend test/clean build와 cumulative Frontend 검증도 미실행이다.
-실제 실행과 남은 gate는 [진행 기록](progress.json)을 따른다.
+비교 15회와 fresh integrated operations drill이 PASS했다. 마지막 lag 관측 수정 이후 실제
+broker/DB 장애, authorized human recovery와 quiesced rollback을 끝까지 실행했다.
+관련 regression, 전체 Backend test/clean build와 cumulative Frontend 검증도 통과했다.
+실제 실행 이력은 [진행 기록](progress.json), [최종 검증](verification.json)과 M5 종료 대조는
+[closure](closure.md)를 따른다. Local 종료 gate는 PASS이며 main Complete는 PR #122 반영 이후다.
 
-Default transport, Kafka의 adoption 범위와 repository/runtime 지위, DB direct의 장기 지위는
-아직 결정하지 않았다. 새 Accepted ADR, ADR Register/README/roadmap 동기화와 M5 종료 대조는
-대표 drill 및 최종 검증 이후에 수행한다. 현재 수치만으로 Kafka 채택·제거나 default 변경을
-정당화하지 않는다.
+[Accepted ADR-0008](../../adr/0008-m5-event-transport-and-runtime-status.md)은 기본 transport를
+`DB_DIRECT`로 유지하고, **별도로** Kafka implementation을 reproducible experimental/comparison
+topology로 유지한다. DB direct는 permanent supported default/manual rollback target이며 Kafka의
+상시 운영 adoption은 보류한다. 단순 latency 순위만으로 채택·제거를 결정하지 않았다.
 
 ## 비교 protocol
 
@@ -107,8 +108,10 @@ seed, profile별 3회 이상 반복을 확인한다. Root summary와 integrity�
 | 비교 root `summary.json`, `integrity.json` | 15 run의 최종 판정과 raw/CSV 재계산 hash |
 | Drill `manifest.json` / `raw.json.gz` / `summary.json` / `integrity.json` | 대표 장애, actual alert/dashboard/trace, TLS human audit, durable convergence와 rollback |
 | `intake-correction.json` | 실제 two-consumer cold-target deadlock 전/후 repeated regression 결과 |
-| `progress.json` | 실행한 검증, 실패한 drill과 미실행 gate를 구분하는 진행 기록 |
-| Harness·이 문서·draft 통합 runbook | 재현 명령과 아직 검증 중인 운영 절차; 최종 ADR은 미작성 |
+| `progress.json` | 실패한 시도와 fresh PASS, source 영향 평가를 구분하는 진행 기록 |
+| `verification.json` | 실제 최종 검증 명령/결과와 opt-in skip, source 및 log hash |
+| Harness·이 문서·통합 runbook | 재현 명령, 검증한 대표 운영 절차와 적용 한계 |
+| `closure.md` / ADR-0008 | #105~#111 완료조건 대조와 두 독립 architecture 결정 |
 
 Warm-up/exploratory 실패·중간 dump·전체 console/application/container log, argument/credential/TLS
 파일과 동일 상태의 JSON/CSV 복제본은 로컬 ignored `build/`에 남긴다. 과거 main evidence와
@@ -118,8 +121,12 @@ Warm-up/exploratory 실패·중간 dump·전체 console/application/container lo
 ## 2026-10-01 실제 비교 결과
 
 이 cohort는 empty-partition lag 관측 수정 **이전**에 실행됐다. 각 manifest의 실제 source hash를
-보존하며 최신 변경 후 실행 결과로 재표기하지 않는다. 최종 판단 전 관측 수정의 영향과 필요한
-재실행 범위를 확인해야 한다. Lossless gzip export와 재계산은 수정 후에도 성공했다.
+보존하며 최신 변경 후 실행 결과로 재표기하지 않는다. Production source와 public trace/비교
+runner/calculator hash를 직접 대조해 차이가 `KafkaIntakeObservability.java` 한 파일뿐임을 확인했다.
+기존 broker end/committed 조회 결과의 빈 partition 판정만 바뀌었고 추가 broker/DB I/O나
+append/intake/executor/receipt/retry/oracle은 바뀌지 않았다. 최신 positive/negative regression과
+fresh broker outage/lag alert 해제를 별도로 검증했다. 기존 15회 측정을 다시 만들지 않았으며
+lossless export와 15 raw→summary/CSV 재계산은 최신 verifier에서도 성공했다.
 
 [Canonical cohort](2026-10-01-comparison/summary.json),
 [integrity](2026-10-01-comparison/integrity.json). `m5TransportComparison`은 27m59s에 성공했고
@@ -177,6 +184,58 @@ trace에서는 1→3과 추가 broker budget의 처리량 이득이 작고 share
 이는 Kafka의 distributed scale-out 효용을 반증하지 않는다. 실제 지원 topology의 요구·isolation·
 recovery·resource/운영 비용과 함께 adoption을 판단한다.
 
+## Fresh integrated operations drill
+
+2026-10-01 재개 후 `m5OperationsDrill`을 새로 실행했다. 첫 시도는 실제 MySQL pause까지 진행했지만
+production scheduler가 의도적으로 redacted log를 남겨 harness의 stack-text 검사에 실패했다.
+Production log를 약화하지 않고 test-only child probe가 장애 중 실제 scoped
+`EventDeliveryWorker.runCycle()`을 호출해 JDBC exception class와 entrypoint만 보존하도록 수정했다.
+Startup/비SQL failure와 메시지 유출은 negative regression으로 제외한다. 그 뒤 **10m49s fresh 전체
+실행과 raw→summary 검사가 PASS**했다. 과거 실패/부분 실행은 이 PASS에 합치지 않는다.
+
+[Canonical drill](2026-10-01-drill/summary.json), [manifest](2026-10-01-drill/manifest.json),
+[integrity](2026-10-01-drill/integrity.json)의 네 파일만 보존한다. Manifest의 revision `114d2da`는
+실행 당시 checkout HEAD이며 당시 미커밋 test harness는 별도 source hash로 식별한다.
+이후 verifier의 기존 integrity 파일 재작성만 제거했고 판단 기준/summary는 바뀌지 않았다.
+Current verifier의 negative/byte-preservation regression과 canonical 재계산을 별도로 실행한다.
+
+| 대표 flow | 실제 탐지: incident→첫 firing (s) | incident→durable convergence 관측 상한 (s) | 확인한 책임 |
+| --- | ---: | ---: | --- |
+| Kafka observer 중단/restart | 12.322 | 32.704 | observer backlog 동안 Waitlist/Booking 진행, process 복구 후 두 receipt/DONE |
+| Kafka Waitlist DEAD/cause 수정/human replay | 15.474 | 18.675 | observer/Booking 진행, exact operation retry→audit 1→receipt/DONE |
+| Broker unavailable/restart | 71.061 | 131.639 | lag unknown alert, immutable append/Booking 유지, publication/intake/business 별도 수렴 |
+| ACK 이후 ledger marking 전 relay halt | 42.074 | 62.800 | expired publication claim 탐지, 실제 physical redelivery, 동일 logical target/effect |
+| Durable intake 뒤 실제 MySQL pause/unpause | 34.398 | 91.138 | outage 전 두 intake/Waitlist PROCESSING/observer DONE, scrape 200 unhealthy, 실제 JDBC failure, 복구 뒤 둘 DONE |
+| Quiesced Kafka→DB rollback | 해당 없음 | 36.538 | 전체 writer/worker 정지, epoch 2→3, original/target/attempt/receipt 불변, DB 신규 workload |
+| DB observer 중단/restart | 12.900 | 34.130 | Waitlist/Booking 진행, observer projection/receipt 회복 |
+| DB Waitlist DEAD/cause 수정/human replay | 12.820 | 16.072 | observer/Booking 진행, exact operation retry→audit 1→receipt/DONE |
+
+Incident/first firing/durable snapshot의 monotonic nanos 차이다. Summary의 `observedAfterMs`는 alert
+대기 시작부터의 시간이며 위 incident 기준과 다르다. Convergence는 명시적 원인 수정/restart,
+finite timeout/lease, operator와 polling 시간을 포함한다. HTTP operator admission→business convergence는
+Kafka 2.869s/DB 2.865s였다. 생산 환경 detection/recovery SLA 또는 timeout 합격 기준이 아니다.
+Raw에는 incident/recovery start/end, operator 요청/응답, firing/clearing 시각과 snapshot을 보존한다.
+
+`SlotqExecutionRuntimeUnavailable`, `SlotqConsumerDeadDelivery`, `SlotqDeadDelivery`,
+`SlotqKafkaLagUnavailable`, `SlotqPublicationClaimExpired`, `SlotqDatabaseSampleUnavailable`의
+actual Prometheus firing/clear를 확인했다. Protected TLS machine scrape, human unauthorized 401,
+isolated role의 Product/operator 404, Grafana panel query 및 Tempo origin/attempt trace도 확인했다.
+DB 장애는 `CommunicationsException`과 실제 production-cycle entrypoint를 남겼다. Outage 동안 조회할
+수 없는 DB state를 healthy zero로 대체하지 않고 outage 전/후 durable snapshot과 telemetry를 대조한다.
+
+최종 original 9/target 18 DONE, Waitlist PROMOTED receipt/Offer/notification 각 9,
+human operation/audit 각 2, DB_DIRECT epoch 3이다. Loss·duplicate
+logical effect·partial receipt/DONE·capacity violation·remaining unexplained DEAD/quarantine는 0이고
+original membership/authority, receipt 및 Product outcome을 대조했다. Drill은 fixture당 한 eligible
+Waitlist entry이며 여러 후보 FIFO/current-state는 15회 비교와 관련 regression에서 별도로 확인한다.
+Booking HTTP는 여섯 대표 outage/rollback 상황에서 모두 201이었다. 실패 예산을 바꾸지 않았다.
+
+Rollback 뒤 DB flow에서 Product의 local execution/maintenance timer를 test adapter로 제어했다.
+따라서 DB producer-only 또는 Product로부터 완전한 Waitlist process 격리를 입증하지 않는다.
+이번 fresh 실행은 Kafka→DB만 수행했으며 필요 없는 재전환을 새 PASS로 세지 않는다. 양방향 계약과
+stale authority는 merged #108/#109와 현재 cutover regression 근거로 유지한다. 미회복 escalation과
+실제 지원 role/horizon은 [통합 runbook](../../runbooks/event-operations.md)과 ADR-0008을 따른다.
+
 ## 선행 gate 대조
 
 Issue state/checkbox만으로 완료를 추론하지 않고 최신 main의 merge와 구현·원자료를 대조한다.
@@ -195,9 +254,15 @@ Issue state/checkbox만으로 완료를 추론하지 않고 최신 main의 merge
 #108은 Closed이고 PR #119가 merge됐지만 Issue 본문 checkbox는 미체크 상태다. 이를 체크됐다고
 보고하지 않는다. 위 실제 intake/vertical-slice/cutover evidence와 current regression을 기준으로
 완료조건을 대조한다. #109 historical gate에는 당시 미실행 clean build가 명시돼 있으며 이를 PASS로
-세지 않는다. #111의 전체 test/clean build는 아직 미실행이며 별도 gate로 남아 있다.
+세지 않는다. 이번 cumulative 검증은 [최종 검증](verification.json)에서 별도로 기록한다.
 
 ## Regression 기준
+
+최종 관련 12 suite/94 case와 15 dataset 재계산 PASS, Backend 전체 `test` PASS(17m52s),
+`clean build` 및 fresh drill 재계산 PASS(17m58s)다. Clean build JUnit은 84 suite/691 case 중
+682 PASS, 9 existing opt-in skip, failure/error 0이다. Historical fault/security/diagnostic fixture
+property가 필요한 skip을 새 PASS로 세지 않는다. Frontend typecheck/test(12 file/210 case)/build도
+PASS했다. 실제 명령/skip/source·log hash는 verification.json을 따른다.
 
 - Source/authority/oracle: committed original unexplained loss, duplicate logical effect, partial
   receipt/DONE, effective capacity violation, missing membership/assignment, unexplained DEAD/quarantine는

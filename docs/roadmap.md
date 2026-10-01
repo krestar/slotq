@@ -8,6 +8,13 @@ M4는 #94~#97로 등록→Promotional HOLD Offer→event 기반 승급·만료·
 종료 감사에서 발견된 #97 async-state blocker 3건은 PR #103으로 보정한 뒤 closure 재검토를
 PASS했다. 존재하지 않는 Product 기능이나 검증 명령을 전제로 하지 않는다.
 
+M5는 #105~#110이 main에 병합됐고 #111의 최종 비교/drill/ADR gate를 [PR #122](https://github.com/krestar/slotq/pull/122)에서
+local 종료 gate PASS로 마감했다. [ADR-0008](adr/0008-m5-event-transport-and-runtime-status.md)은 DB direct를 permanent
+supported default와 수동 rollback target으로 유지하고 Kafka를 reproducible experimental/
+comparison topology로 보존한다. 상시 운영 Kafka adoption과 default 선택은 별개의 결정이다.
+최종 [완료조건 대조](experiments/m5-transport/closure.md)와 실제 local 검증을 근거로 종료를
+판정하며 PR 미병합 상태를 main의 Complete로 표기하지 않는다.
+
 ## 계획 원칙
 
 - Product Domain → Consistency → Event-driven → Reliability → Observability → AI Platform
@@ -67,6 +74,8 @@ Status의 의미는 다음과 같다.
   consumer·activation·maintenance·process recovery를 연결했고 #97은 Customer·Venue Thin UI를
   완성했다. 종료 독립 감사의 #97 async-state blocker 3건은 PR #103에서 보정됐으며, 최종
   Backend CI·Frontend CI·PR Policy 성공과 closure 재검토 PASS를 확인했다.
+- M5 Reliability & Observability: #105~#110 Done, #111 local 종료 gate PASS / PR #122 In Review.
+  #111의 main 반영 전에는 Complete가 아니며 M6 구현은 시작하지 않는다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -125,6 +134,16 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 - #96 [Feature] Booking 이벤트 기반 Waitlist 승급과 만료 복구 연결
 - #97 [Feature] Customer·Venue Thin Waitlist UI 구현
 
+### M5
+
+- #105 [Chore] 실제 Waitlist workload 기준선과 분산 전달 계약 확정
+- #106 [Feature] Product 요청·event 관측과 운영 dashboard 구현
+- #107 [Feature] Transactional event 기반 Kafka relay와 전달 foundation 구현
+- #108 [Feature] Kafka 기반 Waitlist·운영 관측 consumer와 안전한 transport 전환 구현
+- #109 [Chore] Kafka multi-instance·rebalance·broker 장애 복구 검증
+- #110 [Feature] Tenant 범위 operator recovery와 감사·runbook 구현
+- #111 [Chore] DB·Kafka 상대 성능과 운영 복구 drill 및 M5 종료 판정
+
 #18, #19, #20과 #45, #97의 Project Area는 Frontend이고 #23은 CI이다. 아직 실제 Issue가 없는
 후속 work package는 착수 시점 전까지 별도 Issue나 Area 항목으로 만들지 않는다.
 
@@ -145,6 +164,7 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
 | #80, #84, #86, #88 | P1 | M3 전달 계약, production foundation, process recovery gate와 종료 blocker 보정이다. |
 | #94, #95, #96 | P1 | M4 등록·Offer 원자성·실제 event promotion/recovery를 완성하는 핵심 backend 작업이다. |
 | #97 | P2 | Backend 계약 위에 실제 Customer·Venue thin flow와 browser recovery 경계를 완성한다. |
+| #105~#111 | P1 | M5의 workload, 관측, 분산 전달·복구와 실제 evidence 기반 종료 결정을 연결한다. |
 
 현재 Issue에는 즉시 대응이 필요한 P0도, 장기 아이디어 성격의 P3도 부여하지 않는다.
 우선순위는 Milestone 번호와 같지 않으며, Ready 여부는 Priority가 아니라 dependency
@@ -205,11 +225,16 @@ dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 �
                               #97 corrective / PR #103 ──> M4 complete
                                                    │
                                                    v
-                                      M5-WP1 Logs·Metrics·Trace
+                                      #105 Workload·Protocol
                                                    │
-                                  ├──> M5-WP2 Drill·Runbook·Baseline
-                                  └──> M5-WP3 Client error correlation 결정
-                                  M5-WP2 + M5-WP3 ──> M5 complete
+                                  #106 관측·Client correlation + #107 Relay
+                                                   │
+                                      #108 Intake·Scope·Cutover
+                                                   │
+                                  #109 Fault + #110 Human recovery
+                                                   │
+                                      #111 비교·Drill·ADR·종료 gate
+                                      main 반영 뒤 M5 complete
                                                    │
                                   ┌────────────────┴────────────────┐
                                   v                                 v
@@ -612,6 +637,20 @@ M3 Reliable Event Foundation.
 
 ## M5 Reliability & Observability
 
+### 실제 구현과 종료 판정
+
+#105 workload/protocol, #106 protected observability와 최소 client correlation, #107 committed-event
+relay, #108 two-consumer intake/scope/cutover, #109 process/broker/DB fault, #110 human authorization/
+audit가 main에 병합됐다. #111은 5 profile × 3회 비교와 fresh 대표 integrated operations drill,
+raw 재계산, cumulative 검증을 [종료 대조표](experiments/m5-transport/closure.md)로 마감한다.
+#108의 Issue checkbox 미체크와 #109 당시 clean build 미실행은 merge/evidence와 구분해 기록한다.
+
+DB direct default, Kafka experimental 지위, 실제 runtime roles, broker/DB retention horizon,
+shared DB/host 한계와 regression/operator 유지 비용은 ADR-0008을 따른다. Kafka를 default로
+바꾸거나 구현을 삭제하지 않으며 automatic fallback, M6 AI, Redis/Kubernetes/HA/backup 범위를
+추가하지 않는다. [통합 runbook](runbooks/event-operations.md)은 actual protected recovery,
+alert/trace/durable inventory와 quiesced 수동 rollback을 연결한다.
+
 ### 목표
 
 Product Backend와 event flow의 장애를 탐지하고 원인을 설명하며 안전하게 복구할 수 있게
@@ -781,7 +820,7 @@ M7 Model Router & Agent Runtime.
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
 | Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 #80/#84/#86과 corrective #88, M4는 #94~#97과 #97 corrective PR #103으로 완료했다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71·#97은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M0~M4는 Complete이다. M5 실제 Issue는 M4 종료 뒤 별도 설계·감사를 거쳐 확정하며 work package만으로 Ready를 선언하지 않는다. |
-| 기술 선택을 설명할 근거가 있는가? | Java와 Modular Monolith는 Accepted ADR로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일한다. 동시성과 M3 messaging 선택은 재현 가능한 실험과 ADR에 근거한다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0~M4는 Complete이다. M5 #105~#110은 main 반영, #111은 실제 종료 gate와 PR #122로 관리한다. M6는 M5 main 완료 이후 별도 ownership을 따른다. |
+| 기술 선택을 설명할 근거가 있는가? | Java는 ADR-0004, module 경계와 최종 event transport/runtime은 Accepted ADR-0008로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일한다. 동시성과 M3~M5 messaging 선택은 재현 가능한 실험과 ADR에 근거한다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

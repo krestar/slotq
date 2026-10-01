@@ -1,7 +1,8 @@
 # ADR-0007: Transactional event record와 DB 기반 전달 경계 사용
 
-- 상태: `Accepted`
+- 상태: `Superseded`
 - 결정일: 2026-09-09
+- 대체: [ADR-0008](0008-m5-event-transport-and-runtime-status.md). 초기 transport/runtime 선택을 대체하고 transactional source/identity/receipt/fencing 계약은 보존한다. 아래 본문은 당시 결정 기록이다.
 - 관련 Issue: [#80](https://github.com/krestar/slotq/issues/80)
 - 근거: [실험 및 완료조건 대조](../experiments/event-delivery-boundaries.md),
   [clean 원자료](../experiments/events/clean/report.json)
