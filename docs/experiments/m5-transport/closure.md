@@ -1,9 +1,9 @@
 # M5 / #111 완료조건 대조
 
-2026-10-01에 최신 remote main `7a38901`과 PR #122 branch `114d2da`에서 재개해 직접 대조했다.
-Issue state, merge, historical evidence와 이번 fresh 실행은 서로 다른 근거다. M5 종료 판정은
-이 표의 실제 gate와 [최종 local 검증](verification.json)을 함께 따른다. 모든 필수 local gate가
-PASS했으며, PR 미병합 상태를 main Complete로 처리하지 않는다.
+2026-10-01에 remote main `7a38901`과 PR #122 branch에서 재개해 완료조건을 직접 대조했고,
+PR #122는 이후 squash merge되어 현재 main에 반영됐다. Issue state, merge, historical evidence와
+fresh 실행은 서로 다른 근거다. M5 종료 판정은 이 표의 실제 gate와 [최종 local 검증](verification.json)을
+함께 따른다. 모든 필수 gate가 PASS했으며, merge 여부와 Milestone 완료 상태를 혼동하지 않는다.
 
 ## #105~#110의 실제 완료조건
 
@@ -12,7 +12,7 @@ PASS했으며, PR 미병합 상태를 main Complete로 처리하지 않는다.
 | #105 / PR #112 `9a934a5` | 실제 public M4 path와 3회 DB raw/manifest; PROMOTED/normal no-op와 FIFO/current-state/capacity/receipt oracle; publication/target/receipt identity; durable intake→offset→scoped executor/crash 책임; original registration/discovery/retention/cutover; clock/분모/cardinality; fixed protocol과 adoption 후보; ADR-0002/0006/0007 보존·변경 표. [protocol](../waitlist-baseline.md)과 [historical baseline](../waitlist-baseline/2026-09-26-db-direct-1worker/summary.md) 확인. #111은 같은 trace/oracle에 두 consumer를 적용하고 M4를 다른 workload의 참고값으로 유지. | 완료조건 대응 있음 |
 | #106 / PR #115 `16ba6b6` | request correlation→event/effect origin/attempt link; DB query/dashboard/alert; fixed Kafka query/panel/cardinality 계약; separate machine credential/read-only pool와 negative boundary; label/redaction; collector outage의 Product 독립성; 최소 client correlation 선택. [실행](../product-observability/2026-09-27-db-direct/README.md), [blocker correction](../product-observability/2026-09-27-blocker-regression/README.md), 현재 metadata-only scrape regression 및 fresh Grafana/Tempo/alert 확인. | 완료조건 대응 있음 |
 | #107 / PR #116 `de95fc2` | committed append만 publication/rollback 제외; separate identity/cursors/attempts; ACK/marking crash·duplicate/multi-relay fencing; durable assignment/readiness와 dual authority 거부; tenant/schema/canonical/ACL/retention gap; consumer 준비 전 Kafka business 금지. [relay](../kafka-relay/2026-09-28/README.md)와 [correction](../kafka-relay/2026-09-28-blocker-regression/README.md), fresh ACK-before-ledger 죽음→expired-claim alert→두 consumer 재전달 수렴 대조. | 완료조건 대응 있음; conservative retention guard는 보정된 것으로 세지 않음 |
-| #108 / PR #119 `fd3510a` | full M4 vertical slice; Waitlist/observer group/process; durable intake commit/offset prefix; offset 뒤 attempts=0 PENDING 최초 DB 실행; 양쪽 scoped execution/shared discovery; effect/receipt/DONE와 M2~M4; quarantine/rebalance/retry/DEAD; 양방향 quiesced original inventory/epoch; 실제 Kafka panel. [원자료/실행](../kafka-consumer/2026-09-29/README.md), crash/cutover/vertical-slice regression과 fresh two-consumer drill을 대조. 이번 cold-target RR race를 재현·수정하고 회귀에 포함. | Closed/merged, **본문 checkbox는 미체크**. State만으로 완료를 추정하지 않고 실제 대응 근거 확인 |
+| #108 / PR #119 `fd3510a` | full M4 vertical slice; Waitlist/observer group/process; durable intake commit/offset prefix; offset 뒤 attempts=0 PENDING 최초 DB 실행; 양쪽 scoped execution/shared discovery; effect/receipt/DONE와 M2~M4; quarantine/rebalance/retry/DEAD; 양방향 quiesced original inventory/epoch; 실제 Kafka panel. [원자료/실행](../kafka-consumer/2026-09-29/README.md), crash/cutover/vertical-slice regression과 fresh two-consumer drill을 대조. 이번 cold-target RR race를 재현·수정하고 회귀에 포함. | Closed/merged. 완료조건 checklist는 evidence 대조 뒤 실제 상태에 맞춰 갱신 |
 | #109 / PR #120 `57cfd3c` | 실제 process/broker/DB matrix; intake 전/후/offset 뒤 crash 각각; broker redelivery 없는 PENDING 실행; 모든 original target의 책임 inventory; integrity oracle; consumer/API 독립성; stale owner/rebalance/retention/quarantine; 허용 recovery 뒤 bounded drain. [matrix와 Sept30 추가 원자료](../kafka-fault/2026-09-29/README.md) 및 integrity regression 대조. 이번 실행은 대표 통합 drill이며 matrix 전체 재실행이 아님. | 완료조건 대응 있음. 당시 clean build는 **미실행**; 이번 cumulative gate로 별도 검증 |
 | #110 / PR #121 `7a38901` | personal human identity/발급·만료·철회/mapping; tenant/consumer/action과 Product-role 분리; replay/audit atomicity; duplicate/stale/concurrent/unknown; business/publication 권한 분리; publication operation/audit와 broker I/O 분리; response loss/duplicate/audit rollback; DB/Kafka exact scope; private HTTPS API/CLI/read/audit/runbook. [53-case evidence](../operator-recovery/2026-09-30/README.md), 현재 regression 및 fresh 양 transport의 같은 operation retry→audit 각 1→receipt/DONE 대조. | 완료조건 대응 있음 |
 
@@ -59,7 +59,6 @@ Waitlist 경계를 ADR/runbook에 그대로 기록한다. 이를 제공하려고
 ## M5 종료 판정
 
 Fresh integrated gate, architecture 결정, 완료조건 대조와 cumulative 최종 검증이 모두 PASS다.
-**#111/M5 local 종료 gate PASS, Ready for Review 가능**으로 판정한다. Kafka adoption 제약을
-해결한 것으로 세지 않고 experimental 범위를 확정한 결과다. PR #122를 merge하지 않으며
-#111/main의 M5 Complete는 main 반영 이후에 구분한다. M6 ownership과 M8 release/backup gate는
-변경하지 않는다.
+#111의 종료 gate와 ADR-0008은 PR #122 squash merge로 main에 반영됐다. Kafka adoption 제약을
+해결한 것으로 세지 않고 experimental 범위를 확정한 결과다. M6 ownership과 M8 release/backup gate는
+변경하지 않는다. Milestone의 최종 상태 표기는 repository의 별도 종료 절차에 따라 갱신한다.
