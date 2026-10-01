@@ -46,6 +46,16 @@ final class M5OperationsDrillEvidence {
         require(maps(end.get("event_kafka_publications")).stream().allMatch(p->"PUBLISHED".equals(p.get("state"))),"unresolved publication responsibility");
         var redelivery=phase(timeline,"publication-redelivery-converged");String duplicateId=redelivery.get("eventId").toString().replace("-","");
         require(maps(redelivery.get("event_kafka_intake_records")).stream().filter(i->duplicateId.equals(i.get("event_id"))).count()>=4,"physical redelivery not demonstrated");
+        var outage=phase(timeline,"database-outage-observed");
+        require(number(outage,"scrapeStatus")==200&&Boolean.FALSE.equals(outage.get("healthyEvents")),"DB outage telemetry not demonstrated");
+        var sqlFailures=maps(outage.get("runtimeSqlFailures"));
+        require(!sqlFailures.isEmpty()&&sqlFailures.stream().allMatch(f->"EventDeliveryWorker.runCycle".equals(f.get("entrypoint"))
+            &&f.get("exceptionClasses") instanceof List<?> classes&&!classes.isEmpty()),"actual executor JDBC failure missing");
+        var beforeOutage=phase(timeline,"before-db-outage");var recovered=phase(timeline,"database-recovered");
+        String durableId=beforeOutage.get("eventId").toString().replace("-","");
+        require(maps(beforeOutage.get("event_kafka_target_intakes")).stream().filter(i->durableId.equals(i.get("event_id"))).count()==2
+            &&state(beforeOutage,WAITLIST).equals("PROCESSING")&&state(beforeOutage,OBSERVER).equals("DONE"),"durable intake before DB executor outage missing");
+        require(state(recovered,WAITLIST).equals("DONE")&&state(recovered,OBSERVER).equals("DONE"),"DB executor did not recover from durable intake");
         var before=phase(timeline,"quiesced-before-rollback");var after=phase(timeline,"quiesced-after-rollback");
         for(var tenant:maps(before.get("tenants"))) {
             var preserved=maps(after.get("tenants")).stream().filter(t->Objects.equals(t.get("tenantId"),tenant.get("tenantId"))).findFirst().orElseThrow();
@@ -73,6 +83,6 @@ final class M5OperationsDrillEvidence {
         var raw=M5CanonicalEvidence.read(folder);var summary=summarize(raw);require(JSON.readTree(Files.readString(folder.resolve("summary.json"))).equals(JSON.readTree(JSON.writeValueAsString(summary))),"drill raw -> summary mismatch");
         var hashes=new TreeMap<String,String>();for(Path file:List.of(folder.resolve("manifest.json"),M5CanonicalEvidence.rawPath(folder),folder.resolve("summary.json")))hashes.put(file.getFileName().toString(),M5CanonicalEvidence.sha(Files.readAllBytes(file)));
         Path integrity=folder.resolve("integrity.json");if(Files.exists(integrity)){Map<String,Object> prior=JSON.readValue(Files.readString(integrity),new TypeReference<>(){});require(hashes.equals(map(prior.get("sha256"))),"drill file integrity mismatch");}
-        write(integrity,Map.of("result","PASS","sha256",hashes));System.out.println("#111 drill raw -> summary PASS");
+        else write(integrity,Map.of("result","PASS","sha256",hashes));System.out.println("#111 drill raw -> summary PASS");
     }
 }

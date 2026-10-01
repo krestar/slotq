@@ -141,15 +141,14 @@ public final class M5OperationsDrillRunner {
             capture("before-db-outage",durable);
             docker("pause",mysql.getContainerId());record("database-pause",Map.of("containerId",mysql.getContainerId()));
             try {
+                Files.writeString(local.resolve(observer.label+".db-probe.request"),"paused MySQL: one real scoped cycle");
                 alert("SlotqDatabaseSampleUnavailable","slotq-product",true);
                 var unavailableState=call("GET",ports.get("product"),"/actuator/prometheus",monitor,null);require(unavailableState.statusCode()==200,"scrape blocked by DB outage");
                 require(unavailableState.body().contains("slotq_observation_sample_healthy{sample=\"events\"} 0.0")||unavailableState.body().lines().anyMatch(s->s.startsWith("slotq_observation_sample_healthy")&&s.contains("sample=\"events\"")&&s.endsWith(" 0.0")),"DB outage represented as healthy zero");
-                var sqlFailures=new ArrayList<Map<String,Object>>();for(Role role:roles)if(Files.exists(local.resolve(role.label+".log"))) {
-                    String log=Files.readString(local.resolve(role.label+".log"));boolean executor=log.contains("EventDeliveryWorker.runCycle");
-                    var failures=List.of("SQLTransientConnectionException","CommunicationsException","SQLException").stream().filter(log::contains).toList();
-                    if(executor&&!failures.isEmpty())sqlFailures.add(Map.of("role",role.role,"pid",role.process.pid(),"entrypoint","EventDeliveryWorker.runCycle","exceptionClasses",failures));
-                }
-                require(!sqlFailures.isEmpty(),"no actual executor JDBC failure observed during DB pause");
+                Path probe=local.resolve(observer.label+".db-probe.json");await("actual scoped executor JDBC failure",20,()->Files.exists(probe));
+                var observed=JSON.readValue(Files.readString(probe),new TypeReference<Map<String,Object>>(){});
+                require("EventDeliveryWorker.runCycle".equals(observed.get("entrypoint"))&&observed.get("exceptionClasses") instanceof List<?> classes&&!classes.isEmpty(),"no actual executor JDBC failure observed during DB pause");
+                var sqlFailures=List.of(observed);
                 record("database-outage-observed",Map.of("scrapeStatus",200,"durableRead","unavailable; no zero state substituted","healthyEvents",false,"runtimeSqlFailures",sqlFailures));
             } finally {docker("unpause",mysql.getContainerId());record("database-unpause",Map.of());}
             Files.delete(heldEffect);waitlist.kill();observer.kill();relay.kill();relay=start("relay",null);observer=start("observer",null);waitlist=start("waitlist",null);
@@ -221,6 +220,7 @@ public final class M5OperationsDrillRunner {
         Path argfile=local.resolve(label+".args");Files.writeString(argfile,filtered.stream().map(a->"\""+a.replace('\\','/')+"\"").collect(java.util.stream.Collectors.joining("\n")));
         builder.command(Path.of(System.getProperty("java.home"),"bin","java").toString(),"@"+argfile);builder.redirectErrorStream(true).redirectOutput(local.resolve(label+".log").toFile());
         if(fault!=null)builder.environment().put(relay?"SLOTQ_DRILL_ACK_CRASH":"SLOTQ_DRILL_HANDLER_FAULT",fault.toString());
+        if(!relay)builder.environment().put("SLOTQ_DRILL_DB_PROBE",local.resolve(label+".db-probe").toString());
         Role result=new Role(label,role,builder.start());roles.add(result);record("process-start",Map.of("label",label,"role",role,"pid",result.process.pid(),"transport",transport,"authorityEpoch",epoch));
         await("scoped runtime startup "+label,90,()->{try{return result.process.isAlive()&&call("GET",ports.get(role),"/actuator/prometheus",monitor,null).statusCode()==200;}catch(Exception e){return false;}});return result;
     }

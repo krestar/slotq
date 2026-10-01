@@ -14,6 +14,27 @@ public final class M5DrillRole {
     public static void main(String[]args) {new SpringApplicationBuilder(SlotqApplication.class,Faults.class).run(args);}
     @TestConfiguration(proxyBeanMethods=false)
     static class Faults {
+        @Bean org.springframework.boot.ApplicationRunner drillDatabaseProbe(EventDeliveryWorker worker) {
+            return args->{
+                String prefix=System.getenv("SLOTQ_DRILL_DB_PROBE");
+                if(prefix==null)return;
+                Thread.ofPlatform().daemon().name("drill-db-outage-probe").start(()->{
+                    try {
+                        while(!Files.exists(Path.of(prefix+".request")))Thread.sleep(100);
+                        // The production scheduler deliberately redacts exceptions. Invoke the
+                        // real scoped production cycle once, while the parent has paused MySQL.
+                        try {worker.runCycle();throw new IllegalStateException("DB outage probe did not fail");}
+                        catch(RuntimeException failure) {
+                            var observed=new LinkedHashMap<>(databaseFailure(failure));
+                            observed.put("at",java.time.Instant.now().toString());
+                            observed.put("pid",ProcessHandle.current().pid());
+                            observed.put("invocationSource","test-only explicit production cycle during paused MySQL");
+                            Files.writeString(Path.of(prefix+".json"),M5TransportComparisonRunner.JSON.writeValueAsString(observed));
+                        }
+                    } catch(Exception failure){throw new IllegalStateException("DB outage probe evidence unavailable",failure);}
+                });
+            };
+        }
         @Bean static org.springframework.beans.factory.config.BeanPostProcessor drillHandlerFault() {
             String file=System.getenv("SLOTQ_DRILL_HANDLER_FAULT");
             return new org.springframework.beans.factory.config.BeanPostProcessor(){
@@ -51,5 +72,18 @@ public final class M5DrillRole {
                 public void verifyTopic(String destination,String id,Map<Integer,Long> starts){delegate.verifyTopic(destination,id,starts);}
             };
         }
+    }
+
+    static Map<String,Object> databaseFailure(RuntimeException failure) {
+        var seen=Collections.newSetFromMap(new IdentityHashMap<Throwable,Boolean>());
+        var sqlClasses=new TreeSet<String>();boolean productionCycle=false;
+        for(Throwable cause=failure;cause!=null&&seen.add(cause)&&seen.size()<=32;cause=cause.getCause()) {
+            if(cause instanceof java.sql.SQLException)sqlClasses.add(cause.getClass().getName());
+            productionCycle|=Arrays.stream(cause.getStackTrace()).anyMatch(frame->
+                frame.getClassName().equals(EventDeliveryWorker.class.getName())&&frame.getMethodName().equals("runCycle"));
+        }
+        M5TransportComparisonRunner.require(productionCycle&&!sqlClasses.isEmpty(),"no actual production-cycle JDBC failure");
+        // Never persist exception messages, SQL, stack trace text or connection credentials.
+        return Map.of("entrypoint","EventDeliveryWorker.runCycle","exceptionClasses",List.copyOf(sqlClasses));
     }
 }
