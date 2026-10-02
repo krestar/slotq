@@ -6,7 +6,7 @@
 
 **동시 예약 · 상태 전이 · 이벤트 기반 대기열 · 멀티테넌시 · 장애 복구**
 
-**현재 상태: M0~M4 완료 · M5 종료 gate PASS / PR #122**
+**현재 상태: M0~M4 완료 · M5 종료 gate main 반영 완료**
 
 </div>
 
@@ -273,7 +273,7 @@ flowchart LR
 ```
 
 - **M0~M4:** 완료
-- **M5:** Reliability & Observability local 종료 gate PASS / [PR #122](https://github.com/krestar/slotq/pull/122), main 반영 후 Complete
+- **M5:** Reliability & Observability 종료 gate가 [PR #122](https://github.com/krestar/slotq/pull/122)로 main에 반영됨
 - **M6~M8:** AI Access & Knowledge → Model Router & Agent Runtime → Evaluation & Production Hardening
 
 M0부터 M5까지 Product Backend와 운영 신뢰성을 먼저 완성하고, M6 이후 AI Platform 범위로 이동합니다.
@@ -298,12 +298,10 @@ Milestone별 완료 조건, 현재 상태, Issue 의존 관계는 [Roadmap](docs
 
 ## 현재 상태
 
-> **M4 Waitlist Promotion — Complete**
+> **M5 Reliability & Observability — 종료 gate main 반영 완료**
 
-M0 Foundation부터 M3 Reliable Event Foundation까지의 선행 Milestone은 완료 상태를 유지합니다.
+M0 Foundation부터 M4 Waitlist Promotion까지의 선행 Milestone은 완료 상태를 유지합니다.
 
-M4에서는 M3에서 구축한 이벤트 전달 기반을 실제 **Booking → Waitlist** 흐름에 연결했습니다. 대기 등록·취소, Promotional HOLD 기반 Offer, 두 가지 승급 경로, 재시작·DB 장애 복구, Customer/Venue UI까지 구현하고 검증했습니다.
+M5에서는 Product 요청·event 관측, Kafka relay/consumer 실험, multi-instance·fault 검증, tenant 범위 human operator recovery를 구현하고, DB direct와 Kafka를 동일 workload에서 비교했습니다. [ADR-0008](docs/adr/0008-m5-event-transport-and-runtime-status.md)에 따라 DB direct를 기본 transport로 유지하고 Kafka는 experimental/comparison topology로 보존합니다.
 
-종료 감사에서 발견된 브라우저 비동기 상태 문제도 보정했으며 Backend CI, Frontend CI, PR Policy 통과 후 M4를 완료로 확정했습니다.
-
-자세한 완료 근거와 Issue 의존 관계는 [Roadmap](docs/roadmap.md), Waitlist 관련 설계와 복구 증거는 [Architecture 문서](docs/architecture/)에서 확인할 수 있습니다.
+[PR #122](https://github.com/krestar/slotq/pull/122)에서 fresh integrated operations drill, 누적 Backend·Frontend 검증, raw evidence 재계산과 종료 gate를 통과한 변경이 main에 반영됐습니다. Milestone별 완료 상태와 후속 착수 조건은 [Roadmap](docs/roadmap.md)에서 관리합니다.
