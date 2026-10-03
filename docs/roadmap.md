@@ -725,6 +725,26 @@ M5 Reliability & Observability.
 - Product API와 RAG source of truth 분리.
 - retrieval tenant isolation과 문서 versioning.
 
+### 구현 전 계약과 Issue ownership
+
+[#130](https://github.com/krestar/slotq/issues/130)의
+[ADR-0009](adr/0009-m6-authenticated-access-and-knowledge.md)와
+[M6 Access & Knowledge 계약](architecture/m6-access-knowledge.md)을 후속 구현 기준으로 사용한다.
+한 live Product JVM의 opt-in MCP, authenticated HTTP Product invocation, narrowed original Actor,
+bounded confirmation/retry와 corpus publication authority를 확정한다. 실제 protocol/runtime,
+security/failure evidence와 M6 종료는 후속 Issue가 소유한다.
+
+| Issue | 선행 | Primary ownership |
+| --- | --- | --- |
+| [#131](https://github.com/krestar/slotq/issues/131) | #130 | MCP protocol, minimum Actor credential/delegation, registry, 공통 timeout/rate/audit |
+| [#132](https://github.com/krestar/slotq/issues/132) | #130 + #131 | Product tools, confirmation, same-intent retry/outcome unknown, admission bound |
+| [#133](https://github.com/krestar/slotq/issues/133) | #130 + #131 | Shared Actor validator를 사용하는 scoped corpus authoring, version/publication/stale work |
+| [#134](https://github.com/krestar/slotq/issues/134) | #131 + #133 | Retrieval, knowledge bridge, 실제 lexical/embedding 비교와 default 선택 |
+| [#135](https://github.com/krestar/slotq/issues/135) | #131~#134 완료 | 통합 검증/evidence/closure |
+
+#133의 conditional authentication dependency는 #131의 Auth-owned validator 재사용 선택으로
+확정한다. Agent Runtime/Model Router는 M7, generic evaluation/hardening은 M8에 남긴다.
+
 ### 검증 결과물
 
 - Product API와 RAG 책임 분리 ADR.

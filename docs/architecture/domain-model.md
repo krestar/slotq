@@ -87,6 +87,11 @@ Bounded Context로 승격한다.
 AI Platform은 Product Backend의 Upstream Dependency가 아니라 미래의 Product API
 Consumer다.
 
+M6의 실행·보안·지식 책임은 [ADR-0009](../adr/0009-m6-authenticated-access-and-knowledge.md)와
+[M6 Access & Knowledge 계약](m6-access-knowledge.md)에서 확정한다. Product transactional
+read/write는 기존 authenticated HTTP Product API를 사용하며 knowledge publication/index는
+Product authority를 대체하지 않는다. 이 결정은 #131~#135의 production 구현 완료를 뜻하지 않는다.
+
 ## 3. Context 의존 방향
 
 다음 화살표는 `Consumer -> Provider`를 뜻한다.
