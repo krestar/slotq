@@ -99,8 +99,7 @@ public final class KafkaIntakeRuntime {
             observation.sample(consumer);
         } catch (RuntimeException failure) {
             halted = true;
-            close();
-            observation.state("degraded");
+            stop("degraded");
             // The broker coordinate remains at or behind the last durable DB prefix. Restart is explicit.
             throw new IllegalStateException("Kafka intake halted; inspect durable provenance before restart");
         }
@@ -156,11 +155,16 @@ public final class KafkaIntakeRuntime {
 
     @PreDestroy
     public synchronized void close() {
+        stop("stopped");
+    }
+
+    private void stop(String state) {
+        // Visibility is invalidated before the potentially blocking broker close.
+        observation.state(state);
         if (consumer != null) {
-            consumer.close(COMMIT);
-            consumer = null;
+            try { consumer.close(COMMIT); }
+            finally { consumer = null; }
         }
-        observation.state("stopped");
     }
 
     private static Map<String, Object> connection(String bootstrap, String protocol, String mechanism,

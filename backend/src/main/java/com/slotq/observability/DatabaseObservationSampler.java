@@ -33,6 +33,8 @@ public final class DatabaseObservationSampler {
     private final Duration staleAfter;
     private final String kafkaConsumerId;
     private final String consumerTransport;
+    private record QuarantineSample(DatabaseObservation.Snapshot snapshot, boolean available) { }
+    private volatile QuarantineSample quarantine = new QuarantineSample(null, false);
 
     public DatabaseObservationSampler(MeterRegistry registry,
             @Value("${slotq.observability.database.jdbc-url}") String url,
@@ -85,6 +87,7 @@ public final class DatabaseObservationSampler {
                 .tags(tags).register(registry);
             Gauge.builder("slotq." + consumerTransport + ".delivery.sample.age.seconds", this, sampler -> sampler.age("events"))
                 .tags(tags).register(registry);
+            if (consumerTransport.equals("kafka")) registerQuarantine();
         }
         this.scheduler = Executors.newSingleThreadScheduledExecutor(task -> {
             var thread = new Thread(task, "slotq-database-observation");
@@ -104,6 +107,7 @@ public final class DatabaseObservationSampler {
             } catch (Exception ignored) {
                 eventsHealthy = false;
             }
+            if (consumerTransport.equals("kafka")) sampleQuarantine();
             return;
         }
         try (Connection connection = source.getConnection()) {
@@ -123,6 +127,47 @@ public final class DatabaseObservationSampler {
         } catch (Exception ignored) {
             locksHealthy = false;
         }
+    }
+
+    private void registerQuarantine() {
+        // Preserve the existing finite quarantine labels; DB health is independent of broker lag.
+        var tags = Tags.of("transport", "kafka", "runtime_role", "consumer", "logical_consumer", kafkaConsumerId);
+        Gauge.builder("slotq.kafka.quarantine.sample.healthy", this,
+            sampler -> sampler.quarantineCurrent(sampler.quarantine) ? 1 : 0).tags(tags).register(registry);
+        Gauge.builder("slotq.kafka.quarantine.sample.age.seconds", this,
+            sampler -> sampler.quarantineAge(sampler.quarantine)).tags(tags).register(registry);
+        var oldest = new DatabaseObservation.Key("quarantine.oldest.age.seconds", "", "");
+        Gauge.builder("slotq.kafka.quarantine.oldest.age.seconds", this, sampler -> sampler.quarantineValue(oldest))
+            .tags(tags).register(registry);
+        for (String failure : DatabaseObservation.QUARANTINE_FAILURE_CODES) {
+            var key = new DatabaseObservation.Key("quarantine.records", "failure_code", failure);
+            Gauge.builder("slotq.kafka.quarantine.records", this, sampler -> sampler.quarantineValue(key))
+                .tags(tags).tag("failure_code", failure).register(registry);
+        }
+    }
+
+    private void sampleQuarantine() {
+        try (Connection connection = source.getConnection()) {
+            var next = observation.readKafkaQuarantine(connection, kafkaConsumerId);
+            quarantine = new QuarantineSample(next, true);
+        } catch (Exception ignored) {
+            // Retain the last complete snapshot and its timestamp, never replace failure with zero.
+            quarantine = new QuarantineSample(quarantine.snapshot(), false);
+        }
+    }
+
+    private double quarantineValue(DatabaseObservation.Key key) {
+        var sample = quarantine;
+        return quarantineCurrent(sample) ? sample.snapshot().values().getOrDefault(key, Double.NaN) : Double.NaN;
+    }
+
+    private boolean quarantineCurrent(QuarantineSample sample) {
+        return sample.available() && quarantineAge(sample) <= staleAfter.toMillis() / 1000.0;
+    }
+
+    private double quarantineAge(QuarantineSample sample) {
+        return sample.snapshot() == null ? Double.NaN
+            : Math.max(0, Duration.between(sample.snapshot().observedAt(), Instant.now()).toMillis() / 1000.0);
     }
 
     private void registerKafka(DatabaseObservation.Snapshot snapshot) {
@@ -164,6 +209,7 @@ public final class DatabaseObservationSampler {
     @PreDestroy
     public void close() {
         scheduler.shutdownNow();
+        quarantine = new QuarantineSample(quarantine.snapshot(), false);
         source.close();
     }
 }

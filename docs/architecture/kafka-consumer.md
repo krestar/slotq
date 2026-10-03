@@ -101,6 +101,16 @@ staleness, 10,000행 cap은 #106과 같으며 sample health/truncation을 함께
 실제 broker의 absolute end offset이 0인 빈 partition은 첫 committed offset이 없어도 known
 lag 0이다. Nonempty partition의 committed provenance 누락, end 조회 실패·범위 오류는 unknown이며
 sample health 0을 유지한다. Client position/seek로 durable committed offset을 대신하지 않는다.
+Halt/degraded/stop, rebalance 또는 마지막 성공 후 45초 경과 시 기존 lag는 NaN/unknown이며
+`SlotqKafkaLagUnavailable`로 탐지한다. 건강한 실제 empty partition의 known lag 0은 유지한다.
+
+#126 corrective 이후 quarantine 관측은 위 opt-in DB observer의 별도 daemon/read-only pool에서
+실행한다. Intake cycle과 production JDBC 경로에서 분리했고 connection/connect 1초,
+query/MySQL statement 1초, socket 1.5초 bound를 사용한다. 성공한 단일 query의 count/oldest-age
+snapshot만 교체한다. 실패·stale은 `slotq_kafka_quarantine_sample_healthy=0`과 값 NaN,
+마지막 성공 age로 표시하며 실제 0을 만들지 않는다. 기본 15초 주기/45초 staleness와 고정
+failure code를 보존한다. DB observer 미설정은 series 부재/unknown이고 active runtime에서는
+`SlotqKafkaQuarantineSampleUnavailable`이 탐지한다. Broker lag와 별개의 sample이다.
 
 DB direct scoped consumer는 같은 ledger를 `slotq_db_delivery_*`, `transport=db`로 표본화한다.
 Product의 read-only publication inventory와 expired claim 신호는 publisher process가 죽은

@@ -1,0 +1,68 @@
+rule_files:
+  - alerts.yml
+evaluation_interval: 5s
+tests:
+  - name: halted lag becomes unavailable and clears only after a new healthy sample
+    interval: 5s
+    input_series:
+      - series: 'slotq_kafka_lag_sample_healthy{logical_consumer="waitlist.promotion"}'
+        values: '1 1 0 0 0 1'
+    alert_rule_test:
+      - eval_time: 20s
+        alertname: SlotqKafkaLagUnavailable
+        exp_alerts:
+          - exp_labels: {logical_consumer: waitlist.promotion, severity: warning}
+            exp_annotations: {summary: "Kafka lag unavailable; broker/intake progress is unknown, inspect durable DB responsibility separately"}
+      - eval_time: 25s
+        alertname: SlotqKafkaLagUnavailable
+        exp_alerts: []
+  - name: known healthy zero lag and successful zero quarantine do not alert
+    interval: 5s
+    input_series:
+      - series: 'slotq_kafka_lag_sample_healthy{logical_consumer="waitlist.promotion"}'
+        values: '1x6'
+      - series: 'slotq_kafka_consumer_lag_records{logical_consumer="waitlist.promotion",partition="0"}'
+        values: '0x6'
+      - series: 'slotq_kafka_quarantine_sample_healthy{logical_consumer="waitlist.promotion"}'
+        values: '1x6'
+      - series: 'slotq_kafka_quarantine_records{logical_consumer="waitlist.promotion",failure_code="MALFORMED_WIRE"}'
+        values: '0x6'
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: SlotqKafkaLagUnavailable
+        exp_alerts: []
+      - eval_time: 30s
+        alertname: SlotqKafkaQuarantineSampleUnavailable
+        exp_alerts: []
+  - name: quarantine DB failure or staleness is independent of healthy broker lag
+    interval: 5s
+    input_series:
+      - series: 'slotq_kafka_lag_sample_healthy{logical_consumer="waitlist.promotion"}'
+        values: '1x6'
+      - series: 'slotq_kafka_quarantine_sample_healthy{logical_consumer="waitlist.promotion"}'
+        values: '1 1 0 0 0 1'
+    alert_rule_test:
+      - eval_time: 20s
+        alertname: SlotqKafkaQuarantineSampleUnavailable
+        exp_alerts:
+          - exp_labels: {logical_consumer: waitlist.promotion, severity: warning}
+            exp_annotations: {summary: "Quarantine DB observation failed, stale or unconfigured; missing count is not zero and lag health is independent"}
+      - eval_time: 20s
+        alertname: SlotqKafkaLagUnavailable
+        exp_alerts: []
+      - eval_time: 25s
+        alertname: SlotqKafkaQuarantineSampleUnavailable
+        exp_alerts: []
+  - name: active Kafka runtime without configured quarantine observer is unknown
+    interval: 5s
+    input_series:
+      - series: 'slotq_kafka_runtime_state{logical_consumer="operations.event-observation",runtime_role="consumer",state="ready",job="slotq-observer",instance="observer:9443"}'
+        values: '1x6'
+      - series: 'slotq_kafka_runtime_state{logical_consumer="waitlist.promotion",runtime_role="consumer",state="stopped",job="slotq-waitlist",instance="waitlist:9443"}'
+        values: '1x6'
+    alert_rule_test:
+      - eval_time: 20s
+        alertname: SlotqKafkaQuarantineSampleUnavailable
+        exp_alerts:
+          - exp_labels: {logical_consumer: operations.event-observation, runtime_role: consumer, state: ready, job: slotq-observer, instance: "observer:9443", severity: warning}
+            exp_annotations: {summary: "Quarantine DB observation failed, stale or unconfigured; missing count is not zero and lag health is independent"}

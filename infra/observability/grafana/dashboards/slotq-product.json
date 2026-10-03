@@ -648,7 +648,7 @@
       "id": 22,
       "title": "Kafka lag by group / partition",
       "type": "timeseries",
-      "description": "Configured group/topic/partition allowlist only, <=128 tuples. Offset values never become labels. Lag=0 does not prove effect completion.",
+      "description": "Configured group/topic/partition allowlist only, <=128 tuples. Halted, unavailable or stale samples are NaN/UNKNOWN. Actual absolute end 0 is known zero; lag never proves effect completion.",
       "datasource": {
         "type": "prometheus",
         "uid": "slotq-prometheus"
@@ -1008,7 +1008,7 @@
       "id": 34,
       "title": "Kafka lag sample validity",
       "type": "timeseries",
-      "description": "Health/freshness/offset errors and 128 configured tuple cap. Partial or invalid lag cannot prove that backlog is zero.",
+      "description": "Health=0 on halt, stop, rebalance, broker/assignment failure or sample older than 45s. Partial or invalid lag cannot prove that backlog is zero.",
       "datasource": {
         "type": "prometheus",
         "uid": "slotq-prometheus"
@@ -1044,6 +1044,32 @@
       "targets": [
         { "refId": "A", "expr": "slotq_kafka_delivery_targets", "legendFormat": "{{logical_consumer}} / {{delivery_state}} targets" },
         { "refId": "B", "expr": "slotq_kafka_delivery_oldest_created_age_seconds", "legendFormat": "{{logical_consumer}} / {{delivery_state}} oldest s" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
+    },
+    {
+      "id": 39,
+      "title": "Kafka quarantine count / oldest age",
+      "type": "timeseries",
+      "description": "Independent read-only DB snapshot per logical consumer. Failed, stale or disabled observation is UNKNOWN, never zero. Stable failure codes only; quarantine is not business DEAD.",
+      "datasource": { "type": "prometheus", "uid": "slotq-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 152 },
+      "targets": [
+        { "refId": "A", "expr": "slotq_kafka_quarantine_records", "legendFormat": "{{logical_consumer}} / {{failure_code}} records" },
+        { "refId": "B", "expr": "slotq_kafka_quarantine_oldest_age_seconds", "legendFormat": "{{logical_consumer}} oldest age (seconds)" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
+    },
+    {
+      "id": 40,
+      "title": "Kafka quarantine sample validity",
+      "type": "timeseries",
+      "description": "Quarantine DB sample health and last-success age are independent of broker lag and delivery sample health. Health=0 on failure/staleness; absent observer has no sample.",
+      "datasource": { "type": "prometheus", "uid": "slotq-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 152 },
+      "targets": [
+        { "refId": "A", "expr": "slotq_kafka_quarantine_sample_healthy", "legendFormat": "{{logical_consumer}} DB sample health" },
+        { "refId": "B", "expr": "slotq_kafka_quarantine_sample_age_seconds", "legendFormat": "{{logical_consumer}} last-success age (seconds)" }
       ],
       "fieldConfig": { "defaults": { "unit": "short", "noValue": "NO SIGNAL / UNKNOWN" }, "overrides": [] }
     },
