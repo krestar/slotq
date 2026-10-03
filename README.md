@@ -6,7 +6,7 @@
 
 **동시 예약 · 상태 전이 · 이벤트 기반 대기열 · 멀티테넌시 · 장애 복구**
 
-**현재 상태: M0~M4 완료 · M5 종료 관측 corrective #126 진행**
+**현재 상태: M0~M5 완료**
 
 </div>
 
@@ -272,8 +272,7 @@ flowchart LR
     M7 --> M8[M8 Evaluation & Production Hardening]
 ```
 
-- **M0~M4:** 완료
-- **M5:** Reliability & Observability 종료 gate가 [PR #122](https://github.com/krestar/slotq/pull/122)로 main에 반영됨
+- **M0~M5:** 완료
 - **M6~M8:** AI Access & Knowledge → Model Router & Agent Runtime → Evaluation & Production Hardening
 
 M0부터 M5까지 Product Backend와 운영 신뢰성을 먼저 완성하고, M6 이후 AI Platform 범위로 이동합니다.
@@ -298,10 +297,10 @@ Milestone별 완료 조건, 현재 상태, Issue 의존 관계는 [Roadmap](docs
 
 ## 현재 상태
 
-> **M5 Reliability & Observability — #111 gate main 반영 · #126 종료 corrective 진행**
+> **M5 Reliability & Observability — Complete**
 
 M0 Foundation부터 M4 Waitlist Promotion까지의 선행 Milestone은 완료 상태를 유지합니다.
 
 M5에서는 Product 요청·event 관측, Kafka relay/consumer 실험, multi-instance·fault 검증, tenant 범위 human operator recovery를 구현하고, DB direct와 Kafka를 동일 workload에서 비교했습니다. [ADR-0008](docs/adr/0008-m5-event-transport-and-runtime-status.md)에 따라 DB direct를 기본 transport로 유지하고 Kafka는 experimental/comparison topology로 보존합니다.
 
-[PR #122](https://github.com/krestar/slotq/pull/122)에서 fresh integrated operations drill, 누적 Backend·Frontend 검증, raw evidence 재계산과 종료 gate를 통과한 변경이 main에 반영됐습니다. 이후 발견된 Kafka intake 관측 결함은 [#126](https://github.com/krestar/slotq/issues/126)에서 보정하며, merge 후 최신 main의 완료조건을 다시 확인한 뒤 최종 M5 종료 상태를 확정합니다. Milestone별 완료 상태와 후속 착수 조건은 [Roadmap](docs/roadmap.md)에서 관리합니다.
+[PR #122](https://github.com/krestar/slotq/pull/122)에서 fresh integrated operations drill, 누적 Backend·Frontend 검증, raw evidence 재계산과 종료 gate를 통과했고, 이후 확인된 Kafka intake 관측 결함은 [#126](https://github.com/krestar/slotq/issues/126) / [PR #127](https://github.com/krestar/slotq/pull/127)에서 보정했습니다. 최신 main에서 완료조건을 다시 대조해 M5를 완료로 확정했습니다. Milestone별 완료 상태와 후속 착수 조건은 [Roadmap](docs/roadmap.md)에서 관리합니다.

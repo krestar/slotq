@@ -1,7 +1,7 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 M0 Foundation부터 M4 Waitlist Promotion까지 완료했다. M3는 #80 전달 경계
+현재 저장소는 M0 Foundation부터 M5 Reliability & Observability까지 완료했다. M3는 #80 전달 경계
 결정, #84 production runtime, #86 process failure recovery gate와 종료 감사 corrective #88을
 포함하며 PR #90에서 DB unavailable evidence의 실제 production DB access 진입까지 보강했다.
 M4는 #94~#97로 등록→Promotional HOLD Offer→event 기반 승급·만료·next→Thin UI를 연결했고,
@@ -13,9 +13,9 @@ M5는 #105~#111이 모두 main에 병합됐고 #111의 최종 비교/drill/ADR g
 supported default와 수동 rollback target으로 유지하고 Kafka를 reproducible experimental/
 comparison topology로 보존한다. 상시 운영 Kafka adoption과 default 선택은 별개의 결정이다.
 [완료조건 대조](experiments/m5-transport/closure.md), fresh integrated drill과 누적 검증 결과가
-현재 main에 반영돼 있다. 이후 Kafka intake 관측 계약의 세 결함을 종료 corrective
-[#126](https://github.com/krestar/slotq/issues/126)에서 보정한다. 수정·검증과 merge 후 최신 main
-완료조건 재확인이 필요하며 최종 M5 종료 상태는 아직 확정하지 않는다.
+현재 main에 반영돼 있다. 이후 확인된 Kafka intake 관측 계약의 세 결함은
+[#126](https://github.com/krestar/slotq/issues/126) / [PR #127](https://github.com/krestar/slotq/pull/127)에서 보정했고,
+최신 main의 완료조건을 다시 대조해 M5를 Complete로 확정했다.
 
 ## 계획 원칙
 
@@ -76,9 +76,9 @@ Status의 의미는 다음과 같다.
   consumer·activation·maintenance·process recovery를 연결했고 #97은 Customer·Venue Thin UI를
   완성했다. 종료 독립 감사의 #97 async-state blocker 3건은 PR #103에서 보정됐으며, 최종
   Backend CI·Frontend CI·PR Policy 성공과 closure 재검토 PASS를 확인했다.
-- M5 Reliability & Observability: #105~#111 Done. PR #122의 비교·drill·ADR 종료 gate가 main에 반영됐다.
-  #126 Kafka intake observability 종료 corrective의 수정·검증 및 merge 후 main 재확인을 별도 gate로 둔다.
-  M6 구현 착수는 M5 Milestone 종료 상태가 확정된 뒤 진행한다.
+- M5 Reliability & Observability: Complete. #105~#111과 종료 corrective #126이 모두 Done이며,
+  PR #122의 비교·drill·ADR gate와 PR #127의 Kafka intake observability 보정이 main에 반영됐다.
+  M6는 완료된 M5의 Product operations/security boundary를 선행 조건으로 사용한다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -823,7 +823,7 @@ M7 Model Router & Agent Runtime.
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
 | Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 #80/#84/#86과 corrective #88, M4는 #94~#97과 #97 corrective PR #103으로 완료했다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71·#97은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M0~M4는 Complete이다. M5 #105~#111과 PR #122 종료 gate는 main에 반영됐다. M6는 M5 Milestone 종료 상태 확정 이후 별도 ownership을 따른다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0~M5는 Complete이다. M6는 완료된 M5를 선행 조건으로 별도 Issue 설계와 ownership을 따른다. |
 | 기술 선택을 설명할 근거가 있는가? | Java는 ADR-0004, module 경계와 최종 event transport/runtime은 Accepted ADR-0008로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일한다. 동시성과 M3~M5 messaging 선택은 재현 가능한 실험과 ADR에 근거한다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

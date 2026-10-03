@@ -3,9 +3,9 @@
 2026-10-01에 remote main `7a38901`과 PR #122 branch에서 재개해 완료조건을 직접 대조했고,
 PR #122는 이후 squash merge되어 현재 main에 반영됐다. Issue state, merge, historical evidence와
 fresh 실행은 서로 다른 근거다. 아래 [#111 local 검증](verification.json)은 2026-10-01의 역사적
-gate PASS다. 이후 Kafka intake 관측 결함 세 건이 #126의 M5 종료 corrective로 확인됐다.
-[#126 수정·검증](../kafka-intake-observability/2026-10-03/README.md)을 별도로 대조하며,
-corrective merge 뒤 최신 main의 완료조건 재확인 전까지 최종 M5 종료 판정은 보류한다.
+gate PASS다. 이후 Kafka intake 관측 결함 세 건이 #126의 M5 종료 corrective로 확인됐고,
+[#126 수정·검증](../kafka-intake-observability/2026-10-03/README.md)은 PR #127로 main에 반영됐다.
+최신 main에서 #105~#111과 #126 완료조건을 다시 대조해 최종 M5 종료를 PASS로 확정했다.
 
 ## #105~#110의 실제 완료조건
 
@@ -73,7 +73,9 @@ DB direct supported default, Kafka experimental/comparison 지위와 ADR-0008은
 
 ## M5 종료 상태
 
-#111의 당시 integrated gate, architecture 결정과 cumulative 검증은 PASS이며 PR #122 squash
-merge로 main에 반영됐다. #126의 관측 corrective는 별도 종료 blocker다. 수정·검증 결과와
-merge 후 최신 main 완료조건을 대조한 뒤 별도 종료 절차에서 최종 M5 상태를 확정한다.
-Kafka adoption/retention 제약, M6 ownership과 M8 release/backup gate는 변경하지 않는다.
+#111의 integrated gate, architecture 결정과 cumulative 검증은 PR #122로 main에 반영됐고,
+#126의 관측 corrective와 실제 MySQL/Kafka regression은 PR #127로 main에 반영됐다. 최신 main에서
+#105~#111과 #126의 완료조건을 다시 대조한 결과 추가 correctness/security/transaction/concurrency
+blocker를 확인하지 않았다. **M5 Reliability & Observability는 Complete로 확정한다.**
+Kafka adoption/retention 제약은 experimental topology의 알려진 채택 제약으로 유지하며,
+M6 ownership과 M8 release/backup gate는 변경하지 않는다.
