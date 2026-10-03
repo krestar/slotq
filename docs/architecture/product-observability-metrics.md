@@ -2,7 +2,7 @@
 
 DB는 business authority이고 metric은 비동기 advisory sample이다. HTTP scrape는 JDBC를 호출하지 않는다. opt-in observer는 별도 daemon과 max-one connection pool, query별 1초 timeout/MySQL MAX_EXECUTION_TIME, socket 1.5초/connection 1초 timeout을 사용한다. Product worker scheduler, pool, transaction manager를 공유하지 않는다. 각 sample은 여러 autocommit 조회이므로 원자적인 전역 snapshot이나 correctness oracle이 아니다.
 
-각 조회는 최대 10,001행까지만 읽고 10,000개만 집계한다. query sort/join도 MySQL statement time budget의 적용 대상이다. 표본 cap은 결과 수/메모리 한도이며 전체 table scan이 최대 10,000행이라는 뜻은 아니다. timeout이면 invalid sample로 처리한다. interval 기본 15초, 마지막 성공 45초 초과 또는 최근 실패면 sample healthy=0과 값 NaN으로 표시한다. 최초 미수집/disabled는 series 부재다. 누락값을 0으로 보정하지 않는다.
+각 조회는 최대 10,001행까지만 읽고 10,000개만 집계한다. query sort/join도 MySQL statement time budget의 적용 대상이다. 표본 cap은 결과 수/메모리 한도이며 전체 table scan이 최대 10,000행이라는 뜻은 아니다. timeout이면 invalid sample로 처리한다. interval 기본 15초, 마지막 성공 45초 초과 또는 최근 실패면 sample healthy=0과 값 NaN으로 표시한다. 최초 미수집 inventory는 absent 또는 NaN이며 disabled observer는 series 부재다. 누락값을 0으로 보정하지 않는다.
 
 | Prometheus signal | 단위와 의미 |
 | --- | --- |

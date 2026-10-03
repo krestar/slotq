@@ -13,7 +13,9 @@ M5는 #105~#111이 모두 main에 병합됐고 #111의 최종 비교/drill/ADR g
 supported default와 수동 rollback target으로 유지하고 Kafka를 reproducible experimental/
 comparison topology로 보존한다. 상시 운영 Kafka adoption과 default 선택은 별개의 결정이다.
 [완료조건 대조](experiments/m5-transport/closure.md), fresh integrated drill과 누적 검증 결과가
-현재 main에 반영돼 있다.
+현재 main에 반영돼 있다. 이후 Kafka intake 관측 계약의 세 결함을 종료 corrective
+[#126](https://github.com/krestar/slotq/issues/126)에서 보정한다. 수정·검증과 merge 후 최신 main
+완료조건 재확인이 필요하며 최종 M5 종료 상태는 아직 확정하지 않는다.
 
 ## 계획 원칙
 
@@ -75,6 +77,7 @@ Status의 의미는 다음과 같다.
   완성했다. 종료 독립 감사의 #97 async-state blocker 3건은 PR #103에서 보정됐으며, 최종
   Backend CI·Frontend CI·PR Policy 성공과 closure 재검토 PASS를 확인했다.
 - M5 Reliability & Observability: #105~#111 Done. PR #122의 비교·drill·ADR 종료 gate가 main에 반영됐다.
+  #126 Kafka intake observability 종료 corrective의 수정·검증 및 merge 후 main 재확인을 별도 gate로 둔다.
   M6 구현 착수는 M5 Milestone 종료 상태가 확정된 뒤 진행한다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
