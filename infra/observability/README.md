@@ -72,4 +72,13 @@ expired claim/DEAD alert를 분리한다. Publisher가 죽은 뒤 ACK unknown은
 inventory로 탐지한다. 미수집 metric을 0으로 만들지 않는다. 실제 #111 drill 명령·결과는
 [M5 비교 및 통합 drill](../../docs/experiments/m5-transport/README.md)을 따른다.
 
+Kafka consumer의 quarantine도 `slotq.observability.database.enabled=true`와 별도 read-only
+계정이 필요하다. #126 이후 intake cycle에서 조회하지 않으며 같은 observer daemon/pool의
+bounded query를 사용한다. `slotq_kafka_quarantine_sample_healthy`/마지막 성공 age와 count를
+함께 확인한다. 실패·stale은 NaN, 미설정은 absent이고 `SlotqKafkaQuarantineSampleUnavailable`로
+탐지한다. Lag health는 이 DB sample health를 대신하지 않는다. 실제 empty partition만 known-zero이며
+halted/stale lag는 `SlotqKafkaLagUnavailable`로 탐지한다.
+
+Rule regression: `promtool test rules infra/observability/alerts.test.yml`.
+
 알림 임계값은 위 재현을 위한 local diagnostic budget이며 #111 transport 선택/production SLO 임계값을 확정하지 않는다. Alertmanager 외부 notification 채널은 추가하지 않는다. Prometheus `/api/v1/alerts`와 dashboard가 firing/resolved evidence다.

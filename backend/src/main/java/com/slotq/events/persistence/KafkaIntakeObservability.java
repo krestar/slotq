@@ -17,21 +17,18 @@ import org.apache.kafka.common.TopicPartition;
 
 /** Bounded, advisory consumer signals. Metrics never grant offset or business authority. */
 final class KafkaIntakeObservability {
-    private static final Set<String> FAILURE_CODES = Set.of("MALFORMED_WIRE", "UNKNOWN_ORIGINAL",
-        "IDENTITY_CORRUPTION", "CANONICAL_CORRUPTION", "REGISTRATION_CORRUPTION");
+    private static final Duration LAG_STALE_AFTER = Duration.ofSeconds(45);
     private final JdbcKafkaIntakeStore store;
     private final MeterRegistry registry;
     private final KafkaConsumerCatalog.ConsumerDefinition consumer;
     private final String topic;
     private final Set<Integer> allowedPartitions;
     private final Map<TopicPartition, AtomicLong> lag = new HashMap<>();
-    private final Map<String, AtomicLong> quarantine = new HashMap<>();
-    private final AtomicLong quarantineOldest = new AtomicLong();
     private final AtomicLong lagHealthy = new AtomicLong();
     private final AtomicLong lagTruncated = new AtomicLong();
     private final Map<String, AtomicLong> states = new HashMap<>();
     private final Timer delay;
-    private long lastQuarantineSampleMillis;
+    private volatile long lastLagSampleNanos;
 
     KafkaIntakeObservability(JdbcKafkaIntakeStore store, MeterRegistry registry,
                              KafkaConsumerCatalog.ConsumerDefinition consumer, String topic,
@@ -41,15 +38,9 @@ final class KafkaIntakeObservability {
         String[] tags = tags();
         this.delay = Timer.builder("slotq.kafka.durable.intake.observed.delay")
             .publishPercentileHistogram().tags(tags).register(registry);
-        Gauge.builder("slotq.kafka.lag.sample.healthy", lagHealthy, AtomicLong::get).tags(tags).register(registry);
-        Gauge.builder("slotq.kafka.lag.sample.truncated", lagTruncated, AtomicLong::get).tags(tags).register(registry);
-        Gauge.builder("slotq.kafka.quarantine.oldest.age.seconds", quarantineOldest, AtomicLong::get)
+        Gauge.builder("slotq.kafka.lag.sample.healthy", this, signal -> signal.lagCurrent() ? 1 : 0)
             .tags(tags).register(registry);
-        for (String failure : FAILURE_CODES) {
-            AtomicLong count = new AtomicLong(); quarantine.put(failure, count);
-            Gauge.builder("slotq.kafka.quarantine.records", count, AtomicLong::get)
-                .tags(tags).tag("failure_code", failure).register(registry);
-        }
+        Gauge.builder("slotq.kafka.lag.sample.truncated", lagTruncated, AtomicLong::get).tags(tags).register(registry);
         for (String state : Set.of("ready", "degraded", "stopped")) {
             AtomicLong value = new AtomicLong(); states.put(state, value);
             Gauge.builder("slotq.kafka.runtime.state", value, AtomicLong::get)
@@ -59,10 +50,12 @@ final class KafkaIntakeObservability {
     }
 
     void state(String active) {
+        if (!active.equals("ready")) lagHealthy.set(0);
         states.forEach((name, value) -> value.set(name.equals(active) ? 1 : 0));
     }
 
     void rebalance(String outcome) {
+        lagHealthy.set(0);
         registry.counter("slotq.kafka.consumer.rebalance", append(tags(), "outcome", outcome)).increment();
     }
 
@@ -91,6 +84,9 @@ final class KafkaIntakeObservability {
     }
 
     void sample(KafkaConsumer<byte[], byte[]> runtime) {
+        // Invalidate before broker I/O, including a blocked or failed observation.
+        lagHealthy.set(0);
+        lag.values().forEach(value -> value.set(-1));
         var partitions = runtime.assignment();
         if (partitions.isEmpty()) { lagHealthy.set(0); return; }
         if (partitions.size() > 64 || partitions.stream().anyMatch(p -> !p.topic().equals(topic)
@@ -111,33 +107,26 @@ final class KafkaIntakeObservability {
                 if (end == null || end < 0 || (position == null && end != 0)
                     || (position != null && position.offset() > end)) { complete = false; continue; }
                 AtomicLong holder = lag.computeIfAbsent(partition, key -> {
-                    AtomicLong created = new AtomicLong();
-                    Gauge.builder("slotq.kafka.consumer.lag.records", created, AtomicLong::get)
+                    AtomicLong created = new AtomicLong(-1);
+                    Gauge.builder("slotq.kafka.consumer.lag.records", created,
+                            value -> lagCurrent() && value.get() >= 0 ? value.get() : Double.NaN)
                         .tags(tags()).tag("consumer_group", consumer.groupId()).tag("topic", topic)
                         .tag("partition", Integer.toString(key.partition())).register(registry);
                     return created;
                 });
                 holder.set(position == null ? 0 : end - position.offset());
             }
-            lagHealthy.set(complete ? 1 : 0);
+            if (complete) {
+                lastLagSampleNanos = System.nanoTime();
+                lagHealthy.set(1);
+            }
         } catch (RuntimeException unavailable) {
             lagHealthy.set(0);
         }
-        if (System.currentTimeMillis() - lastQuarantineSampleMillis >= 30_000) {
-            lastQuarantineSampleMillis = System.currentTimeMillis();
-            try {
-                quarantine.values().forEach(value -> value.set(0));
-                long oldest = 0;
-                for (var item : store.quarantineCounts(consumer.consumerId())) {
-                    AtomicLong count = quarantine.get(item.failureCode());
-                    if (count != null) count.set(item.count());
-                    oldest = Math.max(oldest, item.oldestAgeSeconds());
-                }
-                quarantineOldest.set(oldest);
-            } catch (RuntimeException unavailable) {
-                // Keep the last sample; lag health already signals DB/Kafka visibility separately.
-            }
-        }
+    }
+
+    private boolean lagCurrent() {
+        return lagHealthy.get() == 1 && System.nanoTime() - lastLagSampleNanos <= LAG_STALE_AFTER.toNanos();
     }
 
     private String[] tags() {

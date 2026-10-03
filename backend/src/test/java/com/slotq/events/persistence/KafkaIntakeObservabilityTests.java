@@ -40,12 +40,60 @@ class KafkaIntakeObservabilityTests {
     }
     @Test void brokerFailureAndLostAssignmentCannotPublishHealthyZero() {
         var registry=new SimpleMeterRegistry();try {
-            when(runtime.assignment()).thenReturn(assignment);when(runtime.endOffsets(assignment)).thenThrow(new IllegalStateException("unavailable"));
+            when(runtime.assignment()).thenReturn(assignment);
+            when(runtime.endOffsets(assignment)).thenReturn(Map.of(empty,0L,active,7L));
+            when(runtime.committed(assignment)).thenReturn(Map.of(active,new OffsetAndMetadata(7)));
             var observation=observation(registry);observation.sample(runtime);
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isEqualTo(1);
+            when(runtime.endOffsets(assignment)).thenThrow(new IllegalStateException("unavailable"));
+            observation.sample(runtime);
             assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isZero();
+            assertThat(registry.get("slotq.kafka.consumer.lag.records").tag("partition","0").gauge().value()).isNaN();
             when(runtime.assignment()).thenReturn(Set.of());observation.sample(runtime);
             assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isZero();
         } finally {registry.close();}
     }
+    @Test void staleAndRevokedPartitionsCannotRetainCurrentLag() {
+        var registry = new SimpleMeterRegistry(); try {
+            when(runtime.assignment()).thenReturn(assignment);
+            when(runtime.endOffsets(assignment)).thenReturn(Map.of(empty, 0L, active, 7L));
+            when(runtime.committed(assignment)).thenReturn(Map.of(active, new OffsetAndMetadata(7)));
+            var observation = observation(registry);
+            observation.sample(runtime);
+            org.springframework.test.util.ReflectionTestUtils.setField(observation, "lastLagSampleNanos",
+                System.nanoTime() - java.time.Duration.ofSeconds(46).toNanos());
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isZero();
+            assertThat(registry.get("slotq.kafka.consumer.lag.records").tag("partition", "1").gauge().value()).isNaN();
+            observation.state("ready");
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isZero();
+            observation.sample(runtime);
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isEqualTo(1);
+            observation.sample(runtime);
+            observation.rebalance("revoked");
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isZero();
+            when(runtime.assignment()).thenReturn(Set.of(empty));
+            when(runtime.endOffsets(Set.of(empty))).thenReturn(Map.of(empty, 0L));
+            when(runtime.committed(Set.of(empty))).thenReturn(Map.of());
+            observation.sample(runtime);
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isEqualTo(1);
+            assertThat(registry.get("slotq.kafka.consumer.lag.records").tag("partition", "0").gauge().value()).isZero();
+            assertThat(registry.get("slotq.kafka.consumer.lag.records").tag("partition", "1").gauge().value()).isNaN();
+        } finally { registry.close(); }
+    }
+    @Test void healthyLagIsInvalidatedWhenRuntimeDegrades() {
+        var registry = new SimpleMeterRegistry(); try {
+            when(runtime.assignment()).thenReturn(assignment);
+            when(runtime.endOffsets(assignment)).thenReturn(Map.of(empty, 0L, active, 7L));
+            when(runtime.committed(assignment)).thenReturn(Map.of(active, new OffsetAndMetadata(7)));
+            var observation = observation(registry);
+            observation.state("ready");
+            observation.sample(runtime);
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isEqualTo(1);
+            observation.state("degraded");
+            assertThat(registry.get("slotq.kafka.lag.sample.healthy").gauge().value()).isZero();
+            assertThat(registry.get("slotq.kafka.consumer.lag.records").tag("partition", "1").gauge().value()).isNaN();
+        } finally { registry.close(); }
+    }
+
     private KafkaIntakeObservability observation(SimpleMeterRegistry registry){return new KafkaIntakeObservability(store,registry,new ConsumerDefinition("waitlist.promotion","slotq.waitlist.promotion.v1",List.of()),empty.topic(),Set.of(0,1,2));}
 }

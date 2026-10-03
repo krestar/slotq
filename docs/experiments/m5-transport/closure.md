@@ -2,8 +2,10 @@
 
 2026-10-01에 remote main `7a38901`과 PR #122 branch에서 재개해 완료조건을 직접 대조했고,
 PR #122는 이후 squash merge되어 현재 main에 반영됐다. Issue state, merge, historical evidence와
-fresh 실행은 서로 다른 근거다. M5 종료 판정은 이 표의 실제 gate와 [최종 local 검증](verification.json)을
-함께 따른다. 모든 필수 gate가 PASS했으며, merge 여부와 Milestone 완료 상태를 혼동하지 않는다.
+fresh 실행은 서로 다른 근거다. 아래 [#111 local 검증](verification.json)은 2026-10-01의 역사적
+gate PASS다. 이후 Kafka intake 관측 결함 세 건이 #126의 M5 종료 corrective로 확인됐다.
+[#126 수정·검증](../kafka-intake-observability/2026-10-03/README.md)을 별도로 대조하며,
+corrective merge 뒤 최신 main의 완료조건 재확인 전까지 최종 M5 종료 판정은 보류한다.
 
 ## #105~#110의 실제 완료조건
 
@@ -39,8 +41,8 @@ fresh 실행은 서로 다른 근거다. M5 종료 판정은 이 표의 실제 g
 
 ## Blocker와 채택 제약의 구분
 
-현재 선택한 supported DB topology의 correctness/security/transaction/concurrency blocker를
-관측하지 않았다. 모든 필수 local 검증이 통과했다. Opt-in historical fault/security/diagnostic
+2026-10-01 #111에서 선택한 supported DB topology의 correctness/security/transaction/concurrency
+blocker를 관측하지 않았고 당시 필수 local 검증이 통과했다. Opt-in historical fault/security/diagnostic
 9 case는 fixture 없이 skip됐으며 exact 목록을 verification.json에 남겼다. #109 전체 matrix를
 이번 실행으로 재표기하지 않는다.
 
@@ -56,9 +58,22 @@ DB producer-only와 완전한 Waitlist process 분리도 검증되지 않았다.
 Waitlist 경계를 ADR/runbook에 그대로 기록한다. 이를 제공하려고 이번 범위에서 activation/security
 계약을 새로 만들지 않았다. 제거/decommission이나 후속 Milestone 기능을 선도입하지 않는다.
 
-## M5 종료 판정
+## #126 Kafka intake observability corrective
 
-Fresh integrated gate, architecture 결정, 완료조건 대조와 cumulative 최종 검증이 모두 PASS다.
-#111의 종료 gate와 ADR-0008은 PR #122 squash merge로 main에 반영됐다. Kafka adoption 제약을
-해결한 것으로 세지 않고 experimental 범위를 확정한 결과다. M6 ownership과 M8 release/backup gate는
-변경하지 않는다. Milestone의 최종 상태 표기는 repository의 별도 종료 절차에 따라 갱신한다.
+최신 main `3fb0332`에서 #106/#108/#111과 production 코드를 재대조해 세 finding을 확인했다.
+Healthy lag 뒤 halt/degraded에서도 health=1이 남았고, quarantine DB 실패는 기존 count를 0으로
+덮어썼다. Quarantine 조회는 production JDBC를 통해 intake cycle에서 명시적인 query/socket
+bound 없이 동기 실행됐다. #126은 lag validity/unknown, 성공한 quarantine snapshot의 교체,
+별도 read-only observer의 finite timeout과 독립 sample health/age로 이 관측 계약을 보정한다.
+
+실제 MySQL/Kafka timeout·empty partition과 runtime halt, durable intake/offset/target authority
+회귀 및 최신 Backend 검증은 [별도 기록](../kafka-intake-observability/2026-10-03/README.md)을
+따른다. 기존 비교 dataset과 #109 matrix/#111 drill을 이번 source의 새 실행으로 세지 않는다.
+DB direct supported default, Kafka experimental/comparison 지위와 ADR-0008은 유지한다.
+
+## M5 종료 상태
+
+#111의 당시 integrated gate, architecture 결정과 cumulative 검증은 PASS이며 PR #122 squash
+merge로 main에 반영됐다. #126의 관측 corrective는 별도 종료 blocker다. 수정·검증 결과와
+merge 후 최신 main 완료조건을 대조한 뒤 별도 종료 절차에서 최종 M5 상태를 확정한다.
+Kafka adoption/retention 제약, M6 ownership과 M8 release/backup gate는 변경하지 않는다.

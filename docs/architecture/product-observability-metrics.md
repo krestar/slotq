@@ -2,7 +2,7 @@
 
 DB는 business authority이고 metric은 비동기 advisory sample이다. HTTP scrape는 JDBC를 호출하지 않는다. opt-in observer는 별도 daemon과 max-one connection pool, query별 1초 timeout/MySQL MAX_EXECUTION_TIME, socket 1.5초/connection 1초 timeout을 사용한다. Product worker scheduler, pool, transaction manager를 공유하지 않는다. 각 sample은 여러 autocommit 조회이므로 원자적인 전역 snapshot이나 correctness oracle이 아니다.
 
-각 조회는 최대 10,001행까지만 읽고 10,000개만 집계한다. query sort/join도 MySQL statement time budget의 적용 대상이다. 표본 cap은 결과 수/메모리 한도이며 전체 table scan이 최대 10,000행이라는 뜻은 아니다. timeout이면 invalid sample로 처리한다. interval 기본 15초, 마지막 성공 45초 초과 또는 최근 실패면 sample healthy=0과 값 NaN으로 표시한다. 최초 미수집/disabled는 series 부재다. 누락값을 0으로 보정하지 않는다.
+각 조회는 최대 10,001행까지만 읽고 10,000개만 집계한다. query sort/join도 MySQL statement time budget의 적용 대상이다. 표본 cap은 결과 수/메모리 한도이며 전체 table scan이 최대 10,000행이라는 뜻은 아니다. timeout이면 invalid sample로 처리한다. interval 기본 15초, 마지막 성공 45초 초과 또는 최근 실패면 sample healthy=0과 값 NaN으로 표시한다. 최초 미수집 inventory는 absent 또는 NaN이며 disabled observer는 series 부재다. 누락값을 0으로 보정하지 않는다.
 
 | Prometheus signal | 단위와 의미 |
 | --- | --- |
@@ -49,6 +49,8 @@ Count가 0이어도 sample truncated=1 또는 healthy=0이면 global 부재를 �
 | `slotq_kafka_delivery_targets{logical_consumer,delivery_state}`, `slotq_kafka_delivery_oldest_created_age_seconds` | #108. Kafka intake 뒤 MySQL 실행 ledger의 consumer별 PENDING/PROCESSING/DONE/DEAD inventory와 상태별 oldest age. offset lag와 독립 |
 | `slotq_kafka_delivery_retry_due`, `slotq_kafka_delivery_retry_backoff` | #108. PENDING이고 기존 attempt가 있는 target의 DB next_attempt_at 기준 즉시 재시도 가능/대기 inventory |
 | `slotq_kafka_delivery_sample_healthy`, `slotq_kafka_delivery_sample_age_seconds`, `slotq_kafka_sample_truncated{sample}` | #108. #106의 별도 read-only pool, timeout, 10,000행 cap을 consumer별 적용한 실행 ledger 표본 유효성. opt-in observer 미설정이면 series 부재 |
+| `slotq_kafka_quarantine_records{failure_code}`, `slotq_kafka_quarantine_oldest_age_seconds` | #108/#126. 별도 DB observer에서 단일 nonlocking query로 완성한 consumer별 quarantine count/oldest age snapshot. 성공한 빈 집합만 실제 0. 최초 실패·최근 실패·stale이면 NaN, observer disabled이면 series 부재 |
+| `slotq_kafka_quarantine_sample_healthy`, `slotq_kafka_quarantine_sample_age_seconds` | #126. quarantine DB sample의 독립 health와 마지막 성공 이후 초. 실패 시 기존 snapshot/성공 timestamp 보존, healthy=0. 첫 성공 전 age=NaN. broker lag나 delivery sample health로 대체하지 않음 |
 
 이 표의 metric naming, 단위, timestamp source, cardinality 및 missing 의미는 #106 관측 계약이다. 실제 측정/emit, publication 책임 데이터, Kafka client lifecycle은 #107, intake provenance/offset/lag 수집 구현은 #108이 소유한다. 공통 label은 publication에 `transport=kafka,runtime_role=relay`, intake/lag에 `transport=kafka,runtime_role=consumer`를 사용한다. intake/delay/lag/lag sample의 `logical_consumer`는 #108에서 확정한 `waitlist.promotion`, `operations.event-observation` 두 값만 허용한다. 임의 consumer, process/replica/registration UUID는 이 label로 허용하지 않는다. runtime state만 별도 role enum을 사용한다.
 
@@ -62,6 +64,21 @@ DB direct observer를 Kafka intake로 표현하지 않는다. Panel은 각 consu
 Broker에서 실제 조회한 absolute end offset 0은 record가 없는 partition의 known lag 0이다.
 이때만 첫 committed offset 부재를 허용한다. Nonempty partition의 committed offset 누락이나
 broker 조회 실패는 sample unhealthy/unknown이며 client position을 durable offset으로 사용하지 않는다.
+Halt/degraded/stop과 rebalance는 broker close 전에 lag health를 무효화한다. 새 broker sample을
+얻는 동안이나 마지막 성공 후 45초가 지나면 healthy=0과 lag NaN이다. 새 assignment에 없는
+partition의 이전 lag도 NaN이다. Metric은 halt 해제, offset 진행 또는 recovery 권한을 부여하지 않는다.
+
+Quarantine은 `slotq.observability.database.enabled=true`인 Kafka consumer의 기존 #106 daemon/
+read-only max-one pool을 사용하며 intake `runCycle()`에서 SQL을 실행하지 않는다. 기본 interval
+15초/stale-after 45초, connection/connect 1초, JDBC query/MySQL MAX_EXECUTION_TIME 1초,
+socket 1.5초이며 query 실패·timeout은 실제 0이 아니다. 단일 GROUP BY의 결과는 고정 다섯
+failure code의 count와 전체 oldest age로 제한한다. Aggregate scan 비용도 statement timeout의
+대상이며 delivery inventory의 10,000행 lower-bound cap을 quarantine count에 적용하지 않는다.
+Label은 기존 `transport=kafka,runtime_role=consumer,logical_consumer`와 `MALFORMED_WIRE`,
+`UNKNOWN_ORIGINAL`, `IDENTITY_CORRUPTION`, `CANONICAL_CORRUPTION`, `REGISTRATION_CORRUPTION`만
+사용한다. Quarantine 권한/조회 실패는 delivery sample을 지우지 않는다. Scrape는 memory만 읽는다.
+`SlotqKafkaQuarantineSampleUnavailable`은 DB health=0과 active Kafka runtime의 관측 미설정을
+탐지한다. Broker lag healthy=1이어도 quarantine DB 상태는 unknown일 수 있다.
 
 #111의 별도 read-only Product/relay DB sampler는 `slotq_db_publication_targets{publication_state}`와
 `slotq_db_publication_oldest_recorded_age_seconds{publication_state}`를 제공한다. 각 상태별 oldest-first

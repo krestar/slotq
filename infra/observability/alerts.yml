@@ -70,3 +70,8 @@ groups:
         for: 10s
         labels: {severity: warning}
         annotations: {summary: "Kafka lag unavailable; broker/intake progress is unknown, inspect durable DB responsibility separately"}
+      - alert: SlotqKafkaQuarantineSampleUnavailable
+        expr: slotq_kafka_quarantine_sample_healthy == 0 or (slotq_kafka_runtime_state{runtime_role="consumer",state=~"ready|degraded"} == 1 unless on (job,instance,logical_consumer) slotq_kafka_quarantine_sample_healthy)
+        for: 10s
+        labels: {severity: warning}
+        annotations: {summary: "Quarantine DB observation failed, stale or unconfigured; missing count is not zero and lag health is independent"}

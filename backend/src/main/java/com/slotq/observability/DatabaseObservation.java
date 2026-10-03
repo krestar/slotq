@@ -14,8 +14,32 @@ public final class DatabaseObservation {
     public static final int LIMIT = 10_000;
     public static final Set<String> STATES = Set.of("PENDING", "PROCESSING", "DONE", "DEAD");
     public static final Set<String> OUTCOMES = Set.of("PROMOTED", "NO_CAPACITY", "NO_CANDIDATE", "NOT_ELIGIBLE", "SLOT_PAST", "DEFERRED");
+    public static final Set<String> QUARANTINE_FAILURE_CODES = Set.of("MALFORMED_WIRE", "UNKNOWN_ORIGINAL",
+        "IDENTITY_CORRUPTION", "CANONICAL_CORRUPTION", "REGISTRATION_CORRUPTION");
     public record Key(String metric, String dimension, String value) { }
     public record Snapshot(Map<Key, Double> values, Instant observedAt) { }
+
+    /** One nonlocking query; fixed groups, server/JDBC timeout and observer socket bounds. */
+    public Snapshot readKafkaQuarantine(Connection connection, String consumerId) throws SQLException {
+        if (!Set.of("waitlist.promotion", "operations.event-observation").contains(consumerId))
+            throw new IllegalArgumentException("Unknown logical consumer");
+        var values = new LinkedHashMap<Key, Double>();
+        for (String failure : QUARANTINE_FAILURE_CODES)
+            put(values, "quarantine.records", "failure_code", failure, 0);
+        put(values, "quarantine.oldest.age.seconds", 0);
+        query(connection, "SELECT failure_code,COUNT(*), "
+            + "TIMESTAMPDIFF(SECOND,MIN(intaken_at),UTC_TIMESTAMP(6)) "
+            + "FROM event_kafka_intake_records WHERE consumer_id='" + consumerId
+            + "' AND disposition='QUARANTINED' GROUP BY failure_code", rows -> {
+                String failure = rows.getString(1);
+                if (!QUARANTINE_FAILURE_CODES.contains(failure))
+                    throw new SQLException("Unknown quarantine failure code");
+                put(values, "quarantine.records", "failure_code", failure, rows.getLong(2));
+                values.merge(new Key("quarantine.oldest.age.seconds", "", ""),
+                    Math.max(0, rows.getDouble(3)), Math::max);
+            });
+        return new Snapshot(Map.copyOf(values), Instant.now());
+    }
 
     public Snapshot read(Connection connection) throws SQLException {
         var values = new LinkedHashMap<Key, Double>();

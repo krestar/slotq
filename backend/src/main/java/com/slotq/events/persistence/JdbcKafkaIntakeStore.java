@@ -106,17 +106,6 @@ public class JdbcKafkaIntakeStore {
         }, consumer.consumerId(), record.topic(), record.partition(), record.offset()).stream().findFirst();
     }
 
-    public List<QuarantineCount> quarantineCounts(String consumerId) {
-        return db.query("""
-            SELECT failure_code,COUNT(*) AS row_count,
-                   TIMESTAMPDIFF(SECOND,MIN(intaken_at),UTC_TIMESTAMP(6)) AS oldest_age
-              FROM event_kafka_intake_records
-             WHERE consumer_id=? AND disposition='QUARANTINED'
-             GROUP BY failure_code
-            """, (row, n) -> new QuarantineCount(row.getString("failure_code"), row.getLong("row_count"),
-            row.getLong("oldest_age")), consumerId);
-    }
-
     private Outcome intakeInTransaction(ConsumerRecord<byte[], byte[]> record, ConsumerDefinition consumer,
                                         long expectedEpoch, byte[] hash) {
         db.update("""
@@ -297,7 +286,6 @@ public class JdbcKafkaIntakeStore {
 
     public enum Outcome { TARGET, REUSED_TARGET, NON_TARGET, QUARANTINED }
     public record DelayObservation(Duration duration) { }
-    public record QuarantineCount(String failureCode, long count, long oldestAgeSeconds) { }
     private record Registration(UUID id, String transport, Long epoch) { }
     private record Original(StoredEvent stored, ProductTelemetry.Origin origin) { }
 }
