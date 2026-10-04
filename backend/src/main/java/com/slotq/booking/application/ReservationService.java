@@ -6,6 +6,8 @@ import java.time.ZoneOffset;
 import java.util.Objects;
 
 import com.slotq.auth.application.AuthorizationUseCase;
+import com.slotq.auth.access.ProductCredentialAccess;
+import com.slotq.auth.access.ProductOperation;
 import com.slotq.auth.application.ReservationAccessTarget;
 import com.slotq.auth.application.ReservationAction;
 import com.slotq.auth.application.ResourceNotFoundException;
@@ -42,6 +44,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
     private final HoldIdempotencyStore idempotencyStore;
     private final HoldIdempotencyPolicy idempotencyPolicy;
     private final Clock clock;
+    private final ProductCredentialAccess productAccess;
 
     ReservationService(ReservationRepository reservationRepository,
                        SlotInventoryRepository slotRepository,
@@ -52,7 +55,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
                        ReservationCommandExecutor commandExecutor,
                        HoldIdempotencyStore idempotencyStore,
                        HoldIdempotencyPolicy idempotencyPolicy,
-                       Clock clock) {
+                       Clock clock, ProductCredentialAccess productAccess) {
         this.reservationRepository = reservationRepository;
         this.slotRepository = slotRepository;
         this.tenantRepository = tenantRepository;
@@ -63,6 +66,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
         this.idempotencyStore = idempotencyStore;
         this.idempotencyPolicy = idempotencyPolicy;
         this.clock = clock;
+        this.productAccess = productAccess;
     }
 
     @Override
@@ -73,10 +77,17 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
             command.principal(),
             "principal must not be null"
         );
+        productAccess.requireHoldAdmission(principal, command.venueId(), command.slotInventoryId().value(),
+            command.partySize(), command.idempotencyKey().map(HoldIdempotencyKey::value).orElse(null));
         Instant now = clock.instant();
         Clock commandClock = Clock.fixed(now, ZoneOffset.UTC);
         SlotInventory slot = slotRepository.findForUpdate(command.venueId(), command.slotInventoryId())
             .orElseThrow(ResourceNotFoundException::new);
+        // Recheck after the scoped lock wait as well; keep Product's captured command time unchanged.
+        productAccess.requireHoldAdmission(principal, command.venueId(), command.slotInventoryId().value(),
+            command.partySize(), command.idempotencyKey().map(HoldIdempotencyKey::value).orElse(null));
+        if (principal.restriction() != null && !principal.restriction().tenantId().equals(slot.tenantId()))
+            throw new ResourceNotFoundException();
         HoldIdempotencyStore.Fingerprint fingerprint = new HoldIdempotencyStore.Fingerprint(
             command.venueId(), command.slotInventoryId(), command.partySize()
         );
@@ -144,6 +155,7 @@ class ReservationService implements ReservationUseCase, ReservationExpiryUseCase
     @Transactional(readOnly = true)
     public ReservationDetails getReservation(VenueId venueId, ReservationId reservationId,
                                              AuthenticatedPrincipal principal) {
+        productAccess.requireAdmission(principal, ProductOperation.RESERVATION_GET, venueId, reservationId.value());
         return currentDetails(
             venueId, reservationId, principal,
             Clock.fixed(clock.instant(), ZoneOffset.UTC), false

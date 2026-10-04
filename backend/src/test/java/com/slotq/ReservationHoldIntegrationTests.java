@@ -336,6 +336,11 @@ class ReservationHoldIntegrationTests {
         assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(2);
         assertThat(countIdempotency(key)).isEqualTo(1);
 
+        clock.set(BASE_NOW.plus(Duration.ofHours(24)).plusNanos(1_000));
+        postHold(fixture.venue(), fixture.slot(), 2, customerA, key)
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(secondId));
+        assertThat(countForSlot("reservations", fixture.slot())).isEqualTo(2);
+
         jdbcTemplate.update("""
             INSERT INTO hold_idempotency_records (
                 tenant_id, customer_principal_id, idempotency_key,

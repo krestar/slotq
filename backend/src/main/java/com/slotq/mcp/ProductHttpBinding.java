@@ -19,6 +19,7 @@ public final class ProductHttpBinding {
         this.origin=origin;this.authority=authority;this.credentials=credentials;this.clock=clock;
     }
     public Prepared prepare(RequestContext context,ProductOperation operation,UUID target) {
+        if(operation==ProductOperation.RESERVATION_HOLD)throw new McpFailure(McpFailure.Reason.FORBIDDEN);
         DelegatedActor actor=context.revalidate(authority,clock);
         ProductAccessCredential credential=credentials.issueProduct(actor.delegationId(),operation,target,context.deadline());
         String path=operation==ProductOperation.RESERVATION_GET
@@ -26,6 +27,12 @@ public final class ProductHttpBinding {
             :"/api/v1/management/venues/"+actor.venueId().value()+"/reservations";
         return new Prepared(origin.resolve(path),"GET",credential,context.remaining(clock,CONNECT_MAX),
             context.remaining(clock,RESPONSE_MAX));
+    }
+    public Prepared prepareHold(RequestContext context,UUID slot,int partySize,String key) {
+        DelegatedActor actor=context.revalidate(authority,clock);
+        ProductAccessCredential credential=credentials.issueHold(actor.delegationId(),slot,partySize,key,context.deadline());
+        return new Prepared(origin.resolve("/api/v1/venues/"+actor.venueId().value()+"/reservations/holds"),"POST",credential,
+            context.remaining(clock,CONNECT_MAX),context.remaining(clock,RESPONSE_MAX));
     }
     public record Prepared(URI uri,String method,ProductAccessCredential credential,Duration connectTimeout,Duration responseTimeout) { }
 }

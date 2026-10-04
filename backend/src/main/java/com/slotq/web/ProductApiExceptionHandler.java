@@ -191,6 +191,13 @@ class ProductApiExceptionHandler {
             request.getRequestURI(), exception.error().name()));
     }
 
+    @ExceptionHandler(com.slotq.auth.access.AccessFailure.class)
+    ResponseEntity<Void> delegatedAdmissionFailure(com.slotq.auth.access.AccessFailure failure) {
+        // Same safe status contract as the PRODUCT credential authentication filter.
+        int status = failure.reason() == com.slotq.auth.access.AccessFailure.Reason.UNAVAILABLE ? 503 : 401;
+        return ResponseEntity.status(status).header("Cache-Control", "no-store").build();
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiProblem> internalError(Exception exception, HttpServletRequest request) {
         RequestOutcome.failure(request, exception);
