@@ -1,0 +1,30 @@
+{
+  "gate" : "PASS: expired PRODUCT credential rejected at application admission; ordinary HOLD unchanged",
+  "sentAt" : "2026-10-04T20:41:37.999762300Z",
+  "releasedAt" : "2026-10-04T20:42:39.001167200Z",
+  "elapsedMillis" : 61290,
+  "authenticatedPausedRequests" : 3,
+  "productCredentialExpiredAt" : "2026-10-04T20:42:37.799249300Z",
+  "lateProductGetStatus" : 401,
+  "lateNarrowedHoldStatus" : 401,
+  "lateNarrowedHoldDurableRows" : {
+    "reservations" : 0,
+    "allocations" : 0,
+    "idempotency" : 0
+  },
+  "holdClientObservation" : "HttpTimeoutException at 15 seconds; subsequent MySQL COMMIT observed",
+  "ordinaryHoldAuthentication" : "existing local/test-only dev Product credential",
+  "guardedHoldAuthentication" : "Auth-issued material-bound PRODUCT audience credential",
+  "durableProductRows" : {
+    "reservationId" : "7D16BF6D7B2F45A7B6C29F1BBE7FCE7F",
+    "slotId" : "210812A70162463BB8F7B5EF530EEF47",
+    "customerId" : "10000000000000000000000000000001",
+    "state" : "HELD",
+    "allocationId" : "F1841FAA50004FFAACD0E6E64AF729C3",
+    "idempotencyState" : "COMPLETED",
+    "completedAt" : "2026-10-04T20:42:39.142Z"
+  },
+  "diagnosticRegistrySize" : 0,
+  "fixtureOverridesProductionRegistry" : true,
+  "pauseLayer" : "test-only HandlerInterceptor after Product security authentication, before controller/application/transaction"
+}

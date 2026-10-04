@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.ReservationHoldIntegrationTests" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:49:08.944Z" hostname="KRESTAR" time="15.504">
+  <properties/>
+  <testcase name="serializesConcurrentSameKeyRequestsToOneReservationAndAllocation()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.13"/>
+  <testcase name="scopesTheSameKeyIndependentlyByCustomerAndTenant()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.228"/>
+  <testcase name="replaysSameKeyAndLocationWithCurrentEffectiveRepresentation()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.11"/>
+  <testcase name="rejectsInactiveScopesStartedSlotAndUnsupportedPartySize()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.367"/>
+  <testcase name="invalidKeysHaveNoSideEffectsAndMissingKeyKeepsOneShotBehavior()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.104"/>
+  <testcase name="hidesCrossVenueAndOtherCustomerReservationsAndValidatesTheRequest()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.177"/>
+  <testcase name="ignoresDueHeldForOccupancyAndReadDoesNotMaterializeExpiry()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.119"/>
+  <testcase name="createsHoldAndAllocationWithCurrentPolicyWithoutChangingSlotSnapshot()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.094"/>
+  <testcase name="enforcesRetentionBoundaryAndCleanupNeverDeletesInProgressRows()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.151"/>
+  <testcase name="rejectsConsumedCapacityAndLeavesOnlyTheFirstReservation()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.094"/>
+  <testcase name="rejectsSameKeyWithDifferentFingerprintWithoutNewSideEffects()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.097"/>
+  <testcase name="rollsBackReliabilityStateWithReservationAndAllowsTheSameKeyRetry()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.146"/>
+  <testcase name="authenticationFailureUsesTheCommonProblemEnvelope()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.006"/>
+  <testcase name="rollsBackReservationAndAllocationWhenTransactionFails()" classname="com.slotq.ReservationHoldIntegrationTests" time="0.075"/>
+  <system-out><![CDATA[2026-10-05T05:49:08.946+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:49:09.018+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 814d5372db118a2f0ddae7c1e7e81589169c23fb504b0e94d917939df9492aed
+2026-10-05T05:49:09.295+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:1754/slotq using query 'SELECT 1'
+2026-10-05T05:49:18.583+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.6375032S
+2026-10-05T05:49:18.584+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:1754/slotq)
+2026-10-05T05:49:18.590+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.ReservationHoldIntegrationTests
+2026-10-05T05:49:18.595+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.ReservationHoldIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:49:18.617+09:00  INFO 37152 --- [    Test worker] c.slotq.ReservationHoldIntegrationTests  : Starting ReservationHoldIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:49:18.617+09:00  INFO 37152 --- [    Test worker] c.slotq.ReservationHoldIntegrationTests  : The following 1 profile is active: "test"
+2026-10-05T05:49:19.238+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:49:19.297+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 58 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:49:19.420+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:1754/slotq (MySQL 8.4)
+2026-10-05T05:49:19.461+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq`.`flyway_schema_history` does not exist yet
+2026-10-05T05:49:19.462+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.015s)
+2026-10-05T05:49:19.486+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq`.`flyway_schema_history` ...
+2026-10-05T05:49:19.546+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq`: << Empty Schema >>
+2026-10-05T05:49:19.551+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "1 - configure database"
+2026-10-05T05:49:19.586+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "2 - create tenant venue policy"
+2026-10-05T05:49:19.707+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "3 - create auth tenant boundaries"
+2026-10-05T05:49:19.813+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "4 - create resource slot inventory"
+2026-10-05T05:49:19.908+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "5 - create reservation allocation"
+2026-10-05T05:49:20.019+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "6 - add venue name"
+2026-10-05T05:49:20.204+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "7 - create hold idempotency"
+2026-10-05T05:49:20.271+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:49:20.374+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "9 - create transactional events"
+2026-10-05T05:49:20.581+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "10 - create waitlist registration"
+2026-10-05T05:49:20.731+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "11 - create waitlist offers"
+2026-10-05T05:49:20.923+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "12 - create waitlist promotion effect"
+2026-10-05T05:49:21.054+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "13 - create waitlist promotion requests"
+2026-10-05T05:49:21.108+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "14 - index maintenance backlogs"
+2026-10-05T05:49:21.207+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "15 - add event observation origin"
+2026-10-05T05:49:21.285+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:49:21.412+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "17 - create kafka intake"
+2026-10-05T05:49:21.523+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "18 - create event observation projection"
+2026-10-05T05:49:21.579+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "19 - create event transport cutover"
+2026-10-05T05:49:21.628+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "20 - create human operator recovery"
+2026-10-05T05:49:21.804+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "21 - create actor access credentials"
+2026-10-05T05:49:21.965+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "22 - create mcp hold approval"
+2026-10-05T05:49:22.096+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq`, now at version v22 (execution time 00:02.041s)
+2026-10-05T05:49:22.131+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:49:22.173+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:1754/slotq]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:49:22.247+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:49:22.483+09:00  INFO 37152 --- [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-05T05:49:22.483+09:00  INFO 37152 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T05:49:22.485+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:49:22.488+09:00  INFO 37152 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 5 ms
+2026-10-05T05:49:22.506+09:00  INFO 37152 --- [    Test worker] c.slotq.ReservationHoldIntegrationTests  : Started ReservationHoldIntegrationTests in 3.91 seconds (process running for 205.181)
+operation=product.request outcome=success request_id=6cfcac05-4083-46bd-a8ec-2fe4ddb999c6 trace_id=41d3d800d5a0674dd90fa590895f7afe span_id=9bc43b0de5840492 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="6cfcac05-4083-46bd-a8ec-2fe4ddb999c6" trace_id="41d3d800d5a0674dd90fa590895f7afe" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=5e5d8810-3249-4beb-bd2d-07f7a9a0e848 trace_id=51f00547fa85323b3bdf6c0835c53e58 span_id=ccb8fa52f989d76d event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5e5d8810-3249-4beb-bd2d-07f7a9a0e848" trace_id="51f00547fa85323b3bdf6c0835c53e58" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=4b7ea435-ca89-4b51-a74e-9ac43cc85a00 trace_id=5ab22b28f5b27bdc1d512e04013436f7 span_id=135bd5b6e5c806a3 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="4b7ea435-ca89-4b51-a74e-9ac43cc85a00" trace_id="5ab22b28f5b27bdc1d512e04013436f7" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=a7249b96-36d4-4181-a34b-a8755076b754 trace_id=575ab8781db5ed3d656b3843627ede28 span_id=dd9bf2ceba753aac event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a7249b96-36d4-4181-a34b-a8755076b754" trace_id="575ab8781db5ed3d656b3843627ede28" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=581b51c9-e329-4b64-b07a-e80ab4d33603 trace_id=45022281ca7e091f99b810a27595f70f span_id=3353a19e655d77d1 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="581b51c9-e329-4b64-b07a-e80ab4d33603" trace_id="45022281ca7e091f99b810a27595f70f" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=e8aad0e2-c647-4fad-9a83-4c924cb43f02 trace_id=275f30f6cf323dcc28ff605d7a75a9eb span_id=db1215d099197b60 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e8aad0e2-c647-4fad-9a83-4c924cb43f02" trace_id="275f30f6cf323dcc28ff605d7a75a9eb" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=23fb7e07-bf60-4cf3-aef6-855ab3a6fc64 trace_id=6ff70c293a9e5c2cb28f83f23ee086b3 span_id=f8882744cf16a199 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="23fb7e07-bf60-4cf3-aef6-855ab3a6fc64" trace_id="6ff70c293a9e5c2cb28f83f23ee086b3" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=d1c6596b-e9f3-4d83-9e60-958263969a14 trace_id=46014a47f97936b75607d4101bdd09c1 span_id=c9be7044382fd33f event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d1c6596b-e9f3-4d83-9e60-958263969a14" trace_id="46014a47f97936b75607d4101bdd09c1" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=4b77d305-80ba-4313-98f9-0f068ffe2f0a trace_id=16f7ce8b144b78db3a5530d2c42d78c8 span_id=32120d873b9e3cc1 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="4b77d305-80ba-4313-98f9-0f068ffe2f0a" trace_id="16f7ce8b144b78db3a5530d2c42d78c8" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=09f97732-407d-4e94-8458-84f988ce4be7 trace_id=bec3eb8470c5688df33fbdcf6aa30c93 span_id=523209095b4c268b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="09f97732-407d-4e94-8458-84f988ce4be7" trace_id="bec3eb8470c5688df33fbdcf6aa30c93" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=5f9b1280-19d2-4666-bef5-ee3da4f86389 trace_id=b5ca9891076fbe81473d6d645e9d246e span_id=28d9a7b71adc6afd event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5f9b1280-19d2-4666-bef5-ee3da4f86389" trace_id="b5ca9891076fbe81473d6d645e9d246e" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=3660558c-59b3-471c-b881-22a2b4cf03fb trace_id=315aa31e678ad093079a2a78546a4550 span_id=c952819c2e0081be event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="3660558c-59b3-471c-b881-22a2b4cf03fb" trace_id="315aa31e678ad093079a2a78546a4550" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=6b86b897-a8e8-4e85-91fe-3ef201e164d7 trace_id=adf69a5d0a109d213e90deff7832752a span_id=ccae4cac848441c7 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="6b86b897-a8e8-4e85-91fe-3ef201e164d7" trace_id="adf69a5d0a109d213e90deff7832752a" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=3c77e8d7-0819-433b-bffb-5eff19bdeb14 trace_id=94180fa1df93abf2edce50a37450ad3b span_id=8c66880de9354827 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="3c77e8d7-0819-433b-bffb-5eff19bdeb14" trace_id="94180fa1df93abf2edce50a37450ad3b" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=7b4b9683-964b-4676-93bb-545a91caa6d9 trace_id=9d4dec82a69c66cae3e69663d5e36fad span_id=20276aa1271b1b70 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="7b4b9683-964b-4676-93bb-545a91caa6d9" trace_id="9d4dec82a69c66cae3e69663d5e36fad" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=7e6b361b-c117-449c-8ad8-1e63b7797a42 trace_id=6301b72bd12907d9d7ebb92de2a5717d span_id=9bcf6220dd654bf7 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="7e6b361b-c117-449c-8ad8-1e63b7797a42" trace_id="6301b72bd12907d9d7ebb92de2a5717d" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=e073a248-5ab6-4558-b525-7b64096be435 trace_id=affbc41912e2c11ff15da605a5d2da08 span_id=d672f1a2c4268c72 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e073a248-5ab6-4558-b525-7b64096be435" trace_id="affbc41912e2c11ff15da605a5d2da08" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="PARTY_SIZE_NOT_SUPPORTED"
+operation=product.request outcome=client_error request_id=58385d9f-2928-41d8-bdf5-1887aa0efdc0 trace_id=4361d5fc6938f34802b467a0e1712ad9 span_id=d3a1c5f9e91877da event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="58385d9f-2928-41d8-bdf5-1887aa0efdc0" trace_id="4361d5fc6938f34802b467a0e1712ad9" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="BOOKING_NOT_ALLOWED"
+operation=product.request outcome=client_error request_id=e9fd6a93-8bb5-4241-ba10-1f955dbfefe0 trace_id=d3d8af48367a8c5d6cc422f61f61380b span_id=f0f3fad532969616 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e9fd6a93-8bb5-4241-ba10-1f955dbfefe0" trace_id="d3d8af48367a8c5d6cc422f61f61380b" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="BOOKING_NOT_ALLOWED"
+operation=product.request outcome=client_error request_id=a21e82ae-eec4-4373-9b29-56c7067598a1 trace_id=ee2d0a45a14c688667d4ef471bf55ed4 span_id=0c47a5e86297932f event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a21e82ae-eec4-4373-9b29-56c7067598a1" trace_id="ee2d0a45a14c688667d4ef471bf55ed4" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="BOOKING_NOT_ALLOWED"
+operation=product.request outcome=client_error request_id=f31c783c-a0c6-4bbd-a9f3-cda5b838e6de trace_id=2e390b84ec986cce554c966d8bab74d2 span_id=73be14c738a34c81 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="f31c783c-a0c6-4bbd-a9f3-cda5b838e6de" trace_id="2e390b84ec986cce554c966d8bab74d2" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="BOOKING_NOT_ALLOWED"
+operation=product.request outcome=success request_id=e4fa22f6-e97f-4e21-8b8a-8221c8e66cb4 trace_id=e2b68c295fd68c39976108131cdbd9ec span_id=b03d6d5c443ffc13 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e4fa22f6-e97f-4e21-8b8a-8221c8e66cb4" trace_id="e2b68c295fd68c39976108131cdbd9ec" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=a07e1e1a-e89a-4fa8-808e-a1343ac2c5d0 trace_id=cdb25077df8392ceac78716edea03c71 span_id=f2c2e614e97554ce event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a07e1e1a-e89a-4fa8-808e-a1343ac2c5d0" trace_id="cdb25077df8392ceac78716edea03c71" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=929b9dd8-5c2a-4991-9e1b-49694ac71205 trace_id=4aa17034110c580fd8cb929722eac8d6 span_id=abf5256279ce7b2c event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="929b9dd8-5c2a-4991-9e1b-49694ac71205" trace_id="4aa17034110c580fd8cb929722eac8d6" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="400" outcome="VALIDATION_FAILED"
+operation=product.request outcome=client_error request_id=db88a7c5-edbd-46c3-bb76-53f8b42dc8f5 trace_id=76da582c8cf10c5a65dd9f9cbca35453 span_id=7c967c61d1ba3e21 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="db88a7c5-edbd-46c3-bb76-53f8b42dc8f5" trace_id="76da582c8cf10c5a65dd9f9cbca35453" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="400" outcome="VALIDATION_FAILED"
+operation=product.request outcome=success request_id=8133a7c1-648b-462f-b5a5-fdf055801ce2 trace_id=2dc04c1958b8debb2c8483fc3fb33f85 span_id=39ab21085cfca1fd event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="8133a7c1-648b-462f-b5a5-fdf055801ce2" trace_id="2dc04c1958b8debb2c8483fc3fb33f85" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=49752470-5233-4590-930e-864ff6fd58d1 trace_id=b4b6b3b332b129be0f376e9f335fc45e span_id=5d43e412b88c1579 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="49752470-5233-4590-930e-864ff6fd58d1" trace_id="b4b6b3b332b129be0f376e9f335fc45e" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="CAPACITY_UNAVAILABLE"
+operation=product.request outcome=success request_id=2b9b5ffa-4227-4cf8-8d73-3129df8054ef trace_id=177b99de9f7c4a5d9d214e781aa37ec3 span_id=ad3c9946b682e020 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="2b9b5ffa-4227-4cf8-8d73-3129df8054ef" trace_id="177b99de9f7c4a5d9d214e781aa37ec3" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=317bc818-f822-45be-810b-08cd5783ffd9 trace_id=81b3868669edfe624907d05625484405 span_id=16c07f644c9df23e event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="317bc818-f822-45be-810b-08cd5783ffd9" trace_id="81b3868669edfe624907d05625484405" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=5b3846ff-5abe-4d23-b20f-93f32dc8db43 trace_id=166734634ad4edcf10b6da69584745e1 span_id=a71a36c1652b1cd2 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5b3846ff-5abe-4d23-b20f-93f32dc8db43" trace_id="166734634ad4edcf10b6da69584745e1" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=c66a055f-1d18-43ba-9445-00dd904b5512 trace_id=b9925a86d29f3a7a9c7509c173dae795 span_id=28786961c431b124 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="c66a055f-1d18-43ba-9445-00dd904b5512" trace_id="b9925a86d29f3a7a9c7509c173dae795" route="/api/v1/venues/{venueId}/reservations/{reservationId}" method="GET" status="404" outcome="RESOURCE_NOT_FOUND"
+operation=product.request outcome=client_error request_id=93f563d3-2c31-412d-8545-cdc19c5a3a62 trace_id=a249b2d1eab991df088debebf62c1dda span_id=9755e42aec728a1a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="93f563d3-2c31-412d-8545-cdc19c5a3a62" trace_id="a249b2d1eab991df088debebf62c1dda" route="/api/v1/venues/{venueId}/reservations/{reservationId}" method="GET" status="404" outcome="RESOURCE_NOT_FOUND"
+operation=product.request outcome=client_error request_id=416d9328-9423-47ad-8f8c-390e3b1ec847 trace_id=0db424257bf3d41874bc13e43f9af0b5 span_id=9e54cd8c417b85b4 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="416d9328-9423-47ad-8f8c-390e3b1ec847" trace_id="0db424257bf3d41874bc13e43f9af0b5" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="404" outcome="RESOURCE_NOT_FOUND"
+operation=product.request outcome=client_error request_id=a5528339-75bb-4e8a-9829-f8cdcdd47ecb trace_id=041b3c14c0993f20f8617e86e327e120 span_id=70a98126734b4d3b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a5528339-75bb-4e8a-9829-f8cdcdd47ecb" trace_id="041b3c14c0993f20f8617e86e327e120" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="400" outcome="VALIDATION_FAILED"
+operation=product.request outcome=client_error request_id=ba238982-fce6-4efc-b49f-8ca2c090858c trace_id=800ca138db655244dd124d1362ea68e5 span_id=907944360392899a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="ba238982-fce6-4efc-b49f-8ca2c090858c" trace_id="800ca138db655244dd124d1362ea68e5" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="400" outcome="VALIDATION_FAILED"
+operation=product.request outcome=success request_id=e959ef51-0b10-4ff3-bedf-81f69f7316c1 trace_id=93ed0253202226b280d582ddd8e233a5 span_id=ea494dba28eb6a28 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e959ef51-0b10-4ff3-bedf-81f69f7316c1" trace_id="93ed0253202226b280d582ddd8e233a5" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=8c22e0ef-712c-4836-aec6-6e079aadd653 trace_id=2b9dbc9a36f9b672919fb527432f5bb2 span_id=afce62d01beb05af event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="8c22e0ef-712c-4836-aec6-6e079aadd653" trace_id="2b9dbc9a36f9b672919fb527432f5bb2" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=9ee104b6-bf4d-447e-bedd-3b242266251f trace_id=35ba4e580e1c2de0cb4aec25c31b60ad span_id=7c98fcc141279924 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="9ee104b6-bf4d-447e-bedd-3b242266251f" trace_id="35ba4e580e1c2de0cb4aec25c31b60ad" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=8a0fd314-63c9-48b5-b240-12af907c3a04 trace_id=2e22fdc4a35fa6dbe113a35fb29b569c span_id=4119f0dda9c4faa8 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="8a0fd314-63c9-48b5-b240-12af907c3a04" trace_id="2e22fdc4a35fa6dbe113a35fb29b569c" route="/api/v1/venues/{venueId}/reservations/{reservationId}" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=69846ac5-701c-47dc-9e50-3eb88d700760 trace_id=983c92de2f83a530a004f44b43381217 span_id=83ba855730ad32e6 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="69846ac5-701c-47dc-9e50-3eb88d700760" trace_id="983c92de2f83a530a004f44b43381217" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=605287cc-d517-4c06-948a-5afb1d738549 trace_id=c2cdc3255316876be6e30777b69abbc8 span_id=773af9ad5f8f4b57 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="605287cc-d517-4c06-948a-5afb1d738549" trace_id="c2cdc3255316876be6e30777b69abbc8" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=c517418f-ba45-4553-a931-6304484137a7 trace_id=a8e6ecee3c8a981506084447c911b6a4 span_id=474a59d6094b2a36 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="c517418f-ba45-4553-a931-6304484137a7" trace_id="a8e6ecee3c8a981506084447c911b6a4" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=b1b65f5e-0d65-4434-9e8e-eb2897ab1d05 trace_id=ce9e1b228e64cc6dffffd7b47c27d448 span_id=b2455deecff3fbe1 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b1b65f5e-0d65-4434-9e8e-eb2897ab1d05" trace_id="ce9e1b228e64cc6dffffd7b47c27d448" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=be672c92-a44b-4be2-8c3a-9d8793440e16 trace_id=77567c0f438b9c259335a6dfc0a402d0 span_id=b5fe8ef0463f3e28 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="be672c92-a44b-4be2-8c3a-9d8793440e16" trace_id="77567c0f438b9c259335a6dfc0a402d0" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=02c54947-24d4-4926-a2e2-ac9decf176c5 trace_id=e9f9d4a6860b38c161f0d426a02910da span_id=68c6512b623f5f05 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="02c54947-24d4-4926-a2e2-ac9decf176c5" trace_id="e9f9d4a6860b38c161f0d426a02910da" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=7cdc2ebc-d91d-490d-bc10-ef4b60decef1 trace_id=6ea58686a2069e4563baaa43902c1ff1 span_id=258db12de0aab974 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="7cdc2ebc-d91d-490d-bc10-ef4b60decef1" trace_id="6ea58686a2069e4563baaa43902c1ff1" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=c24e71f1-c041-4960-a160-f7cd047ebec8 trace_id=d3284abacde7d0a8c85329d2dfd5cb2b span_id=217e82e2b070b88a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="c24e71f1-c041-4960-a160-f7cd047ebec8" trace_id="d3284abacde7d0a8c85329d2dfd5cb2b" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=47b08d29-2b40-4f0c-aed6-83a596c73c3b trace_id=6e1a1d861810d82d3a89897cb47691f4 span_id=de3a66bea3abb29f event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="47b08d29-2b40-4f0c-aed6-83a596c73c3b" trace_id="6e1a1d861810d82d3a89897cb47691f4" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=6f0b5666-8648-4fb9-91b1-6148c24e02b9 trace_id=b0d962af294748fe81b5bd7a93f48497 span_id=10480f090b33b0ae event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="6f0b5666-8648-4fb9-91b1-6148c24e02b9" trace_id="b0d962af294748fe81b5bd7a93f48497" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=79ffc91c-633b-4647-8391-891cc72544b5 trace_id=f5e205a9b88b34bf59ea5761dd0d7fd4 span_id=cee1e85264703ab5 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="79ffc91c-633b-4647-8391-891cc72544b5" trace_id="f5e205a9b88b34bf59ea5761dd0d7fd4" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=bd7f09fd-310a-49ae-ba57-38365a125012 trace_id=a721bbadc67e41967cf05f8096b5f7dd span_id=b2212d5bd088817d event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="bd7f09fd-310a-49ae-ba57-38365a125012" trace_id="a721bbadc67e41967cf05f8096b5f7dd" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=f9e225f2-05bc-49cd-bb1a-5d00026349c2 trace_id=c20aadf6ccfdec0ba80215ddf5217082 span_id=1a1179aaae068222 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="f9e225f2-05bc-49cd-bb1a-5d00026349c2" trace_id="c20aadf6ccfdec0ba80215ddf5217082" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=aecb5b98-a161-473c-8835-c6fe5e5bd98f trace_id=6d0b3185d5c36f247924355aef7e0182 span_id=5b068131921a69ae event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="aecb5b98-a161-473c-8835-c6fe5e5bd98f" trace_id="6d0b3185d5c36f247924355aef7e0182" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="CAPACITY_UNAVAILABLE"
+operation=product.request outcome=success request_id=44303907-1c88-4e21-b3d8-93666fd32fcd trace_id=cc1361a8715d3e4058166326ca6d924a span_id=7b07e4b41e265fa1 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="44303907-1c88-4e21-b3d8-93666fd32fcd" trace_id="cc1361a8715d3e4058166326ca6d924a" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=f055cb8a-f9eb-4867-8f3e-dc089d59a265 trace_id=f6a3cc963c83cc9ce669aff4dd1ffaf5 span_id=eef2f084f48a2e2f event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="f055cb8a-f9eb-4867-8f3e-dc089d59a265" trace_id="f6a3cc963c83cc9ce669aff4dd1ffaf5" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=8a8f686e-17ab-4db3-b84f-b64ee78355da trace_id=b25c7e5240fec0454cc3f9117cab2d7f span_id=f59fa66d560aada4 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="8a8f686e-17ab-4db3-b84f-b64ee78355da" trace_id="b25c7e5240fec0454cc3f9117cab2d7f" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=93fc0d68-775c-4fea-bcca-b85e515c1c05 trace_id=c7e11ea5e10a40145fb3c0977d743fcc span_id=6727af42c15bb804 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="93fc0d68-775c-4fea-bcca-b85e515c1c05" trace_id="c7e11ea5e10a40145fb3c0977d743fcc" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="409" outcome="IDEMPOTENCY_KEY_REUSED"
+operation=product.request outcome=success request_id=50d058a8-5adb-467c-8f8e-07e9217d4b21 trace_id=08e3c36d29d6aaae250f2fc134a558fc span_id=db04f5d87c17809c event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="50d058a8-5adb-467c-8f8e-07e9217d4b21" trace_id="08e3c36d29d6aaae250f2fc134a558fc" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=8a7c33d1-d77d-4e2d-9871-21e08ba1dcea trace_id=77644ca56c61ae843468000a9b84af78 span_id=6010cd263f0558ee event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="8a7c33d1-d77d-4e2d-9871-21e08ba1dcea" trace_id="77644ca56c61ae843468000a9b84af78" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=44533460-9788-4c9e-969a-6e6741429458 trace_id=bb23b761bf7b8d72622acc296b8e6e07 span_id=507697ac3e1e4d9b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="44533460-9788-4c9e-969a-6e6741429458" trace_id="bb23b761bf7b8d72622acc296b8e6e07" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="500" outcome="INTERNAL_ERROR"
+operation=product.request outcome=success request_id=d4fa46b0-9b45-4e34-90fe-b65c5b4da10e trace_id=53a1ede16375fd728dc2dd9517c84c32 span_id=cd130045b9a60854 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d4fa46b0-9b45-4e34-90fe-b65c5b4da10e" trace_id="53a1ede16375fd728dc2dd9517c84c32" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=0a297357-4d31-499a-b82a-260505cf61a1 trace_id=d5acff8ec194c8fac2c090b9b6cf15ad span_id=bae8bd79059f45ff event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="0a297357-4d31-499a-b82a-260505cf61a1" trace_id="d5acff8ec194c8fac2c090b9b6cf15ad" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=b57c53e7-ea7e-4282-94b7-2e4fc06cf810 trace_id=4a9161b3502a25cf54cdf5347ecc7829 span_id=e3abe9f3b46859d6 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b57c53e7-ea7e-4282-94b7-2e4fc06cf810" trace_id="4a9161b3502a25cf54cdf5347ecc7829" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=2ae2f338-4d40-4fd9-aeb2-55b6ebf17ddf trace_id=e2762ce967ffcc969b2103e647ee9ab0 span_id=d2d1da8d8ac31fbb event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="2ae2f338-4d40-4fd9-aeb2-55b6ebf17ddf" trace_id="e2762ce967ffcc969b2103e647ee9ab0" route="UNMATCHED" method="POST" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=success request_id=f281ac1d-5b36-49b2-a24c-e6835b647617 trace_id=e176ef22db242af5e9f16023847f60b1 span_id=87ed81a45ca85cf6 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="f281ac1d-5b36-49b2-a24c-e6835b647617" trace_id="e176ef22db242af5e9f16023847f60b1" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=16a764fc-929f-4d64-9ca8-d825ae3f08ce trace_id=bb962b85c6c61fa5b8e50d78c592fdd3 span_id=6b60f71cfc6dd2e4 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="16a764fc-929f-4d64-9ca8-d825ae3f08ce" trace_id="bb962b85c6c61fa5b8e50d78c592fdd3" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

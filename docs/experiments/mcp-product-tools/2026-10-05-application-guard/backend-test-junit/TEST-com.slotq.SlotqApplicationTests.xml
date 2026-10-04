@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.SlotqApplicationTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:49:59.388Z" hostname="KRESTAR" time="14.367">
+  <properties/>
+  <testcase name="emptyMySqlAppliesMigrationsAndValidatesJpaMappings()" classname="com.slotq.SlotqApplicationTests" time="0.112"/>
+  <testcase name="reservationOwnershipAllowsOnlyStoredCustomerOrScopedOperator()" classname="com.slotq.SlotqApplicationTests" time="0.09"/>
+  <testcase name="createsReadsAndUpdatesTenantVenueAndVersionedPolicy()" classname="com.slotq.SlotqApplicationTests" time="0.136"/>
+  <testcase name="databaseRejectsCrossTenantVenuePolicyReference()" classname="com.slotq.SlotqApplicationTests" time="0.036"/>
+  <testcase name="concurrentPolicyUpdatesKeepVenueVersionMonotonic()" classname="com.slotq.SlotqApplicationTests" time="0.054"/>
+  <testcase name="databaseRejectsCrossTenantAndRoleForgedVenueGrants()" classname="com.slotq.SlotqApplicationTests" time="0.066"/>
+  <testcase name="resolvesSamePrincipalOwnerManagerAndStaffMembershipsAtEachTargetBoundary()" classname="com.slotq.SlotqApplicationTests" time="0.155"/>
+  <testcase name="invalidTimezoneHoursPolicyUnitsAndRequiredValuesAreNotSaved()" classname="com.slotq.SlotqApplicationTests" time="0.03"/>
+  <testcase name="injectedClockCalculatesBoundaryDeadlinesAndPolicySnapshotRemainsStable()" classname="com.slotq.SlotqApplicationTests" time="0.048"/>
+  <system-out><![CDATA[2026-10-05T05:49:59.389+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:49:59.461+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: e0b1032970ace72a07e6dc2eef61f5060b2b65110b86eca1fb1d0d911ee0154d
+2026-10-05T05:49:59.717+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:10255/slotq using query 'SELECT 1'
+2026-10-05T05:50:09.128+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.7384453S
+2026-10-05T05:50:09.128+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:10255/slotq)
+2026-10-05T05:50:09.133+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.SlotqApplicationTests
+2026-10-05T05:50:09.137+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.SlotqApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:50:09.158+09:00  INFO 37152 --- [    Test worker] com.slotq.SlotqApplicationTests          : Starting SlotqApplicationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:50:09.158+09:00  INFO 37152 --- [    Test worker] com.slotq.SlotqApplicationTests          : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T05:50:09.770+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:50:09.832+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 58 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:50:09.946+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:10255/slotq (MySQL 8.4)
+2026-10-05T05:50:09.982+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq`.`flyway_schema_history` does not exist yet
+2026-10-05T05:50:09.984+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.014s)
+2026-10-05T05:50:10.005+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq`.`flyway_schema_history` ...
+2026-10-05T05:50:10.057+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq`: << Empty Schema >>
+2026-10-05T05:50:10.062+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "1 - configure database"
+2026-10-05T05:50:10.095+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "2 - create tenant venue policy"
+2026-10-05T05:50:10.215+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "3 - create auth tenant boundaries"
+2026-10-05T05:50:10.329+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "4 - create resource slot inventory"
+2026-10-05T05:50:10.427+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "5 - create reservation allocation"
+2026-10-05T05:50:10.538+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "6 - add venue name"
+2026-10-05T05:50:10.728+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "7 - create hold idempotency"
+2026-10-05T05:50:10.799+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:50:10.902+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "9 - create transactional events"
+2026-10-05T05:50:11.103+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "10 - create waitlist registration"
+2026-10-05T05:50:11.254+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "11 - create waitlist offers"
+2026-10-05T05:50:11.450+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "12 - create waitlist promotion effect"
+2026-10-05T05:50:11.576+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "13 - create waitlist promotion requests"
+2026-10-05T05:50:11.622+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "14 - index maintenance backlogs"
+2026-10-05T05:50:11.726+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "15 - add event observation origin"
+2026-10-05T05:50:11.805+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:50:11.939+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "17 - create kafka intake"
+2026-10-05T05:50:12.051+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "18 - create event observation projection"
+2026-10-05T05:50:12.106+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "19 - create event transport cutover"
+2026-10-05T05:50:12.154+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "20 - create human operator recovery"
+2026-10-05T05:50:12.332+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "21 - create actor access credentials"
+2026-10-05T05:50:12.490+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "22 - create mcp hold approval"
+2026-10-05T05:50:12.625+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq`, now at version v22 (execution time 00:02.060s)
+2026-10-05T05:50:12.652+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:50:12.687+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:10255/slotq]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:50:12.767+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:50:13.008+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:50:13.017+09:00  INFO 37152 --- [    Test worker] com.slotq.SlotqApplicationTests          : Started SlotqApplicationTests in 3.877 seconds (process running for 255.692)
+2026-10-05T05:50:13.034+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:10255/slotq (MySQL 8.4)
+2026-10-05T05:50:13.090+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:10255/slotq (MySQL 8.4)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

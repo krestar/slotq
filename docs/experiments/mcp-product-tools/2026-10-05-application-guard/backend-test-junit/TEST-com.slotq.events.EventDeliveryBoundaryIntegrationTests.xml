@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.EventDeliveryBoundaryIntegrationTests" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:53:05.846Z" hostname="KRESTAR" time="21.89">
+  <properties/>
+  <testcase name="waitingForDeliveryLockUsesFreshTimeAfterAcquisitionRatherThanStatementStart()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.781"/>
+  <testcase name="actualMysqlDeadlockVictimRollsBackEffectAndSchedulesBoundedRetry()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.249"/>
+  <testcase name="statementAndNetworkTimeoutBoundRealBlockingSqlAndDoNotCommitPartialEffect()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="2.117"/>
+  <testcase name="finalFreshTimeCheckRollsBackEffectWhenLeaseExpiresInsideHandler()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.572"/>
+  <testcase name="rawJpaLockTimeoutIsAlsoRetryableOnlyAfterTheWholeEffectRollsBack()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="1.158"/>
+  <testcase name="deeperRequiresNewCannotSuspendAndIndependentlyCommitAnEffect()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.128"/>
+  <testcase name="defaultSchedulerIsDisabledWhileManualWorkerAndExistingHoldCleanupRemainAvailable()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.125"/>
+  <testcase name="sessionTimeoutsAreRestoredBeforeConnectionReturnsToPool()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.131"/>
+  <testcase name="unknownCommitBeforeCommitPreservesClaimUntilLeaseRecovery()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.164"/>
+  <testcase name="actualMysqlLockTimeoutRollsBackTheWholeEffectBeforeSchedulingRetry()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="1.168"/>
+  <testcase name="commitResponseLostAfterActualCommitPreservesDoneAndNeverRepeatsEffect()" classname="com.slotq.events.EventDeliveryBoundaryIntegrationTests" time="0.136"/>
+  <system-out><![CDATA[2026-10-05T05:53:05.847+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:53:05.919+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 5696b2b97cf75af29a6ee2e299802b1aa2c5adaab6fb3e5c17f40599167d900c
+2026-10-05T05:53:06.212+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:13430/event_delivery_boundaries using query 'SELECT 1'
+2026-10-05T05:53:17.123+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT11.2763027S
+2026-10-05T05:53:17.124+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:13430/event_delivery_boundaries)
+2026-10-05T05:53:17.125+09:00  INFO 37152 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.EventDeliveryBoundaryIntegrationTests]: EventDeliveryBoundaryIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T05:53:17.130+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.EventDeliveryBoundaryIntegrationTests
+2026-10-05T05:53:17.131+09:00  INFO 37152 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.EventDeliveryBoundaryIntegrationTests]: EventDeliveryBoundaryIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T05:53:17.134+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.EventDeliveryBoundaryIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:53:17.154+09:00  INFO 37152 --- [    Test worker] .e.EventDeliveryBoundaryIntegrationTests : Starting EventDeliveryBoundaryIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:53:17.154+09:00  INFO 37152 --- [    Test worker] .e.EventDeliveryBoundaryIntegrationTests : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T05:53:17.768+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:53:17.832+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 62 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:53:17.951+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:13430/event_delivery_boundaries (MySQL 8.4)
+2026-10-05T05:53:17.988+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `event_delivery_boundaries`.`flyway_schema_history` does not exist yet
+2026-10-05T05:53:17.990+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.015s)
+2026-10-05T05:53:18.011+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `event_delivery_boundaries`.`flyway_schema_history` ...
+2026-10-05T05:53:18.072+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `event_delivery_boundaries`: << Empty Schema >>
+2026-10-05T05:53:18.077+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "1 - configure database"
+2026-10-05T05:53:18.109+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "2 - create tenant venue policy"
+2026-10-05T05:53:18.228+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "3 - create auth tenant boundaries"
+2026-10-05T05:53:18.336+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "4 - create resource slot inventory"
+2026-10-05T05:53:18.434+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "5 - create reservation allocation"
+2026-10-05T05:53:18.547+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "6 - add venue name"
+2026-10-05T05:53:18.730+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "7 - create hold idempotency"
+2026-10-05T05:53:18.795+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:53:18.897+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "9 - create transactional events"
+2026-10-05T05:53:19.098+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "10 - create waitlist registration"
+2026-10-05T05:53:19.247+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "11 - create waitlist offers"
+2026-10-05T05:53:19.439+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "12 - create waitlist promotion effect"
+2026-10-05T05:53:19.571+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "13 - create waitlist promotion requests"
+2026-10-05T05:53:19.617+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "14 - index maintenance backlogs"
+2026-10-05T05:53:19.715+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "15 - add event observation origin"
+2026-10-05T05:53:19.792+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:53:19.919+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "17 - create kafka intake"
+2026-10-05T05:53:20.030+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "18 - create event observation projection"
+2026-10-05T05:53:20.084+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "19 - create event transport cutover"
+2026-10-05T05:53:20.129+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "20 - create human operator recovery"
+2026-10-05T05:53:20.303+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "21 - create actor access credentials"
+2026-10-05T05:53:20.470+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `event_delivery_boundaries` to version "22 - create mcp hold approval"
+2026-10-05T05:53:20.598+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `event_delivery_boundaries`, now at version v22 (execution time 00:02.039s)
+2026-10-05T05:53:20.631+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:53:20.673+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:13430/event_delivery_boundaries]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: event_delivery_boundaries/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:53:20.772+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:53:20.989+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:53:20.999+09:00  INFO 37152 --- [    Test worker] .e.EventDeliveryBoundaryIntegrationTests : Started EventDeliveryBoundaryIntegrationTests in 3.862 seconds (process running for 443.674)
+operation=product.event.append outcome=committed request_id=null trace_id=099d855759d1a90ecca0e278b3a940dc span_id=e68216749dc4c09c event_id=f1a9488b-b248-4bc5-9e6c-5a96027875b1 fencing_token=0 
+operation=product.event.effect outcome=ownership_lost request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=f1a9488b-b248-4bc5-9e6c-5a96027875b1 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=158aa0a5bcc3ba10afc6aad18847d816 span_id=4bbec4eea9c29481 event_id=607951a7-e974-4716-801d-bbac02209dda fencing_token=0 
+operation=product.event.effect outcome=rolled_back request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=607951a7-e974-4716-801d-bbac02209dda fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=5c120effff99c1f96eccf703bd6e96f7 span_id=32cd2321326e161d event_id=e08c62ff-c054-4c83-9f23-fde5b68d7560 fencing_token=0 
+operation=product.event.effect outcome=unknown request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=e08c62ff-c054-4c83-9f23-fde5b68d7560 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=64d157709e2ebea656d055deac818fec span_id=e6909c13ccdc0a9a event_id=10f91dab-4d0e-407a-af32-87aeab9d5832 fencing_token=0 
+operation=product.event.effect outcome=ownership_lost request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=10f91dab-4d0e-407a-af32-87aeab9d5832 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=10f91dab-4d0e-407a-af32-87aeab9d5832 fencing_token=2 
+operation=product.event.append outcome=committed request_id=null trace_id=da3a23b8ff4ad3a8cdb7413c6c3b72d5 span_id=856f5a4c319066ec event_id=b9847db9-97ba-48a6-a883-f73b915e9dbf fencing_token=0 
+operation=product.event.effect outcome=rolled_back request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=b9847db9-97ba-48a6-a883-f73b915e9dbf fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=33e3ae4890db1a2a53dfff4c7c93cd45 span_id=06403fcb6cb172db event_id=1014ee4f-1f12-438d-8265-2571696539e6 fencing_token=0 
+operation=product.event.effect outcome=rolled_back request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=1014ee4f-1f12-438d-8265-2571696539e6 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=01c32a4919caac550c928394888d0c54 span_id=09a074b10ef3171b event_id=390a76b5-09de-4e99-b06d-49d006d71c9d fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=390a76b5-09de-4e99-b06d-49d006d71c9d fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=4f9fd210ead7869f724b2c8ad8387831 span_id=5c24cf0aa41283ba event_id=1fdf0e57-c605-4ac3-8569-1df53fd39711 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=1fdf0e57-c605-4ac3-8569-1df53fd39711 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=83566909556ab1e7267408a8da351899 span_id=0abebb063b58b693 event_id=7f8c07d3-71e6-42b4-a5fc-afa79d9c204c fencing_token=0 
+operation=product.event.effect outcome=unknown request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=7f8c07d3-71e6-42b4-a5fc-afa79d9c204c fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=7f8c07d3-71e6-42b4-a5fc-afa79d9c204c fencing_token=2 
+operation=product.event.append outcome=committed request_id=null trace_id=ff2f1a8557f3c30f962f98960c437045 span_id=e08cca31b0e00c72 event_id=40bb6799-e46e-4be1-9af9-8622040ce8d8 fencing_token=0 
+operation=product.event.effect outcome=rolled_back request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=40bb6799-e46e-4be1-9af9-8622040ce8d8 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=84c4c6697e72e977bb37ff1aa1c87021 span_id=fd152a6d2ba03674 event_id=d58bd043-10ff-411f-a97c-d7d0d85ce09c fencing_token=0 
+operation=product.event.effect outcome=unknown request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=d58bd043-10ff-411f-a97c-d7d0d85ce09c fencing_token=1 
+operation=product.event.effect outcome=ownership_lost request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=d58bd043-10ff-411f-a97c-d7d0d85ce09c fencing_token=1 
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

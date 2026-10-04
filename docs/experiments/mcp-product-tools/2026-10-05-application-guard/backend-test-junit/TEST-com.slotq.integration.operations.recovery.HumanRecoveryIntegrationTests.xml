@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" tests="53" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:59:21.454Z" hostname="KRESTAR" time="26.375">
+  <properties/>
+  <testcase name="[1] state = &quot;PENDING&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.127"/>
+  <testcase name="[2] state = &quot;PROCESSING&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.104"/>
+  <testcase name="[3] state = &quot;DONE&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.105"/>
+  <testcase name="committedHumanPublicationRecoveryIsPublishedByExistingRelayOutsideRecoveryTransaction()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.931"/>
+  <testcase name="appendOnlyHumanAuditAndHttpRecoveryReturnDurableOutcome()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.156"/>
+  <testcase name="staleTransportEpochCannotReplayAndHistoricalRetrySurvivesCutover()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.152"/>
+  <testcase name="[1] kafka = false" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.122"/>
+  <testcase name="[2] kafka = true" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.136"/>
+  <testcase name="rotationKeepsStablePrincipalAndHistoricalResultButRevokedTokenStops()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.132"/>
+  <testcase name="currentCredentialAndGrantAreRevalidatedInsideTransaction()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.103"/>
+  <testcase name="[1] publication = false" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.229"/>
+  <testcase name="[2] publication = true" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.224"/>
+  <testcase name="scopedReadsIncludePublicationFailureBeforeIntakeAndPageAllOriginals()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.168"/>
+  <testcase name="[1] fault = &quot;business-audit&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.125"/>
+  <testcase name="[2] fault = &quot;business-operation&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.118"/>
+  <testcase name="[3] fault = &quot;business-operation-finalize&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.125"/>
+  <testcase name="[4] fault = &quot;publication-audit&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.135"/>
+  <testcase name="[5] fault = &quot;publication-operation&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.116"/>
+  <testcase name="[6] fault = &quot;publication-operation-finalize&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.124"/>
+  <testcase name="[1] mode = &quot;business-committed&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.134"/>
+  <testcase name="[2] mode = &quot;business-rollback&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.137"/>
+  <testcase name="[3] mode = &quot;publication-committed&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.134"/>
+  <testcase name="[4] mode = &quot;publication-rollback&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.147"/>
+  <testcase name="[1] kind = &quot;missing&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.042"/>
+  <testcase name="[2] kind = &quot;invalid&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.051"/>
+  <testcase name="[3] kind = &quot;expired&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.053"/>
+  <testcase name="[4] kind = &quot;revoked&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.051"/>
+  <testcase name="[5] kind = &quot;inactive&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.055"/>
+  <testcase name="[6] kind = &quot;product&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.049"/>
+  <testcase name="[7] kind = &quot;monitor&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.043"/>
+  <testcase name="publicationResponseLossLaterDeadRelayAndDuplicateIntakePreserveTargetsBudgets()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.215"/>
+  <testcase name="[1] action = &quot;business&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.197"/>
+  <testcase name="[2] action = &quot;publication&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.2"/>
+  <testcase name="wrongScopeMissingTargetsAndRevokedReadGrantAreIndistinguishableAndListsBounded()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.188"/>
+  <testcase name="[1] kafka = false" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.175"/>
+  <testcase name="[2] kafka = true" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.172"/>
+  <testcase name="privateTlsAndCorsBoundaryAndOperatorCannotUseProductApi()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.121"/>
+  <testcase name="publicationAuditReadRequiresEveryConsumerAndPaginationSkipsHiddenRows()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.183"/>
+  <testcase name="omittedPublicationScopeArbitraryDestinationAndMalformedReasonAreRejected()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.126"/>
+  <testcase name="historicalOperationRetryStillRequiresCurrentGrant()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.107"/>
+  <testcase name="existingCrossTenantEventAndMixedRegistrationNeverRecover()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.103"/>
+  <testcase name="[1] change = &quot;target&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.117"/>
+  <testcase name="[2] change = &quot;action&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.113"/>
+  <testcase name="[3] change = &quot;destination&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.118"/>
+  <testcase name="[4] change = &quot;consumers&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.118"/>
+  <testcase name="[5] change = &quot;reason&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.116"/>
+  <testcase name="[6] change = &quot;fence&quot;" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.12"/>
+  <testcase name="credentialExpiryDuringLockWaitIsRejectedUsingPostLockDbTime()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="1.291"/>
+  <testcase name="responseLossLaterDeadAndChangedRequestCannotOpenAnotherCycle()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.135"/>
+  <testcase name="businessGrantDoesNotAuthorizePublicationAndPublicationNeedsWholeBlastRadius()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.134"/>
+  <testcase name="publicationOnlyGrantDoesNotResetOrAuthorizeBusinessDeadTarget()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.14"/>
+  <testcase name="callerOperatorIdAndMissingExpectedVersionDoNotSupplyIdentityOrRecover()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.111"/>
+  <testcase name="publishedRecoveryRequiresRetentionCauseAndExpectedFence()" classname="com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests" time="0.132"/>
+  <system-out><![CDATA[2026-10-05T05:59:21.529+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests
+2026-10-05T05:59:21.534+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:59:21.553+09:00  INFO 37152 --- [    Test worker] c.s.i.o.r.HumanRecoveryIntegrationTests  : Starting HumanRecoveryIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:59:21.553+09:00  INFO 37152 --- [    Test worker] c.s.i.o.r.HumanRecoveryIntegrationTests  : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T05:59:22.171+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:59:22.228+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 55 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:59:22.274+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:59:22.350+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 450af5a2fb4be49775e6805f2a2493bece28fb9427a1c6d1ba80456142cf2e53
+2026-10-05T05:59:22.672+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:13182/operator_recovery using query 'SELECT 1'
+2026-10-05T05:59:32.192+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.9183375S
+2026-10-05T05:59:32.192+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:13182/operator_recovery)
+2026-10-05T05:59:32.266+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:13182/operator_recovery (MySQL 8.4)
+2026-10-05T05:59:32.306+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `operator_recovery`.`flyway_schema_history` does not exist yet
+2026-10-05T05:59:32.307+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.014s)
+2026-10-05T05:59:32.328+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `operator_recovery`.`flyway_schema_history` ...
+2026-10-05T05:59:32.393+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `operator_recovery`: << Empty Schema >>
+2026-10-05T05:59:32.398+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "1 - configure database"
+2026-10-05T05:59:32.433+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "2 - create tenant venue policy"
+2026-10-05T05:59:32.566+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "3 - create auth tenant boundaries"
+2026-10-05T05:59:32.690+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "4 - create resource slot inventory"
+2026-10-05T05:59:32.789+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "5 - create reservation allocation"
+2026-10-05T05:59:32.921+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "6 - add venue name"
+2026-10-05T05:59:33.144+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "7 - create hold idempotency"
+2026-10-05T05:59:33.215+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:59:33.319+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "9 - create transactional events"
+2026-10-05T05:59:33.525+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "10 - create waitlist registration"
+2026-10-05T05:59:33.675+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "11 - create waitlist offers"
+2026-10-05T05:59:33.877+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "12 - create waitlist promotion effect"
+2026-10-05T05:59:34.011+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "13 - create waitlist promotion requests"
+2026-10-05T05:59:34.057+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "14 - index maintenance backlogs"
+2026-10-05T05:59:34.159+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "15 - add event observation origin"
+2026-10-05T05:59:34.237+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:59:34.370+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "17 - create kafka intake"
+2026-10-05T05:59:34.482+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "18 - create event observation projection"
+2026-10-05T05:59:34.536+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "19 - create event transport cutover"
+2026-10-05T05:59:34.585+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "20 - create human operator recovery"
+2026-10-05T05:59:34.764+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "21 - create actor access credentials"
+2026-10-05T05:59:34.930+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `operator_recovery` to version "22 - create mcp hold approval"
+2026-10-05T05:59:35.062+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `operator_recovery`, now at version v22 (execution time 00:02.156s)
+2026-10-05T05:59:35.091+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:59:35.124+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:13182/operator_recovery]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: operator_recovery/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:59:35.196+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:59:35.419+09:00  INFO 37152 --- [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-05T05:59:35.419+09:00  INFO 37152 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T05:59:35.421+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:59:35.424+09:00  INFO 37152 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 5 ms
+2026-10-05T05:59:35.446+09:00  INFO 37152 --- [    Test worker] c.s.i.o.r.HumanRecoveryIntegrationTests  : Started HumanRecoveryIntegrationTests in 13.909 seconds (process running for 818.12)
+2026-10-05T05:59:35.451+09:00  INFO 37152 --- [    Test worker] tc.apache/kafka:4.1.1                    : Creating container for image: apache/kafka:4.1.1
+2026-10-05T05:59:35.546+09:00  INFO 37152 --- [    Test worker] tc.apache/kafka:4.1.1                    : Container apache/kafka:4.1.1 is starting: 6266ea2af9676d6602b212cbdc2b75d4e9a10d2a5f32f368621b2a08e44a71cb
+2026-10-05T05:59:39.021+09:00  INFO 37152 --- [    Test worker] tc.apache/kafka:4.1.1                    : Container apache/kafka:4.1.1 started in PT3.5701053S
+operation=product.event.append outcome=committed request_id=null trace_id=5ff89a9fc4f9bd5661976e51622523f5 span_id=6626c22eb7335249 event_id=96e33096-8510-4261-bd34-50d4296a056d fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=18a36ab782352d7c39c4134033b71604 span_id=d24318690e5c9790 event_id=4656c16c-e989-4cc4-b480-b31c3a0f0c63 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e279074556d0a0c3dc104f6ad80893bb span_id=0dbed2c3dfa0b5a9 event_id=ccca6fcb-a6c4-4162-bbc8-3e7165b2069e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=6b200923609b6d8dbbf8566adba66ca4 span_id=24e66cf2396b940e event_id=0cd4083b-b921-4c4e-a691-825e08093636 fencing_token=0 
+operation=product.request outcome=success request_id=83d923e9-d4aa-4430-9572-182fec8cd965 trace_id=855efcfe8b9b11fb634e4e4bfdbfc805 span_id=60b3a0cfd98ffae4 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="83d923e9-d4aa-4430-9572-182fec8cd965" trace_id="855efcfe8b9b11fb634e4e4bfdbfc805" route="/internal/operations/tenants/{tenant}/publications/{event}/recover" method="POST" status="200" outcome="SUCCESS"
+2026-10-05T05:59:39.558+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ProducerConfig values: 
+	acks = -1
+	batch.size = 16384
+	bootstrap.servers = [localhost:6865]
+	buffer.memory = 33554432
+	client.dns.lookup = use_all_dns_ips
+	client.id = producer-11
+	compression.gzip.level = -1
+	compression.lz4.level = 9
+	compression.type = none
+	compression.zstd.level = 3
+	config.providers = []
+	connections.max.idle.ms = 540000
+	delivery.timeout.ms = 15000
+	enable.idempotence = true
+	enable.metrics.push = true
+	interceptor.classes = []
+	key.serializer = class org.apache.kafka.common.serialization.StringSerializer
+	linger.ms = 5
+	max.block.ms = 5000
+	max.in.flight.requests.per.connection = 5
+	max.request.size = 1048576
+	metadata.max.age.ms = 300000
+	metadata.max.idle.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partitioner.adaptive.partitioning.enable = true
+	partitioner.availability.timeout.ms = 0
+	partitioner.class = null
+	partitioner.ignore.keys = false
+	receive.buffer.bytes = 32768
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 5000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	transaction.timeout.ms = 60000
+	transaction.two.phase.commit.enable = false
+	transactional.id = null
+	value.serializer = class org.apache.kafka.common.serialization.StringSerializer
+
+2026-10-05T05:59:39.558+09:00  INFO 37152 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T05:59:39.561+09:00  INFO 37152 --- [    Test worker] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=producer-11] Instantiated an idempotent producer.
+2026-10-05T05:59:39.573+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T05:59:39.573+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T05:59:39.573+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791147579572
+2026-10-05T05:59:39.595+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] The metadata response from the cluster reported a recoverable issue with correlation id 1 : {slotq.waitlist.events.v1=UNKNOWN_TOPIC_OR_PARTITION}
+2026-10-05T05:59:39.596+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T05:59:39.708+09:00  INFO 37152 --- [d | producer-11] o.a.k.c.p.internals.TransactionManager   : [Producer clientId=producer-11] ProducerId set to 0 with epoch 0
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=0cd4083b-b921-4c4e-a691-825e08093636 fencing_token=7 
+2026-10-05T05:59:39.747+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.offset.reset = none
+	bootstrap.servers = [localhost:6865]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3-49
+	client.rack = 
+	config.providers = []
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	share.acknowledgement.mode = implicit
+	share.acquire.mode = BATCH_OPTIMIZED
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-10-05T05:59:39.747+09:00  INFO 37152 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T05:59:39.760+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T05:59:39.760+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T05:59:39.760+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791147579760
+2026-10-05T05:59:39.760+09:00  INFO 37152 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3-49, groupId=human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3] Assigned to partition(s): slotq.waitlist.events.v1-0
+2026-10-05T05:59:39.760+09:00  INFO 37152 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3-49, groupId=human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3] Seeking to offset 0 for partition slotq.waitlist.events.v1-0
+2026-10-05T05:59:39.770+09:00  INFO 37152 --- [    Test worker] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3-49, groupId=human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T05:59:39.797+09:00  INFO 37152 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3-49, groupId=human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-10-05T05:59:39.797+09:00  INFO 37152 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3-49, groupId=human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3] Request joining group due to: consumer pro-actively leaving the group
+2026-10-05T05:59:40.308+09:00  INFO 37152 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T05:59:40.308+09:00  INFO 37152 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T05:59:40.308+09:00  INFO 37152 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-10-05T05:59:40.309+09:00  INFO 37152 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T05:59:40.316+09:00  INFO 37152 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-human-recovery-evidence-68f6f016-a184-4978-9816-79ef586e51a3-49 unregistered
+operation=product.event.append outcome=committed request_id=null trace_id=05806623f17c712d62be8962651b1412 span_id=a14b8254a41ae16d event_id=788b6676-8591-42a7-9422-6daf8c83dbc0 fencing_token=0 
+operation=product.request outcome=success request_id=5e1e672d-769f-41f3-83b7-1947a5071b4a trace_id=b5a84244abcff6035361d2c80e142535 span_id=942041b5ae99c031 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5e1e672d-769f-41f3-83b7-1947a5071b4a" trace_id="b5a84244abcff6035361d2c80e142535" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries/{event}/{registration}/replay" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=8b806cb3-4226-4e05-9708-e81ceabd7551 trace_id=b1c6208ad72306a95ccf95f9a32a19fe span_id=4639e514628d0f51 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="8b806cb3-4226-4e05-9708-e81ceabd7551" trace_id="b1c6208ad72306a95ccf95f9a32a19fe" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/operations/{operation}" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=fd167127-0003-44bd-9505-052446ab8f4e trace_id=93c89deec41440a1a2d31adb05aabe3c span_id=da0528d196dbdcdf event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="fd167127-0003-44bd-9505-052446ab8f4e" trace_id="93c89deec41440a1a2d31adb05aabe3c" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/audit" method="GET" status="200" outcome="SUCCESS"
+operation=product.event.append outcome=committed request_id=null trace_id=5b7001fa109b9406e62c2d8f423d8534 span_id=9fc1cdd5dd6430b3 event_id=06e71587-af60-4fa1-a97c-9689b9b92f07 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=17c581dc6d19cc75e320330133d0f01f span_id=7eb40522b87f1dee event_id=fe6c88dc-697e-446a-a7de-3e78e3e35b8d fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=788fd13186026dabb4c6faa6341d1a28 span_id=6943da09c5837b7e event_id=60d094f1-a6bf-4f8b-a66a-5d2fe0ba4ad3 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=4ab4e598e70fa64b61f6242418c4cbae span_id=f9c79443218b5be7 event_id=90422369-44fe-42b9-8542-204b4df782f2 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=267a228c73e19df80d0930e67babc5f7 span_id=8d2e9e3df23214f5 event_id=e7f6cd13-e1e4-4621-9e7a-c6008316b97e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e8d44a656c44d35f964946318eb9f3ae span_id=6a56c9c781511a02 event_id=8336c826-affa-468a-b173-10bbee19dbbd fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=71a5595e2c4de6077eff0307bb45841f span_id=957dbc191c53b635 event_id=e620e4d2-99c3-43fa-9d3b-a4628a110b0e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=34227991e85c301b788cc8c6d42b6be5 span_id=9f12a9b54e00933a event_id=0dcfca0a-039d-402b-b4ad-e4d83a350a6b fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=937ce88f8fcd493071a10b043bb3044b span_id=811695092fe8354a event_id=7da63279-2af5-4b79-aae4-5ed058023975 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=35b8ae356e1a589d71a030bd6ed610df span_id=d5dc0df8fd2d5283 event_id=880114d9-52e6-444c-8bb6-8b5f7c3135df fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=672a04b1f8bd3cdc99a1d8cb7c66fdda span_id=e30a3aa47d9f328b event_id=e323d552-a760-45fd-8acd-7202b571960d fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=9017b698a2c27a19a4a7bb9a0a5b05ea span_id=d83fa5c27354aec2 event_id=422aa75d-b7ac-4244-b8ab-824b0ef6c243 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=eb15868a9410fddcf44bb4df29780621 span_id=5b0d151f316dbce1 event_id=b588a17d-2fcf-4fd4-9f93-0367b4ab30e8 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=ab4e3e5839f405ae3fc10be9a72c62f9 span_id=24d900ee265eb3f8 event_id=fd6c0d55-84b0-46a5-8a4c-f6256875d945 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=df8352bd73ac3faaf4e1b0bd95b00ab9 span_id=0537dfe802d451b5 event_id=6fd8425f-7467-4dc2-8efd-523be83acfd4 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=d621f3627e2de790f4439b7ba55d1b34 span_id=1e4b01ce71ad23d7 event_id=1435a9c8-4b56-496d-923a-ef4a30b0c990 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=978677a74be7d16ee3e36edfbac8d15e span_id=5da0580f7f86f4bf event_id=099d019b-639e-4109-b87d-dedcf0a6076e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=94855bb24909067c2fae6823dd4c9b7d span_id=54e2403657c6e005 event_id=3d99712a-fc46-4988-a6d6-c971a76b17d2 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=bc4ad7ac6dd42185b5c7c3e86f84cbcd span_id=bac17105fbe34c50 event_id=edd451b2-171d-496e-a547-3f457c6fdc36 fencing_token=0 
+operation=product.request outcome=client_error request_id=c4caf209-de4b-4390-ad50-3c25d1bc598b trace_id=517f21ca7f28fa2f70f8a615a6f89ff9 span_id=f2e732ae5e065a6d event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="c4caf209-de4b-4390-ad50-3c25d1bc598b" trace_id="517f21ca7f28fa2f70f8a615a6f89ff9" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=2b52c2bc-f5ef-401e-b1d9-e4855a1c3389 trace_id=bbed261a690da5a958fb08386c2c0458 span_id=78d1a8b855926964 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="2b52c2bc-f5ef-401e-b1d9-e4855a1c3389" trace_id="bbed261a690da5a958fb08386c2c0458" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=99df771f-d4ed-4355-96eb-dee74fb87315 trace_id=0fa0a22ffc9dfb8a79122c0049c45e54 span_id=da4df33091f31af9 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="99df771f-d4ed-4355-96eb-dee74fb87315" trace_id="0fa0a22ffc9dfb8a79122c0049c45e54" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=945d79ef-f0b7-4cfd-b473-4dc842f7739e trace_id=7ac942c8742699f61b610769c0fbe6c1 span_id=75a2668d499caeea event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="945d79ef-f0b7-4cfd-b473-4dc842f7739e" trace_id="7ac942c8742699f61b610769c0fbe6c1" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=a18857a2-b6d2-4e75-b714-28d8879864c4 trace_id=c96942349f9435c3e0022dd3213d248f span_id=2f0dc9fe1e75564a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a18857a2-b6d2-4e75-b714-28d8879864c4" trace_id="c96942349f9435c3e0022dd3213d248f" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=4908ad23-2fb1-4b11-a2e4-5b09a6a93ddc trace_id=ac0bdfa56949507e5e7045f7913ded4f span_id=965e9d5ca9cf7bce event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="4908ad23-2fb1-4b11-a2e4-5b09a6a93ddc" trace_id="ac0bdfa56949507e5e7045f7913ded4f" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=81f585df-d914-477a-bf15-dc44b9c6a682 trace_id=e70cf274b4f5b4a099e49cf9bcbeb7ff span_id=72dcd050ae9cfd75 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="81f585df-d914-477a-bf15-dc44b9c6a682" trace_id="e70cf274b4f5b4a099e49cf9bcbeb7ff" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.event.append outcome=committed request_id=null trace_id=fd88615d16e782f78cabb1da007306a5 span_id=35b09aab188bfffe event_id=7d7bec5a-c628-4f6a-bed5-0cc7c1b840e0 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=fced4fe056ee17fd9a09695c449939c3 span_id=a525281cfd583773 event_id=e49f95fd-b8bf-4280-ad3c-d33ec35682ae fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=c335f6218ba967611882c6bd57508ae6 span_id=d78a2143257b3eb7 event_id=afd91bfb-609e-4715-a92d-2da7900be755 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=f60604f59de6b870a43a35a78d266078 span_id=cbb461e745473924 event_id=be36badb-baee-4c0a-86b1-81059b1e2124 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=54da653ed9a8ed0dc7a9478648114570 span_id=38affedf39fcd428 event_id=e5a92cf4-3a81-49e9-9237-05c2b425b8d2 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=8c789b8b9db12d0b81e712e151084ccd span_id=ec4338b7761467bc event_id=897e67f0-2f79-4c05-8e32-021116faaefd fencing_token=0 
+operation=product.request outcome=client_error request_id=430859f4-87e5-456f-a233-76731ee491c8 trace_id=19dce74cf1041a003f832f45f4751bd7 span_id=fef2e32d97e33554 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="430859f4-87e5-456f-a233-76731ee491c8" trace_id="19dce74cf1041a003f832f45f4751bd7" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries/{event}/{registration}" method="GET" status="404" outcome="CLIENT_ERROR"
+operation=product.request outcome=client_error request_id=d1d56b98-2384-4863-91e4-13bd6684d987 trace_id=d7e11ae947b7fd09e7520c91d4f6743b span_id=a9def72a3dbf50f0 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d1d56b98-2384-4863-91e4-13bd6684d987" trace_id="d7e11ae947b7fd09e7520c91d4f6743b" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries/{event}/{registration}" method="GET" status="404" outcome="CLIENT_ERROR"
+operation=product.request outcome=client_error request_id=b4036b8e-1658-4fe4-9ad8-dbe4fe04e6d0 trace_id=405f0052efd4e9d2970454d74d4147e3 span_id=47e797d8a366ca1a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b4036b8e-1658-4fe4-9ad8-dbe4fe04e6d0" trace_id="405f0052efd4e9d2970454d74d4147e3" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries/{event}/{registration}" method="GET" status="404" outcome="CLIENT_ERROR"
+operation=product.request outcome=success request_id=d55ac9c1-9563-4eb6-9b60-3068a5aca0b0 trace_id=b31c59a01d67a4f1a99f757077433788 span_id=f54bcd31e12fbddf event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d55ac9c1-9563-4eb6-9b60-3068a5aca0b0" trace_id="b31c59a01d67a4f1a99f757077433788" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries/{event}/{registration}" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=8be0928b-e541-441e-ab9b-e2b8d78f8d38 trace_id=eaf6869fb6b01dc64a9638f52c3dbc08 span_id=b85592d524c6583a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="8be0928b-e541-441e-ab9b-e2b8d78f8d38" trace_id="eaf6869fb6b01dc64a9638f52c3dbc08" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries" method="GET" status="400" outcome="CLIENT_ERROR"
+operation=product.request outcome=success request_id=77f5c14c-5c44-4cd3-b7d7-fbd9193ea85c trace_id=8c569e748b17ffae2bcce61a0c1147b4 span_id=d5bd34bc92910b6a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="77f5c14c-5c44-4cd3-b7d7-fbd9193ea85c" trace_id="8c569e748b17ffae2bcce61a0c1147b4" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries" method="GET" status="200" outcome="SUCCESS"
+operation=product.event.append outcome=committed request_id=null trace_id=cc14d606ae8081afaae360a1f7844a35 span_id=3eef3a9477e02cbd event_id=ded4b809-1c2a-4ab7-bedd-3c7433e41fbd fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=ded4b809-1c2a-4ab7-bedd-3c7433e41fbd fencing_token=7 
+operation=product.event.effect outcome=ownership_lost request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=ded4b809-1c2a-4ab7-bedd-3c7433e41fbd fencing_token=7 
+operation=product.event.append outcome=committed request_id=null trace_id=0e474d2d5aaaa09bf67587019e16135a span_id=798aa9c61304915b event_id=1869a2dc-c167-4beb-874b-8af6bdfefbeb fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=1869a2dc-c167-4beb-874b-8af6bdfefbeb fencing_token=7 
+operation=product.event.effect outcome=ownership_lost request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=1869a2dc-c167-4beb-874b-8af6bdfefbeb fencing_token=7 
+operation=product.request outcome=client_error request_id=b8eb9fee-4455-4cc4-b376-0f6d89399d87 trace_id=390e2513dbb72491fa8b94196c631bdd span_id=b5a5dd51fc505960 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b8eb9fee-4455-4cc4-b376-0f6d89399d87" trace_id="390e2513dbb72491fa8b94196c631bdd" route="/**" method="GET" status="404" outcome="RESOURCE_NOT_FOUND"
+operation=product.request outcome=success request_id=128ebaa8-1330-42b1-a452-70af8b222a51 trace_id=468776750c7d568bfa4d93287b3aa311 span_id=4a9d576528ab447e event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="128ebaa8-1330-42b1-a452-70af8b222a51" trace_id="468776750c7d568bfa4d93287b3aa311" route="/actuator/prometheus" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=492f4cab-368a-4748-9a98-9f3fdb62ea19 trace_id=58f7fb903417b939433fe455f2851db2 span_id=8b2055b022283b0a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="492f4cab-368a-4748-9a98-9f3fdb62ea19" trace_id="58f7fb903417b939433fe455f2851db2" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=231c9875-d5d6-4b82-a3fa-97ea1f68e322 trace_id=045e777f6bb1352efa18b3cfe7bbec6e span_id=f7aaa3114289a52e event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="231c9875-d5d6-4b82-a3fa-97ea1f68e322" trace_id="045e777f6bb1352efa18b3cfe7bbec6e" route="UNMATCHED" method="GET" status="403" outcome="ACCESS_DENIED"
+operation=product.request outcome=client_error request_id=c2d42d65-56cf-402d-b666-b2a285e8225d trace_id=705d6548d267a5d2ca455629905306fe span_id=2e36f5b04e595264 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="c2d42d65-56cf-402d-b666-b2a285e8225d" trace_id="705d6548d267a5d2ca455629905306fe" route="UNMATCHED" method="GET" status="403" outcome="ACCESS_DENIED"
+operation=product.request outcome=client_error request_id=24d2d1fc-ee22-40d7-8d29-a7fee46cde38 trace_id=85a1e2bb145970fc539ba8ace9e12db4 span_id=48b830171b9fdfb2 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="24d2d1fc-ee22-40d7-8d29-a7fee46cde38" trace_id="85a1e2bb145970fc539ba8ace9e12db4" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.event.append outcome=committed request_id=null trace_id=38939db6bb3a6808bfb5ef9044b9dd3c span_id=ef64084d59e5ed6b event_id=40ca2afc-5da2-4f63-85d5-ecddb67a86f8 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=10d2051ed1611e924c6f37934119104e span_id=32d08ddc7866a881 event_id=a48151bf-1eea-4bbc-95b4-7d52c28f0ee7 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=47ac10fab0609c90be93b8dad3d24d51 span_id=c23fe2c5bd91857d event_id=94a30ab7-354b-46f9-aac7-afc064693f1d fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=f8152c7645b2d20b288284a96063431d span_id=5c28381240302aa9 event_id=8776b898-2024-451a-af8c-ee22c89c613c fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=fd859f47ce2e763fac6859504a1301fc span_id=30b918ae3415645f event_id=6219c698-5be1-4c43-950b-e6ade5e4295e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=01b500a56edf207cc957e123093f5cd5 span_id=3eff132d56e61e22 event_id=46841838-1266-4cfd-a593-140430bddfb8 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a78c8960191cf0b96a57c9f7892b6e48 span_id=39448c1c71d3089d event_id=a3d9324b-3992-467a-ad51-b92adaae608e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=8af8dc8761472fb7b8b67902a8adad55 span_id=84ffdde177264ade event_id=ede66f08-dc8c-47a8-820a-8982ecc5c410 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=eb754d160f8fbdf3cf6b021c2a98f3b2 span_id=a734a08b666b4dbe event_id=b72ada72-14da-4006-829b-c8c3032f32dc fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=749343e0b059195995caf4cda18c4437 span_id=5dfd28e230a69e08 event_id=c04c9ecc-f813-4c01-ba43-020d15c5c092 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=587d92f2d56f30d4184ada7582a22b00 span_id=8bc6d567ffee59fe event_id=379b0330-ad3d-4ca5-9642-a1cd38e35324 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=3977f2e9c211f933fe6fa2b51301e81e span_id=6c5f0b3617819e8a event_id=e4d826cc-a115-488f-b6fb-d0b733134078 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=7f3a61c8fdb3ba92ad6e5ec4c230117c span_id=c1addbf9a5aac2c2 event_id=961372d4-0e76-4ec4-bc7c-0cbb89d36725 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=b4d7f0d2d722368e484df6000241e30e span_id=d80868fd3cfa610b event_id=3c839a51-77d7-4b46-bf52-ddc380c1ad3e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a0eaf40fd97807d5984b94907b7f86ae span_id=ab9d280fb026576f event_id=600bdb52-7296-49ec-a4c3-16f8cccbd107 fencing_token=0 
+operation=product.request outcome=client_error request_id=61a4fb10-6666-413d-b3a2-fb6ca5054fdf trace_id=aa04822807afa619bd11584c0badb396 span_id=0794b33ac29d7223 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="61a4fb10-6666-413d-b3a2-fb6ca5054fdf" trace_id="aa04822807afa619bd11584c0badb396" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries/{event}/{registration}/replay" method="POST" status="400" outcome="CLIENT_ERROR"
+operation=product.request outcome=success request_id=cec84590-fa54-4df4-a275-43d37bb799ce trace_id=6d783c3e314074e824c483e88062d546 span_id=1ebf660934cd79e0 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="cec84590-fa54-4df4-a275-43d37bb799ce" trace_id="6d783c3e314074e824c483e88062d546" route="/internal/operations/tenants/{tenant}/consumers/{consumer}/deliveries/{event}/{registration}/replay" method="POST" status="200" outcome="SUCCESS"
+operation=product.event.append outcome=committed request_id=null trace_id=e57481719224d08bd69db36ada3160fd span_id=f6b8d3be95467a95 event_id=9b2cfcf1-4da3-430a-a155-7f986938a9eb fencing_token=0 
+2026-10-05T05:59:48.509+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node 1 disconnected.
+2026-10-05T05:59:48.510+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:48.627+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node 1 disconnected.
+2026-10-05T05:59:48.627+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Cancelled in-flight API_VERSIONS request with correlation id 8 due to node 1 being disconnected (elapsed time since creation: 2ms, elapsed time since send: 2ms, throttle time: 0ms, request timeout: 5000ms)
+2026-10-05T05:59:48.990+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node 1 disconnected.
+2026-10-05T05:59:48.990+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Cancelled in-flight API_VERSIONS request with correlation id 9 due to node 1 being disconnected (elapsed time since creation: 152ms, elapsed time since send: 152ms, throttle time: 0ms, request timeout: 5000ms)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

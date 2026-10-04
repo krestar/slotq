@@ -1,0 +1,824 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.application.KafkaRelayIntegrationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:14:23.229Z" hostname="KRESTAR" time="26.097">
+  <properties/>
+  <testcase name="realMysqlKafkaRollbackCrashDuplicateClaimFencingAndCanonicalWire()" classname="com.slotq.events.application.KafkaRelayIntegrationTests" time="7.731"/>
+  <system-out><![CDATA[2026-10-05T06:14:23.231+09:00  INFO 35972 --- [    Test worker] tc.apache/kafka:4.1.1                    : Creating container for image: apache/kafka:4.1.1
+2026-10-05T06:14:23.320+09:00  INFO 35972 --- [    Test worker] tc.apache/kafka:4.1.1                    : Container apache/kafka:4.1.1 is starting: 14706a83eb3969573739357aebd9f46754d91a7a43147fa0368caefd9a1d9e02
+2026-10-05T06:14:26.959+09:00  INFO 35972 --- [    Test worker] tc.apache/kafka:4.1.1                    : Container apache/kafka:4.1.1 started in PT3.7283031S
+2026-10-05T06:14:26.959+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T06:14:27.076+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 4868208349c2f072a0aafec664e21abd1b7496832ad536df0cc3e167ca685805
+2026-10-05T06:14:27.517+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:10554/slotq_kafka_relay using query 'SELECT 1'
+2026-10-05T06:14:37.606+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT10.6462307S
+2026-10-05T06:14:37.606+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:10554/slotq_kafka_relay)
+2026-10-05T06:14:37.606+09:00  INFO 35972 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.application.KafkaRelayIntegrationTests]: KafkaRelayIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T06:14:37.697+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.application.KafkaRelayIntegrationTests
+2026-10-05T06:14:37.699+09:00  INFO 35972 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.application.KafkaRelayIntegrationTests]: KafkaRelayIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T06:14:37.702+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.application.KafkaRelayIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T06:14:37.722+09:00  INFO 35972 --- [    Test worker] c.s.e.a.KafkaRelayIntegrationTests       : Starting KafkaRelayIntegrationTests using Java 25.0.4.1 with PID 35972 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T06:14:37.722+09:00  INFO 35972 --- [    Test worker] c.s.e.a.KafkaRelayIntegrationTests       : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T06:14:38.309+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T06:14:38.365+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 54 ms. Found 8 JPA repository interfaces.
+2026-10-05T06:14:38.488+09:00  INFO 35972 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:10554/slotq_kafka_relay (MySQL 8.4)
+2026-10-05T06:14:38.530+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_kafka_relay`.`flyway_schema_history` does not exist yet
+2026-10-05T06:14:38.532+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.015s)
+2026-10-05T06:14:38.551+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_kafka_relay`.`flyway_schema_history` ...
+2026-10-05T06:14:38.612+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_kafka_relay`: << Empty Schema >>
+2026-10-05T06:14:38.617+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "1 - configure database"
+2026-10-05T06:14:38.650+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "2 - create tenant venue policy"
+2026-10-05T06:14:38.769+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "3 - create auth tenant boundaries"
+2026-10-05T06:14:38.880+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "4 - create resource slot inventory"
+2026-10-05T06:14:38.975+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "5 - create reservation allocation"
+2026-10-05T06:14:39.086+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "6 - add venue name"
+2026-10-05T06:14:39.277+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "7 - create hold idempotency"
+2026-10-05T06:14:39.346+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T06:14:39.451+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "9 - create transactional events"
+2026-10-05T06:14:39.666+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "10 - create waitlist registration"
+2026-10-05T06:14:39.811+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "11 - create waitlist offers"
+2026-10-05T06:14:40.017+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "12 - create waitlist promotion effect"
+2026-10-05T06:14:40.158+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "13 - create waitlist promotion requests"
+2026-10-05T06:14:40.204+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "14 - index maintenance backlogs"
+2026-10-05T06:14:40.303+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "15 - add event observation origin"
+2026-10-05T06:14:40.381+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "16 - create kafka publication and transport assignment"
+2026-10-05T06:14:40.513+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "17 - create kafka intake"
+2026-10-05T06:14:40.623+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "18 - create event observation projection"
+2026-10-05T06:14:40.679+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "19 - create event transport cutover"
+2026-10-05T06:14:40.726+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "20 - create human operator recovery"
+2026-10-05T06:14:40.913+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "21 - create actor access credentials"
+2026-10-05T06:14:41.082+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_relay` to version "22 - create mcp hold approval"
+2026-10-05T06:14:41.216+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq_kafka_relay`, now at version v22 (execution time 00:02.116s)
+2026-10-05T06:14:41.244+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T06:14:41.287+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:10554/slotq_kafka_relay]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq_kafka_relay/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T06:14:41.368+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T06:14:41.584+09:00  INFO 35972 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T06:14:41.590+09:00  INFO 35972 --- [    Test worker] c.s.e.a.KafkaRelayIntegrationTests       : Started KafkaRelayIntegrationTests in 3.886 seconds (process running for 524.393)
+2026-10-05T06:14:41.597+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : AdminClientConfig values: 
+	bootstrap.controllers = []
+	bootstrap.servers = [localhost:10511]
+	client.dns.lookup = use_all_dns_ips
+	client.id = 
+	config.providers = []
+	connections.max.idle.ms = 300000
+	default.api.timeout.ms = 60000
+	enable.metrics.push = false
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+
+2026-10-05T06:14:41.606+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:14:41.606+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:14:41.606+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148481606
+2026-10-05T06:14:41.691+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:41.691+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:41.691+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:14:41.691+09:00  INFO 35972 --- [| adminclient-5] o.a.kafka.common.utils.AppInfoParser     : App info kafka.admin.client for adminclient-5 unregistered
+2026-10-05T06:14:41.701+09:00  INFO 35972 --- [| adminclient-5] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:41.701+09:00  INFO 35972 --- [| adminclient-5] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:41.701+09:00  INFO 35972 --- [| adminclient-5] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+operation=product.event.append outcome=rolled_back request_id=null trace_id=516bf112864cb9ea31da1dcb946b3f0b span_id=617f313f2735bab2 event_id=3256fd6a-988e-44a6-ad33-bc1d4cce9b3e fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=bf739b229cedecdc85cda397897fc23e span_id=d7cf6889fd3f8bc1 event_id=b0558b09-e7c2-4111-a484-a0999b06a4f6 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=289cd0c52b7e91ae1295e742e4b5ced7 span_id=0e90a08d30e583dd event_id=c753a30d-5c9d-4b36-92d0-dfab7c021667 fencing_token=0 
+2026-10-05T06:14:41.812+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ProducerConfig values: 
+	acks = -1
+	batch.size = 16384
+	bootstrap.servers = [localhost:10511]
+	buffer.memory = 33554432
+	client.dns.lookup = use_all_dns_ips
+	client.id = producer-3
+	compression.gzip.level = -1
+	compression.lz4.level = 9
+	compression.type = none
+	compression.zstd.level = 3
+	config.providers = []
+	connections.max.idle.ms = 540000
+	delivery.timeout.ms = 15000
+	enable.idempotence = true
+	enable.metrics.push = true
+	interceptor.classes = []
+	key.serializer = class org.apache.kafka.common.serialization.StringSerializer
+	linger.ms = 5
+	max.block.ms = 5000
+	max.in.flight.requests.per.connection = 5
+	max.request.size = 1048576
+	metadata.max.age.ms = 300000
+	metadata.max.idle.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partitioner.adaptive.partitioning.enable = true
+	partitioner.availability.timeout.ms = 0
+	partitioner.class = null
+	partitioner.ignore.keys = false
+	receive.buffer.bytes = 32768
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 5000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	transaction.timeout.ms = 60000
+	transaction.two.phase.commit.enable = false
+	transactional.id = null
+	value.serializer = class org.apache.kafka.common.serialization.StringSerializer
+
+2026-10-05T06:14:41.813+09:00  INFO 35972 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T06:14:41.815+09:00  INFO 35972 --- [    Test worker] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=producer-3] Instantiated an idempotent producer.
+2026-10-05T06:14:41.829+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:14:41.829+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:14:41.829+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148481829
+2026-10-05T06:14:41.844+09:00  INFO 35972 --- [ad | producer-3] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-3] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T06:14:41.975+09:00  INFO 35972 --- [ad | producer-3] o.a.k.c.p.internals.TransactionManager   : [Producer clientId=producer-3] ProducerId set to 0 with epoch 0
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=c753a30d-5c9d-4b36-92d0-dfab7c021667 fencing_token=2 
+2026-10-05T06:14:42.878+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:10511]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4
+	client.rack = 
+	config.providers = []
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	share.acknowledgement.mode = implicit
+	share.acquire.mode = BATCH_OPTIMIZED
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-10-05T06:14:42.879+09:00  INFO 35972 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T06:14:42.893+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:14:42.893+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:14:42.893+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148482893
+2026-10-05T06:14:42.893+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Subscribed to topic(s): slotq.waitlist.events.v1
+2026-10-05T06:14:42.904+09:00  INFO 35972 --- [    Test worker] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T06:14:43.019+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Discovered group coordinator localhost:10511 (id: 2147483646 rack: null isFenced: false)
+2026-10-05T06:14:43.020+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] (Re-)joining group
+2026-10-05T06:14:43.030+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Request joining group due to: need to re-join with the given member-id: consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4-eb1d7075-8f02-49f2-ad08-4e9df01188d0
+2026-10-05T06:14:43.030+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] (Re-)joining group
+2026-10-05T06:14:43.038+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Successfully joined group with generation Generation{generationId=1, memberId='consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4-eb1d7075-8f02-49f2-ad08-4e9df01188d0', protocol='range'}
+2026-10-05T06:14:43.039+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Finished assignment for group at generation 1: {consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4-eb1d7075-8f02-49f2-ad08-4e9df01188d0=Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])}
+2026-10-05T06:14:43.050+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Successfully synced group in generation Generation{generationId=1, memberId='consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4-eb1d7075-8f02-49f2-ad08-4e9df01188d0', protocol='range'}
+2026-10-05T06:14:43.050+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Notifying assignor about the new Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])
+2026-10-05T06:14:43.050+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Adding newly assigned partitions: [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:14:43.056+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:14:43.056+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Found no committed offset for partition slotq.waitlist.events.v1-1
+2026-10-05T06:14:43.056+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:14:43.065+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Resetting offset for partition slotq.waitlist.events.v1-0 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:10511 (id: 1 rack: null isFenced: false)], epoch=0}}.
+2026-10-05T06:14:43.065+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Resetting offset for partition slotq.waitlist.events.v1-1 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:10511 (id: 1 rack: null isFenced: false)], epoch=0}}.
+2026-10-05T06:14:43.065+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Resetting offset for partition slotq.waitlist.events.v1-2 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:10511 (id: 1 rack: null isFenced: false)], epoch=0}}.
+2026-10-05T06:14:43.087+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Revoke previously assigned partitions [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:14:43.087+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Member consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4-eb1d7075-8f02-49f2-ad08-4e9df01188d0 sending LeaveGroup request to coordinator localhost:10511 (id: 2147483646 rack: null isFenced: false) due to the consumer is being closed
+2026-10-05T06:14:43.088+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-10-05T06:14:43.088+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4, groupId=relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134] Request joining group due to: consumer pro-actively leaving the group
+2026-10-05T06:14:43.598+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:43.598+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:43.598+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-10-05T06:14:43.598+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:14:43.607+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-relay-evidence-684c4142-9640-44d1-9219-67c17a8d8134-4 unregistered
+2026-10-05T06:14:43.607+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : AdminClientConfig values: 
+	bootstrap.controllers = []
+	bootstrap.servers = [localhost:10511]
+	client.dns.lookup = use_all_dns_ips
+	client.id = 
+	config.providers = []
+	connections.max.idle.ms = 300000
+	default.api.timeout.ms = 60000
+	enable.metrics.push = false
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+
+2026-10-05T06:14:43.613+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:14:43.613+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:14:43.613+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148483613
+2026-10-05T06:14:43.731+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:43.731+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:43.731+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:14:43.732+09:00  INFO 35972 --- [| adminclient-6] o.a.kafka.common.utils.AppInfoParser     : App info kafka.admin.client for adminclient-6 unregistered
+2026-10-05T06:14:43.738+09:00  INFO 35972 --- [| adminclient-6] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:43.738+09:00  INFO 35972 --- [| adminclient-6] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:43.738+09:00  INFO 35972 --- [| adminclient-6] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+operation=product.event.append outcome=committed request_id=null trace_id=5a915c12671a4a0e9a12bf4e9b06b427 span_id=80138d3010842eab event_id=8fea234f-1e93-4613-8d46-54158dcc53e9 fencing_token=0 
+operation=product.event.publication outcome=unknown request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=8fea234f-1e93-4613-8d46-54158dcc53e9 fencing_token=1 
+2026-10-05T06:14:43.808+09:00  WARN 35972 --- [    Test worker] i.m.core.instrument.MeterRegistry        : This Gauge has been already registered (MeterId{name='slotq.kafka.publication.pending.events', tags=[tag(runtime_role=relay),tag(transport=kafka)]}), the registration will be ignored. Note that subsequent logs will be logged at debug level.
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=8fea234f-1e93-4613-8d46-54158dcc53e9 fencing_token=2 
+2026-10-05T06:14:43.857+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:10511]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5
+	client.rack = 
+	config.providers = []
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	share.acknowledgement.mode = implicit
+	share.acquire.mode = BATCH_OPTIMIZED
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-10-05T06:14:43.857+09:00  INFO 35972 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T06:14:43.869+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:14:43.870+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:14:43.870+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148483869
+2026-10-05T06:14:43.870+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Subscribed to topic(s): slotq.waitlist.events.v1
+2026-10-05T06:14:43.879+09:00  INFO 35972 --- [    Test worker] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T06:14:43.879+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Discovered group coordinator localhost:10511 (id: 2147483646 rack: null isFenced: false)
+2026-10-05T06:14:43.880+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] (Re-)joining group
+2026-10-05T06:14:43.891+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Request joining group due to: need to re-join with the given member-id: consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5-30d89c23-2c9c-482e-b171-e3315cc313c4
+2026-10-05T06:14:43.891+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] (Re-)joining group
+2026-10-05T06:14:43.894+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Successfully joined group with generation Generation{generationId=1, memberId='consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5-30d89c23-2c9c-482e-b171-e3315cc313c4', protocol='range'}
+2026-10-05T06:14:43.895+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Finished assignment for group at generation 1: {consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5-30d89c23-2c9c-482e-b171-e3315cc313c4=Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])}
+2026-10-05T06:14:43.905+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Successfully synced group in generation Generation{generationId=1, memberId='consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5-30d89c23-2c9c-482e-b171-e3315cc313c4', protocol='range'}
+2026-10-05T06:14:43.905+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Notifying assignor about the new Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])
+2026-10-05T06:14:43.905+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Adding newly assigned partitions: [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:14:43.908+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:14:43.908+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Found no committed offset for partition slotq.waitlist.events.v1-1
+2026-10-05T06:14:43.908+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:14:43.917+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Resetting offset for partition slotq.waitlist.events.v1-0 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:10511 (id: 1 rack: null isFenced: false)], epoch=0}}.
+2026-10-05T06:14:43.917+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Resetting offset for partition slotq.waitlist.events.v1-1 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:10511 (id: 1 rack: null isFenced: false)], epoch=0}}.
+2026-10-05T06:14:43.917+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Resetting offset for partition slotq.waitlist.events.v1-2 to position FetchPosition{offset=2, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:10511 (id: 1 rack: null isFenced: false)], epoch=0}}.
+2026-10-05T06:14:43.928+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Revoke previously assigned partitions [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:14:43.928+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Member consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5-30d89c23-2c9c-482e-b171-e3315cc313c4 sending LeaveGroup request to coordinator localhost:10511 (id: 2147483646 rack: null isFenced: false) due to the consumer is being closed
+2026-10-05T06:14:43.929+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-10-05T06:14:43.929+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5, groupId=ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee] Request joining group due to: consumer pro-actively leaving the group
+2026-10-05T06:14:44.435+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:44.435+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:44.435+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-10-05T06:14:44.435+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:14:44.445+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-ack-loss-evidence-0916b2be-7ba2-40ac-ab9e-26c96a66b5ee-5 unregistered
+operation=product.event.append outcome=committed request_id=null trace_id=636682466bc270b63275f49077fd81dd span_id=af6a6a3e7155efad event_id=2b66c8d5-af79-457c-a60c-a7afccb54e84 fencing_token=0 
+operation=product.event.publication outcome=unknown request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=2b66c8d5-af79-457c-a60c-a7afccb54e84 fencing_token=1 
+2026-10-05T06:14:45.052+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : AdminClientConfig values: 
+	bootstrap.controllers = []
+	bootstrap.servers = [localhost:10511]
+	client.dns.lookup = use_all_dns_ips
+	client.id = 
+	config.providers = []
+	connections.max.idle.ms = 300000
+	default.api.timeout.ms = 60000
+	enable.metrics.push = false
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+
+2026-10-05T06:14:45.059+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:14:45.059+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:14:45.059+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148485059
+2026-10-05T06:14:45.076+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:45.076+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:45.076+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:14:45.076+09:00  INFO 35972 --- [| adminclient-7] o.a.kafka.common.utils.AppInfoParser     : App info kafka.admin.client for adminclient-7 unregistered
+2026-10-05T06:14:45.083+09:00  INFO 35972 --- [| adminclient-7] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:45.083+09:00  INFO 35972 --- [| adminclient-7] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:45.083+09:00  INFO 35972 --- [| adminclient-7] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=2b66c8d5-af79-457c-a60c-a7afccb54e84 fencing_token=2 
+operation=product.event.append outcome=committed request_id=null trace_id=55756b35d38bbdd7099fc171aebdc19c span_id=5d2fa67ec0150aea event_id=a03402a3-2f71-40d6-a15a-3c66e3700d61 fencing_token=0 
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=a03402a3-2f71-40d6-a15a-3c66e3700d61 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=1f9b851f6053c33fcb48def8bddad4ae span_id=84a3e05dc6c782ce event_id=536020ba-5791-4ce1-b556-340f98cde730 fencing_token=0 
+2026-10-05T06:14:49.314+09:00  INFO 35972 --- [    Test worker] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=producer-3] Closing the Kafka producer with timeoutMillis = 30000 ms.
+2026-10-05T06:14:49.324+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:14:49.324+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:14:49.324+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-10-05T06:14:49.324+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:14:49.325+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : App info kafka.producer for producer-3 unregistered
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

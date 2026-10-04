@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.ResourceSlotInventoryIntegrationTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:09:49.750Z" hostname="KRESTAR" time="14.451">
+  <properties/>
+  <testcase name="handlesDstGapAndBothExplicitOverlapOffsets()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.132"/>
+  <testcase name="validatesOffsetOperatingHoursGridAndFixedDuration()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.078"/>
+  <testcase name="rejectsDuplicateAndOverlappingSlotsButAllowsEndExclusiveAdjacency()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.1"/>
+  <testcase name="rejectsSlotWhoseActualEndCrossesSpringForwardClosingTime()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.045"/>
+  <testcase name="allowsSlotWhoseActualEndFitsWithinFallBackOperatingHours()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.058"/>
+  <testcase name="createsTableResourceAndUtcSlotRoundTripsThroughJpa()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.06"/>
+  <testcase name="concurrentCreationStoresOnlyOneSlotAtTheSameResourceStart()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.061"/>
+  <testcase name="rejectsCrossTenantAndCrossVenueReferencesInDomainApplicationAndDatabase()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.078"/>
+  <testcase name="databaseRejectsCapacityOtherThanOneInvalidRangeAndDuplicateStart()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.061"/>
+  <testcase name="rejectsInvalidResourceAndReservationEligibility()" classname="com.slotq.ResourceSlotInventoryIntegrationTests" time="0.08"/>
+  <system-out><![CDATA[2026-10-05T06:09:49.752+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T06:09:49.827+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 7caa38a2846fb3e8d4aadddebf0e4f7999f9f61c1d3ecf34258fdc655a8b441f
+2026-10-05T06:09:50.146+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:11667/slotq using query 'SELECT 1'
+2026-10-05T06:09:59.547+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.795928S
+2026-10-05T06:09:59.548+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:11667/slotq)
+2026-10-05T06:09:59.549+09:00  INFO 35972 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.ResourceSlotInventoryIntegrationTests]: ResourceSlotInventoryIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T06:09:59.553+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.ResourceSlotInventoryIntegrationTests
+2026-10-05T06:09:59.553+09:00  INFO 35972 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.ResourceSlotInventoryIntegrationTests]: ResourceSlotInventoryIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T06:09:59.557+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.ResourceSlotInventoryIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T06:09:59.579+09:00  INFO 35972 --- [    Test worker] .s.ResourceSlotInventoryIntegrationTests : Starting ResourceSlotInventoryIntegrationTests using Java 25.0.4.1 with PID 35972 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T06:09:59.579+09:00  INFO 35972 --- [    Test worker] .s.ResourceSlotInventoryIntegrationTests : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T06:10:00.208+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T06:10:00.265+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 54 ms. Found 8 JPA repository interfaces.
+2026-10-05T06:10:00.380+09:00  INFO 35972 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:11667/slotq (MySQL 8.4)
+2026-10-05T06:10:00.419+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq`.`flyway_schema_history` does not exist yet
+2026-10-05T06:10:00.421+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.015s)
+2026-10-05T06:10:00.440+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq`.`flyway_schema_history` ...
+2026-10-05T06:10:00.499+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq`: << Empty Schema >>
+2026-10-05T06:10:00.503+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "1 - configure database"
+2026-10-05T06:10:00.536+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "2 - create tenant venue policy"
+2026-10-05T06:10:00.655+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "3 - create auth tenant boundaries"
+2026-10-05T06:10:00.759+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "4 - create resource slot inventory"
+2026-10-05T06:10:00.850+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "5 - create reservation allocation"
+2026-10-05T06:10:00.962+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "6 - add venue name"
+2026-10-05T06:10:01.151+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "7 - create hold idempotency"
+2026-10-05T06:10:01.223+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T06:10:01.326+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "9 - create transactional events"
+2026-10-05T06:10:01.526+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "10 - create waitlist registration"
+2026-10-05T06:10:01.671+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "11 - create waitlist offers"
+2026-10-05T06:10:01.866+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "12 - create waitlist promotion effect"
+2026-10-05T06:10:01.998+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "13 - create waitlist promotion requests"
+2026-10-05T06:10:02.046+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "14 - index maintenance backlogs"
+2026-10-05T06:10:02.149+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "15 - add event observation origin"
+2026-10-05T06:10:02.227+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "16 - create kafka publication and transport assignment"
+2026-10-05T06:10:02.367+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "17 - create kafka intake"
+2026-10-05T06:10:02.479+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "18 - create event observation projection"
+2026-10-05T06:10:02.536+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "19 - create event transport cutover"
+2026-10-05T06:10:02.586+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "20 - create human operator recovery"
+2026-10-05T06:10:02.766+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "21 - create actor access credentials"
+2026-10-05T06:10:02.929+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "22 - create mcp hold approval"
+2026-10-05T06:10:03.074+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq`, now at version v22 (execution time 00:02.066s)
+2026-10-05T06:10:03.102+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T06:10:03.138+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:11667/slotq]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T06:10:03.212+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T06:10:03.429+09:00  INFO 35972 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T06:10:03.438+09:00  INFO 35972 --- [    Test worker] .s.ResourceSlotInventoryIntegrationTests : Started ResourceSlotInventoryIntegrationTests in 3.879 seconds (process running for 246.24)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

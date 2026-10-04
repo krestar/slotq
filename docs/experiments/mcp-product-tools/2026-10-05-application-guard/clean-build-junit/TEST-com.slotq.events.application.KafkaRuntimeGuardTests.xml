@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.application.KafkaRuntimeGuardTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:14:50.482Z" hostname="KRESTAR" time="0.009">
+  <properties/>
+  <testcase name="relayRejectsLocalExecutionAndUnknownRole()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.001"/>
+  <testcase name="relayAcceptsOnlyTheConfiguredFamilyRoutesWithDbAuthority()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.0"/>
+  <testcase name="productCannotRunAnotherLogicalConsumerOrKafkaDbScheduler()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.0"/>
+  <testcase name="kafkaBusinessActivationRequiresApprovedRoutes()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.0"/>
+  <testcase name="isolatedServletRequiresExplicitMetricsOnlyModeAndKeepsRoleGuards()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.001"/>
+  <testcase name="productRejectsKafkaAssignmentWithNoIntake()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.001"/>
+  <testcase name="consumerCannotStartWithStaleEpochOrIncompleteCutover()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.001"/>
+  <testcase name="nonLoopbackAnonymousAndIncompleteTlsCredentialsAreRejected()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.0"/>
+  <testcase name="relayRequiresExactWaitlistRoutesButDoesNotInspectOtherConsumers()" classname="com.slotq.events.application.KafkaRuntimeGuardTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

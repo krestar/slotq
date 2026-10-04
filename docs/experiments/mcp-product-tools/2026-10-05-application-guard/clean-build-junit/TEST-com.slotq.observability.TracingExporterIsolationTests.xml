@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.observability.TracingExporterIsolationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:23:44.365Z" hostname="KRESTAR" time="20.282">
+  <properties/>
+  <testcase name="realOtlpExporterTimeoutAndQueueSaturationNeverWaitOnProductThread(CapturedOutput)" classname="com.slotq.observability.TracingExporterIsolationTests" time="19.241"/>
+  <system-out><![CDATA[2026-10-05T06:23:44.380+09:00  INFO 35972 --- [    Test worker] i.o.sdk.trace.SdkTracerProvider          : Calling shutdown() multiple times.
+2026-10-05T06:23:44.532+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:5789]
+2026-10-05T06:23:44.583+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:44.583+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:44.583+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T06:23:45.403+09:00  INFO 35972 --- [    Test worker] c.s.o.TracingExporterIsolationTests      : Starting TracingExporterIsolationTests using Java 25.0.4.1 with PID 35972 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T06:23:45.403+09:00  INFO 35972 --- [    Test worker] c.s.o.TracingExporterIsolationTests      : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T06:23:45.406+09:00  INFO 35972 --- [    Test worker] c.s.o.TracingExporterIsolationTests      : Started TracingExporterIsolationTests in 0.022 seconds (process running for 1068.208)
+operation=product.request outcome=success request_id=79d7b3fd-4163-40f1-ab08-7a5205dc2460 trace_id=08fd464ffb28cbae4efcb9d2523e6590 span_id=0015af7253bd0796 event_id=null fencing_token=0 
+2026-10-05T06:23:45.584+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:45.584+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:45.584+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:46.585+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:46.585+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:46.585+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+operation=product.request outcome=success request_id=0e50ce47-5e96-447b-9d6c-0110d7fa5662 trace_id=9fd8c5a280f14566e5c0859bb2d87b1c span_id=c148894467de822f event_id=null fencing_token=0 
+2026-10-05T06:23:47.585+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:47.586+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:47.586+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:48.586+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:48.588+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:48.588+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+BatchSpanProcessor dropped 2049 span(s) since the last export because the queue is full (maxQueueSize=2048) 
+2026-10-05T06:23:49.490+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:5789]
+2026-10-05T06:23:49.541+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:5789]
+2026-10-05T06:23:49.593+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:49.593+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:49.593+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:50.595+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:50.595+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:50.595+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:51.595+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:51.596+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:51.596+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:52.595+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:52.596+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:52.596+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:53.596+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:53.596+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:53.597+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:54.597+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:54.597+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:54.597+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:55.599+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:55.599+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:55.599+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:56.600+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:56.600+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:56.600+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:57.601+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:57.601+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:57.601+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:58.506+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:5789]
+2026-10-05T06:23:58.556+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:5789]
+2026-10-05T06:23:58.609+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:58.609+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:58.610+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:23:59.610+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:23:59.610+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:23:59.610+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:24:00.612+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:24:00.612+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:24:00.612+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:24:01.613+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:24:01.613+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:24:01.613+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:24:02.614+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:24:02.614+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:24:02.614+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:24:03.614+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:24:03.615+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:24:03.615+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:24:04.616+09:00  INFO 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:24:04.616+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:5789) could not be established. Node may not be available.
+2026-10-05T06:24:04.616+09:00  WARN 35972 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:5789 (id: -1 rack: null isFenced: false) disconnected
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

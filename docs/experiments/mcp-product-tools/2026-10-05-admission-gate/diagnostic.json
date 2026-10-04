@@ -1,0 +1,22 @@
+{
+  "gate" : "FAIL: authentication expiry is not application admission expiry",
+  "sentAt" : "2026-10-04T17:48:00.072386500Z",
+  "releasedAt" : "2026-10-04T17:49:01.072979300Z",
+  "elapsedMillis" : 61168,
+  "authenticatedPausedRequests" : 2,
+  "productCredentialExpiredAt" : "2026-10-04T17:48:59.615129600Z",
+  "lateProductGetStatus" : 200,
+  "holdClientObservation" : "HttpTimeoutException at 15 seconds; subsequent MySQL COMMIT observed",
+  "holdAuthentication" : "existing local/test-only dev Product credential; no MCP write credential issued",
+  "durableProductRows" : {
+    "reservationId" : "C50F77897AE6494589B5496B2E9D789A",
+    "slotId" : "13F80FE14D124A7D842D460294CA4DF0",
+    "customerId" : "10000000000000000000000000000001",
+    "state" : "HELD",
+    "allocationId" : "1A9E3FF1908C45D2B824AA7D8DB8169F",
+    "idempotencyState" : "COMPLETED",
+    "completedAt" : "2026-10-04T17:49:01.176Z"
+  },
+  "productionRegistrySize" : 0,
+  "pauseLayer" : "test-only HandlerInterceptor after Product security authentication, before controller/application/transaction"
+}

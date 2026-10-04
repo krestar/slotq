@@ -1,0 +1,34 @@
+[
+  {
+    "path": "backend/src/test/java/com/slotq/mcp/ProductAdmissionGateDiagnosticTests.java",
+    "sha256": "ec2a8fd7782ca934e62b916f805db7143f0b2877b048ddc8e943bd1c1038c749"
+  },
+  {
+    "path": "backend/src/main/java/com/slotq/auth/persistence/ActorAccessService.java",
+    "sha256": "d66699b6c87a33b27ad48a14410fb4903bccb39e15c517fbebdb769ffc6583f2"
+  },
+  {
+    "path": "backend/src/main/java/com/slotq/auth/domain/ConsumerRestriction.java",
+    "sha256": "cbb8899bea16720f3d60c73739cd6b7965a1aaa2fff420760cd517ce4e5d6077"
+  },
+  {
+    "path": "backend/src/main/java/com/slotq/booking/application/ReservationService.java",
+    "sha256": "c3dbdc777686612d94db204492137f637b54bbd8d7e28ba4c6ba1062ffefe3fb"
+  },
+  {
+    "path": "backend/src/main/java/com/slotq/mcp/web/McpTopologyConfiguration.java",
+    "sha256": "dd787ca3fab99c70e1a127b766f3446226281fd3be69ebffccf083b28484718c"
+  },
+  {
+    "path": "backend/src/main/java/com/slotq/mcp/ProductHttpBinding.java",
+    "sha256": "40df19a987d077b29569f0960b29db089cf0a27126007ae8e87e1877d95856f6"
+  },
+  {
+    "path": "docs/adr/0009-m6-authenticated-access-and-knowledge.md",
+    "sha256": "c5e5261ec30803f58a678361f17775376c47f6231aab35b43c37ccd513299d6a"
+  },
+  {
+    "path": "docs/architecture/m6-access-knowledge.md",
+    "sha256": "2a7c9b26e5d626584e717675e15859d98be10f4888ff585dcfab759b62d90dad"
+  }
+]

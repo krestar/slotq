@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.experiments.waitlist.M5DrillRoleTests" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:58:46.366Z" hostname="KRESTAR" time="0.002">
+  <properties/>
+  <testcase name="nonSqlExecutorFailureCannotProveAnActualDatabaseOutage()" classname="com.slotq.experiments.waitlist.M5DrillRoleTests" time="0.001"/>
+  <testcase name="recordsOnlySqlClassAndProductionEntrypointWithoutSensitiveExceptionText()" classname="com.slotq.experiments.waitlist.M5DrillRoleTests" time="0.001"/>
+  <testcase name="sqlFailureFromStartupOrAnotherQueryCannotProveAnExecutorOutage()" classname="com.slotq.experiments.waitlist.M5DrillRoleTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

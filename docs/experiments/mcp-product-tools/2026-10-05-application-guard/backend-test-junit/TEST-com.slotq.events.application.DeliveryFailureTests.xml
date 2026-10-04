@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.application.DeliveryFailureTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:54:17.203Z" hostname="KRESTAR" time="0.006">
+  <properties/>
+  <testcase name="directAndWrappedPersistenceFailuresAreClassifiedWithoutRetryingArbitraryProgrammingErrors()" classname="com.slotq.events.application.DeliveryFailureTests" time="0.001"/>
+  <testcase name="causeCycleCannotTrapFailureClassificationInAnInfiniteLoop()" classname="com.slotq.events.application.DeliveryFailureTests" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

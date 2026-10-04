@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.HoldIdempotencyScopeMigrationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:46:50.468Z" hostname="KRESTAR" time="12.506">
+  <properties/>
+  <testcase name="migratesV7RowsAndRejectsCrossScopeReservationReferences()" classname="com.slotq.HoldIdempotencyScopeMigrationTests" time="2.991"/>
+  <system-out><![CDATA[2026-10-05T05:46:50.469+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:46:50.542+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: a0b9bfbbb56029736f64d4380c340b76837533b197aba0c04385786651fcb5b8
+2026-10-05T05:46:50.829+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:13459/slotq_hold_idempotency_scope_migration using query 'SELECT 1'
+2026-10-05T05:46:59.982+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.5136113S
+2026-10-05T05:46:59.983+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:13459/slotq_hold_idempotency_scope_migration)
+2026-10-05T05:47:00.006+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:13459/slotq_hold_idempotency_scope_migration (MySQL 8.4)
+2026-10-05T05:47:00.046+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_hold_idempotency_scope_migration`.`flyway_schema_history` does not exist yet
+2026-10-05T05:47:00.048+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.016s)
+2026-10-05T05:47:00.072+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_hold_idempotency_scope_migration`.`flyway_schema_history` ...
+2026-10-05T05:47:00.128+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_hold_idempotency_scope_migration`: << Empty Schema >>
+2026-10-05T05:47:00.134+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "1 - configure database"
+2026-10-05T05:47:00.169+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "2 - create tenant venue policy"
+2026-10-05T05:47:00.290+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "3 - create auth tenant boundaries"
+2026-10-05T05:47:00.401+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "4 - create resource slot inventory"
+2026-10-05T05:47:00.497+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "5 - create reservation allocation"
+2026-10-05T05:47:00.613+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "6 - add venue name"
+2026-10-05T05:47:00.804+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "7 - create hold idempotency"
+2026-10-05T05:47:00.872+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 7 migrations to schema `slotq_hold_idempotency_scope_migration`, now at version v7 (execution time 00:00.571s)
+2026-10-05T05:47:00.949+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:13459/slotq_hold_idempotency_scope_migration (MySQL 8.4)
+2026-10-05T05:47:00.988+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.018s)
+2026-10-05T05:47:01.001+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_hold_idempotency_scope_migration`: 7
+2026-10-05T05:47:01.006+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:47:01.113+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "9 - create transactional events"
+2026-10-05T05:47:01.325+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "10 - create waitlist registration"
+2026-10-05T05:47:01.477+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "11 - create waitlist offers"
+2026-10-05T05:47:01.672+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "12 - create waitlist promotion effect"
+2026-10-05T05:47:01.796+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "13 - create waitlist promotion requests"
+2026-10-05T05:47:01.846+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "14 - index maintenance backlogs"
+2026-10-05T05:47:01.953+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "15 - add event observation origin"
+2026-10-05T05:47:02.033+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:47:02.168+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "17 - create kafka intake"
+2026-10-05T05:47:02.276+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "18 - create event observation projection"
+2026-10-05T05:47:02.332+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "19 - create event transport cutover"
+2026-10-05T05:47:02.381+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "20 - create human operator recovery"
+2026-10-05T05:47:02.580+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "21 - create actor access credentials"
+2026-10-05T05:47:02.753+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_hold_idempotency_scope_migration` to version "22 - create mcp hold approval"
+2026-10-05T05:47:02.880+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 15 migrations to schema `slotq_hold_idempotency_scope_migration`, now at version v22 (execution time 00:01.522s)
+2026-10-05T05:47:02.900+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:13459/slotq_hold_idempotency_scope_migration (MySQL 8.4)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

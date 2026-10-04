@@ -1,0 +1,51 @@
+{
+  "exactReconciliation" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"outcome\":\"succeeded\",\"productStatus\":200,\"data\":{\"id\":\"61b554fd-255c-4893-976a-aeeb00484f0e\",\"venueId\":\"ee2a020d-4502-42fe-a60e-03d58bebc8ed\",\"resourceId\":\"a3806ad0-9c56-4367-9de6-d872076f93fe\",\"slotInventoryId\":\"da8c91ed-56cf-41fb-8465-5533de2ec8aa\",\"state\":\"HELD\",\"partySize\":2,\"allocationQuantity\":1,\"startsAt\":\"2026-10-06T12:00:00Z\",\"endsAt\":\"2026-10-06T12:30:00Z\",\"expiresAt\":\"2026-10-04T20:48:35.126197Z\",\"cancelAllowedUntil\":\"2026-10-06T11:40:00Z\",\"noShowEligibleAt\":\"2026-10-06T12:10:00Z\",\"appliedPolicyVersion\":1}}"
+    } ],
+    "isError" : false,
+    "structuredContent" : {
+      "outcome" : "succeeded",
+      "productStatus" : 200,
+      "data" : {
+        "id" : "61b554fd-255c-4893-976a-aeeb00484f0e",
+        "venueId" : "ee2a020d-4502-42fe-a60e-03d58bebc8ed",
+        "resourceId" : "a3806ad0-9c56-4367-9de6-d872076f93fe",
+        "slotInventoryId" : "da8c91ed-56cf-41fb-8465-5533de2ec8aa",
+        "state" : "HELD",
+        "partySize" : 2,
+        "allocationQuantity" : 1,
+        "startsAt" : "2026-10-06T12:00:00Z",
+        "endsAt" : "2026-10-06T12:30:00Z",
+        "expiresAt" : "2026-10-04T20:48:35.126197Z",
+        "cancelAllowedUntil" : "2026-10-06T11:40:00Z",
+        "noShowEligibleAt" : "2026-10-06T12:10:00Z",
+        "appliedPolicyVersion" : 1
+      }
+    },
+    "_meta" : {
+      "knownTarget" : "61b554fd-255c-4893-976a-aeeb00484f0e",
+      "productRequestId" : "a6374dc5-7e8a-4161-9a28-bae55ce6e2b1",
+      "requestId" : "986a7da3-47f5-49b4-930b-0ffb1f8f61b9"
+    }
+  },
+  "durableReservation" : "61b554fd-255c-4893-976a-aeeb00484f0e",
+  "unknown" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"outcome\":\"outcome_unknown\"}"
+    } ],
+    "isError" : true,
+    "structuredContent" : {
+      "outcome" : "outcome_unknown"
+    },
+    "_meta" : {
+      "knownTarget" : "61b554fd-255c-4893-976a-aeeb00484f0e",
+      "intentId" : "a13f0a3b-430c-4bdb-b200-4fb78be8a39d",
+      "requestId" : "33e8d41f-e955-4872-ba97-0dab4155a5d6",
+      "confirmationId" : "abfded04-292e-434a-8236-65b8374a55be",
+      "productRequestId" : "4b395053-50af-4b66-9b11-78e817c1f65a"
+    }
+  }
+}

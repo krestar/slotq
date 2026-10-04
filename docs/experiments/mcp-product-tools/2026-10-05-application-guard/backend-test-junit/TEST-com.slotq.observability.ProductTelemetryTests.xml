@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.observability.ProductTelemetryTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:03:37.132Z" hostname="KRESTAR" time="0.307">
+  <properties/>
+  <testcase name="brokenProviderCannotChangeRequestOutcomeAndThreadContextIsAlwaysRestored()" classname="com.slotq.observability.ProductTelemetryTests" time="0.306"/>
+  <testcase name="unknownOutcomeAndOriginFieldsNeverBecomeRawTraceAttributes()" classname="com.slotq.observability.ProductTelemetryTests" time="0.001"/>
+  <system-out><![CDATA[operation=product.request outcome=success request_id=1ac69d30-500a-4b2c-a65f-ee8f9b987050 trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=null fencing_token=0 
+operation=product.event.effect outcome=unknown request_id=null trace_id=552840e1d99e214e7ebc10de24289036 span_id=9f07b6c5a159d395 event_id=31e310e6-0120-4152-91b2-c079a9c8a9a6 fencing_token=1 
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,51 @@
+{
+  "exactReconciliation" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"outcome\":\"succeeded\",\"productStatus\":200,\"data\":{\"id\":\"ddc5ad3b-9209-44c0-b158-496b1b8e8552\",\"venueId\":\"8f70306c-198a-47ae-96c1-5fcba44773e2\",\"resourceId\":\"6d58e05e-3580-48bc-af26-2ab17e8161aa\",\"slotInventoryId\":\"8fc59c67-512a-4e4e-97ae-ac49c986a7fb\",\"state\":\"HELD\",\"partySize\":2,\"allocationQuantity\":1,\"startsAt\":\"2026-10-06T12:00:00Z\",\"endsAt\":\"2026-10-06T12:30:00Z\",\"expiresAt\":\"2026-10-04T19:48:24.374709Z\",\"cancelAllowedUntil\":\"2026-10-06T11:40:00Z\",\"noShowEligibleAt\":\"2026-10-06T12:10:00Z\",\"appliedPolicyVersion\":1}}"
+    } ],
+    "isError" : false,
+    "structuredContent" : {
+      "outcome" : "succeeded",
+      "productStatus" : 200,
+      "data" : {
+        "id" : "ddc5ad3b-9209-44c0-b158-496b1b8e8552",
+        "venueId" : "8f70306c-198a-47ae-96c1-5fcba44773e2",
+        "resourceId" : "6d58e05e-3580-48bc-af26-2ab17e8161aa",
+        "slotInventoryId" : "8fc59c67-512a-4e4e-97ae-ac49c986a7fb",
+        "state" : "HELD",
+        "partySize" : 2,
+        "allocationQuantity" : 1,
+        "startsAt" : "2026-10-06T12:00:00Z",
+        "endsAt" : "2026-10-06T12:30:00Z",
+        "expiresAt" : "2026-10-04T19:48:24.374709Z",
+        "cancelAllowedUntil" : "2026-10-06T11:40:00Z",
+        "noShowEligibleAt" : "2026-10-06T12:10:00Z",
+        "appliedPolicyVersion" : 1
+      }
+    },
+    "_meta" : {
+      "productRequestId" : "6df7f1e7-ed41-439b-9861-0407d92b1c38",
+      "knownTarget" : "ddc5ad3b-9209-44c0-b158-496b1b8e8552",
+      "requestId" : "aee65d24-ded4-40e5-a5ec-42fa1790dd6d"
+    }
+  },
+  "unknown" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"outcome\":\"outcome_unknown\"}"
+    } ],
+    "isError" : true,
+    "structuredContent" : {
+      "outcome" : "outcome_unknown"
+    },
+    "_meta" : {
+      "confirmationId" : "cfab990c-d65f-42de-9261-7e0a2ef8985f",
+      "requestId" : "0d11c198-bbaa-4bc3-a370-9b08dfea7319",
+      "intentId" : "8ae8b36b-f939-4b4d-90be-d1964645ada6",
+      "knownTarget" : "ddc5ad3b-9209-44c0-b158-496b1b8e8552",
+      "productRequestId" : "1948e822-8f14-4ee9-be55-fe2054002975"
+    }
+  },
+  "durableReservation" : "ddc5ad3b-9209-44c0-b158-496b1b8e8552"
+}

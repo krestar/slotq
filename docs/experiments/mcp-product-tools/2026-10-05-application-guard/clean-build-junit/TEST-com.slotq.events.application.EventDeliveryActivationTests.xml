@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.application.EventDeliveryActivationTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:14:22.748Z" hostname="KRESTAR" time="0.033">
+  <properties/>
+  <testcase name="readinessOfAnotherLogicalConsumerCannotTriggerTheScopedWorker()" classname="com.slotq.events.application.EventDeliveryActivationTests" time="0.002"/>
+  <testcase name="configuredTickWithoutDeploymentReadinessDoesNotRunTheWorker()" classname="com.slotq.events.application.EventDeliveryActivationTests" time="0.0"/>
+  <testcase name="disabledByDefaultAndInvalidEnabledIntervalFailsFast()" classname="com.slotq.events.application.EventDeliveryActivationTests" time="0.007"/>
+  <testcase name="periodicSchedulerRemainsGatedUntilActivationPublishesReadiness()" classname="com.slotq.events.application.EventDeliveryActivationTests" time="0.016"/>
+  <testcase name="explicitEventPropertyEnablesThinTriggerOfTheSameCoreCycle()" classname="com.slotq.events.application.EventDeliveryActivationTests" time="0.005"/>
+  <system-out><![CDATA[operation=product.event_delivery outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=null fencing_token=0 
+2026-10-05T06:14:22.759+09:00  WARN 35972 --- [    Test worker] s.c.a.AnnotationConfigApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'eventDeliveryScheduler': Failed to instantiate [com.slotq.events.application.EventDeliveryScheduler]: Constructor threw exception
+2026-10-05T06:14:22.763+09:00  INFO 35972 --- [    Test worker] o.s.s.config.TaskSchedulerRouter         : No TaskScheduler/ScheduledExecutorService bean found for scheduled processing
+operation=product.event_delivery outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=null fencing_token=0 
+2026-10-05T06:14:22.780+09:00  INFO 35972 --- [    Test worker] o.s.s.config.TaskSchedulerRouter         : No TaskScheduler/ScheduledExecutorService bean found for scheduled processing
+operation=product.event_delivery outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=null fencing_token=0 
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

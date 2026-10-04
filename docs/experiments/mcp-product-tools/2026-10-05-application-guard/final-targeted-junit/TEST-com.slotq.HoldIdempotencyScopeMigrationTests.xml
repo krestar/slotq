@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.HoldIdempotencyScopeMigrationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:40:20.192Z" hostname="KRESTAR" time="15.517">
+  <properties/>
+  <testcase name="migratesV7RowsAndRejectsCrossScopeReservationReferences()" classname="com.slotq.HoldIdempotencyScopeMigrationTests" time="3.809"/>
+  <system-out><![CDATA[05:40:20.270 [Test worker] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+05:40:20.276 [Test worker] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+05:40:20.288 [Test worker] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+05:40:20.527 [Test worker] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+05:40:20.932 [Test worker] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+05:40:20.933 [Test worker] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+05:40:20.954 [Test worker] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.7.2
+  API Version: 1.55
+  Operating System: Docker Desktop
+  Total Memory: 7544 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+05:40:21.077 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+05:40:21.401 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: 48804b37f73445653100dfc7bca57e5ab59da2a1bbf38b0b0f31c59b8a24f5f3
+05:40:21.786 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.7092012S
+05:40:21.792 [Test worker] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+05:40:21.792 [Test worker] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+05:40:21.793 [Test worker] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+05:40:21.793 [Test worker] INFO tc.mysql:8.4 -- Creating container for image: mysql:8.4
+05:40:21.886 [Test worker] INFO tc.mysql:8.4 -- Container mysql:8.4 is starting: d45d7cb9229762a6fb6b586965b3b898a91499f73fababc5da6c9741f6bda411
+05:40:22.231 [Test worker] INFO tc.mysql:8.4 -- Waiting for database connection to become available at jdbc:mysql://localhost:14951/slotq_hold_idempotency_scope_migration using query 'SELECT 1'
+05:40:31.884 [Test worker] INFO tc.mysql:8.4 -- Container mysql:8.4 started in PT10.09035S
+05:40:31.884 [Test worker] INFO tc.mysql:8.4 -- Container is started (JDBC URL: jdbc:mysql://localhost:14951/slotq_hold_idempotency_scope_migration)
+05:40:32.297 [Test worker] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:mysql://localhost:14951/slotq_hold_idempotency_scope_migration (MySQL 8.4)
+05:40:32.423 [Test worker] INFO org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory -- Schema history table `slotq_hold_idempotency_scope_migration`.`flyway_schema_history` does not exist yet
+05:40:32.429 [Test worker] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 22 migrations (execution time 00:00.037s)
+05:40:32.461 [Test worker] INFO org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory -- Creating Schema History table `slotq_hold_idempotency_scope_migration`.`flyway_schema_history` ...
+05:40:32.552 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema `slotq_hold_idempotency_scope_migration`: << Empty Schema >>
+05:40:32.564 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "1 - configure database"
+05:40:32.620 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "2 - create tenant venue policy"
+05:40:32.758 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "3 - create auth tenant boundaries"
+05:40:32.875 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "4 - create resource slot inventory"
+05:40:32.984 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "5 - create reservation allocation"
+05:40:33.122 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "6 - add venue name"
+05:40:33.316 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "7 - create hold idempotency"
+05:40:33.391 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Successfully applied 7 migrations to schema `slotq_hold_idempotency_scope_migration`, now at version v7 (execution time 00:00.593s)
+05:40:33.487 [Test worker] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:mysql://localhost:14951/slotq_hold_idempotency_scope_migration (MySQL 8.4)
+05:40:33.536 [Test worker] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 22 migrations (execution time 00:00.022s)
+05:40:33.552 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema `slotq_hold_idempotency_scope_migration`: 7
+05:40:33.559 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "8 - scope hold idempotency reservation reference"
+05:40:33.681 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "9 - create transactional events"
+05:40:33.915 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "10 - create waitlist registration"
+05:40:34.077 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "11 - create waitlist offers"
+05:40:34.284 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "12 - create waitlist promotion effect"
+05:40:34.421 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "13 - create waitlist promotion requests"
+05:40:34.476 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "14 - index maintenance backlogs"
+05:40:34.591 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "15 - add event observation origin"
+05:40:34.678 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "16 - create kafka publication and transport assignment"
+05:40:34.819 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "17 - create kafka intake"
+05:40:34.935 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "18 - create event observation projection"
+05:40:34.994 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "19 - create event transport cutover"
+05:40:35.051 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "20 - create human operator recovery"
+05:40:35.235 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "21 - create actor access credentials"
+05:40:35.412 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema `slotq_hold_idempotency_scope_migration` to version "22 - create mcp hold approval"
+05:40:35.544 [Test worker] INFO org.flywaydb.core.internal.command.DbMigrate -- Successfully applied 15 migrations to schema `slotq_hold_idempotency_scope_migration`, now at version v22 (execution time 00:01.554s)
+05:40:35.567 [Test worker] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:mysql://localhost:14951/slotq_hold_idempotency_scope_migration (MySQL 8.4)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

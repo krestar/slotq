@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.WaitlistMaintenanceIntegrationTests" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:10:47.416Z" hostname="KRESTAR" time="26.079">
+  <properties/>
+  <testcase name="disabledNotReadyAndOuterTransactionNeverStartMaintenance()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.291"/>
+  <testcase name="scanNowDoesNotBecomeTargetCommandNowAndNextTargetCapturesAgain()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.349"/>
+  <testcase name="[1] promotional = false" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.247"/>
+  <testcase name="[2] promotional = true" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.294"/>
+  <testcase name="terminalReconcileAfterRoutingSnapshotUsesFreshTargetTransaction()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.219"/>
+  <testcase name="dueOfferReleaseThenM3PromotesNextEntry()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.408"/>
+  <testcase name="maintenanceReconcileKeepsTerminalBackingCorruptionGuard()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.28"/>
+  <testcase name="[1] confirm = true" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.226"/>
+  <testcase name="[2] confirm = false" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.28"/>
+  <testcase name="currentWaitingLockDoesNotOverwriteCancelCommittedAfterEarlyRrSnapshot()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.161"/>
+  <testcase name="notDueOfferPrefixDoesNotStarveLaterTargets()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="1.159"/>
+  <testcase name="scanFailureIsReportedAndDoesNotBlockOtherBacklogKinds()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.175"/>
+  <testcase name="waitingExpiryOuterRollbackAndStaleOfferedCandidateCannotExpireAnOffer()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.272"/>
+  <testcase name="twoMaintenanceComponentsDrainSameDurableBacklog()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="1.156"/>
+  <testcase name="appendFailureRollsBackPairAndLaterTargetsAdvanceBeyondFailedPrefix()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.964"/>
+  <testcase name="ordinaryExpiryAndOfferReconcileRaceReleaseExactlyOnceWithoutSlotLock()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.224"/>
+  <testcase name="maintenanceReconcileAppendFailureRollsBackEntireOfferBackingPair()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.235"/>
+  <testcase name="maintenanceDiscoversReleaseFreeOpportunityButOnlyM3CreatesHold()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.297"/>
+  <testcase name="backlogLargerThanBatchConvergesAfterComponentRestartWithoutGetSideEffects()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="1.732"/>
+  <testcase name="waitingExpiryLocksOnlyEntryAndRevalidatesCurrentStateAfterSnapshot()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.189"/>
+  <testcase name="boundedTargetLockTimeoutDoesNotRetryOrStarveFollowingTarget()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="2.383"/>
+  <testcase name="terminalReservationAfterScanIsReportedWithoutBlockingLaterExpiry()" classname="com.slotq.WaitlistMaintenanceIntegrationTests" time="0.328"/>
+  <system-out><![CDATA[2026-10-05T06:10:47.418+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T06:10:47.496+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: bff6689c3b70be6a82f53a0d99ad608a8c56125b87585c519bb06fb362fc6fc1
+2026-10-05T06:10:47.761+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:4410/slotq_maintenance using query 'SELECT 1'
+2026-10-05T06:10:56.932+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.5143119S
+2026-10-05T06:10:56.933+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:4410/slotq_maintenance)
+2026-10-05T06:10:56.938+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.WaitlistMaintenanceIntegrationTests
+2026-10-05T06:10:56.943+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.WaitlistMaintenanceIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T06:10:56.962+09:00  INFO 35972 --- [    Test worker] c.s.WaitlistMaintenanceIntegrationTests  : Starting WaitlistMaintenanceIntegrationTests using Java 25.0.4.1 with PID 35972 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T06:10:56.962+09:00  INFO 35972 --- [    Test worker] c.s.WaitlistMaintenanceIntegrationTests  : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T06:10:57.582+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T06:10:57.641+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 57 ms. Found 8 JPA repository interfaces.
+2026-10-05T06:10:57.762+09:00  INFO 35972 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:4410/slotq_maintenance (MySQL 8.4)
+2026-10-05T06:10:57.800+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_maintenance`.`flyway_schema_history` does not exist yet
+2026-10-05T06:10:57.802+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.015s)
+2026-10-05T06:10:57.827+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_maintenance`.`flyway_schema_history` ...
+2026-10-05T06:10:57.884+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_maintenance`: << Empty Schema >>
+2026-10-05T06:10:57.889+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "1 - configure database"
+2026-10-05T06:10:57.922+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "2 - create tenant venue policy"
+2026-10-05T06:10:58.041+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "3 - create auth tenant boundaries"
+2026-10-05T06:10:58.145+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "4 - create resource slot inventory"
+2026-10-05T06:10:58.234+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "5 - create reservation allocation"
+2026-10-05T06:10:58.347+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "6 - add venue name"
+2026-10-05T06:10:58.530+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "7 - create hold idempotency"
+2026-10-05T06:10:58.597+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T06:10:58.701+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "9 - create transactional events"
+2026-10-05T06:10:58.896+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "10 - create waitlist registration"
+2026-10-05T06:10:59.049+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "11 - create waitlist offers"
+2026-10-05T06:10:59.246+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "12 - create waitlist promotion effect"
+2026-10-05T06:10:59.377+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "13 - create waitlist promotion requests"
+2026-10-05T06:10:59.429+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "14 - index maintenance backlogs"
+2026-10-05T06:10:59.529+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "15 - add event observation origin"
+2026-10-05T06:10:59.606+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "16 - create kafka publication and transport assignment"
+2026-10-05T06:10:59.734+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "17 - create kafka intake"
+2026-10-05T06:10:59.839+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "18 - create event observation projection"
+2026-10-05T06:10:59.893+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "19 - create event transport cutover"
+2026-10-05T06:10:59.942+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "20 - create human operator recovery"
+2026-10-05T06:11:00.124+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "21 - create actor access credentials"
+2026-10-05T06:11:00.288+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_maintenance` to version "22 - create mcp hold approval"
+2026-10-05T06:11:00.415+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq_maintenance`, now at version v22 (execution time 00:02.043s)
+2026-10-05T06:11:00.443+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T06:11:00.477+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:4410/slotq_maintenance]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq_maintenance/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T06:11:00.553+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T06:11:01.590+09:00  INFO 35972 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T06:11:01.599+09:00  INFO 35972 --- [    Test worker] c.s.WaitlistMaintenanceIntegrationTests  : Started WaitlistMaintenanceIntegrationTests in 4.655 seconds (process running for 304.401)
+operation=product.maintenance outcome=success request_id=null trace_id=dd7c7276aefd463572ceeee5fa4b575b span_id=8c13bbac44c20a61 event_id=null fencing_token=0 
+operation=product.maintenance outcome=unknown request_id=null trace_id=b72d34440f72acd6598d8a477205911d span_id=9d072f9c89eea753 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=5a014d335c04aca05f0b6373efe3bb22 span_id=ceb67fd3cbdb941b event_id=null fencing_token=0 
+operation=product.maintenance outcome=unknown request_id=null trace_id=8aef488a3e29f6c8c4c449992b746fd6 span_id=46237e52f32c0011 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=18b954f79471d0848e9500dbb2b9a9f7 span_id=d679041f67c3cb09 event_id=b5dff97a-148d-4c91-b192-c6ddec5ff9f4 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=18b954f79471d0848e9500dbb2b9a9f7 span_id=4649c2214df73634 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=1027a3f89bcc54000c80a16694218f4e span_id=7d4adbbec0ec1d72 event_id=6710ae0d-20c9-48c6-94f4-a42b6a725247 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=1027a3f89bcc54000c80a16694218f4e span_id=c26d36b38733a014 event_id=2216bead-baa7-4830-a1df-333f27a9a1b2 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=1027a3f89bcc54000c80a16694218f4e span_id=1f53603798b66016 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=ca554740ab84e35b77f207ef3a447946 span_id=0d85b7bc674289e5 event_id=5c6b37d2-9b28-4188-a3cf-44a0c345f255 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=ca554740ab84e35b77f207ef3a447946 span_id=e4902ab45242f9e7 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=d8a6cce02a1ba0cddd48de6efb0d1c2f span_id=9740e3a616fd2977 event_id=5004a37b-0176-4dc5-8669-d3b9c4a7e4a2 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=d8a6cce02a1ba0cddd48de6efb0d1c2f span_id=185f375cc8eec5ae event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=b6072fbc4aa19f9009141720b0a2ab23 span_id=a8a9ba0a3d873d1a event_id=37f772ef-bb0e-4e81-8dc0-a52c75ebd56d fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=05c92ca059a407c61d28fe773489ad9a span_id=83342ec936a8a234 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=b146a445e8e9dd4703007522136822f3 span_id=1ed02f7e90a5007a event_id=a0aabbc4-0ac9-49eb-a6d1-b4072aa85abc fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=b146a445e8e9dd4703007522136822f3 span_id=6d68e68f2caaae2d event_id=fcd6363e-2f2e-43d5-8870-45801106a5cc fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=b146a445e8e9dd4703007522136822f3 span_id=cb8a5ae4803b6370 event_id=null fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=a0aabbc4-0ac9-49eb-a6d1-b4072aa85abc fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=1dc3787d4cb378931b279bd1c1f9ab63 span_id=f10e4e0d4b54584b event_id=131b375f-e662-4c32-be68-cae671d59afb fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=1dc3787d4cb378931b279bd1c1f9ab63 span_id=ab3bf44c324be9a3 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=f24c51c2860feb5a3e2e5fac682dfd26 span_id=893042dbf8bc8de3 event_id=917c2ccd-3890-436a-b715-a264311f0bdc fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=f24c51c2860feb5a3e2e5fac682dfd26 span_id=fa45d6cce32b28e2 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=19edb1f8908b33031648d1e5747ef913 span_id=9bdae7cd34cac84d event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=47d2643691209f85afe7b37f20f6b236 span_id=e56509a66b25c62b event_id=969a4f98-c82c-4cd8-9373-f750eae5cfe0 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=2c88ad68d691f6bc3c86cb81c69bf9e8 span_id=9b9222739d3f73bc event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=14978a79a53518611e11fc6d3bead7fd span_id=cd22a6cfeb2c1303 event_id=53d13651-e6fc-47ae-ab4b-f5855b0a64fe fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=460b46c6fec4499b0bdad26eba45a6b4 span_id=ce3c557c10922616 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=f105ad42bd8b7f1b596a4d494289650a span_id=ec28e03d591b5d4e event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=c8199a02a52b256b68c9f69e3c07aa21 span_id=4ed10a6e1fa70e32 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e16a1d07285baa6099c23848a5eb918f span_id=7f7c6166a18eb099 event_id=8e88b393-9dd2-49cf-a9f9-f10dd81b55d0 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e16a1d07285baa6099c23848a5eb918f span_id=b1be47befb00ef3f event_id=1f9a7c4a-44e6-46d5-a6dc-707ec3f3818f fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e16a1d07285baa6099c23848a5eb918f span_id=6483c0a5d42f4bbe event_id=f15ac554-5668-4e38-908d-f9e21c6015fb fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=e16a1d07285baa6099c23848a5eb918f span_id=d24541c62a1541e0 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=cf8f91bcf27411cb04a8f5cda723a17b span_id=7e9be25d1a7fa46e event_id=95b0cb4f-8081-4342-b3d4-e606ca472739 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=cf8f91bcf27411cb04a8f5cda723a17b span_id=8b472b1acb05bf64 event_id=9b989d48-81ea-4637-b574-627eacd5bbd1 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=cf8f91bcf27411cb04a8f5cda723a17b span_id=57e38ebc878915f1 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=dc09352541a3f55bb4137f36179d34ed span_id=748ef1377e7651ad event_id=null fencing_token=0 
+operation=product.maintenance outcome=server_error request_id=null trace_id=076a8d5a5e913f1fc04852c7cfde7cb1 span_id=7fd2311dd6ca8693 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=7fd71765b7e00243b7bdd034f098daa8 span_id=f400de9d6c566b93 event_id=ffd18a55-c3da-440a-aa75-cd07c91724ae fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=7fd71765b7e00243b7bdd034f098daa8 span_id=035698459183b671 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=870a0ea3123d284c6599b4b1cd7fc83f span_id=918765b133328947 event_id=4eeaec66-04ba-4303-8eaf-9469166d3eb6 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=870a0ea3123d284c6599b4b1cd7fc83f span_id=4b1c932981a2ef70 event_id=b44276d6-abaa-4a0b-a18f-83c3622c754d fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=870a0ea3123d284c6599b4b1cd7fc83f span_id=38a9cf81964e830f event_id=9b755375-1305-4c6b-8677-05a0a63c117a fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=870a0ea3123d284c6599b4b1cd7fc83f span_id=daa6eb42fa9def6b event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=d06cd932e6e982207fdb1c147dbc77d5 span_id=338e0c9ed6c4b839 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=786ad55d437c12fdaddeb23cea708ab3 span_id=6946fc20d60d5023 event_id=46444f6f-a3d9-4e89-a6c7-8818a40d62af fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=786ad55d437c12fdaddeb23cea708ab3 span_id=c66274134e3632e7 event_id=0740be88-fa43-42c9-a751-e26083b7a097 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=786ad55d437c12fdaddeb23cea708ab3 span_id=56d9d47379e30a18 event_id=85550855-0305-4d65-841e-44544eb03ac6 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=786ad55d437c12fdaddeb23cea708ab3 span_id=d83f811fac2d2fa3 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=d64e2618e1d076105823dfdc9a2ca131 span_id=98f2834f70339624 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=439866faff84286540cbc3373843cec4 span_id=5c2f64c0fb70a957 event_id=f2493cc2-7bf0-4f4a-bdd6-93571fcdac65 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=439866faff84286540cbc3373843cec4 span_id=551c1b923a382565 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=439855df2117018a6402cb78abd33e32 span_id=7171b559c408d4e8 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=32975ae150dcfd9be7546430ecc59c1c span_id=351893957af09e62 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=abb96ed6a5ef514710544663823c2792 span_id=38df2a3ec030d8c8 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=0f35b618cdc405871797a32d8befec67 span_id=b005e92423518b2c event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=92752b758a8e894f5a3775580485b473 span_id=d7f5b58976b13cb0 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=db06b0a3e266f8ba536b3eda9d89af0f span_id=40678fadd03903c1 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=063414801432f25e47ed85a149f0ccdf span_id=2fd027f3c78d3bba event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=ab80c03ee5a3bbd8a6366ed944c67e23 span_id=3157056956963abe event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=0d5e66889d7f61e067f0b27e46fed7b3 span_id=6535363f86532daf event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=4f5cc236817f662dc5dc184998e137fd span_id=4b78263c80e82ee6 event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=ce1df1a9f3a91fb6d55d0483befdb48e span_id=cf70fdca8397c547 event_id=null fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=88d21f32ec44b282dfc2921fb2efebe1 span_id=515a7ae8ad4bf352 event_id=d3598d1b-601a-4fdb-922b-020b63034898 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=88d21f32ec44b282dfc2921fb2efebe1 span_id=c6098158c4aa371f event_id=bcd9d6d3-1690-4a76-9d30-3af01b695dcf fencing_token=0 
+operation=product.maintenance outcome=server_error request_id=null trace_id=88d21f32ec44b282dfc2921fb2efebe1 span_id=3c29dc5e6eff4faa event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=742a5fecb0555d418abfc0037e8a4798 span_id=35f35e61102db010 event_id=601d74e3-ce8c-4961-af04-27b53f9e54b0 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=742a5fecb0555d418abfc0037e8a4798 span_id=36c4a95b18bb971f event_id=3bf77ae7-db62-4291-8f54-ebde663f524c fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=742a5fecb0555d418abfc0037e8a4798 span_id=4b67678022115949 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=5b97dc18f8917f5cd5dab25dda7c8acb span_id=da5a2a8412510a37 event_id=9a5587c2-909a-4897-b641-18b5fb634b02 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=5b97dc18f8917f5cd5dab25dda7c8acb span_id=2099d95be71468b5 event_id=5465905f-4720-4dca-9218-867309c73940 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=5b97dc18f8917f5cd5dab25dda7c8acb span_id=5fc3b3582ee43b8e event_id=null fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=07e2daf4bac95c0031e2bc77a30f5761 span_id=5f8a4d719a27fe8e event_id=null fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=ef824e5e79382c3545ae858e5e5a321e span_id=b1a2772f2c022fca event_id=808940b3-62a9-4a38-8eaf-5c90b53915ba fencing_token=0 
+operation=product.maintenance outcome=server_error request_id=null trace_id=ef824e5e79382c3545ae858e5e5a321e span_id=7bb02bf948b46acc event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=d18e632beccd0905b4b2c183565d237a span_id=71073030838ec919 event_id=7e0b2bdd-aa81-4509-8bca-6e9a9c7f62db fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=d18e632beccd0905b4b2c183565d237a span_id=f03b05ec14899d99 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=6f736348d04b8fd87552282404096a14 span_id=7c03a58cf6a815e1 event_id=3e348917-5fff-4bd7-a8da-d1321bd8be4e fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=72fe3fb6d591ffed03c200d976430ee1 span_id=1034c5efa8333f0e event_id=cbb15afa-fa62-4df7-9cb9-166f21c11e96 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=5873cbb5362b8041912bb04c2fb82c40 span_id=1585808c8184d107 event_id=39861b47-aabc-4aea-b4c4-4274c5ab2106 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=d2b57ee0214f965ccee7b1ed21231bad span_id=10667dd5784a51a8 event_id=b6d1eb45-1955-4e11-8a18-26043d16ed52 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=d2b57ee0214f965ccee7b1ed21231bad span_id=2675050bf5946e69 event_id=null fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=b6d1eb45-1955-4e11-8a18-26043d16ed52 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=3d1186c0d922749f3effb090c7acfd86 span_id=d0ae7b6efac62782 event_id=70f1011d-dbcb-4399-906c-c47fbb7fe9e0 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=3d1186c0d922749f3effb090c7acfd86 span_id=4adae8fb70b92abb event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=66d1f8621efded7d9fd2d5194baeb8de span_id=ea452feb543f13e5 event_id=fe51033e-f8c6-4c0b-acd0-ee54a94bc01c fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=66d1f8621efded7d9fd2d5194baeb8de span_id=b8f522497c4fbc76 event_id=a5e463ff-7caa-46ff-9c52-b69c0ef16d1c fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=66d1f8621efded7d9fd2d5194baeb8de span_id=5beef21bc5a3c0dc event_id=a7e21b68-7c0d-43d4-b141-77f22d8fd3ab fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=66d1f8621efded7d9fd2d5194baeb8de span_id=d74c460c04be8927 event_id=63ab1017-378e-425b-b3fb-722aebb41093 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=66d1f8621efded7d9fd2d5194baeb8de span_id=2c86f97c12a7487e event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=dc0be4b046847803ca98ebe395e37731 span_id=0377d7c361328a8b event_id=62d4cc5a-5c3e-4156-ae0e-347a6e4e77a9 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=dc0be4b046847803ca98ebe395e37731 span_id=db915d005256868c event_id=758df6fb-a0fe-42cf-b5bf-039116e57429 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=dc0be4b046847803ca98ebe395e37731 span_id=0d32caeb27c91367 event_id=01b1d06f-a820-410e-ba73-a04d01a734d2 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=dc0be4b046847803ca98ebe395e37731 span_id=a78d091604c7ec31 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=f8140c4d3d0bacc4c5c598681f132ae2 span_id=60e302368992d1d0 event_id=2941b6ad-e79c-49d2-8a42-5aba22817c10 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=f8140c4d3d0bacc4c5c598681f132ae2 span_id=b3ece3df12feec78 event_id=a84a1062-f3c0-4ff7-aff4-1f8af69b7c66 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=f8140c4d3d0bacc4c5c598681f132ae2 span_id=6d640eac6ab847bf event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=c2cce43d22fb6142f4ec5ec59d13c041 span_id=cfc0e9d40cf5a379 event_id=e4d05196-ecfc-4f27-9225-e3bc78d13292 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=c2cce43d22fb6142f4ec5ec59d13c041 span_id=f41029620ea3d307 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e45fbb60c56c71b5111959872f2a3782 span_id=23d41390b15e7b3e event_id=d707bae6-abab-45f5-9b35-9ccf0a392bd9 fencing_token=0 
+operation=product.maintenance outcome=server_error request_id=null trace_id=e45fbb60c56c71b5111959872f2a3782 span_id=1803c5a597e8012f event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=4d4e3b4b8ef25242bef1b2d0305ad4f0 span_id=67425420e8924af4 event_id=75029be5-0241-49eb-889d-343440b71189 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=4d4e3b4b8ef25242bef1b2d0305ad4f0 span_id=ce18017bec6b69f6 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=3a68740cd39eebec5b9edea13fb43400 span_id=aeda4fc55d618865 event_id=96ba7585-72b2-41b1-85d9-c768f2a3fb38 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=55064d39721b346e5e8ded426097cb0c span_id=3c65528549a71bd8 event_id=04ba8ff5-9617-47cb-b4f1-c47ed1f8f7b5 fencing_token=0 
+operation=product.maintenance outcome=server_error request_id=null trace_id=55064d39721b346e5e8ded426097cb0c span_id=109955413aaba1e6 event_id=null fencing_token=0 
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

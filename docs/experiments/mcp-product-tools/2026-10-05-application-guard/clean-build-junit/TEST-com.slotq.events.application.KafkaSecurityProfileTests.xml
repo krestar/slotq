@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.application.KafkaSecurityProfileTests" tests="1" skipped="1" failures="0" errors="0" timestamp="2026-10-04T21:14:50.492Z" hostname="KRESTAR" time="0.0">
+  <properties/>
+  <testcase name="tlsAuthenticationAndRoleAclAreEnforced()" classname="com.slotq.events.application.KafkaSecurityProfileTests" time="0.0">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

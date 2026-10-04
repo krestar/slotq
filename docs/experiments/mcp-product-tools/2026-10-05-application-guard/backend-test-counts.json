@@ -1,0 +1,890 @@
+{
+  "suiteCount": 96,
+  "tests": 760,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 9,
+  "suites": [
+    {
+      "name": "com.slotq.architecture.ContextDependencyArchitectureTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.018,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.architecture.EventFoundationArchitectureTests",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.388,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.architecture.McpArchitectureTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.134,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.architecture.RepositoryPortArchitectureTests",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.018,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.architecture.WaitlistArchitectureTests",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.074,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.auth.dev.DevAuthFixtureDataInitializerTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.35,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.auth.dev.DevCredentialStoreTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.001,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.AuthWebIntegrationTests",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 25.401,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.booking.application.HoldIdempotencyCleanupRoleTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.358,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.booking.application.HoldIdempotencyKeyTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.002,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.booking.application.ReservationApplicationBoundaryTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.002,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.booking.application.ReservationTransitionRecorderTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.276,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.booking.domain.ReservationReconstitutionTests",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.03,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.booking.domain.ReservationTests",
+      "tests": 71,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.061,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.BookingCapacityLockEvidenceTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2,
+      "time": 0.001,
+      "skippedCases": [
+        "narrowingLockToSlotOrDiscoveringIdsWithSnapshotMissesCommittedCapacity()",
+        "differentSlotsRecordHeldGapsAndActualOrmInsertCycle(Scenario)"
+      ]
+    },
+    {
+      "name": "com.slotq.BookingCapacityReleaseIntegrationTests",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 24.778,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.config.SecurityPropertyConfigurationTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.008,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.DeliveryFailureTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.006,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.DeliveryPolicyTests",
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.021,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.EventDeliveryActivationTests",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.033,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.EventHandlersTests",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.02,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.KafkaRelayFailureClassificationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.411,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.KafkaRelayFaultEvidenceIntegrityTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": 0.0,
+      "skippedCases": [
+        "recalculatesRollbackAckAmbiguityFencingOutageAndRetentionGap()"
+      ]
+    },
+    {
+      "name": "com.slotq.events.application.KafkaRelayIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 25.609,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.KafkaRuntimeGuardTests",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.011,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.application.KafkaSecurityProfileTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": 0.0,
+      "skippedCases": [
+        "tlsAuthenticationAndRoleAclAreEnforced()"
+      ]
+    },
+    {
+      "name": "com.slotq.events.EventAppendIntegrationTests",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 16.443,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.EventDeliveryBoundaryIntegrationTests",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 21.89,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.EventDeliveryIntegrationTests",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 18.223,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.EventObservationIntegrationTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 15.086,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.EventTransportCutoverIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 13.718,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": 0.0,
+      "skippedCases": [
+        "oldDbOwnerCannotConsumeKafkaOrLaterRollbackEpoch()"
+      ]
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": 0.0,
+      "skippedCases": [
+        "recalculatesProcessFaultOraclesFromRawSnapshots()"
+      ]
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaFaultProcessIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": 0.0,
+      "skippedCases": [
+        "realGroupsScaleRebalanceLeaderRestartAndOutageRecover()"
+      ]
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaIntakeConcurrencyIntegrationTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.051,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": 0.0,
+      "skippedCases": [
+        "brokerOffsetNeverOutrunsDurableIntakeAndPendingTargetRunsWithoutRedelivery()"
+      ]
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 180.681,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaIntakeObservabilityTests",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.297,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaIntakeRuntimeTests",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.161,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.events.persistence.KafkaLagObservationIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 3.871,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.concurrency.ConcurrencyBaselineRawEvidenceTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.021,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.concurrency.ConcurrencyBaselineSmokeTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.322,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.concurrency.ConcurrencyBaselineSupportTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.003,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.concurrency.OptimisticConcurrencyExperimentTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.098,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.events.EventBoundaryTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 9.762,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.events.EventProcessRecoveryEvidenceTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.006,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.events.EventRawEvidenceTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.007,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.waitlist.M5CanonicalEvidenceTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.048,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.waitlist.M5DrillRoleTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.002,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.307,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.waitlist.M5TransportEvidenceTests",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.006,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.waitlist.WaitlistBaselineEvidenceTests",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.118,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.waitlist.WaitlistBaselineSmokeTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 19.96,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.experiments.waitlist.WaitlistProcessRecoveryEvidenceTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.075,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.HoldIdempotencyScopeMigrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 12.506,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.integration.operations.OperationsObservationIntegrationTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.049,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.integration.operations.recovery.HumanRecoveryIntegrationTests",
+      "tests": 53,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 26.375,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.integration.waitlist.WaitlistActivationIntegrationTests",
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 17.132,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.integration.waitlist.WaitlistMaintenanceSchedulerTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.198,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.KafkaBookingPublicationIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 20.273,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.KafkaWaitlistVerticalSliceIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 24.538,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.ManagementApiIntegrationTests",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 15.261,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.McpAccountingTests",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.035,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.McpActivationTests",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.291,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.McpFoundationTests",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.897,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.McpHttpIntegrationTests",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 22.642,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.ProductAdmissionGateDiagnosticTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 77.039,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.ProductDatabaseBoundsIntegrationTests",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 32.429,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.ProductToolsIntegrationTests",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 34.226,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.mcp.ProductWriteActivationTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.166,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.DatabaseObservationIntegrationTests",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 16.481,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.KafkaQuarantineObservationIntegrationTests",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 22.275,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.ObservationMeterFilterTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.003,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.ProductTelemetryTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.307,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.TraceQueueWarningFilterTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.004,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.TracingExporterIsolationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 20.273,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.web.MetricOnlyRuntimeFilterTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.001,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.observability.web.RequestCorrelationFilterTests",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.025,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.ProductionAuthIntegrationTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.034,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.ProductObservabilityIntegrationTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.403,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.PublicAvailabilityApiIntegrationTests",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 15.124,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.ReservationConfirmExpiryIntegrationTests",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 15.716,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.ReservationHoldIntegrationTests",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 15.504,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.ReservationTransitionIntegrationTests",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 18.773,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.ResourceSlotInventoryIntegrationTests",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.245,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.SlotqApplicationTests",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.367,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.VenueNameMigrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 12.55,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.waitlist.domain.WaitlistEntryTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.001,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.waitlist.domain.WaitlistOfferTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.001,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.WaitlistDisabledActivationIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.209,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.WaitlistMaintenanceIntegrationTests",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 25.951,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.WaitlistProductionActivationIntegrationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 14.155,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.WaitlistPromotionDeliveryIntegrationTests",
+      "tests": 63,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time": 33.231,
+      "skippedCases": [
+        "diagnosticBaselineCapacityGapIsEngineTransient()"
+      ]
+    },
+    {
+      "name": "com.slotq.WaitlistPromotionRequestIntegrationTests",
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 28.33,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.WaitlistRegistrationIntegrationTests",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 19.939,
+      "skippedCases": []
+    },
+    {
+      "name": "com.slotq.web.ProductApiErrorContractTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.002,
+      "skippedCases": []
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.mcp.McpFoundationTests" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:41:00.960Z" hostname="KRESTAR" time="0.938">
+  <properties/>
+  <testcase name="auditQueueFullAndUnavailableSinkNeverChangeSuccessAndExceptionsRemainRedacted()" classname="com.slotq.mcp.McpFoundationTests" time="0.368"/>
+  <testcase name="timedOutContinuingWorkKeepsPermitUntilActualExitAndNeverQueuesOrReplays()" classname="com.slotq.mcp.McpFoundationTests" time="0.297"/>
+  <testcase name="oneExplicitToolCanAuthorizeBothProfilesWithoutPermissionOrAllowlistSubstitution()" classname="com.slotq.mcp.McpFoundationTests" time="0.114"/>
+  <testcase name="listAndDirectCallIndependentlyAuthorizeAndStrictlyValidateWithoutLeakingInputs()" classname="com.slotq.mcp.McpFoundationTests" time="0.135"/>
+  <testcase name="concurrentProfilesCarryImmutableContextAcrossExecutorChanges()" classname="com.slotq.mcp.McpFoundationTests" time="0.019"/>
+  <testcase name="localQuotaCountsDenialsRetriesAndCannotResetIndebtedBucketsOrBypassPrincipalViaDelegation()" classname="com.slotq.mcp.McpFoundationTests" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

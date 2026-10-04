@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" tests="5" skipped="0" failures="3" errors="0" timestamp="2026-10-04T18:49:11.107Z" hostname="KRESTAR" time="47.633">
+  <properties/>
+  <testcase name="actualSlotLockWaitTerminatesOnServerAndRollsBackBeforeLockOwnerRelease()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="3.057">
+    <failure message="org.springframework.jdbc.BadSqlGrammarException: StatementCallback; bad SQL grammar [SELECT COUNT(*) FROM performance_schema.data_lock_waits]" type="org.springframework.jdbc.BadSqlGrammarException">org.springframework.jdbc.BadSqlGrammarException: StatementCallback; bad SQL grammar [SELECT COUNT(*) FROM performance_schema.data_lock_waits]
+	at org.springframework.jdbc.support.SQLExceptionSubclassTranslator.doTranslate(SQLExceptionSubclassTranslator.java:112)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)
+	at org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1549)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:427)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:491)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:501)
+	at org.springframework.jdbc.core.JdbcTemplate.queryForObject(JdbcTemplate.java:533)
+	at org.springframework.jdbc.core.JdbcTemplate.queryForObject(JdbcTemplate.java:539)
+	at com.slotq.mcp.ProductDatabaseBoundsIntegrationTests.lambda$actualSlotLockWaitTerminatesOnServerAndRollsBackBeforeLockOwnerRelease$0(ProductDatabaseBoundsIntegrationTests.java:99)
+Caused by: java.sql.SQLSyntaxErrorException: SELECT command denied to user 'test'@'172.17.0.1' for table 'data_lock_waits'
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:112)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:114)
+	at com.mysql.cj.jdbc.StatementImpl.executeQuery(StatementImpl.java:1318)
+	at com.zaxxer.hikari.pool.ProxyStatement.executeQuery(ProxyStatement.java:111)
+	at com.zaxxer.hikari.pool.HikariProxyStatement.executeQuery(HikariProxyStatement.java)
+	at org.springframework.jdbc.core.JdbcTemplate$1QueryStatementCallback.doInStatement(JdbcTemplate.java:478)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:412)
+	... 5 more
+</failure>
+  </testcase>
+  <testcase name="realDatabasePauseReturnsUnavailableThenRecoveryHasNoUnobservedEffect()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="4.434"/>
+  <testcase name="poolExhaustionRejectsAtAuthorityAcquisitionThenRecoversWithoutBusinessEffect()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="2.215"/>
+  <testcase name="serverIdleTransactionTerminationRollsBackAllThreeRowsWhileJavaWorkIsStillAlive()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="0.261">
+    <failure message="org.springframework.jdbc.BadSqlGrammarException: PreparedStatementCallback; bad SQL grammar [SELECT COUNT(*) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id=?]" type="org.springframework.jdbc.BadSqlGrammarException">org.springframework.jdbc.BadSqlGrammarException: PreparedStatementCallback; bad SQL grammar [SELECT COUNT(*) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id=?]
+	at org.springframework.jdbc.support.SQLExceptionSubclassTranslator.doTranslate(SQLExceptionSubclassTranslator.java:112)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)
+	at org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1549)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:689)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:732)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:757)
+	at org.springframework.jdbc.core.JdbcTemplate.queryForObject(JdbcTemplate.java:893)
+	at org.springframework.jdbc.core.JdbcTemplate.queryForObject(JdbcTemplate.java:912)
+	at com.slotq.mcp.ProductDatabaseBoundsIntegrationTests.lambda$serverIdleTransactionTerminationRollsBackAllThreeRowsWhileJavaWorkIsStillAlive$1(ProductDatabaseBoundsIntegrationTests.java:133)
+Caused by: java.sql.SQLSyntaxErrorException: Access denied; you need (at least one of) the PROCESS privilege(s) for this operation
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:112)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:114)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:988)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeQuery(ClientPreparedStatement.java:1056)
+	at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeQuery(ProxyPreparedStatement.java:52)
+	at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeQuery(HikariProxyPreparedStatement.java)
+	at org.springframework.jdbc.core.JdbcTemplate.lambda$query$0(JdbcTemplate.java:738)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:670)
+	... 5 more
+</failure>
+  </testcase>
+  <testcase name="jdbcQueryTimeoutAndSocketFailureAreNotMistakenForBusinessCommit()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="12.141">
+    <failure message="org.awaitility.core.ConditionTimeoutException: Assertion condition defined as a Lambda expression in com.slotq.mcp.ProductDatabaseBoundsIntegrationTests &#13;&#10;expected: 0&#13;&#10; but was: 1 within 8 seconds." type="org.awaitility.core.ConditionTimeoutException">org.awaitility.core.ConditionTimeoutException: Assertion condition defined as a Lambda expression in com.slotq.mcp.ProductDatabaseBoundsIntegrationTests 
+expected: 0
+ but was: 1 within 8 seconds.
+	at org.awaitility.core.ConditionAwaiter.await(ConditionAwaiter.java:167)
+	at org.awaitility.core.AssertionCondition.await(AssertionCondition.java:119)
+	at org.awaitility.core.AssertionCondition.await(AssertionCondition.java:31)
+	at org.awaitility.core.ConditionFactory.until(ConditionFactory.java:1160)
+	at org.awaitility.core.ConditionFactory.untilAsserted(ConditionFactory.java:790)
+	at com.slotq.mcp.ProductDatabaseBoundsIntegrationTests.jdbcQueryTimeoutAndSocketFailureAreNotMistakenForBusinessCommit(ProductDatabaseBoundsIntegrationTests.java:114)
+Caused by: java.util.concurrent.TimeoutException
+	at java.base/java.util.concurrent.FutureTask.get(FutureTask.java:206)
+	at org.awaitility.core.Uninterruptibles.getUninterruptibly(Uninterruptibles.java:101)
+	at org.awaitility.core.Uninterruptibles.getUninterruptibly(Uninterruptibles.java:81)
+	at org.awaitility.core.ConditionAwaiter.await(ConditionAwaiter.java:103)
+	... 5 more
+</failure>
+  </testcase>
+  <system-out><![CDATA[03:49:11.178 [Test worker] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+03:49:11.185 [Test worker] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+03:49:11.966 [Test worker] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+03:49:12.188 [Test worker] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+03:49:12.664 [Test worker] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+03:49:12.666 [Test worker] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+03:49:12.690 [Test worker] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.7.2
+  API Version: 1.55
+  Operating System: Docker Desktop
+  Total Memory: 7544 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+03:49:12.792 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+03:49:13.084 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: 8904aac4e01fa9a664f804cdc142e92a8bab46900c2a30c185647ccecc42f8ae
+03:49:13.535 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.7433361S
+03:49:13.541 [Test worker] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+03:49:13.541 [Test worker] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+03:49:13.541 [Test worker] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+03:49:13.542 [Test worker] INFO tc.mysql:8.4 -- Creating container for image: mysql:8.4
+03:49:13.630 [Test worker] INFO tc.mysql:8.4 -- Container mysql:8.4 is starting: 07d24cf71ed6cef38d201d6139f133bad8cbbbaeced6366e163118a666be8c90
+03:49:13.911 [Test worker] INFO tc.mysql:8.4 -- Waiting for database connection to become available at jdbc:mysql://localhost:8107/slotq using query 'SELECT 1'
+03:49:23.640 [Test worker] INFO tc.mysql:8.4 -- Container mysql:8.4 started in PT10.0971828S
+03:49:23.640 [Test worker] INFO tc.mysql:8.4 -- Container is started (JDBC URL: jdbc:mysql://localhost:8107/slotq)
+03:49:23.761 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.slotq.mcp.ProductDatabaseBoundsIntegrationTests]: ProductDatabaseBoundsIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+03:49:24.030 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.mcp.ProductDatabaseBoundsIntegrationTests
+03:49:24.113 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.slotq.mcp.ProductDatabaseBoundsIntegrationTests]: ProductDatabaseBoundsIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+03:49:24.120 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.mcp.ProductDatabaseBoundsIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T03:49:24.685+09:00  INFO 35996 --- [    Test worker] .m.ProductDatabaseBoundsIntegrationTests : Starting ProductDatabaseBoundsIntegrationTests using Java 25.0.4.1 with PID 35996 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T03:49:24.686+09:00  INFO 35996 --- [    Test worker] .m.ProductDatabaseBoundsIntegrationTests : The following 1 profile is active: "test"
+2026-10-05T03:49:26.297+09:00  INFO 35996 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T03:49:26.517+09:00  INFO 35996 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 211 ms. Found 8 JPA repository interfaces.
+2026-10-05T03:49:27.472+09:00  INFO 35996 --- [    Test worker] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8104 (https)
+2026-10-05T03:49:27.496+09:00  INFO 35996 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-05T03:49:27.498+09:00  INFO 35996 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-05T03:49:27.586+09:00  INFO 35996 --- [    Test worker] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 2878 ms
+2026-10-05T03:49:27.920+09:00  INFO 35996 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:8107/slotq (MySQL 8.4)
+2026-10-05T03:49:28.035+09:00  INFO 35996 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq`.`flyway_schema_history` does not exist yet
+2026-10-05T03:49:28.041+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 21 migrations (execution time 00:00.038s)
+2026-10-05T03:49:28.074+09:00  INFO 35996 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq`.`flyway_schema_history` ...
+2026-10-05T03:49:28.164+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq`: << Empty Schema >>
+2026-10-05T03:49:28.174+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "1 - configure database"
+2026-10-05T03:49:28.233+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "2 - create tenant venue policy"
+2026-10-05T03:49:28.370+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "3 - create auth tenant boundaries"
+2026-10-05T03:49:28.488+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "4 - create resource slot inventory"
+2026-10-05T03:49:28.596+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "5 - create reservation allocation"
+2026-10-05T03:49:28.722+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "6 - add venue name"
+2026-10-05T03:49:28.910+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "7 - create hold idempotency"
+2026-10-05T03:49:28.993+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T03:49:29.121+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "9 - create transactional events"
+2026-10-05T03:49:29.333+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "10 - create waitlist registration"
+2026-10-05T03:49:29.501+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "11 - create waitlist offers"
+2026-10-05T03:49:29.703+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "12 - create waitlist promotion effect"
+2026-10-05T03:49:29.831+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "13 - create waitlist promotion requests"
+2026-10-05T03:49:29.888+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "14 - index maintenance backlogs"
+2026-10-05T03:49:29.991+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "15 - add event observation origin"
+2026-10-05T03:49:30.075+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "16 - create kafka publication and transport assignment"
+2026-10-05T03:49:30.210+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "17 - create kafka intake"
+2026-10-05T03:49:30.328+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "18 - create event observation projection"
+2026-10-05T03:49:30.387+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "19 - create event transport cutover"
+2026-10-05T03:49:30.440+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "20 - create human operator recovery"
+2026-10-05T03:49:30.627+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "21 - create actor access credentials"
+2026-10-05T03:49:30.796+09:00  INFO 35996 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 21 migrations to schema `slotq`, now at version v21 (execution time 00:01.990s)
+2026-10-05T03:49:30.973+09:00  INFO 35996 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T03:49:31.038+09:00  INFO 35996 --- [    Test worker] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.5.Final
+2026-10-05T03:49:31.623+09:00  INFO 35996 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:8107/slotq]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T03:49:32.623+09:00  INFO 35996 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T03:49:32.950+09:00  INFO 35996 --- [    Test worker] o.s.boot.web.servlet.RegistrationBean    : Filter disableContainerRegistration was not registered (disabled)
+2026-10-05T03:49:33.091+09:00  INFO 35996 --- [    Test worker] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-05T03:49:36.318+09:00  INFO 35996 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T03:49:36.453+09:00  INFO 35996 --- [    Test worker] o.a.t.util.net.NioEndpoint.certificate   : Connector [https-jsse-nio-8104], TLS virtual host [_default_], certificate type [UNDEFINED] configured from keystore [Set directly - location unknown] using alias [tomcat] with trust store [null]
+2026-10-05T03:49:36.465+09:00  INFO 35996 --- [    Test worker] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8104 (https) with context path '/'
+2026-10-05T03:49:36.479+09:00  INFO 35996 --- [    Test worker] .m.ProductDatabaseBoundsIntegrationTests : Started ProductDatabaseBoundsIntegrationTests in 12.154 seconds (process running for 26.287)
+2026-10-05T03:49:37.211+09:00  INFO 35996 --- [io-8104-exec-16] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-05T03:49:37.211+09:00  INFO 35996 --- [io-8104-exec-16] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-05T03:49:37.213+09:00  INFO 35996 --- [io-8104-exec-16] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+operation=product.request outcome=success request_id=ae5e155a-0143-43ce-887d-db768adf094b trace_id=e74f999020ce502f309d502b2eeb45f3 span_id=fbc5471cea4a3b07 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="ae5e155a-0143-43ce-887d-db768adf094b" trace_id="e74f999020ce502f309d502b2eeb45f3" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=b3dc8a61-b716-4b18-b2bb-accfca97ac04 trace_id=98d93067cb9201133e4d40ee53c72735 span_id=68ce929646b56ea5 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b3dc8a61-b716-4b18-b2bb-accfca97ac04" trace_id="98d93067cb9201133e4d40ee53c72735" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="500" outcome="INTERNAL_ERROR"
+operation=product.request outcome=success request_id=3c17ed96-98fd-46b9-8d4c-aa5f6f9f6287 trace_id=6ef7f4932b69b458dad31e289f5d0dd7 span_id=d18890a63a0cae23 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="3c17ed96-98fd-46b9-8d4c-aa5f6f9f6287" trace_id="6ef7f4932b69b458dad31e289f5d0dd7" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=feb27854-4068-46d5-8c5d-f3df5d9f0e6f trace_id=0ee718f7bf70cfbc11a0a133992ce38f span_id=c71e966c1739b685 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="feb27854-4068-46d5-8c5d-f3df5d9f0e6f" trace_id="0ee718f7bf70cfbc11a0a133992ce38f" route="UNMATCHED" method="GET" status="503" outcome="INTERNAL_ERROR"
+operation=product.request outcome=success request_id=758399ef-1c7a-4f17-a992-c5b0a1f356db trace_id=9bb844a4674583c50c9b6d426db580a5 span_id=d24f6992d269188f event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="758399ef-1c7a-4f17-a992-c5b0a1f356db" trace_id="9bb844a4674583c50c9b6d426db580a5" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=d71ed584-511c-42f6-b9b4-ccaabf64b00f trace_id=ebf53b5c8c40dbeb7f33f0125fd53842 span_id=8e9d0742bdab8941 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d71ed584-511c-42f6-b9b4-ccaabf64b00f" trace_id="ebf53b5c8c40dbeb7f33f0125fd53842" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=70f05831-b927-4c46-a9ec-f15936fafc68 trace_id=2cd17a8676d2f5b2bb215a59f17cd2d1 span_id=8ff698ebbe69ad3b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="70f05831-b927-4c46-a9ec-f15936fafc68" trace_id="2cd17a8676d2f5b2bb215a59f17cd2d1" route="UNMATCHED" method="GET" status="503" outcome="INTERNAL_ERROR"
+operation=product.request outcome=success request_id=890770c7-ab05-48bd-9ac3-e2611e7df638 trace_id=ce3c79fb5ff2d98804ac920b3631c533 span_id=d5eab1b151dcd888 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="890770c7-ab05-48bd-9ac3-e2611e7df638" trace_id="ce3c79fb5ff2d98804ac920b3631c533" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=02f93739-53f2-4d18-95a9-6ac9fa906430 trace_id=a528b1782092ff3b807d3cc44e44a0c5 span_id=27c3cd07b061bc44 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="02f93739-53f2-4d18-95a9-6ac9fa906430" trace_id="a528b1782092ff3b807d3cc44e44a0c5" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=3dc284be-6b73-416d-9796-456944c36a22 trace_id=d83d95eabc10824153540fd65849d425 span_id=8215879e08085763 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="3dc284be-6b73-416d-9796-456944c36a22" trace_id="d83d95eabc10824153540fd65849d425" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=10fdc999-20d3-422d-89a9-21f755bc7f17 trace_id=57ff9acc3d67694810ef34473eb2cd18 span_id=e2c88bb1ef25759e event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="10fdc999-20d3-422d-89a9-21f755bc7f17" trace_id="57ff9acc3d67694810ef34473eb2cd18" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=b642340a-1637-4af3-bbbb-b4060a12db21 trace_id=36773d93593a585bd9399ebb61f1eb5b span_id=4ab0286adc31c144 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b642340a-1637-4af3-bbbb-b4060a12db21" trace_id="36773d93593a585bd9399ebb61f1eb5b" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="500" outcome="INTERNAL_ERROR"
+]]></system-out>
+  <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\cell1\.gradle\caches\modules-2\files-2.1\net.bytebuddy\byte-buddy-agent\1.18.11\82212e5b3633e7a65fca8bec525762cfb6c9bae4\byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

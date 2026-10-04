@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:42:39.978Z" hostname="KRESTAR" time="30.979">
+  <properties/>
+  <testcase name="actualSlotLockWaitTerminatesOnServerAndRollsBackBeforeLockOwnerRelease()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="2.336"/>
+  <testcase name="realDatabasePauseReturnsUnavailableThenRecoveryHasNoUnobservedEffect()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="4.325"/>
+  <testcase name="poolExhaustionRejectsAtAuthorityAcquisitionThenRecoversWithoutBusinessEffect()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="2.186"/>
+  <testcase name="serverIdleTransactionTerminationRollsBackAllThreeRowsWhileJavaWorkIsStillAlive()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="5.151"/>
+  <testcase name="jdbcQueryTimeoutAndSocketFailureAreNotMistakenForBusinessCommit()" classname="com.slotq.mcp.ProductDatabaseBoundsIntegrationTests" time="2.216"/>
+  <system-out><![CDATA[2026-10-05T05:42:39.980+09:00  INFO 32492 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:42:40.070+09:00  INFO 32492 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: bd2a43171f2252a895609875044cfa77cd8cc1793d8749f70ad5f16d9df85d12
+2026-10-05T05:42:40.393+09:00  INFO 32492 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:9202/slotq using query 'SELECT 1'
+2026-10-05T05:42:49.857+09:00  INFO 32492 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.8772973S
+2026-10-05T05:42:49.857+09:00  INFO 32492 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:9202/slotq)
+2026-10-05T05:42:49.865+09:00  INFO 32492 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.mcp.ProductDatabaseBoundsIntegrationTests
+2026-10-05T05:42:49.871+09:00  INFO 32492 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.mcp.ProductDatabaseBoundsIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:42:49.911+09:00  INFO 32492 --- [    Test worker] .m.ProductDatabaseBoundsIntegrationTests : Starting ProductDatabaseBoundsIntegrationTests using Java 25.0.4.1 with PID 32492 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:42:49.911+09:00  INFO 32492 --- [    Test worker] .m.ProductDatabaseBoundsIntegrationTests : The following 1 profile is active: "test"
+2026-10-05T05:42:50.749+09:00  INFO 32492 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:42:50.819+09:00  INFO 32492 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 69 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:42:51.018+09:00  INFO 32492 --- [    Test worker] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 9199 (https)
+2026-10-05T05:42:51.019+09:00  INFO 32492 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-05T05:42:51.019+09:00  INFO 32492 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-05T05:42:51.075+09:00  INFO 32492 --- [    Test worker] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1161 ms
+2026-10-05T05:42:51.143+09:00  INFO 32492 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:9202/slotq (MySQL 8.4)
+2026-10-05T05:42:51.209+09:00  INFO 32492 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq`.`flyway_schema_history` does not exist yet
+2026-10-05T05:42:51.213+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.032s)
+2026-10-05T05:42:51.240+09:00  INFO 32492 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq`.`flyway_schema_history` ...
+2026-10-05T05:42:51.324+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq`: << Empty Schema >>
+2026-10-05T05:42:51.331+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "1 - configure database"
+2026-10-05T05:42:51.373+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "2 - create tenant venue policy"
+2026-10-05T05:42:51.497+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "3 - create auth tenant boundaries"
+2026-10-05T05:42:51.610+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "4 - create resource slot inventory"
+2026-10-05T05:42:51.711+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "5 - create reservation allocation"
+2026-10-05T05:42:51.829+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "6 - add venue name"
+2026-10-05T05:42:52.019+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "7 - create hold idempotency"
+2026-10-05T05:42:52.090+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:42:52.192+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "9 - create transactional events"
+2026-10-05T05:42:52.396+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "10 - create waitlist registration"
+2026-10-05T05:42:52.546+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "11 - create waitlist offers"
+2026-10-05T05:42:52.739+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "12 - create waitlist promotion effect"
+2026-10-05T05:42:52.872+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "13 - create waitlist promotion requests"
+2026-10-05T05:42:52.924+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "14 - index maintenance backlogs"
+2026-10-05T05:42:53.029+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "15 - add event observation origin"
+2026-10-05T05:42:53.108+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:42:53.241+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "17 - create kafka intake"
+2026-10-05T05:42:53.361+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "18 - create event observation projection"
+2026-10-05T05:42:53.415+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "19 - create event transport cutover"
+2026-10-05T05:42:53.466+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "20 - create human operator recovery"
+2026-10-05T05:42:53.652+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "21 - create actor access credentials"
+2026-10-05T05:42:53.820+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "22 - create mcp hold approval"
+2026-10-05T05:42:53.957+09:00  INFO 32492 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq`, now at version v22 (execution time 00:02.085s)
+2026-10-05T05:42:53.999+09:00  INFO 32492 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:42:54.052+09:00  INFO 32492 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:9202/slotq]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:42:54.226+09:00  INFO 32492 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:42:54.287+09:00  INFO 32492 --- [    Test worker] o.s.boot.web.servlet.RegistrationBean    : Filter disableContainerRegistration was not registered (disabled)
+2026-10-05T05:42:54.684+09:00  INFO 32492 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:42:54.702+09:00  INFO 32492 --- [    Test worker] o.a.t.util.net.NioEndpoint.certificate   : Connector [https-jsse-nio-9199], TLS virtual host [_default_], certificate type [UNDEFINED] configured from keystore [Set directly - location unknown] using alias [tomcat] with trust store [null]
+2026-10-05T05:42:54.705+09:00  INFO 32492 --- [    Test worker] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 9199 (https) with context path '/'
+2026-10-05T05:42:54.708+09:00  INFO 32492 --- [    Test worker] .m.ProductDatabaseBoundsIntegrationTests : Started ProductDatabaseBoundsIntegrationTests in 4.834 seconds (process running for 155.575)
+2026-10-05T05:42:54.836+09:00  INFO 32492 --- [nio-9199-exec-6] o.a.c.c.C.[Tomcat-2].[localhost].[/]     : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-05T05:42:54.837+09:00  INFO 32492 --- [nio-9199-exec-6] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-05T05:42:54.837+09:00  INFO 32492 --- [nio-9199-exec-6] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+operation=product.request outcome=success request_id=a5f3037a-5e6b-46dd-a960-1ff79bcffaa8 trace_id=280bbbab810b69393b77e96b9c38cd52 span_id=ece96cf4a6107cad event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a5f3037a-5e6b-46dd-a960-1ff79bcffaa8" trace_id="280bbbab810b69393b77e96b9c38cd52" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=d0646a29-10b3-42de-9ca4-de7b2fa955e7 trace_id=601436a9272c5b7f69b544e4f00e8e5e span_id=f8f818848a0c1d84 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d0646a29-10b3-42de-9ca4-de7b2fa955e7" trace_id="601436a9272c5b7f69b544e4f00e8e5e" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="500" outcome="INTERNAL_ERROR"
+operation=product.request outcome=success request_id=53383a5f-d063-4049-8402-0869e723da85 trace_id=8e1db67a35c9f91ac5dd61182725d25b span_id=b82257f12a211970 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="53383a5f-d063-4049-8402-0869e723da85" trace_id="8e1db67a35c9f91ac5dd61182725d25b" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=e32ba75f-3b2d-446a-8f48-b09a7d835a85 trace_id=4af57516476fa8cf656de5cc95c601e6 span_id=db3d46c247c819f5 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e32ba75f-3b2d-446a-8f48-b09a7d835a85" trace_id="4af57516476fa8cf656de5cc95c601e6" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=03fac8de-202a-411f-83bd-227fbe154a39 trace_id=f843f67bb4652f3b436153295da01c60 span_id=d31f33a003605154 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="03fac8de-202a-411f-83bd-227fbe154a39" trace_id="f843f67bb4652f3b436153295da01c60" route="UNMATCHED" method="GET" status="503" outcome="INTERNAL_ERROR"
+operation=product.request outcome=success request_id=5abd7131-7b04-49ac-9eab-0c30ac2a2335 trace_id=54bfc1a72778d144f180ef2e32e7bb13 span_id=b9e5edcddb9f5318 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5abd7131-7b04-49ac-9eab-0c30ac2a2335" trace_id="54bfc1a72778d144f180ef2e32e7bb13" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=95423815-3890-4962-be41-4b543f5b374c trace_id=80356e7cef88278bac279d809a1d1140 span_id=5a7d6dd3f331384b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="95423815-3890-4962-be41-4b543f5b374c" trace_id="80356e7cef88278bac279d809a1d1140" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=0dd7635e-bdad-4462-80b9-530c5b3575b3 trace_id=52bea01735c49356c02b51f76d96c5db span_id=e3115f399bec67cd event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="0dd7635e-bdad-4462-80b9-530c5b3575b3" trace_id="52bea01735c49356c02b51f76d96c5db" route="UNMATCHED" method="GET" status="503" outcome="INTERNAL_ERROR"
+operation=product.request outcome=success request_id=78f58ff1-71b4-4ccc-bf73-1176595462db trace_id=501dda610773ece2a8ebf5f1bdbdd23d span_id=d823e004365b7d26 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="78f58ff1-71b4-4ccc-bf73-1176595462db" trace_id="501dda610773ece2a8ebf5f1bdbdd23d" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="201" outcome="SUCCESS"
+operation=product.request outcome=success request_id=11b36b61-0d5d-49c7-9778-edfcbac1dd86 trace_id=7e7cb1907f2f09a28ba90719e6d8fcba span_id=79918f69736d72de event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="11b36b61-0d5d-49c7-9778-edfcbac1dd86" trace_id="7e7cb1907f2f09a28ba90719e6d8fcba" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=1e0e9935-87d6-4026-b3d4-b0bf78141c01 trace_id=3a21b7c08a48f4baaab13dafb0a5e02a span_id=d1985e8a824da0c1 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="1e0e9935-87d6-4026-b3d4-b0bf78141c01" trace_id="3a21b7c08a48f4baaab13dafb0a5e02a" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="500" outcome="DB_CONNECTION"
+operation=product.request outcome=success request_id=98d74f92-5bf0-4456-ae0a-01f68eb518dd trace_id=4d27f393f844e9f41496621daabe8d78 span_id=555ae2f5f9b47316 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="98d74f92-5bf0-4456-ae0a-01f68eb518dd" trace_id="4d27f393f844e9f41496621daabe8d78" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=server_error request_id=ed3be018-65a0-4d80-93e9-099768241b42 trace_id=8922cf95f777e065548e6fc259da0dda span_id=1ac3162cdfa8569c event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="ed3be018-65a0-4d80-93e9-099768241b42" trace_id="8922cf95f777e065548e6fc259da0dda" route="/api/v1/venues/{venueId}/reservations/holds" method="POST" status="500" outcome="INTERNAL_ERROR"
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

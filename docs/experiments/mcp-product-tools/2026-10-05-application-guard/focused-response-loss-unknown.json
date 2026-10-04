@@ -1,0 +1,56 @@
+{
+  "firstOutcome" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"outcome\":\"outcome_unknown\"}"
+    } ],
+    "isError" : true,
+    "structuredContent" : {
+      "outcome" : "outcome_unknown"
+    },
+    "_meta" : {
+      "confirmationId" : "8a5166c3-a2b0-4658-b420-802011795f17",
+      "intentId" : "df453bb9-9d6d-44a0-b20e-876353f33221",
+      "requestId" : "1ea19a08-0408-4c62-9499-5f5bb03086a9"
+    }
+  },
+  "durableRows" : {
+    "reservations" : 1,
+    "allocations" : 1,
+    "idempotency" : 1
+  },
+  "completedAt" : "2026-10-04T20:08:48.686016Z",
+  "retry" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"outcome\":\"succeeded\",\"productStatus\":201,\"data\":{\"id\":\"d7aab52c-9c0a-4b98-a588-5c421037b983\",\"venueId\":\"17522f9d-8709-4c55-bb5f-8d180170f51a\",\"resourceId\":\"811d4a1a-380d-4782-886f-8d17d1b6441d\",\"slotInventoryId\":\"0a390d59-7f57-426b-a90d-f3f52c02534c\",\"state\":\"HELD\",\"partySize\":2,\"allocationQuantity\":1,\"startsAt\":\"2026-10-06T12:00:00Z\",\"endsAt\":\"2026-10-06T12:30:00Z\",\"expiresAt\":\"2026-10-04T20:13:48.686016Z\",\"cancelAllowedUntil\":\"2026-10-06T11:40:00Z\",\"noShowEligibleAt\":\"2026-10-06T12:10:00Z\",\"appliedPolicyVersion\":1}}"
+    } ],
+    "isError" : false,
+    "structuredContent" : {
+      "outcome" : "succeeded",
+      "productStatus" : 201,
+      "data" : {
+        "id" : "d7aab52c-9c0a-4b98-a588-5c421037b983",
+        "venueId" : "17522f9d-8709-4c55-bb5f-8d180170f51a",
+        "resourceId" : "811d4a1a-380d-4782-886f-8d17d1b6441d",
+        "slotInventoryId" : "0a390d59-7f57-426b-a90d-f3f52c02534c",
+        "state" : "HELD",
+        "partySize" : 2,
+        "allocationQuantity" : 1,
+        "startsAt" : "2026-10-06T12:00:00Z",
+        "endsAt" : "2026-10-06T12:30:00Z",
+        "expiresAt" : "2026-10-04T20:13:48.686016Z",
+        "cancelAllowedUntil" : "2026-10-06T11:40:00Z",
+        "noShowEligibleAt" : "2026-10-06T12:10:00Z",
+        "appliedPolicyVersion" : 1
+      }
+    },
+    "_meta" : {
+      "knownTarget" : "d7aab52c-9c0a-4b98-a588-5c421037b983",
+      "intentId" : "df453bb9-9d6d-44a0-b20e-876353f33221",
+      "requestId" : "bf34167b-9499-41b1-97fb-869ba79e259b",
+      "confirmationId" : "8a5166c3-a2b0-4658-b420-802011795f17",
+      "productRequestId" : "c2952a0e-a96e-4403-a2d8-0bbe9e450264"
+    }
+  }
+}

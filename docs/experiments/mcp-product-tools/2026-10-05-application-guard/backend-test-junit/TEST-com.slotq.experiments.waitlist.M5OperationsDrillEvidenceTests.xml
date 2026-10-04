@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:58:46.368Z" hostname="KRESTAR" time="0.307">
+  <properties/>
+  <testcase name="phaseNamesWithoutActualExecutorSqlFailureCannotPass()" classname="com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests" time="0.087"/>
+  <testcase name="freshRepresentativeDrillReconcilesOriginalsReceiptsAuthorityAndRecovery()" classname="com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests" time="0.054"/>
+  <testcase name="wrongFinalAuthorityCannotPass()" classname="com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests" time="0.034"/>
+  <testcase name="recalculationNeverRewritesAnExistingIntegrityArtifact()" classname="com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests" time="0.026"/>
+  <testcase name="changedTargetAttemptsAcrossRollbackCannotPass()" classname="com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests" time="0.053"/>
+  <testcase name="missingHumanAuditCannotPass()" classname="com.slotq.experiments.waitlist.M5OperationsDrillEvidenceTests" time="0.051"/>
+  <system-out><![CDATA[#111 drill raw -> summary PASS
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

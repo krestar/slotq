@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.AuthWebIntegrationTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:45:58.935Z" hostname="KRESTAR" time="25.401">
+  <properties/>
+  <testcase name="browserHoldPreflightAllowsIdempotencyKeyAndResponsesExposeLocation()" classname="com.slotq.AuthWebIntegrationTests" time="0.685"/>
+  <testcase name="bootstrapRejectsUnknownFixtureAndEveryIdentityOrScopeClaim()" classname="com.slotq.AuthWebIntegrationTests" time="0.173"/>
+  <testcase name="machineScrapeCredentialIsSeparateFromProductCredentialsAndDiagnosticsStayDenied()" classname="com.slotq.AuthWebIntegrationTests" time="0.966"/>
+  <testcase name="publicAnonymousProtectedUnauthorizedAndCorsAllowDenyAreSeparated()" classname="com.slotq.AuthWebIntegrationTests" time="0.125"/>
+  <testcase name="serverCorrelationCoversAuthenticationErrorsAndIgnoresForgedCorrelationHeaders()" classname="com.slotq.AuthWebIntegrationTests" time="0.115"/>
+  <testcase name="bootstrapReturnsNoStoreOpaqueBearerAndCredentialAuthenticatesProtectedCalls(CapturedOutput)" classname="com.slotq.AuthWebIntegrationTests" time="0.155"/>
+  <testcase name="realHttpServerAcceptsTheProcessCredentialInsideTheSecurityChain()" classname="com.slotq.AuthWebIntegrationTests" time="0.221"/>
+  <system-out><![CDATA[05:45:59.008 [Test worker] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+05:45:59.016 [Test worker] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+05:45:59.028 [Test worker] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+05:45:59.283 [Test worker] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+05:45:59.749 [Test worker] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+05:45:59.750 [Test worker] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+05:45:59.771 [Test worker] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.7.2
+  API Version: 1.55
+  Operating System: Docker Desktop
+  Total Memory: 7544 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+05:45:59.869 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+05:46:00.147 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: 3e3ff0c19d50661806204f825419ffeae2eee409c74ac609ab4062d6cb37a471
+05:46:00.569 [Test worker] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.6994148S
+05:46:00.576 [Test worker] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+05:46:00.576 [Test worker] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+05:46:00.576 [Test worker] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+05:46:00.577 [Test worker] INFO tc.mysql:8.4 -- Creating container for image: mysql:8.4
+05:46:00.662 [Test worker] INFO tc.mysql:8.4 -- Container mysql:8.4 is starting: e07becb251b6e3ed31826b14fab032e977506bdc405422628f55262e4db46a6a
+05:46:00.962 [Test worker] INFO tc.mysql:8.4 -- Waiting for database connection to become available at jdbc:mysql://localhost:10424/slotq using query 'SELECT 1'
+05:46:10.389 [Test worker] INFO tc.mysql:8.4 -- Container mysql:8.4 started in PT9.8118588S
+05:46:10.389 [Test worker] INFO tc.mysql:8.4 -- Container is started (JDBC URL: jdbc:mysql://localhost:10424/slotq)
+05:46:10.753 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.AuthWebIntegrationTests
+05:46:10.843 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.AuthWebIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:46:11.272+09:00  INFO 37152 --- [    Test worker] com.slotq.AuthWebIntegrationTests        : Starting AuthWebIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:46:11.273+09:00  INFO 37152 --- [    Test worker] com.slotq.AuthWebIntegrationTests        : The following 1 profile is active: "test"
+2026-10-05T05:46:12.701+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:46:12.959+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 247 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:46:13.741+09:00  INFO 37152 --- [    Test worker] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-05T05:46:13.768+09:00  INFO 37152 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-05T05:46:13.769+09:00  INFO 37152 --- [    Test worker] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-05T05:46:13.887+09:00  INFO 37152 --- [    Test worker] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 2596 ms
+2026-10-05T05:46:14.142+09:00  INFO 37152 --- [    Test worker] o.s.boot.web.servlet.RegistrationBean    : Filter disableContainerRegistration was not registered (disabled)
+2026-10-05T05:46:14.562+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:10424/slotq (MySQL 8.4)
+2026-10-05T05:46:14.678+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq`.`flyway_schema_history` does not exist yet
+2026-10-05T05:46:14.685+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.042s)
+2026-10-05T05:46:14.721+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq`.`flyway_schema_history` ...
+2026-10-05T05:46:14.812+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq`: << Empty Schema >>
+2026-10-05T05:46:14.821+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "1 - configure database"
+2026-10-05T05:46:14.880+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "2 - create tenant venue policy"
+2026-10-05T05:46:15.015+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "3 - create auth tenant boundaries"
+2026-10-05T05:46:15.134+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "4 - create resource slot inventory"
+2026-10-05T05:46:15.250+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "5 - create reservation allocation"
+2026-10-05T05:46:15.375+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "6 - add venue name"
+2026-10-05T05:46:15.571+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "7 - create hold idempotency"
+2026-10-05T05:46:15.653+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:46:15.766+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "9 - create transactional events"
+2026-10-05T05:46:15.986+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "10 - create waitlist registration"
+2026-10-05T05:46:16.150+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "11 - create waitlist offers"
+2026-10-05T05:46:16.359+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "12 - create waitlist promotion effect"
+2026-10-05T05:46:16.489+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "13 - create waitlist promotion requests"
+2026-10-05T05:46:16.544+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "14 - index maintenance backlogs"
+2026-10-05T05:46:16.657+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "15 - add event observation origin"
+2026-10-05T05:46:16.744+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:46:16.888+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "17 - create kafka intake"
+2026-10-05T05:46:17.007+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "18 - create event observation projection"
+2026-10-05T05:46:17.069+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "19 - create event transport cutover"
+2026-10-05T05:46:17.123+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "20 - create human operator recovery"
+2026-10-05T05:46:17.310+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "21 - create actor access credentials"
+2026-10-05T05:46:17.485+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq` to version "22 - create mcp hold approval"
+2026-10-05T05:46:17.629+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq`, now at version v22 (execution time 00:02.131s)
+2026-10-05T05:46:17.743+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:46:17.805+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.5.Final
+2026-10-05T05:46:18.393+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:10424/slotq]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:46:19.353+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:46:19.575+09:00  INFO 37152 --- [    Test worker] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-05T05:46:21.656+09:00  INFO 37152 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring TestDispatcherServlet ''
+2026-10-05T05:46:21.656+09:00  INFO 37152 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-05T05:46:21.665+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:46:21.673+09:00  INFO 37152 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 17 ms
+2026-10-05T05:46:21.765+09:00  INFO 37152 --- [    Test worker] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 5359 (http) with context path '/'
+2026-10-05T05:46:21.775+09:00  INFO 37152 --- [    Test worker] com.slotq.AuthWebIntegrationTests        : Started AuthWebIntegrationTests in 10.87 seconds (process running for 24.45)
+operation=product.request outcome=success request_id=a984add4-0b2e-44a4-9eb8-5dd5e11a5884 trace_id=42f92438a4ed1233a02179f16401d60f span_id=6a48b261179aecb3 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a984add4-0b2e-44a4-9eb8-5dd5e11a5884" trace_id="42f92438a4ed1233a02179f16401d60f" route="UNMATCHED" method="OPTIONS" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=5cc686ad-0eba-4927-a72c-2907052c4a92 trace_id=fda2ef32229fdf37b16a1c9537f526e6 span_id=ecd3598f57acc9ca event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5cc686ad-0eba-4927-a72c-2907052c4a92" trace_id="fda2ef32229fdf37b16a1c9537f526e6" route="/api/v1/venues" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=e53296c9-62f0-4cf4-902e-b88c458d2e70 trace_id=30b393fed00812bf7fac22d3e54bd20e span_id=18e636c53baf7509 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e53296c9-62f0-4cf4-902e-b88c458d2e70" trace_id="30b393fed00812bf7fac22d3e54bd20e" route="UNMATCHED" method="OPTIONS" status="403" outcome="ACCESS_DENIED"
+operation=product.request outcome=client_error request_id=dace6b7c-1069-44b1-a7b3-080018ba697a trace_id=8fc8d48ba208a31d1f8c9c4b6564e152 span_id=8e136be00bbd7e18 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="dace6b7c-1069-44b1-a7b3-080018ba697a" trace_id="8fc8d48ba208a31d1f8c9c4b6564e152" route="/__dev/auth/session" method="POST" status="400" outcome="CLIENT_ERROR"
+operation=product.request outcome=client_error request_id=220e7f85-721b-4541-87d1-320e83c85931 trace_id=41855cc72aa259514926f23e1c0aa367 span_id=a02a47623b9d21f8 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="220e7f85-721b-4541-87d1-320e83c85931" trace_id="41855cc72aa259514926f23e1c0aa367" route="/__dev/auth/session" method="POST" status="400" outcome="CLIENT_ERROR"
+operation=product.request outcome=client_error request_id=a7f8cdee-b072-498a-9548-a4426bc2bc82 trace_id=1a2e5884af7594fa87ab07e90495d780 span_id=63930cf87d083098 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a7f8cdee-b072-498a-9548-a4426bc2bc82" trace_id="1a2e5884af7594fa87ab07e90495d780" route="/__dev/auth/session" method="POST" status="400" outcome="CLIENT_ERROR"
+operation=product.request outcome=client_error request_id=245f6ab0-eac7-41cd-9d0f-2b497b833fe6 trace_id=8a870ed874759844af60a5022b84a9a5 span_id=d13f96156f5ff035 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="245f6ab0-eac7-41cd-9d0f-2b497b833fe6" trace_id="8a870ed874759844af60a5022b84a9a5" route="/__dev/auth/session" method="POST" status="400" outcome="CLIENT_ERROR"
+operation=product.request outcome=client_error request_id=986bb17b-9712-46ef-a32c-ccaaf96ad31e trace_id=c59a55e9632177fdc7d6a08a83c15325 span_id=2e77cad20529b705 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="986bb17b-9712-46ef-a32c-ccaaf96ad31e" trace_id="c59a55e9632177fdc7d6a08a83c15325" route="/__dev/auth/session" method="POST" status="400" outcome="CLIENT_ERROR"
+operation=product.request outcome=success request_id=10d189db-df2b-4fea-b48e-4f6fa335095a trace_id=d9320286e33fe3de8bed302a0ca84ea3 span_id=60262d30555f323e event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="10d189db-df2b-4fea-b48e-4f6fa335095a" trace_id="d9320286e33fe3de8bed302a0ca84ea3" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=ba5992d8-2673-4269-952e-3c15520f0d53 trace_id=1d56725854a0a55492af119ccdeecf32 span_id=bbf73bd491f31442 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="ba5992d8-2673-4269-952e-3c15520f0d53" trace_id="1d56725854a0a55492af119ccdeecf32" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=9313aed7-75ce-4577-aade-c5bd04f47b3d trace_id=69ecc4ea62d57a3ed8e6e13dc63c9cba span_id=54c30a2cadf72df4 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="9313aed7-75ce-4577-aade-c5bd04f47b3d" trace_id="69ecc4ea62d57a3ed8e6e13dc63c9cba" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=41ada97f-d483-4f5c-83f4-a3332c81dc0d trace_id=f50aadfd2b5b6f1bf6af7dfcbbabe3e8 span_id=c76f6b3a0f0b7c1b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="41ada97f-d483-4f5c-83f4-a3332c81dc0d" trace_id="f50aadfd2b5b6f1bf6af7dfcbbabe3e8" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=c923f70b-2e70-4288-af29-5929c6ab515d trace_id=113c36b7b70ec1c143293eb6d9e2952a span_id=6af824cedc6a34ea event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="c923f70b-2e70-4288-af29-5929c6ab515d" trace_id="113c36b7b70ec1c143293eb6d9e2952a" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=b03b8f2d-f25b-4385-8f33-7edab46f6410 trace_id=ee3002779d71afe62faaff03300a7197 span_id=37bea45b071c4e09 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b03b8f2d-f25b-4385-8f33-7edab46f6410" trace_id="ee3002779d71afe62faaff03300a7197" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=4dd394f4-9908-43bd-985b-7aeff55c4d37 trace_id=96a61de879c4e06f516d222d2f97a503 span_id=85189338e407a388 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="4dd394f4-9908-43bd-985b-7aeff55c4d37" trace_id="96a61de879c4e06f516d222d2f97a503" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=f683544e-374f-46c6-903b-9ba7ed063ad3 trace_id=481cb571d490f67508e93f356144aa2f span_id=1a94ad5a62369cb2 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="f683544e-374f-46c6-903b-9ba7ed063ad3" trace_id="481cb571d490f67508e93f356144aa2f" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=25edd794-6464-40b7-a715-0e9f8acf8096 trace_id=91921c6afb9558f1501318f88b56e8b6 span_id=b9e32e11a1d3a38a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="25edd794-6464-40b7-a715-0e9f8acf8096" trace_id="91921c6afb9558f1501318f88b56e8b6" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=b362e10b-1965-4bf3-970e-bae7542de709 trace_id=89bbe237c355a125748bf5af9a97ba2b span_id=64d6134c7fc66ed3 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b362e10b-1965-4bf3-970e-bae7542de709" trace_id="89bbe237c355a125748bf5af9a97ba2b" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=dc76cd4c-e48f-4bcf-85e9-e7d6a3f3d150 trace_id=3ebd5d83b9e41af9624baa7de1aa49c1 span_id=6b1add8761784a3f event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="dc76cd4c-e48f-4bcf-85e9-e7d6a3f3d150" trace_id="3ebd5d83b9e41af9624baa7de1aa49c1" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=5bca5d53-c4ac-4f0e-a2ee-bbe4276c74df trace_id=316f84b4b25ae2ff3bb260dcb1c9a94f span_id=58dd8f722f94a00e event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5bca5d53-c4ac-4f0e-a2ee-bbe4276c74df" trace_id="316f84b4b25ae2ff3bb260dcb1c9a94f" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=e4152767-c2c5-4b7e-9abb-65cfcb848681 trace_id=649613218cd920c040a6a634efcfd2df span_id=d69a2f887497fd26 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e4152767-c2c5-4b7e-9abb-65cfcb848681" trace_id="649613218cd920c040a6a634efcfd2df" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=success request_id=3c45322b-c4b9-4521-9060-1f62a72828ef trace_id=1b6ee698e906b13382446c1ac0432d9a span_id=76778b6990970d95 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="3c45322b-c4b9-4521-9060-1f62a72828ef" trace_id="1b6ee698e906b13382446c1ac0432d9a" route="/actuator/prometheus" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=e0aebefa-979e-47a0-8c0c-87e4b81c129c trace_id=064d94643670dfef1ec2907b11737ade span_id=b9bb18d37f494536 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="e0aebefa-979e-47a0-8c0c-87e4b81c129c" trace_id="064d94643670dfef1ec2907b11737ade" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=fab5582f-fc39-43d0-a234-589622cde5bd trace_id=4588bd0f1a6f807148f402d2b4d92e76 span_id=0b46e9b5e05ee81c event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="fab5582f-fc39-43d0-a234-589622cde5bd" trace_id="4588bd0f1a6f807148f402d2b4d92e76" route="UNMATCHED" method="POST" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=167e2e03-984a-4fae-b178-3fe7df65ee8a trace_id=9add223df721f31cc56b6b48988780a5 span_id=16d01724affcd0ca event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="167e2e03-984a-4fae-b178-3fe7df65ee8a" trace_id="9add223df721f31cc56b6b48988780a5" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=ce5ea1d1-68d3-4618-babf-e532e510492b trace_id=a0a74e496105fd696036126fc912df66 span_id=7cd10a489205243b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="ce5ea1d1-68d3-4618-babf-e532e510492b" trace_id="a0a74e496105fd696036126fc912df66" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=success request_id=0a849c06-a131-4cc8-b227-58260548506d trace_id=fd0170b18cb1e28bf02d2933c606b735 span_id=465dbfcf88b72406 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="0a849c06-a131-4cc8-b227-58260548506d" trace_id="fd0170b18cb1e28bf02d2933c606b735" route="/api/v1/venues" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=d8b98e38-5eb9-458b-b84d-5f0400b93717 trace_id=94afc281a6212f6106ffc684c672779f span_id=ee90615941ee4668 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d8b98e38-5eb9-458b-b84d-5f0400b93717" trace_id="94afc281a6212f6106ffc684c672779f" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=client_error request_id=57d96de4-38f5-4fa0-9dcb-82a03e4ea144 trace_id=678e81b16c4827dbd482d8ce2d1244dc span_id=684bbf70a1832d63 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="57d96de4-38f5-4fa0-9dcb-82a03e4ea144" trace_id="678e81b16c4827dbd482d8ce2d1244dc" route="/api/v1/venues/{venueId}/availability" method="GET" status="400" outcome="VALIDATION_FAILED"
+operation=product.request outcome=success request_id=4706e6a3-e74b-4a90-b400-b3a621a04846 trace_id=d5c3db6f6de51a255e9b4761f762342c span_id=a50b3b0169e21d24 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="4706e6a3-e74b-4a90-b400-b3a621a04846" trace_id="d5c3db6f6de51a255e9b4761f762342c" route="UNMATCHED" method="OPTIONS" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=9ff90a8e-8988-4976-9d5b-564a32b6fa33 trace_id=908b167663d949c089eb0965568e753b span_id=45f896ba0b3fbc0c event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="9ff90a8e-8988-4976-9d5b-564a32b6fa33" trace_id="908b167663d949c089eb0965568e753b" route="UNMATCHED" method="OPTIONS" status="403" outcome="ACCESS_DENIED"
+operation=product.request outcome=client_error request_id=204f5018-b65e-41c2-a3d9-ee46159f6ebb trace_id=576955663d99d76b47a7c500a98ee68a span_id=735650633a8f5888 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="204f5018-b65e-41c2-a3d9-ee46159f6ebb" trace_id="576955663d99d76b47a7c500a98ee68a" route="UNMATCHED" method="GET" status="401" outcome="AUTHENTICATION_REQUIRED"
+operation=product.request outcome=success request_id=6f04adf0-c6ef-49bd-96a6-7dca43500adc trace_id=f68defd0735a307381d94c8106843984 span_id=499c2d16c15376cb event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="6f04adf0-c6ef-49bd-96a6-7dca43500adc" trace_id="f68defd0735a307381d94c8106843984" route="/api/v1/venues" method="GET" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=d3fe6d0c-f23b-4c25-888a-4642e602b53f trace_id=60104a6489bf0dc104c420780b11122d span_id=927fb1ba4f6fcd28 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="d3fe6d0c-f23b-4c25-888a-4642e602b53f" trace_id="60104a6489bf0dc104c420780b11122d" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=ac26e8ad-7fd7-4bc5-9cec-c2a65bd2d470 trace_id=316086fb2fa813a93d4d727c04038695 span_id=4a5fa6d3a3752ebb event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="ac26e8ad-7fd7-4bc5-9cec-c2a65bd2d470" trace_id="316086fb2fa813a93d4d727c04038695" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=5a14463d-4ca1-42a5-838b-550d419b649f trace_id=2cd98ba7359b49fd3b15b7f2c9248ca6 span_id=1b9cdc62dccf626a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="5a14463d-4ca1-42a5-838b-550d419b649f" trace_id="2cd98ba7359b49fd3b15b7f2c9248ca6" route="/__test/customer" method="GET" status="204" outcome="SUCCESS"
+operation=product.request outcome=success request_id=33a818be-b11d-4960-8378-7ba1493de207 trace_id=3efdc2632fdd9dcf55ef51e5a0bc599a span_id=625a10b78cbd43d5 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="33a818be-b11d-4960-8378-7ba1493de207" trace_id="3efdc2632fdd9dcf55ef51e5a0bc599a" route="/__test/venues/{venueId}" method="GET" status="204" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=0449b5a2-05b9-4652-9f9d-c07c92cbffcc trace_id=6653164bc5ab8eb886f6d88ca4f199ef span_id=678a210aa9e1562e event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="0449b5a2-05b9-4652-9f9d-c07c92cbffcc" trace_id="6653164bc5ab8eb886f6d88ca4f199ef" route="/__test/venues/{venueId}" method="GET" status="404" outcome="CLIENT_ERROR"
+operation=product.request outcome=success request_id=061ba274-abc6-4619-be11-a284d3c3e5c8 trace_id=c240122b8c129c9d73d84aac309f8060 span_id=f04f4d86e60c9641 event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="061ba274-abc6-4619-be11-a284d3c3e5c8" trace_id="c240122b8c129c9d73d84aac309f8060" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=client_error request_id=a732fb1c-c6ca-4fce-9aa4-6c23f2719ef9 trace_id=49bd14276872e96a2cbb790d29250021 span_id=e312a9920b191d8f event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="a732fb1c-c6ca-4fce-9aa4-6c23f2719ef9" trace_id="49bd14276872e96a2cbb790d29250021" route="/__test/venues/{venueId}/configuration" method="GET" status="403" outcome="ACCESS_DENIED"
+2026-10-05T05:46:24.300+09:00  INFO 37152 --- [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-05T05:46:24.300+09:00  INFO 37152 --- [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-05T05:46:24.301+09:00  INFO 37152 --- [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+operation=product.request outcome=success request_id=ee4d35b1-63c5-4f75-a0a2-ca1ad0d8a002 trace_id=9bfb00bc038f3b601f64e5484630bae5 span_id=f536db4fefc5582b event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="ee4d35b1-63c5-4f75-a0a2-ca1ad0d8a002" trace_id="9bfb00bc038f3b601f64e5484630bae5" route="/__dev/auth/session" method="POST" status="200" outcome="SUCCESS"
+operation=product.request outcome=success request_id=b508f20d-e56a-4131-8717-ceda2c1f6187 trace_id=49293207cb64268d0e5b870f0fadd928 span_id=be28973a8989020a event_id=null fencing_token=0 
+Product request completed signal="http_request" request_id="b508f20d-e56a-4131-8717-ceda2c1f6187" trace_id="49293207cb64268d0e5b870f0fadd928" route="/__dev/auth/session" method="GET" status="204" outcome="SUCCESS"
+]]></system-out>
+  <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\cell1\.gradle\caches\modules-2\files-2.1\net.bytebuddy\byte-buddy-agent\1.18.11\82212e5b3633e7a65fca8bec525762cfb6c9bae4\byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

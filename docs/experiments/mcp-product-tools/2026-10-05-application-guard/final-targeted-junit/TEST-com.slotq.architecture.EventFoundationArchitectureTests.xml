@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.architecture.EventFoundationArchitectureTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:40:59.918Z" hostname="KRESTAR" time="0.456">
+  <properties/>
+  <testcase name="kafkaFoundationKeepsConcretePersistenceAndM4RouteKnowledgeOutsideApplication()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.111"/>
+  <testcase name="foundationDoesNotDependOnBookingWaitlistOrVenueConcreteImplementations()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.044"/>
+  <testcase name="handlerGuardDetectsUnsafeIndependentEffectsUsingNegativeFixtures()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.003"/>
+  <testcase name="foundationAndReplayHaveNoHttpSurface()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.265"/>
+  <testcase name="protocolCarriersRetainExplicitTenantEventAndDurableTargetScope()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.009"/>
+  <testcase name="immutableEvidenceQueryRequiresTenantAndEventAndCannotChangeDelivery()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.0"/>
+  <testcase name="deliveryPortAllowsOnlyBoundedDiscoveryAndScopeBearingProtocolOperations()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.001"/>
+  <testcase name="productionHandlersCannotDirectlyOpenConnectionsOrSubmitIndependentWork()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.011"/>
+  <testcase name="discoversTheActualFoundationAndItsTwoNarrowWriteStores()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.009"/>
+  <testcase name="appendPortLimitsGlobalAccessToFenceCollisionDetectionAndRegistrationLifecycle()" classname="com.slotq.architecture.EventFoundationArchitectureTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

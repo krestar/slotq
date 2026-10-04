@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.mcp.McpActivationTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:41:00.670Z" hostname="KRESTAR" time="0.29">
+  <properties/>
+  <testcase name="defaultRuntimeAndAllIsolatedRolesHaveNoServletEngineOrExposure()" classname="com.slotq.mcp.McpActivationTests" time="0.024"/>
+  <testcase name="unsafeTlsAuthorityOrBudgetConfigurationCannotActivate()" classname="com.slotq.mcp.McpActivationTests" time="0.104"/>
+  <testcase name="activeRuntimeRejectsUnexpectedMcpSubpaths()" classname="com.slotq.mcp.McpActivationTests" time="0.001"/>
+  <testcase name="arbitraryComponentBeanDoesNotRegisterAToolInProductionComposition()" classname="com.slotq.mcp.McpActivationTests" time="0.16"/>
+  <system-out><![CDATA[2026-10-05T05:41:00.704+09:00  WARN 32492 --- [    Test worker] tationConfigServletWebApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'mcpServletBounds' defined in com.slotq.mcp.web.McpTopologyConfiguration: Failed to instantiate [org.springframework.boot.web.server.WebServerFactoryCustomizer]: Factory method 'mcpServletBounds' threw exception with message: MCP requires TLS, bounded authority acquisition/socket and ingress
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

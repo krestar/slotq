@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.integration.waitlist.WaitlistMaintenanceSchedulerTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:00:06.736Z" hostname="KRESTAR" time="0.198">
+  <properties/>
+  <testcase name="defaultIsDisabledAndBothSchedulingIntervalsAreFinitePositiveMilliseconds()" classname="com.slotq.integration.waitlist.WaitlistMaintenanceSchedulerTests" time="0.005"/>
+  <testcase name="actualPeriodicEntryPointOpensOnlyWithReadiness()" classname="com.slotq.integration.waitlist.WaitlistMaintenanceSchedulerTests" time="0.055"/>
+  <system-out><![CDATA[2026-10-05T06:00:06.883+09:00  INFO 37152 --- [    Test worker] o.s.s.config.TaskSchedulerRouter         : No TaskScheduler/ScheduledExecutorService bean found for scheduled processing
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

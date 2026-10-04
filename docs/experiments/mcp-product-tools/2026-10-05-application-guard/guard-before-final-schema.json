@@ -1,0 +1,30 @@
+{
+  "gate" : "PASS: expired PRODUCT credential rejected at application admission; ordinary HOLD unchanged",
+  "sentAt" : "2026-10-04T19:44:44.781645500Z",
+  "releasedAt" : "2026-10-04T19:45:45.781768900Z",
+  "elapsedMillis" : 61267,
+  "authenticatedPausedRequests" : 3,
+  "productCredentialExpiredAt" : "2026-10-04T19:45:44.678015100Z",
+  "lateProductGetStatus" : 401,
+  "lateNarrowedHoldStatus" : 401,
+  "lateNarrowedHoldDurableRows" : {
+    "allocations" : 0,
+    "reservations" : 0,
+    "idempotency" : 0
+  },
+  "holdClientObservation" : "HttpTimeoutException at 15 seconds; subsequent MySQL COMMIT observed",
+  "ordinaryHoldAuthentication" : "existing local/test-only dev Product credential",
+  "guardedHoldAuthentication" : "Auth-issued material-bound PRODUCT audience credential",
+  "durableProductRows" : {
+    "reservationId" : "39106CA389114ECD827413F2EA14E978",
+    "slotId" : "EC3C5E31BF64484A8331313D049FA9DC",
+    "customerId" : "10000000000000000000000000000001",
+    "state" : "HELD",
+    "allocationId" : "3DB0716EB53441A9942A304FDB23508E",
+    "idempotencyState" : "COMPLETED",
+    "completedAt" : "2026-10-04T19:45:45.907Z"
+  },
+  "diagnosticRegistrySize" : 0,
+  "fixtureOverridesProductionRegistry" : true,
+  "pauseLayer" : "test-only HandlerInterceptor after Product security authentication, before controller/application/transaction"
+}

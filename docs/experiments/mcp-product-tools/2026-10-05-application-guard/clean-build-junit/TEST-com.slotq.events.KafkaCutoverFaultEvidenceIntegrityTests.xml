@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests" tests="1" skipped="1" failures="0" errors="0" timestamp="2026-10-04T21:14:22.719Z" hostname="KRESTAR" time="0.0">
+  <properties/>
+  <testcase name="oldDbOwnerCannotConsumeKafkaOrLaterRollbackEpoch()" classname="com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests" time="0.0">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

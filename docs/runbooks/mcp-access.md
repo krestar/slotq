@@ -1,8 +1,9 @@
-# MCP access foundation (#131)
+# MCP authenticated access와 Product tools (#131/#132)
 
 ADR-0009의 한 live Product JVM에 opt-in으로 활성화한다. 기본 artifact의 `/mcp`는 404이며
-`relay`, `consumer`, `quiesced` 등 Product 이외 role에서도 활성화하지 않는다. Production
-registry는 현재 비어 있다. 실제 Product tools는 #132, knowledge bridge는 #134가 등록한다.
+`relay`, `consumer`, `quiesced` 등 Product 이외 role에서도 활성화하지 않는다.
+Production registry는 `reservation.get`, `reservation.hold`, `management.reservations.list`를
+명시적으로 등록한다. Knowledge bridge는 #134 ownership이다.
 
 ## 활성화 조건
 
@@ -80,8 +81,8 @@ Expired/revoked Auth record의 운영 cleanup은 reference를 임의로 live로 
   `ProductCredentialAccess`는 exact GET route/Reservation target 또는 management list route를
   Product edge에서 재검증한다. Customer는 persisted `ReservationAccessTarget.customerPrincipalId`로
   own-only를 강제하므로 같은 subject의 operator membership으로 우회할 수 없다.
-  현재 read binding만 존재한다. Write credential/tool은 #132의 confirmation, intent/idempotency와
-  실제 HTTP/DB/paused/saturated/response-loss 최대 60초 admission gate 전에는 활성화하지 않는다.
+  `prepareHold`도 exact material에 묶인 별도 Product credential을 제공한다. Production root는
+  아래 bounded write profile을 검증하지 못하면 startup을 거부한다.
   Client response timeout을 remote Product execution 종료 증거로 사용할 수 없다.
 - **#133**: `ActorAccess.validateOriginal` / `requireOriginalConfigurationAccess`를 재사용한다.
   Delegate/MCP/Product/M5 credential은 original authoring identity가 아니다. Corpus command/table은
@@ -145,3 +146,70 @@ executor를 활성화하지 않으며 retry/redirect/replay를 구현하지 않�
 
 [실제 검증/evidence](../experiments/mcp-foundation/2026-10-04/README.md)와
 [PR #137 negotiation 보정 검증](../experiments/mcp-foundation/2026-10-05-negotiation/README.md)을 참고한다.
+
+## Product write 활성화 profile
+
+기본 Product에는 이 설정을 자동 적용하지 않는다. Co-located MCP의 production root는 아래
+profile을 fail closed로 검사한다. 기존 ordinary Product API의 optional key/DTO/domain 계약은
+유지한다. TLS loopback 서버 인증서는 JVM trust store 또는 서버 관리 `SSLContext`로 신뢰해야 한다.
+Arbitrary origin, redirect, token passthrough, HTTP 자동 retry는 지원하지 않는다.
+
+```properties
+spring.datasource.hikari.connection-timeout=2000
+spring.datasource.hikari.data-source-properties.connectTimeout=2000
+spring.datasource.hikari.data-source-properties.socketTimeout=2000
+spring.datasource.hikari.connection-init-sql=SET SESSION innodb_lock_wait_timeout=2, lock_wait_timeout=2, wait_timeout=5, max_execution_time=2000
+spring.transaction.default-timeout=10s
+spring.jpa.properties.jakarta.persistence.query.timeout=2000
+```
+
+JVM 시작 시 `-Djdk.httpclient.disableRetryConnect=true`와
+`-Djdk.httpclient.enableAllMethodRetry=false`를 지정한다. 두 번째 값은 기본 false이지만 명시를
+권장한다. Single-host `jdbc:mysql://`를 사용하고 URL에서 timeout/reconnect 속성을 덮어쓰지
+않는다. `autoReconnect`/`autoReconnectForPools`는 false여야 한다. Session row/metadata wait는
+최대 2초, read SELECT는 최대 2,000ms, idle session은 최대 10초, default transaction timeout은
+최대 10초다. Hikari acquisition/connect/socket은 각각 최대 2초다. Deployment는 startup 검증
+후 이 pool/session 설정을 임의 변경하지 않는다.
+
+Client response budget은 server 종료 보장이 아니다. Auth가 발급한 Product credential UUID의
+expiry와 current original Actor/delegation/operation/target을 Product application 진입 직전,
+HOLD Slot lock 이후 다시 검사한다. HOLD partySize/key digest도 일치해야 한다. 일반 Product
+principal에는 이 guard를 적용하지 않는다. Credential은 MCP admittedAt+handler budget
+(최대 30초) 이전에 만료하며, local monotonic expiry도 검사한다. Authentication 후 61초 정지한
+request도 재개 시 fail closed이며 별도 caller deadline protocol은 없다.
+
+Auth의 bounded local exchange reference는 인증 증거가 아니며 Product filter의 실제 finally까지
+현재 Auth read와 servlet 작업을 추적한다. HTTP timeout/interrupt 뒤 adapter가 그 종료를 기다리는
+동안 MCP runner가 permit을 유지한다. 아직 Product에 도달하지 않은 credential은 expiry 후
+재개할 수 없다. Local reference는 process restart로 복원하지 않으며 durable dispatch/redelivery는
+없다. VM/DB 전체 정지 중 물리적인 종료 시간을 주장하지 않는다. 재개 후 expiry와 실제 종료를
+확인하며, 살아 있는 Java work는 종료로 계상하지 않는다.
+
+## HOLD review / approval / 명시적 retry
+
+서버 관리 adapter가 인증된 original Actor의 통제된 UI/채널에서 `HoldApprovals.prepare`를
+호출한다. 반환된 exact review를 보여준 뒤 같은 original Actor credential로 `approve`를 호출한다.
+이는 공개 HTTP endpoint나 MCP approval tool이 아니며 public onboarding/approval UI는 제공하지
+않는다. Caller Boolean, 자연어, RAG content, MCP audit는 승인이 아니다.
+
+`mcp_hold_intents`에 original approver, delegation, server-derived Tenant/Venue, tool/action,
+Slot, partySize, server-generated immutable Product key, prepared expiry를 저장한다. Slot→Resource
+관계와 Product fingerprint의 최종 authority는 기존 Product HTTP command다. 승인 UUID는
+`mcp_hold_confirmations`의 immutable intent FK와 approval/expiry를 참조한다. MCP HOLD의 closed
+arguments는 `intentId`, `confirmationId`, `slotInventoryId`, `partySize`, `idempotencyKey`이며
+모두 저장된 review와 정확히 일치해야 한다. Venue/tenant/role/action/tool 입력은 허용하지 않는다.
+
+준비/승인은 최대 5분, 최초 dispatch는 row lock/CAS로 한 번만 저장하고 명시적 retry는 그 시각부터
+최대 15분이다. 승인 renewal은 같은 intent/key/firstDispatch를 보존한다. 새 intent는 새 key를
+발급하므로 기존 key의 retention을 연장하는 fresh approval을 만들 수 없다. MCP approval/intent
+rows는 cleanup 없이 계속 보존하여 최소 25시간 tombstone 계약을 충족한다. 운영 cleanup/lifecycle
+UI는 이번 범위에 없다. 데이터 접근은 MCP integration owner의 두 table로 제한한다.
+
+각 호출은 Product HTTP request 한 번뿐이다. Product의 `(tenant, customer, key)` namespace,
+`(venue, slot, partySize)` fingerprint, Reservation/Allocation/idempotency 동일 transaction,
+successful `completedAt + 24h` retention을 그대로 사용한다. Product reliability table lookup은 없다.
+Outcome unknown이면 자동 retry/key 교체를 하지 않는다. Location 또는 성공 DTO의 known target은
+durable intent에 기억하고 `_meta.knownTarget`으로 제공하며 `reservation.get` exact read로 확인한다.
+Target을 모르면 unknown을 유지한다. 다른 ID의 GET 404는 mutation failure의 근거가 아니다.
+
+[#132 실제 gate·Product fault·최종 검증 기록](../experiments/mcp-product-tools/2026-10-05-application-guard/README.md)을 참조한다.

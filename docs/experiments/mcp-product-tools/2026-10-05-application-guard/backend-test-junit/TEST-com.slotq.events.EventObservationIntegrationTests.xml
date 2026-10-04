@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.EventObservationIntegrationTests" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:53:47.184Z" hostname="KRESTAR" time="15.086">
+  <properties/>
+  <testcase name="metadataIsAtomicWithAppendAndDuplicateCannotOverwriteItsOriginalCorrelation()" classname="com.slotq.events.EventObservationIntegrationTests" time="0.102"/>
+  <testcase name="legacyNullMetadataStillCommitsEffectAndDoneWithoutInventingAnOriginalRequest()" classname="com.slotq.events.EventObservationIntegrationTests" time="0.109"/>
+  <testcase name="restartedAttemptsAndReplayKeepOriginalLinkAndSeparateFencingIdentities()" classname="com.slotq.events.EventObservationIntegrationTests" time="0.236"/>
+  <system-out><![CDATA[2026-10-05T05:53:47.185+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:53:47.255+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 3a96f1b2453bd6dc6241f9b7ea391510a615e360462ee5e29cf5b0fb2d023496
+2026-10-05T05:53:47.516+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:5529/slotq_event_observation using query 'SELECT 1'
+2026-10-05T05:53:57.875+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT10.6900955S
+2026-10-05T05:53:57.875+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:5529/slotq_event_observation)
+2026-10-05T05:53:57.876+09:00  INFO 37152 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.EventObservationIntegrationTests]: EventObservationIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T05:53:57.881+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.EventObservationIntegrationTests
+2026-10-05T05:53:57.881+09:00  INFO 37152 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.EventObservationIntegrationTests]: EventObservationIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T05:53:57.885+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.EventObservationIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:53:57.906+09:00  INFO 37152 --- [    Test worker] c.s.e.EventObservationIntegrationTests   : Starting EventObservationIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:53:57.906+09:00  INFO 37152 --- [    Test worker] c.s.e.EventObservationIntegrationTests   : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T05:53:58.552+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:53:58.610+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 57 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:53:58.734+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:5529/slotq_event_observation (MySQL 8.4)
+2026-10-05T05:53:58.771+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_event_observation`.`flyway_schema_history` does not exist yet
+2026-10-05T05:53:58.773+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.014s)
+2026-10-05T05:53:58.792+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_event_observation`.`flyway_schema_history` ...
+2026-10-05T05:53:58.851+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_event_observation`: << Empty Schema >>
+2026-10-05T05:53:58.855+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "1 - configure database"
+2026-10-05T05:53:58.889+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "2 - create tenant venue policy"
+2026-10-05T05:53:59.020+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "3 - create auth tenant boundaries"
+2026-10-05T05:53:59.130+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "4 - create resource slot inventory"
+2026-10-05T05:53:59.226+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "5 - create reservation allocation"
+2026-10-05T05:53:59.339+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "6 - add venue name"
+2026-10-05T05:53:59.522+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "7 - create hold idempotency"
+2026-10-05T05:53:59.590+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:53:59.691+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "9 - create transactional events"
+2026-10-05T05:53:59.893+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "10 - create waitlist registration"
+2026-10-05T05:54:00.045+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "11 - create waitlist offers"
+2026-10-05T05:54:00.238+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "12 - create waitlist promotion effect"
+2026-10-05T05:54:00.364+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "13 - create waitlist promotion requests"
+2026-10-05T05:54:00.413+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "14 - index maintenance backlogs"
+2026-10-05T05:54:00.507+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "15 - add event observation origin"
+2026-10-05T05:54:00.585+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:54:00.719+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "17 - create kafka intake"
+2026-10-05T05:54:00.832+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "18 - create event observation projection"
+2026-10-05T05:54:00.885+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "19 - create event transport cutover"
+2026-10-05T05:54:00.932+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "20 - create human operator recovery"
+2026-10-05T05:54:01.115+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "21 - create actor access credentials"
+2026-10-05T05:54:01.289+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_observation` to version "22 - create mcp hold approval"
+2026-10-05T05:54:01.418+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq_event_observation`, now at version v22 (execution time 00:02.073s)
+2026-10-05T05:54:01.446+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:54:01.479+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:5529/slotq_event_observation]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq_event_observation/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:54:01.548+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:54:01.807+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:54:01.818+09:00  INFO 37152 --- [    Test worker] c.s.e.EventObservationIntegrationTests   : Started EventObservationIntegrationTests in 3.931 seconds (process running for 484.493)
+operation=product.event.append outcome=committed request_id=62471efd-9bd9-4e7f-a8dc-f6adc9165746 trace_id=bb497f7fde9246b57fdf8589f0c579a6 span_id=519b520ae44ebd39 event_id=e7848fe6-3dce-4c4d-b136-2fbe0baea4ac fencing_token=0 
+operation=product.request outcome=success request_id=62471efd-9bd9-4e7f-a8dc-f6adc9165746 trace_id=bb497f7fde9246b57fdf8589f0c579a6 span_id=1b3fce0de38d64ee event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=7797ccb5-4302-4c26-8099-f06b2bae51b3 trace_id=79091db5c53db6d0a778edc7d6e3d95f span_id=e1d468c239c1fa92 event_id=e7848fe6-3dce-4c4d-b136-2fbe0baea4ac fencing_token=0 
+operation=product.request outcome=success request_id=7797ccb5-4302-4c26-8099-f06b2bae51b3 trace_id=79091db5c53db6d0a778edc7d6e3d95f span_id=5fd3016fe7b19ee9 event_id=null fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=a86cd5e1-a36d-4e66-bbed-605e765acbe1 trace_id=a967bcf500db9d825cc4afd093dff555 span_id=897964cf6c118fda event_id=234d91b0-19c2-4239-b876-cb6b6a788e92 fencing_token=0 
+operation=product.request outcome=server_error request_id=a86cd5e1-a36d-4e66-bbed-605e765acbe1 trace_id=a967bcf500db9d825cc4afd093dff555 span_id=d9728321d9395740 event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=6f5eafaf-89d5-4bae-9918-ea1aff87aa5f fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=1fb014cc73f01a5b182e63d9795f5375 span_id=383c41e650ad0d43 event_id=6f5eafaf-89d5-4bae-9918-ea1aff87aa5f fencing_token=1 
+operation=product.event.append outcome=committed request_id=17158fc1-7eab-490e-ad03-81a7e940ec3c trace_id=3f496ee94f7bc680201441a8f3a2fdea span_id=bd51511755861384 event_id=8df0a933-6f73-4982-bbc7-314e9458135b fencing_token=0 
+operation=product.request outcome=success request_id=17158fc1-7eab-490e-ad03-81a7e940ec3c trace_id=3f496ee94f7bc680201441a8f3a2fdea span_id=06eb76a436cb4aae event_id=null fencing_token=0 
+operation=product.event.effect outcome=rolled_back request_id=17158fc1-7eab-490e-ad03-81a7e940ec3c trace_id=1c09dab316aaa8b299d598ba1c88e323 span_id=77090c6f53950a9d event_id=8df0a933-6f73-4982-bbc7-314e9458135b fencing_token=1 
+operation=product.event.effect outcome=rolled_back request_id=17158fc1-7eab-490e-ad03-81a7e940ec3c trace_id=e447d4b724722224789b0a298de7a004 span_id=022305daca65e387 event_id=8df0a933-6f73-4982-bbc7-314e9458135b fencing_token=2 
+operation=product.event.effect outcome=committed request_id=17158fc1-7eab-490e-ad03-81a7e940ec3c trace_id=8b67b659544f3d5d5d88c53fb6361cd4 span_id=20f0f616c90bbede event_id=8df0a933-6f73-4982-bbc7-314e9458135b fencing_token=4 
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

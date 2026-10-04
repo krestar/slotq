@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.experiments.waitlist.WaitlistBaselineSmokeTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:18:53.260Z" hostname="KRESTAR" time="20.252">
+  <properties/>
+  <testcase name="realProductWorkloadAndRawRecalculationRunOnMysql()" classname="com.slotq.experiments.waitlist.WaitlistBaselineSmokeTests" time="20.252"/>
+  <system-out><![CDATA[2026-10-05T06:18:53.263+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T06:18:53.389+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: e4590072833dae2cf38b8a98e43e539a3934028dcf98a898a9de1ada12891441
+2026-10-05T06:18:53.680+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:1707/slotq_baseline using query 'SELECT 1'
+2026-10-05T06:19:02.966+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.7026926S
+2026-10-05T06:19:02.966+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:1707/slotq_baseline)
+operation=product.event.append outcome=committed request_id=null trace_id=45fbda844ebb3cc5a28343981dd144a0 span_id=5d00ab1a3b673c19 event_id=4ee3b8a0-9af1-4e60-a354-8b658708b7e8 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=aa533c72acd51e6fda128cc78f29ff46 span_id=d6a5472693d80f8c event_id=4ee3b8a0-9af1-4e60-a354-8b658708b7e8 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=a8f6b9961b7e0707f7eeac4366de98a2 span_id=36e59c0914e69a03 event_id=801111f8-0e2b-417d-98e4-22920d765ff7 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=ac3dacc876429a597b60bd11360e0acb span_id=ff1569a6542ff674 event_id=801111f8-0e2b-417d-98e4-22920d765ff7 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=8113db792070852eb66ad7b57f42aaa2 span_id=cb5a1150c089925d event_id=b768d3c3-97a6-483e-96f4-dfd99392b7cc fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=6e413f880d265b10c55ecb57b74e74fb span_id=59a199fb267489c4 event_id=b768d3c3-97a6-483e-96f4-dfd99392b7cc fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=72d4bdf435fc974010d35c003bd2a56d span_id=a91acef7a571c863 event_id=32ec9572-32bd-4164-be5b-0fd8f2b131a7 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=1a6b85cc36c6271b1cdc2561d25e3491 span_id=cca8d1e0c4cb7b79 event_id=32ec9572-32bd-4164-be5b-0fd8f2b131a7 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=a95dddb7698533abe26dc4408a7c6a01 span_id=ecfc1ecb5a20fbdb event_id=8ca41c75-22a1-422b-baf5-3b44c6886876 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=54a5dff077e7c9bb96be6329eeac9958 span_id=9c56f87f381c1e28 event_id=8ca41c75-22a1-422b-baf5-3b44c6886876 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=f9f35d93db678416a0c7b7a34c36d83b span_id=c5d15da284f8266c event_id=1fd8dbce-5bcb-4159-a59e-9c8b4ce2b7c9 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=3cef46b88d81837d6052de9e74575c14 span_id=4e9a5fa7d6d20660 event_id=1fd8dbce-5bcb-4159-a59e-9c8b4ce2b7c9 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=1e40b5abf56cae97bdafff517f2a00c3 span_id=a2917d645e0552fb event_id=0ceb358a-54ec-479e-b763-54b1329c96ef fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=488844e9087adc4841d6cd8485896655 span_id=087eca3ab52ebfac event_id=0ceb358a-54ec-479e-b763-54b1329c96ef fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=abfc99bb7058f5a438da0fe27b61848f span_id=62cfd516a2944bbb event_id=066b03df-d83d-410b-966a-ad6ef34a94fd fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=39cda894b366b58d44bb1912052a986d span_id=c82eff90866017a8 event_id=066b03df-d83d-410b-966a-ad6ef34a94fd fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=5490eec9515b7a635a2ee8e8bb948ee2 span_id=62ce83ef68a4d302 event_id=832850ea-87ed-4847-9d81-36250f9ae4c2 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=32972cfc1289c4b61aee73e255eafcaf span_id=d2fa88c71d768279 event_id=832850ea-87ed-4847-9d81-36250f9ae4c2 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=a798dee0a3324433665991978071de94 span_id=5102e1ec4ce1ef44 event_id=3bd03a5c-1100-4f65-8791-2f7eabe88643 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=ff844e7aaa0525d63d8f890e3446c3b6 span_id=5327eaeb00a45e7a event_id=99f9713e-ea42-4d69-968e-f2f5ba414628 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=a6878affc2e85a71059bdd8c1fca2074 span_id=0ef81676e4458c35 event_id=3bd03a5c-1100-4f65-8791-2f7eabe88643 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=99bc9459a87b27ce8c51d842707a1a26 span_id=c49e6b099a9b44b6 event_id=99f9713e-ea42-4d69-968e-f2f5ba414628 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=f99313ab15079b4678b7cb7acf42a9f1 span_id=369c07b4b6ca5e0e event_id=793af83c-d21d-4307-9128-2fe414e7dd0c fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=64d5a2335a75c6ec3f0c81818e033a42 span_id=2241d7a44b28c9bb event_id=70aa8b2a-07fa-4bec-abac-f9add8056ae3 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=036cd00050c9ab83387cd2d9bab256f2 span_id=5ef6054081af0be7 event_id=433853ac-40ee-40b5-b238-166e839bfde6 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=34b6caf76db3315f86f1363540d169d6 span_id=7d302080ddf8ddaf event_id=21c150b7-201b-4eb7-bf8a-d6d83a8d5901 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=3225ed4f5f76e535da0bbc21ae0e3235 span_id=5808b0da9e38f496 event_id=b0a6d8b1-85d5-47a3-a35f-74ab47e8e438 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=4783af36d0881e550af261051aca4146 span_id=8ce5bacf92be57c6 event_id=d935acd9-5cb9-46ea-ad43-f32b51a0f214 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=f09b7bfe0b4f490daaa9aec31d69b9fb span_id=e0989b27371e5c44 event_id=70aa8b2a-07fa-4bec-abac-f9add8056ae3 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=5af91d7e2bd4b30acb3ea302469a18b0 span_id=66b81cfb8c034b28 event_id=793af83c-d21d-4307-9128-2fe414e7dd0c fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=6b378ecd2333b9bd08cf33b8a8acf72c span_id=1a10d19448543e58 event_id=21c150b7-201b-4eb7-bf8a-d6d83a8d5901 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=b4f01cea6f58f3f65aa601822dff65f2 span_id=fd9d2a8515331867 event_id=433853ac-40ee-40b5-b238-166e839bfde6 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=2b51cc69e6ae336a838ac73be92e4c2d span_id=ad1f8628a8764472 event_id=b0a6d8b1-85d5-47a3-a35f-74ab47e8e438 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=ae3f92140b5d964e7840c6718a6b5c3a span_id=15af1a156de56dfe event_id=d935acd9-5cb9-46ea-ad43-f32b51a0f214 fencing_token=1 
+Waitlist DB direct baseline: C:\Users\cell1\AppData\Local\Temp\junit-5063703767158984127\fresh-run
+Raw -> summary and correspondence CSV recalculation PASS: C:\Users\cell1\AppData\Local\Temp\junit-5063703767158984127\fresh-run
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

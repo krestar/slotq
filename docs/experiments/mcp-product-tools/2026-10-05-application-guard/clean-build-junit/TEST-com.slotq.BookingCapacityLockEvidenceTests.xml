@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.BookingCapacityLockEvidenceTests" tests="2" skipped="2" failures="0" errors="0" timestamp="2026-10-04T21:06:27.228Z" hostname="KRESTAR" time="0.001">
+  <properties/>
+  <testcase name="narrowingLockToSlotOrDiscoveringIdsWithSnapshotMissesCommittedCapacity()" classname="com.slotq.BookingCapacityLockEvidenceTests" time="0.0">
+    <skipped/>
+  </testcase>
+  <testcase name="differentSlotsRecordHeldGapsAndActualOrmInsertCycle(Scenario)" classname="com.slotq.BookingCapacityLockEvidenceTests" time="0.0">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

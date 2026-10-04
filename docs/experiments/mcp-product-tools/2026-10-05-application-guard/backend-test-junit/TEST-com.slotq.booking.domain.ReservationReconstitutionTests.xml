@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.booking.domain.ReservationReconstitutionTests" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:52:48.713Z" hostname="KRESTAR" time="0.03">
+  <properties/>
+  <testcase name="rejects HELD with allocation active=false" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.002"/>
+  <testcase name="rejects CONFIRMED with allocation active=false" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="rejects CHECKED_IN with allocation active=false" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="rejects EXPIRED with allocation active=true" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="rejects CANCELLED with allocation active=true" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="rejects NO_SHOW with allocation active=true" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="rejects COMPLETED with allocation active=true" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="rejects mismatched &quot;reservationId&quot;" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="rejects mismatched &quot;tenantId&quot;" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="rejects mismatched &quot;venueId&quot;" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="rejects mismatched &quot;resourceId&quot;" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="rejects mismatched &quot;slotInventoryId&quot;" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="restoresDueHeldSnapshotWithoutMaterializingExpiryOrReleasingAllocation()" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="rejectsAllocationWithInvalidUnit()" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="rejectsInvalidPolicyVersionAndDeadlineOrder()" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="restores HELD with allocation active=true" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="restores CONFIRMED with allocation active=true" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="restores CHECKED_IN with allocation active=true" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.001"/>
+  <testcase name="restores EXPIRED with allocation active=false" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="restores CANCELLED with allocation active=false" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="restores NO_SHOW with allocation active=false" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <testcase name="restores COMPLETED with allocation active=false" classname="com.slotq.booking.domain.ReservationReconstitutionTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

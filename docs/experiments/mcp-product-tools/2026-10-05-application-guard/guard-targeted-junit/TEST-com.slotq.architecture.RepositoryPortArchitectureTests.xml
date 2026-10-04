@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.architecture.RepositoryPortArchitectureTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-04T18:44:45.863Z" hostname="KRESTAR" time="0.024">
+  <properties/>
+  <testcase name="m1HasNoAiSystemOrSuperuserRole()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.0"/>
+  <testcase name="arbitraryDomainObjectsAreNotAggregateWriteExceptions()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.0"/>
+  <testcase name="publicVenueDiscoveryIsAnExplicitNarrowReadModel()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.001"/>
+  <testcase name="productRepositoryPortsCannotExposeUnscopedAccess()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.012"/>
+  <testcase name="unscopedLookupAndDeleteCannotUseAnAggregateAsScope()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.0"/>
+  <testcase name="principalIdAloneCannotScopeAProductRepository()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.001"/>
+  <testcase name="allowlistedTenantOwnedAggregateWritesDoNotNeedASeparateScopeParameter()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.0"/>
+  <testcase name="accessControlRepositoryUsesPrincipalWithAnExplicitTargetScope()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.0"/>
+  <testcase name="scannerFindsMainProductRepositoryPorts()" classname="com.slotq.architecture.RepositoryPortArchitectureTests" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

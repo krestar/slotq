@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.EventAppendIntegrationTests" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:52:48.812Z" hostname="KRESTAR" time="16.443">
+  <properties/>
+  <testcase name="concurrentAppendAndActivationLinearizeOnEitherSideOfOuterCommit()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.488"/>
+  <testcase name="canonicalJsonAndMicrosecondsRemainIdempotentAfterActualPersistenceRoundTrip()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.075"/>
+  <testcase name="caughtDatabaseFailureRollsBackBusinessAndAllocatedBoundary()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.025"/>
+  <testcase name="outerRollbackRemovesBusinessEventAndBoundaryAllocation()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.028"/>
+  <testcase name="boundedAsciiIdentifiersHaveTheSameExactCaseSemanticsInJavaAndMySql()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.073"/>
+  <testcase name="concurrentDuplicateAppendsAllocateOnlyOneDurableBoundary()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.229"/>
+  <testcase name="rolledBackAppendAndCutoverReleaseFenceWithoutLeavingDurableSequenceOrMembership()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.69"/>
+  <testcase name="mandatoryBoundaryRejectsStandaloneAppendBeforeEvenInvalidEnvelopeValidation()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.011"/>
+  <testcase name="everyImmutableIdentityFieldAndArrayOrderRejectCollisionWithoutChangingOriginal()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.102"/>
+  <testcase name="caughtValidationAndCanonicalizationFailuresMakeCallerRollbackOnly()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.182"/>
+  <testcase name="requiredRouteMustBeExactActiveAndItsFailureMarksCallerRollbackOnly()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.12"/>
+  <testcase name="appendSharesProductPhysicalTransactionAndOnlyOuterCommitMakesStateVisible()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.042"/>
+  <testcase name="concurrentAppendAndDeactivationLinearizeOnEitherSideOfOuterCommit()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.48"/>
+  <testcase name="readOnlyCallerCannotAppendAndCaughtFailureStillRollsBack()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.016"/>
+  <testcase name="registrationHistoryExcludesHistoricalEventsAndPreservesOriginalGeneration()" classname="com.slotq.events.EventAppendIntegrationTests" time="0.117"/>
+  <system-out><![CDATA[2026-10-05T05:52:48.814+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:52:48.923+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 45b469c3455f3a1a7c83826b78b96c30b6610a05b1461e108c6455bf65886744
+2026-10-05T05:52:49.213+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:12934/slotq_event_append using query 'SELECT 1'
+2026-10-05T05:52:58.603+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.7892177S
+2026-10-05T05:52:58.603+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:12934/slotq_event_append)
+2026-10-05T05:52:58.604+09:00  INFO 37152 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.EventAppendIntegrationTests]: EventAppendIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T05:52:58.665+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.EventAppendIntegrationTests
+2026-10-05T05:52:58.666+09:00  INFO 37152 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.slotq.events.EventAppendIntegrationTests]: EventAppendIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-05T05:52:58.671+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.events.EventAppendIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:52:58.689+09:00  INFO 37152 --- [    Test worker] c.s.events.EventAppendIntegrationTests   : Starting EventAppendIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:52:58.690+09:00  INFO 37152 --- [    Test worker] c.s.events.EventAppendIntegrationTests   : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T05:52:59.293+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:52:59.351+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 55 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:52:59.461+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:12934/slotq_event_append (MySQL 8.4)
+2026-10-05T05:52:59.503+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_event_append`.`flyway_schema_history` does not exist yet
+2026-10-05T05:52:59.505+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.015s)
+2026-10-05T05:52:59.524+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_event_append`.`flyway_schema_history` ...
+2026-10-05T05:52:59.581+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_event_append`: << Empty Schema >>
+2026-10-05T05:52:59.587+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "1 - configure database"
+2026-10-05T05:52:59.622+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "2 - create tenant venue policy"
+2026-10-05T05:52:59.742+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "3 - create auth tenant boundaries"
+2026-10-05T05:52:59.862+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "4 - create resource slot inventory"
+2026-10-05T05:52:59.951+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "5 - create reservation allocation"
+2026-10-05T05:53:00.064+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "6 - add venue name"
+2026-10-05T05:53:00.242+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "7 - create hold idempotency"
+2026-10-05T05:53:00.311+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:53:00.410+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "9 - create transactional events"
+2026-10-05T05:53:00.617+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "10 - create waitlist registration"
+2026-10-05T05:53:00.776+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "11 - create waitlist offers"
+2026-10-05T05:53:00.978+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "12 - create waitlist promotion effect"
+2026-10-05T05:53:01.108+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "13 - create waitlist promotion requests"
+2026-10-05T05:53:01.154+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "14 - index maintenance backlogs"
+2026-10-05T05:53:01.251+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "15 - add event observation origin"
+2026-10-05T05:53:01.325+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:53:01.452+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "17 - create kafka intake"
+2026-10-05T05:53:01.567+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "18 - create event observation projection"
+2026-10-05T05:53:01.622+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "19 - create event transport cutover"
+2026-10-05T05:53:01.669+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "20 - create human operator recovery"
+2026-10-05T05:53:01.849+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "21 - create actor access credentials"
+2026-10-05T05:53:02.027+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_event_append` to version "22 - create mcp hold approval"
+2026-10-05T05:53:02.161+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq_event_append`, now at version v22 (execution time 00:02.090s)
+2026-10-05T05:53:02.191+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:53:02.224+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:12934/slotq_event_append]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq_event_append/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:53:02.306+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:53:02.558+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:53:02.566+09:00  INFO 37152 --- [    Test worker] c.s.events.EventAppendIntegrationTests   : Started EventAppendIntegrationTests in 3.893 seconds (process running for 425.241)
+operation=product.event.append outcome=committed request_id=null trace_id=03264fd4990a4fb5a9d1d9416f018b9a span_id=af37d7bdfb72ea30 event_id=bb6d688e-f4af-456c-a352-2b2493b61978 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=f35a4ed402579e321daaaa4ac1e99804 span_id=eac04ec09c871844 event_id=06b1fe07-2129-4466-9a83-22f6fc8d8590 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=fa1fe1bf663ca2d992c61ae23b5b69d0 span_id=ad45df8b6132067b event_id=5aea0485-aea6-4ecb-bb6e-8908fcf0dd87 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=171260c50bc2b213b7ebea9f380ffcfb span_id=ac7d112972ce9856 event_id=5aea0485-aea6-4ecb-bb6e-8908fcf0dd87 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=5d782baa07b07de97be2b1a11cb2d9be span_id=d5b9e38806e91de7 event_id=5aea0485-aea6-4ecb-bb6e-8908fcf0dd87 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=5aea0485-aea6-4ecb-bb6e-8908fcf0dd87 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=3adb0fa1a5a2723d6deca345cd64d76a span_id=5d5e75a439b021c9 event_id=c50efe42-528c-48d5-8f85-c23ab1c066b8 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=7f0956450def82e9c0b8ca5d2e54bc6d span_id=1bc4e2ad5ba6dafb event_id=28a152e6-0f71-4b19-b1fc-6266cf3fa449 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=1cc587fe3bccb479a37aa9c68891d21a span_id=83f7b49ac61cf3a0 event_id=5c4f0407-65a0-4524-8ec1-0ec1cd9f307e fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e7813b300f43d8a8b80424280b390591 span_id=da14c3eb7f519a49 event_id=15ec0d1e-cd0a-41fa-a1cc-7cd859c0fa6f fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e219e8ac46fc7d3d87879fc868fb2ea1 span_id=a3c1017a82754c0a event_id=15ec0d1e-cd0a-41fa-a1cc-7cd859c0fa6f fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=1a3a6324b6bcb3909faa6fff9b7b3172 span_id=079cd2a0030e4430 event_id=afffec39-1848-4078-a7e5-707141b22357 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=b354e440e9b641861c07d1121b4be807 span_id=58deca4e00e46dfa event_id=697f49f1-1e6d-44ec-9aca-42afdb63e12c fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=c6a48877773f4c99fe6bdb2e29bf706b span_id=daffdf79ff09764a event_id=29e29d63-82bd-4cca-8f93-fe433af8a6ac fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=ab1b0fae5c22aed722fed35ccb99fa97 span_id=6c51ecb39a6080a6 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=dc777bde4496e96131665775f13cec0a span_id=025bc73d56f0a210 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=9a50fe22a2de5a1aa54e41f617b2fb52 span_id=0f63904d57180bb9 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=c0db0975133d3a1e84467820a6233667 span_id=fd8ea7aced2dea9a event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=b7eb5bf46f68c21a412df1a139b2f284 span_id=bff3dc7167dc2ee3 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=b440ecbaddf6bd2c57331a69df12d321 span_id=2c4d5b020cd4bf33 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=e678e7b1d7c44bb567ac29814e3cf788 span_id=33a3b425b0b7b0d0 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=c03728bcf390b5c23d77e98a3713e3ff span_id=d0c629dc78b90102 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=6e40db0f57728ab50664111e049da9b9 span_id=175c6f6edbfe59fc event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a235a0365e5b10e4c20691ac3470c042 span_id=5ac57dcbf676a9d6 event_id=c1512c40-0bed-46fc-a721-9eedc93ce660 fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=b518922a73993bb1420dfc3757cfa94f span_id=918ea40687db1ccd event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=86fa38535fec0fb37a057e4aa2b1ba85 span_id=f788d45d780ac70e event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=ca4d8b230dcd53b37a1d8642952f645e span_id=d380aba0726bce5e event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=df37f06c80adc3c47a6719b5149409de span_id=50adea4246a4cc10 event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=f93af3035b2bd1074caca401547170ef span_id=9019da1f0d189b67 event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=4443a7706953ba6c93a7fb3c68531e11 span_id=4a8e3e765049c262 event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=8061c711b12e519c53bf10f93508cb3f span_id=56d3ace106fce92a event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=rolled_back request_id=null trace_id=2bf58572533ec81c42c19fd19c78ff5f span_id=f8099e2ef79a86ad event_id=2cb1572b-11e7-47e0-bbb1-d8534755535f fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=948f0c91ff088b29f86a1807f60747d2 span_id=6e2438e97300f9ed event_id=685e750f-46f0-494c-905e-24cf80a7c96d fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=1e86409ed651cf83bb59e1930cfe5f1d span_id=2def4e2e0a1b7ffd event_id=31aeb913-209d-4665-a7be-de96faf0c63f fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=5e24713df4729ff66e887f9dc9400d66 span_id=1ce53317e2838617 event_id=59bc8d77-e488-49ce-a26a-9d71f5a4e07d fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=e48fc6bcd28f5c9208cd9b85fd7e4054 span_id=616337e64f3bbe19 event_id=cb459dbf-d748-47af-8c47-43cb53360abf fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=582acf928286405cbaf76593d08c35aa span_id=797cd724fd437285 event_id=b0912e78-f441-40c3-92c5-a0958f6fd0d4 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=7822a6b0e647f5eab0eba4e02e64b3b8 span_id=4ecfc7ae9d51e251 event_id=e8e23e68-bf1c-4a0b-94b3-f40005cffd77 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=35dd88009cf67df9e71ffb743e87ab3b span_id=3b3014f038afd87d event_id=77c88dff-a285-451b-b9a4-1fe5c30226fa fencing_token=0 
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

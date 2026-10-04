@@ -1,0 +1,57 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava UP-TO-DATE
+> Task :processTestResources NO-SOURCE
+> Task :testClasses UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+Unexpected exception thrown.
+org.gradle.internal.remote.internal.MessageIOException: Could not write '/127.0.0.1:8033'.
+	at org.gradle.internal.remote.internal.inet.SocketConnection.flush(SocketConnection.java:142)
+	at org.gradle.internal.remote.internal.hub.MessageHub$ConnectionDispatch.run(MessageHub.java:333)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:65)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.io.IOException: Connection reset by peer
+	at java.base/sun.nio.ch.SocketDispatcher.write0(Native Method)
+	at java.base/sun.nio.ch.SocketDispatcher.write(SocketDispatcher.java:57)
+	at java.base/sun.nio.ch.IOUtil.writeFromNativeBuffer(IOUtil.java:137)
+	at java.base/sun.nio.ch.IOUtil.write(IOUtil.java:81)
+	at java.base/sun.nio.ch.IOUtil.write(IOUtil.java:58)
+	at java.base/sun.nio.ch.SocketChannelImpl.implWrite(SocketChannelImpl.java:562)
+	at java.base/sun.nio.ch.SocketChannelImpl.write(SocketChannelImpl.java:614)
+	at org.gradle.internal.remote.internal.inet.SocketConnection$SocketOutputStream.writeWithNonBlockingRetry(SocketConnection.java:282)
+	at org.gradle.internal.remote.internal.inet.SocketConnection$SocketOutputStream.writeBufferToChannel(SocketConnection.java:269)
+	at org.gradle.internal.remote.internal.inet.SocketConnection$SocketOutputStream.flush(SocketConnection.java:263)
+	at org.gradle.internal.remote.internal.inet.SocketConnection.flush(SocketConnection.java:140)
+	... 6 more
+
+> Task :test
+
+Gradle Test Run :test FAILED
+    org.gradle.process.ProcessExecutionException at DefaultExecHandle.java:460
+
+
+> Task :test FAILED
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test' (registered by plugin 'org.gradle.jvm-test-suite').
+> Test process encountered an unexpected problem.
+   > Process 'Gradle Test Executor 1' finished with non-zero exit value -1 (NTSTATUS 0xFFFFFFFF)
+
+* Try:
+> Check common problems https://docs.gradle.org/9.7.1/userguide/java_testing.html#sec:java_testing_troubleshooting.
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 12m 47s
+4 actionable tasks: 1 executed, 3 up-to-date

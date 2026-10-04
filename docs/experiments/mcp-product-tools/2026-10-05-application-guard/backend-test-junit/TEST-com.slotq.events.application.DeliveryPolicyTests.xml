@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.events.application.DeliveryPolicyTests" tests="27" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:54:17.209Z" hostname="KRESTAR" time="0.021">
+  <properties/>
+  <testcase name="productionDefaultsBindAndApplyOneBoundedDelayForEachRemainingAttempt()" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.003"/>
+  <testcase name="acceptsFiniteUpperBoundsAndZeroDelayTestOverrides()" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="acceptsTheExactLeaseSafetyBoundaryAndASingleAttemptWithoutRetries()" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="invalidConfigurationFailsDuringContextActivation()" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.003"/>
+  <testcase name="keepsAnImmutableCopyOfRetryConfiguration()" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;zero attempts&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.001"/>
+  <testcase name="&quot;excess attempts&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;zero batch&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;excess batch&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;null lease&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.001"/>
+  <testcase name="&quot;null effect&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;null lock&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;zero lock&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;negative lock&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;fractional lock&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;fractional effect&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.001"/>
+  <testcase name="&quot;equal lock and effect&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;lock longer than effect&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;insufficient lease&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.001"/>
+  <testcase name="&quot;excess lease&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;excess effect&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.001"/>
+  <testcase name="&quot;missing delays&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;short delay schedule&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;long delay schedule&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;null delay&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <testcase name="&quot;negative delay&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.001"/>
+  <testcase name="&quot;unbounded delay&quot;" classname="com.slotq.events.application.DeliveryPolicyTests" time="0.0"/>
+  <system-out><![CDATA[2026-10-05T05:54:17.218+09:00  WARN 37152 --- [    Test worker] s.c.a.AnnotationConfigApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'deliveryPolicy': Failed to instantiate [com.slotq.events.application.DeliveryPolicy]: Constructor threw exception
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,848 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.KafkaWaitlistVerticalSliceIntegrationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:07:25.935Z" hostname="KRESTAR" time="24.912">
+  <properties/>
+  <testcase name="releaseRequestFifoTerminalAndNewDemandConvergeThroughKafkaAndDbLedger()" classname="com.slotq.KafkaWaitlistVerticalSliceIntegrationTests" time="7.183"/>
+  <system-out><![CDATA[2026-10-05T06:07:25.946+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.KafkaWaitlistVerticalSliceIntegrationTests
+2026-10-05T06:07:25.954+09:00  INFO 35972 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.KafkaWaitlistVerticalSliceIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T06:07:25.996+09:00  INFO 35972 --- [    Test worker] fkaWaitlistVerticalSliceIntegrationTests : Starting KafkaWaitlistVerticalSliceIntegrationTests using Java 25.0.4.1 with PID 35972 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T06:07:25.996+09:00  INFO 35972 --- [    Test worker] fkaWaitlistVerticalSliceIntegrationTests : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T06:07:26.693+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T06:07:26.752+09:00  INFO 35972 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 58 ms. Found 8 JPA repository interfaces.
+2026-10-05T06:07:26.810+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T06:07:26.886+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 21f53ab8f3129bafaff3f2eff4e560b7bd2dd4f3b335dcb5bda9a8b8645f911c
+2026-10-05T06:07:27.179+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:11288/slotq_kafka_m4_slice using query 'SELECT 1'
+2026-10-05T06:07:36.731+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.9211762S
+2026-10-05T06:07:36.731+09:00  INFO 35972 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:11288/slotq_kafka_m4_slice)
+2026-10-05T06:07:36.810+09:00  INFO 35972 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:11288/slotq_kafka_m4_slice (MySQL 8.4)
+2026-10-05T06:07:36.852+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_kafka_m4_slice`.`flyway_schema_history` does not exist yet
+2026-10-05T06:07:36.854+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.017s)
+2026-10-05T06:07:36.880+09:00  INFO 35972 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_kafka_m4_slice`.`flyway_schema_history` ...
+2026-10-05T06:07:36.942+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_kafka_m4_slice`: << Empty Schema >>
+2026-10-05T06:07:36.947+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "1 - configure database"
+2026-10-05T06:07:36.984+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "2 - create tenant venue policy"
+2026-10-05T06:07:37.111+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "3 - create auth tenant boundaries"
+2026-10-05T06:07:37.221+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "4 - create resource slot inventory"
+2026-10-05T06:07:37.315+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "5 - create reservation allocation"
+2026-10-05T06:07:37.436+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "6 - add venue name"
+2026-10-05T06:07:37.621+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "7 - create hold idempotency"
+2026-10-05T06:07:37.688+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T06:07:37.801+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "9 - create transactional events"
+2026-10-05T06:07:38.014+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "10 - create waitlist registration"
+2026-10-05T06:07:38.168+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "11 - create waitlist offers"
+2026-10-05T06:07:38.362+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "12 - create waitlist promotion effect"
+2026-10-05T06:07:38.492+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "13 - create waitlist promotion requests"
+2026-10-05T06:07:38.541+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "14 - index maintenance backlogs"
+2026-10-05T06:07:38.650+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "15 - add event observation origin"
+2026-10-05T06:07:38.729+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "16 - create kafka publication and transport assignment"
+2026-10-05T06:07:38.860+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "17 - create kafka intake"
+2026-10-05T06:07:38.976+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "18 - create event observation projection"
+2026-10-05T06:07:39.031+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "19 - create event transport cutover"
+2026-10-05T06:07:39.083+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "20 - create human operator recovery"
+2026-10-05T06:07:39.271+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "21 - create actor access credentials"
+2026-10-05T06:07:39.444+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_kafka_m4_slice` to version "22 - create mcp hold approval"
+2026-10-05T06:07:39.577+09:00  INFO 35972 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq_kafka_m4_slice`, now at version v22 (execution time 00:02.095s)
+2026-10-05T06:07:39.606+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T06:07:39.640+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:11288/slotq_kafka_m4_slice]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq_kafka_m4_slice/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T06:07:39.724+09:00  INFO 35972 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T06:07:40.019+09:00  INFO 35972 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T06:07:40.029+09:00  INFO 35972 --- [    Test worker] fkaWaitlistVerticalSliceIntegrationTests : Started KafkaWaitlistVerticalSliceIntegrationTests in 14.072 seconds (process running for 102.832)
+2026-10-05T06:07:40.038+09:00  INFO 35972 --- [    Test worker] tc.apache/kafka:4.1.1                    : Creating container for image: apache/kafka:4.1.1
+2026-10-05T06:07:40.123+09:00  INFO 35972 --- [    Test worker] tc.apache/kafka:4.1.1                    : Container apache/kafka:4.1.1 is starting: b2f119b171dec1f3c57a4d2bc92b66b01133932073f9891f580bc8c3c728ec59
+2026-10-05T06:07:43.459+09:00  INFO 35972 --- [    Test worker] tc.apache/kafka:4.1.1                    : Container apache/kafka:4.1.1 started in PT3.4213015S
+2026-10-05T06:07:43.461+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : AdminClientConfig values: 
+	bootstrap.controllers = []
+	bootstrap.servers = [localhost:11398]
+	client.dns.lookup = use_all_dns_ips
+	client.id = 
+	config.providers = []
+	connections.max.idle.ms = 300000
+	default.api.timeout.ms = 60000
+	enable.metrics.push = false
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+
+2026-10-05T06:07:43.465+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:07:43.465+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:07:43.465+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148063465
+2026-10-05T06:07:43.567+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:43.567+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:43.568+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:43.568+09:00  INFO 35972 --- [| adminclient-2] o.a.kafka.common.utils.AppInfoParser     : App info kafka.admin.client for adminclient-2 unregistered
+2026-10-05T06:07:43.571+09:00  INFO 35972 --- [| adminclient-2] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:43.571+09:00  INFO 35972 --- [| adminclient-2] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:43.571+09:00  INFO 35972 --- [| adminclient-2] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+operation=product.event.append outcome=committed request_id=null trace_id=21004b9b5c029499708156edc2d923ac span_id=4cfe3697b77c3ae9 event_id=e70ae381-89c4-4341-94ab-ec066fdb6a71 fencing_token=0 
+2026-10-05T06:07:43.922+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ProducerConfig values: 
+	acks = -1
+	batch.size = 16384
+	bootstrap.servers = [localhost:11398]
+	buffer.memory = 33554432
+	client.dns.lookup = use_all_dns_ips
+	client.id = producer-2
+	compression.gzip.level = -1
+	compression.lz4.level = 9
+	compression.type = none
+	compression.zstd.level = 3
+	config.providers = []
+	connections.max.idle.ms = 540000
+	delivery.timeout.ms = 15000
+	enable.idempotence = true
+	enable.metrics.push = true
+	interceptor.classes = []
+	key.serializer = class org.apache.kafka.common.serialization.StringSerializer
+	linger.ms = 5
+	max.block.ms = 5000
+	max.in.flight.requests.per.connection = 5
+	max.request.size = 1048576
+	metadata.max.age.ms = 300000
+	metadata.max.idle.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partitioner.adaptive.partitioning.enable = true
+	partitioner.availability.timeout.ms = 0
+	partitioner.class = null
+	partitioner.ignore.keys = false
+	receive.buffer.bytes = 32768
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 5000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	transaction.timeout.ms = 60000
+	transaction.two.phase.commit.enable = false
+	transactional.id = null
+	value.serializer = class org.apache.kafka.common.serialization.StringSerializer
+
+2026-10-05T06:07:43.923+09:00  INFO 35972 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T06:07:43.923+09:00  INFO 35972 --- [    Test worker] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=producer-2] Instantiated an idempotent producer.
+2026-10-05T06:07:43.927+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:07:43.927+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:07:43.927+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148063927
+2026-10-05T06:07:43.937+09:00  INFO 35972 --- [ad | producer-2] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-2] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T06:07:44.048+09:00  INFO 35972 --- [ad | producer-2] o.a.k.c.p.internals.TransactionManager   : [Producer clientId=producer-2] ProducerId set to 0 with epoch 0
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=e70ae381-89c4-4341-94ab-ec066fdb6a71 fencing_token=1 
+2026-10-05T06:07:44.101+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : AdminClientConfig values: 
+	bootstrap.controllers = []
+	bootstrap.servers = [localhost:11398]
+	client.dns.lookup = use_all_dns_ips
+	client.id = 
+	config.providers = []
+	connections.max.idle.ms = 300000
+	default.api.timeout.ms = 60000
+	enable.metrics.push = false
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+
+2026-10-05T06:07:44.105+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:07:44.105+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:07:44.105+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148064105
+2026-10-05T06:07:44.124+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:44.124+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:44.124+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:44.124+09:00  INFO 35972 --- [| adminclient-3] o.a.kafka.common.utils.AppInfoParser     : App info kafka.admin.client for adminclient-3 unregistered
+2026-10-05T06:07:44.126+09:00  INFO 35972 --- [| adminclient-3] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:44.126+09:00  INFO 35972 --- [| adminclient-3] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:44.126+09:00  INFO 35972 --- [| adminclient-3] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:44.127+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ConsumerConfig values: 
+	allow.auto.create.topics = false
+	auto.commit.interval.ms = 5000
+	auto.offset.reset = none
+	bootstrap.servers = [localhost:11398]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-slotq.waitlist.promotion.v1-2
+	client.rack = 
+	config.providers = []
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = slotq.waitlist.promotion.v1
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 5000
+	interceptor.classes = []
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.ByteArrayDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 8
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 15000
+	share.acknowledgement.mode = implicit
+	share.acquire.mode = BATCH_OPTIMIZED
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.ByteArrayDeserializer
+
+2026-10-05T06:07:44.128+09:00  INFO 35972 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T06:07:44.133+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:07:44.133+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:07:44.133+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148064133
+2026-10-05T06:07:44.134+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Subscribed to topic(s): slotq.waitlist.events.v1
+2026-10-05T06:07:44.141+09:00  INFO 35972 --- [    Test worker] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T06:07:44.265+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Discovered group coordinator localhost:11398 (id: 2147483646 rack: null isFenced: false)
+2026-10-05T06:07:44.266+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] (Re-)joining group
+2026-10-05T06:07:44.274+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Request joining group due to: need to re-join with the given member-id: consumer-slotq.waitlist.promotion.v1-2-606832ee-816e-498e-9f7c-abc670c9b699
+2026-10-05T06:07:44.274+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] (Re-)joining group
+2026-10-05T06:07:44.281+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Successfully joined group with generation Generation{generationId=1, memberId='consumer-slotq.waitlist.promotion.v1-2-606832ee-816e-498e-9f7c-abc670c9b699', protocol='range'}
+2026-10-05T06:07:44.281+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Finished assignment for group at generation 1: {consumer-slotq.waitlist.promotion.v1-2-606832ee-816e-498e-9f7c-abc670c9b699=Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])}
+2026-10-05T06:07:44.290+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Successfully synced group in generation Generation{generationId=1, memberId='consumer-slotq.waitlist.promotion.v1-2-606832ee-816e-498e-9f7c-abc670c9b699', protocol='range'}
+2026-10-05T06:07:44.290+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Notifying assignor about the new Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])
+2026-10-05T06:07:44.290+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Adding newly assigned partitions: [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:07:44.306+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:44.306+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-1
+2026-10-05T06:07:44.306+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:44.312+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Seeking to offset 0 for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:44.314+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Seeking to offset 0 for partition slotq.waitlist.events.v1-1
+2026-10-05T06:07:44.317+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Seeking to offset 0 for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:44.849+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:44.849+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:44.849+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : AdminClientConfig values: 
+	bootstrap.controllers = []
+	bootstrap.servers = [localhost:11398]
+	client.dns.lookup = use_all_dns_ips
+	client.id = 
+	config.providers = []
+	connections.max.idle.ms = 300000
+	default.api.timeout.ms = 60000
+	enable.metrics.push = false
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retries = 2147483647
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+
+2026-10-05T06:07:44.852+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:07:44.852+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:07:44.852+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148064852
+2026-10-05T06:07:44.867+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:44.867+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:44.867+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:44.867+09:00  INFO 35972 --- [| adminclient-4] o.a.kafka.common.utils.AppInfoParser     : App info kafka.admin.client for adminclient-4 unregistered
+2026-10-05T06:07:44.869+09:00  INFO 35972 --- [| adminclient-4] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:44.869+09:00  INFO 35972 --- [| adminclient-4] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:44.869+09:00  INFO 35972 --- [| adminclient-4] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:44.869+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.config.AbstractConfig   : ConsumerConfig values: 
+	allow.auto.create.topics = false
+	auto.commit.interval.ms = 5000
+	auto.offset.reset = none
+	bootstrap.servers = [localhost:11398]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-slotq.operations.event-observation.v1-3
+	client.rack = 
+	config.providers = []
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = slotq.operations.event-observation.v1
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 5000
+	interceptor.classes = []
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.ByteArrayDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 8
+	metadata.max.age.ms = 300000
+	metadata.recovery.rebootstrap.trigger.ms = 300000
+	metadata.recovery.strategy = rebootstrap
+	metric.reporters = [org.apache.kafka.common.metrics.JmxReporter]
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.assertion.algorithm = RS256
+	sasl.oauthbearer.assertion.claim.aud = null
+	sasl.oauthbearer.assertion.claim.exp.seconds = 300
+	sasl.oauthbearer.assertion.claim.iss = null
+	sasl.oauthbearer.assertion.claim.jti.include = false
+	sasl.oauthbearer.assertion.claim.nbf.seconds = 60
+	sasl.oauthbearer.assertion.claim.sub = null
+	sasl.oauthbearer.assertion.file = null
+	sasl.oauthbearer.assertion.private.key.file = null
+	sasl.oauthbearer.assertion.private.key.passphrase = null
+	sasl.oauthbearer.assertion.template.file = null
+	sasl.oauthbearer.client.credentials.client.id = null
+	sasl.oauthbearer.client.credentials.client.secret = null
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = []
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.jwt.retriever.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever
+	sasl.oauthbearer.jwt.validator.class = class org.apache.kafka.common.security.oauthbearer.DefaultJwtValidator
+	sasl.oauthbearer.scope = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 15000
+	share.acknowledgement.mode = implicit
+	share.acquire.mode = BATCH_OPTIMIZED
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = []
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.ByteArrayDeserializer
+
+2026-10-05T06:07:44.869+09:00  INFO 35972 --- [    Test worker] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-10-05T06:07:44.874+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.2.1
+2026-10-05T06:07:44.874+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: 92f61c44867f39dc
+2026-10-05T06:07:44.874+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1791148064874
+2026-10-05T06:07:44.874+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Subscribed to topic(s): slotq.waitlist.events.v1
+2026-10-05T06:07:44.880+09:00  INFO 35972 --- [    Test worker] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Cluster ID: 4L6g3nShT-eMCtK--X86sw
+2026-10-05T06:07:44.881+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Discovered group coordinator localhost:11398 (id: 2147483646 rack: null isFenced: false)
+2026-10-05T06:07:44.881+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] (Re-)joining group
+2026-10-05T06:07:44.887+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Request joining group due to: need to re-join with the given member-id: consumer-slotq.operations.event-observation.v1-3-44751e6c-35a2-4425-befa-7d3c51d00076
+2026-10-05T06:07:44.887+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] (Re-)joining group
+2026-10-05T06:07:44.889+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Successfully joined group with generation Generation{generationId=1, memberId='consumer-slotq.operations.event-observation.v1-3-44751e6c-35a2-4425-befa-7d3c51d00076', protocol='range'}
+2026-10-05T06:07:44.890+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Finished assignment for group at generation 1: {consumer-slotq.operations.event-observation.v1-3-44751e6c-35a2-4425-befa-7d3c51d00076=Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])}
+2026-10-05T06:07:44.893+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Successfully synced group in generation Generation{generationId=1, memberId='consumer-slotq.operations.event-observation.v1-3-44751e6c-35a2-4425-befa-7d3c51d00076', protocol='range'}
+2026-10-05T06:07:44.894+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Notifying assignor about the new Assignment(partitions=[slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2])
+2026-10-05T06:07:44.894+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Adding newly assigned partitions: [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:07:44.902+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:44.902+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-1
+2026-10-05T06:07:44.902+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:44.904+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Seeking to offset 0 for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:44.906+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Seeking to offset 0 for partition slotq.waitlist.events.v1-1
+2026-10-05T06:07:44.909+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Seeking to offset 0 for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:45.424+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:45.424+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=e70ae381-89c4-4341-94ab-ec066fdb6a71 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=e70ae381-89c4-4341-94ab-ec066fdb6a71 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=781ba85baa61950c7d94a2c1991825b9 span_id=05cf19da0fc69cf9 event_id=5ffc72b2-a0ee-40c3-969b-894717844429 fencing_token=0 
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=5ffc72b2-a0ee-40c3-969b-894717844429 fencing_token=1 
+2026-10-05T06:07:46.190+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:46.190+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:46.704+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:46.704+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=5ffc72b2-a0ee-40c3-969b-894717844429 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=5ffc72b2-a0ee-40c3-969b-894717844429 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=3e17ac08eeb396f26c4b8abfa333fc93 span_id=15a3806fb522ca60 event_id=5d09c7e8-b94b-4e03-9660-3bf1191f9143 fencing_token=0 
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=5d09c7e8-b94b-4e03-9660-3bf1191f9143 fencing_token=1 
+2026-10-05T06:07:47.493+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:47.493+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:48.005+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:48.005+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=5d09c7e8-b94b-4e03-9660-3bf1191f9143 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=5d09c7e8-b94b-4e03-9660-3bf1191f9143 fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=3b18b9305c34f69c8203521d296ce60d span_id=cc87944064e5253a event_id=b34cea51-8489-4ae7-bdbc-de18fda0841c fencing_token=0 
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=b34cea51-8489-4ae7-bdbc-de18fda0841c fencing_token=1 
+2026-10-05T06:07:48.919+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:48.919+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:49.429+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:49.429+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=b34cea51-8489-4ae7-bdbc-de18fda0841c fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=b34cea51-8489-4ae7-bdbc-de18fda0841c fencing_token=1 
+operation=product.event.append outcome=committed request_id=null trace_id=a3544eb29d5da148d4a665a818af9f1a span_id=a07e3ca0316d40f5 event_id=8c0d8b8b-3811-4dec-9cf6-3cc8f065d620 fencing_token=0 
+operation=product.event.publication outcome=success request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=8c0d8b8b-3811-4dec-9cf6-3cc8f065d620 fencing_token=1 
+2026-10-05T06:07:50.201+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:50.201+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+2026-10-05T06:07:50.712+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-0
+2026-10-05T06:07:50.712+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Found no committed offset for partition slotq.waitlist.events.v1-2
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=8c0d8b8b-3811-4dec-9cf6-3cc8f065d620 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=8c0d8b8b-3811-4dec-9cf6-3cc8f065d620 fencing_token=1 
+2026-10-05T06:07:50.848+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Revoke previously assigned partitions [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:07:50.848+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Member consumer-slotq.waitlist.promotion.v1-2-606832ee-816e-498e-9f7c-abc670c9b699 sending LeaveGroup request to coordinator localhost:11398 (id: 2147483646 rack: null isFenced: false) due to the consumer is being closed
+2026-10-05T06:07:50.848+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-10-05T06:07:50.848+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.waitlist.promotion.v1-2, groupId=slotq.waitlist.promotion.v1] Request joining group due to: consumer pro-actively leaving the group
+2026-10-05T06:07:50.863+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:50.863+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:50.863+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-10-05T06:07:50.863+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:50.865+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-slotq.waitlist.promotion.v1-2 unregistered
+2026-10-05T06:07:50.865+09:00  INFO 35972 --- [    Test worker] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Revoke previously assigned partitions [slotq.waitlist.events.v1-0, slotq.waitlist.events.v1-1, slotq.waitlist.events.v1-2]
+2026-10-05T06:07:50.866+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Member consumer-slotq.operations.event-observation.v1-3-44751e6c-35a2-4425-befa-7d3c51d00076 sending LeaveGroup request to coordinator localhost:11398 (id: 2147483646 rack: null isFenced: false) due to the consumer is being closed
+2026-10-05T06:07:50.866+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-10-05T06:07:50.866+09:00  INFO 35972 --- [    Test worker] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-slotq.operations.event-observation.v1-3, groupId=slotq.operations.event-observation.v1] Request joining group due to: consumer pro-actively leaving the group
+2026-10-05T06:07:50.877+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:50.877+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:50.877+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-10-05T06:07:50.877+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:50.880+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-slotq.operations.event-observation.v1-3 unregistered
+2026-10-05T06:07:50.880+09:00  INFO 35972 --- [    Test worker] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=producer-2] Closing the Kafka producer with timeoutMillis = 30000 ms.
+2026-10-05T06:07:50.883+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-10-05T06:07:50.883+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-10-05T06:07:50.883+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-10-05T06:07:50.883+09:00  INFO 35972 --- [    Test worker] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-10-05T06:07:50.883+09:00  INFO 35972 --- [    Test worker] o.a.kafka.common.utils.AppInfoParser     : App info kafka.producer for producer-2 unregistered
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

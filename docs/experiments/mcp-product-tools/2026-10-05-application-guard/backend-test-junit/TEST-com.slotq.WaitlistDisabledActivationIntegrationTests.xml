@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.WaitlistDisabledActivationIntegrationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:50:27.572Z" hostname="KRESTAR" time="14.209">
+  <properties/>
+  <testcase name="disabledRunnerKeepsExistingRegistrationsAndOrdinaryBookingButNoScheduledWork()" classname="com.slotq.WaitlistDisabledActivationIntegrationTests" time="0.21"/>
+  <system-out><![CDATA[2026-10-05T05:50:27.573+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:50:27.663+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: dfca8ab209ff328c6408cf0e5367f3bc72407a8d18dada557bde999a38a1e8b2
+2026-10-05T05:50:27.970+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:4536/slotq_activation_disabled using query 'SELECT 1'
+2026-10-05T05:50:37.247+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.67435S
+2026-10-05T05:50:37.248+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:4536/slotq_activation_disabled)
+2026-10-05T05:50:37.253+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.WaitlistDisabledActivationIntegrationTests
+2026-10-05T05:50:37.258+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.WaitlistDisabledActivationIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:50:37.279+09:00  INFO 37152 --- [    Test worker] itlistDisabledActivationIntegrationTests : Starting WaitlistDisabledActivationIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:50:37.279+09:00  INFO 37152 --- [    Test worker] itlistDisabledActivationIntegrationTests : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T05:50:37.909+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:50:37.968+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 58 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:50:38.092+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:4536/slotq_activation_disabled (MySQL 8.4)
+2026-10-05T05:50:38.129+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_activation_disabled`.`flyway_schema_history` does not exist yet
+2026-10-05T05:50:38.132+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.014s)
+2026-10-05T05:50:38.150+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_activation_disabled`.`flyway_schema_history` ...
+2026-10-05T05:50:38.207+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_activation_disabled`: << Empty Schema >>
+2026-10-05T05:50:38.213+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "1 - configure database"
+2026-10-05T05:50:38.245+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "2 - create tenant venue policy"
+2026-10-05T05:50:38.362+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "3 - create auth tenant boundaries"
+2026-10-05T05:50:38.477+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "4 - create resource slot inventory"
+2026-10-05T05:50:38.571+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "5 - create reservation allocation"
+2026-10-05T05:50:38.686+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "6 - add venue name"
+2026-10-05T05:50:38.878+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "7 - create hold idempotency"
+2026-10-05T05:50:38.950+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T05:50:39.050+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "9 - create transactional events"
+2026-10-05T05:50:39.250+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "10 - create waitlist registration"
+2026-10-05T05:50:39.401+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "11 - create waitlist offers"
+2026-10-05T05:50:39.589+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "12 - create waitlist promotion effect"
+2026-10-05T05:50:39.720+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "13 - create waitlist promotion requests"
+2026-10-05T05:50:39.771+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "14 - index maintenance backlogs"
+2026-10-05T05:50:39.872+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "15 - add event observation origin"
+2026-10-05T05:50:39.950+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "16 - create kafka publication and transport assignment"
+2026-10-05T05:50:40.083+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "17 - create kafka intake"
+2026-10-05T05:50:40.193+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "18 - create event observation projection"
+2026-10-05T05:50:40.247+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "19 - create event transport cutover"
+2026-10-05T05:50:40.296+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "20 - create human operator recovery"
+2026-10-05T05:50:40.482+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "21 - create actor access credentials"
+2026-10-05T05:50:40.647+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation_disabled` to version "22 - create mcp hold approval"
+2026-10-05T05:50:40.788+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq_activation_disabled`, now at version v22 (execution time 00:02.068s)
+2026-10-05T05:50:40.823+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T05:50:40.856+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:4536/slotq_activation_disabled]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq_activation_disabled/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T05:50:40.929+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T05:50:41.558+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T05:50:41.566+09:00  INFO 37152 --- [    Test worker] itlistDisabledActivationIntegrationTests : Started WaitlistDisabledActivationIntegrationTests in 4.306 seconds (process running for 284.241)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

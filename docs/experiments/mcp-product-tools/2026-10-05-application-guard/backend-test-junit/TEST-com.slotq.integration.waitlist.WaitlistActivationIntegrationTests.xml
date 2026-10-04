@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" tests="26" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:59:49.018Z" hostname="KRESTAR" time="17.132">
+  <properties/>
+  <testcase name="[1] kind = &quot;version&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.147"/>
+  <testcase name="[2] kind = &quot;consumer&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.108"/>
+  <testcase name="[3] kind = &quot;case&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.11"/>
+  <testcase name="[4] kind = &quot;implementation&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.113"/>
+  <testcase name="bootstrapAndBusinessAppendShareOnlyFoundationFenceAndKeepEventTarget()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.28"/>
+  <testcase name="disabledRestartDoesNotInspectOrChangeExistingDurableRegistrations()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.079"/>
+  <testcase name="historicalEventBeforeFirstRegistrationIsNeverBackfilled()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.217"/>
+  <testcase name="missingHandlerFailsBeforeAnyRegistrationAndReleaseRollsBack()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.131"/>
+  <testcase name="multiInstanceLoserVerifiesFreshDurableGenerationInsteadOfCreatingAnother()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.061"/>
+  <testcase name="validClosedHistoryDoesNotReplaceTheExistingActiveGeneration()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.083"/>
+  <testcase name="lostActivationResponseIsRecoveredByNewFencedObservationWithoutAnotherGeneration()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.071"/>
+  <testcase name="secondRouteDbFailureKeepsPartialBootstrapClosedAndRestartReusesFirstIdentity()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.192"/>
+  <testcase name="firstActivationAndComponentRestartPreserveIdentityAndBoundary()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.079"/>
+  <testcase name="readyCacheCannotPermitAppendAfterDurableRouteWasRemoved()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.178"/>
+  <testcase name="[1] kind = &quot;version&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.04"/>
+  <testcase name="[2] kind = &quot;case&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.037"/>
+  <testcase name="[3] kind = &quot;boundary&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.04"/>
+  <testcase name="[4] kind = &quot;inactive&quot;" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.044"/>
+  <testcase name="[1] deliveryEnabled = false" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.022"/>
+  <testcase name="[2] deliveryEnabled = true" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.012"/>
+  <testcase name="programmingFailureIsNotReclassifiedAsAlreadyActiveEvenAfterInsert()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.033"/>
+  <testcase name="anotherLogicalConsumerOnTheSameEventTypeDoesNotBlockWaitlistBootstrap()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.09"/>
+  <testcase name="reusedGlobalBoundaryAcrossExactRoutesIsCorruptionNotReady()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.146"/>
+  <testcase name="allegedAlreadyActiveWithoutDurableEvidenceFailsClosed()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.128"/>
+  <testcase name="activationAndFreshInspectionRejectAnOuterBusinessTransaction()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.024"/>
+  <testcase name="ticksBeforeSecondRegistrationCommitCannotExecuteBusinessOrDelivery()" classname="com.slotq.integration.waitlist.WaitlistActivationIntegrationTests" time="0.802"/>
+  <system-out><![CDATA[2026-10-05T05:59:49.019+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Creating container for image: mysql:8.4
+2026-10-05T05:59:49.091+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 is starting: 19d7eb0754a4036cc74b80e6f71213e6943c3e95fecf2d068adc73c56e4ef331
+2026-10-05T05:59:49.325+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Waiting for database connection to become available at jdbc:mysql://localhost:5567/slotq_activation using query 'SELECT 1'
+2026-10-05T05:59:49.439+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node 1 disconnected.
+2026-10-05T05:59:49.439+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node 1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:50.388+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node 1 disconnected.
+2026-10-05T05:59:50.388+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node 1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:51.389+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node 1 disconnected.
+2026-10-05T05:59:51.389+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node 1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:52.390+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node 1 disconnected.
+2026-10-05T05:59:52.390+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node 1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:53.225+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:6865]
+2026-10-05T05:59:53.226+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:53.226+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:53.226+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:53.226+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:6865]
+2026-10-05T05:59:53.390+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:53.391+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:53.391+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:54.392+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:54.392+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:54.392+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:55.393+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:55.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:55.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:56.393+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:56.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:56.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:57.227+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:6865]
+2026-10-05T05:59:57.393+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:57.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:57.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:58.393+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:58.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:58.393+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:58.613+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container mysql:8.4 started in PT9.5930462S
+2026-10-05T05:59:58.613+09:00  INFO 37152 --- [    Test worker] tc.mysql:8.4                             : Container is started (JDBC URL: jdbc:mysql://localhost:5567/slotq_activation)
+2026-10-05T05:59:58.680+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.integration.waitlist.WaitlistActivationIntegrationTests
+2026-10-05T05:59:58.685+09:00  INFO 37152 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.slotq.SlotqApplication for test class com.slotq.integration.waitlist.WaitlistActivationIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-05T05:59:58.706+09:00  INFO 37152 --- [    Test worker] s.i.w.WaitlistActivationIntegrationTests : Starting WaitlistActivationIntegrationTests using Java 25.0.4.1 with PID 37152 (started by cell1 in C:\dev\slotq\backend)
+2026-10-05T05:59:58.706+09:00  INFO 37152 --- [    Test worker] s.i.w.WaitlistActivationIntegrationTests : No active profile set, falling back to 1 default profile: "default"
+2026-10-05T05:59:59.313+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-05T05:59:59.329+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:6865]
+2026-10-05T05:59:59.371+09:00  INFO 37152 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 56 ms. Found 8 JPA repository interfaces.
+2026-10-05T05:59:59.394+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T05:59:59.394+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T05:59:59.394+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T05:59:59.654+09:00  INFO 37152 --- [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:mysql://localhost:5567/slotq_activation (MySQL 8.4)
+2026-10-05T05:59:59.690+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table `slotq_activation`.`flyway_schema_history` does not exist yet
+2026-10-05T05:59:59.691+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 22 migrations (execution time 00:00.014s)
+2026-10-05T05:59:59.711+09:00  INFO 37152 --- [    Test worker] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table `slotq_activation`.`flyway_schema_history` ...
+2026-10-05T05:59:59.764+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema `slotq_activation`: << Empty Schema >>
+2026-10-05T05:59:59.768+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "1 - configure database"
+2026-10-05T05:59:59.800+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "2 - create tenant venue policy"
+2026-10-05T05:59:59.918+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "3 - create auth tenant boundaries"
+2026-10-05T06:00:00.026+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "4 - create resource slot inventory"
+2026-10-05T06:00:00.123+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "5 - create reservation allocation"
+2026-10-05T06:00:00.235+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "6 - add venue name"
+2026-10-05T06:00:00.396+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:00:00.396+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T06:00:00.396+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:00:00.421+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "7 - create hold idempotency"
+2026-10-05T06:00:00.488+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "8 - scope hold idempotency reservation reference"
+2026-10-05T06:00:00.584+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "9 - create transactional events"
+2026-10-05T06:00:00.793+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "10 - create waitlist registration"
+2026-10-05T06:00:00.943+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "11 - create waitlist offers"
+2026-10-05T06:00:01.142+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "12 - create waitlist promotion effect"
+2026-10-05T06:00:01.218+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-11] Rebootstrapping with [localhost/127.0.0.1:6865]
+2026-10-05T06:00:01.273+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "13 - create waitlist promotion requests"
+2026-10-05T06:00:01.321+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "14 - index maintenance backlogs"
+2026-10-05T06:00:01.396+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:00:01.396+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T06:00:01.396+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:00:01.420+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "15 - add event observation origin"
+2026-10-05T06:00:01.499+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "16 - create kafka publication and transport assignment"
+2026-10-05T06:00:01.627+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "17 - create kafka intake"
+2026-10-05T06:00:01.733+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "18 - create event observation projection"
+2026-10-05T06:00:01.788+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "19 - create event transport cutover"
+2026-10-05T06:00:01.836+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "20 - create human operator recovery"
+2026-10-05T06:00:02.019+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "21 - create actor access credentials"
+2026-10-05T06:00:02.185+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Migrating schema `slotq_activation` to version "22 - create mcp hold approval"
+2026-10-05T06:00:02.324+09:00  INFO 37152 --- [    Test worker] o.f.core.internal.command.DbMigrate      : Successfully applied 22 migrations to schema `slotq_activation`, now at version v22 (execution time 00:02.066s)
+2026-10-05T06:00:02.353+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-05T06:00:02.386+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:5567/slotq_activation]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.4.11
+	Default catalog/schema: slotq_activation/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-05T06:00:02.397+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:00:02.397+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T06:00:02.397+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+2026-10-05T06:00:02.461+09:00  INFO 37152 --- [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-05T06:00:02.856+09:00  INFO 37152 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-05T06:00:02.864+09:00  INFO 37152 --- [    Test worker] s.i.w.WaitlistActivationIntegrationTests : Started WaitlistActivationIntegrationTests in 4.176 seconds (process running for 845.538)
+2026-10-05T06:00:03.398+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:00:03.398+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T06:00:03.398+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+operation=product.event.append outcome=committed request_id=null trace_id=f7a6fa00947d4b6e9e03fa78beb9c220 span_id=f7c6b52115c648fc event_id=5f46ce0e-8f2c-4aec-868e-34184f87d014 fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=c1fd402fe804247cd929185918d33d2e span_id=62060ec726f64ed2 event_id=5f46ce0e-8f2c-4aec-868e-34184f87d014 fencing_token=1 
+operation=product.event_delivery outcome=success request_id=null trace_id=c1c35ae7af7f6a9969376990cf9120e1 span_id=68db93456200284a event_id=null fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=5624f59a30fa39ed273bafc6ea1775ce span_id=60cd2a84a83cbd65 event_id=0b3bd190-044c-4d68-bc71-3a2bd2401486 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=7c20b10b11f9aae01073914296edfdac span_id=e5d2a60ab84b6a33 event_id=2284fed0-0ce5-42b7-bd0f-4518f26786ff fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=585e9b38962d4396376287bf7d8071b5 span_id=b09124354d4c0d9c event_id=2284fed0-0ce5-42b7-bd0f-4518f26786ff fencing_token=1 
+operation=product.event_delivery outcome=success request_id=null trace_id=0246fa2988622df067720484a5ac4de3 span_id=cb69666deadbbf94 event_id=null fencing_token=0 
+2026-10-05T06:00:04.399+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:00:04.399+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T06:00:04.399+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+operation=product.event.append outcome=rolled_back request_id=null trace_id=70aabcce6d704d2413bee2993965e5e8 span_id=ab4449c6112028bd event_id=dd7d7b08-19d2-4fcb-9e62-aa51978a5dfc fencing_token=0 
+2026-10-05T06:00:05.400+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:00:05.400+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T06:00:05.400+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=471d9370338ea8a0 event_id=af1413c2-712c-49f3-9c75-7fdb8cfe0ad1 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=3978e5bf739331bc event_id=93d9fc33-ac29-4098-b3ed-6dca8f98dc6c fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=f2c9c01e467d905e event_id=73f6f0f7-1118-4060-9708-b4235eb62b67 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=16c2cd69dce9bfef event_id=34b49d44-a01c-46ee-a8b6-f60da4b25141 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=082fb9914106175f event_id=59db4cba-4873-4a94-be68-c6f45035cda6 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=ebc55a4d050e8747 event_id=695a771e-d774-4f36-89a5-3896412331de fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=6d988a78729e85b0 event_id=eecdf8cd-71dd-4bd3-bc2e-8cc67cf63fc3 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=6faf7546e5b90277 event_id=0be71849-15f6-492b-beef-6103e8508cc5 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=bb6fedf1c47d9384 event_id=92f109e4-21b8-4ec3-9c36-9f25990b1fba fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=50b5b4edb99bc5fe event_id=5599ab0a-ad98-4093-b3da-7397ed6c1018 fencing_token=0 
+operation=product.event.append outcome=committed request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=276a749354c5fce3 event_id=fca07e59-743c-43bc-bc4a-15ede21a21c0 fencing_token=0 
+operation=product.maintenance outcome=success request_id=null trace_id=a234476303e429d3f12535e345ea1b87 span_id=ca6d71402c95188f event_id=null fencing_token=0 
+operation=product.event.effect outcome=committed request_id=null trace_id=7ea73ee35128b5518964db3f4bb12778 span_id=af3b11cda48f6985 event_id=0be71849-15f6-492b-beef-6103e8508cc5 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=c6a49744f006119a17aba0419c0471e1 span_id=cc83f1a2d002790a event_id=34b49d44-a01c-46ee-a8b6-f60da4b25141 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=b15c0e3b57d4df31a66f42b8623580af span_id=fc2da2d365c3f8b6 event_id=5599ab0a-ad98-4093-b3da-7397ed6c1018 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=b182056ee7f1318df9679febf8439984 span_id=55b5d18ef680cc74 event_id=59db4cba-4873-4a94-be68-c6f45035cda6 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=40a9bb92226d2bd1efbbf57f6c857e69 span_id=77d9d73015cab420 event_id=695a771e-d774-4f36-89a5-3896412331de fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=26d775b02ae6a43ca81ebc8fdac795c4 span_id=9e26e0e356ce430e event_id=73f6f0f7-1118-4060-9708-b4235eb62b67 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=c62fb15c49b7e8be315f1df136986967 span_id=914793f39ca4921a event_id=92f109e4-21b8-4ec3-9c36-9f25990b1fba fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=639a34767407c30037e87fb8c669a68d span_id=e95dac41e2043bd0 event_id=93d9fc33-ac29-4098-b3ed-6dca8f98dc6c fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=8f228da2f7427f9b1478f41f14e44973 span_id=0a544e731f569678 event_id=af1413c2-712c-49f3-9c75-7fdb8cfe0ad1 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=066d28b185444eda9c03c0c150d05a8d span_id=e775563cfb942e38 event_id=eecdf8cd-71dd-4bd3-bc2e-8cc67cf63fc3 fencing_token=1 
+operation=product.event.effect outcome=committed request_id=null trace_id=9d4a3ec3158054849557f2f0cfa37638 span_id=285154614bc3a01a event_id=fca07e59-743c-43bc-bc4a-15ede21a21c0 fencing_token=1 
+operation=product.event_delivery outcome=success request_id=null trace_id=b6a160a43b950ee49ddeee97525ac413 span_id=77fb5978387f5542 event_id=null fencing_token=0 
+2026-10-05T06:00:06.401+09:00  INFO 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Node -1 disconnected.
+2026-10-05T06:00:06.401+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Connection to node -1 (localhost/127.0.0.1:6865) could not be established. Node may not be available.
+2026-10-05T06:00:06.401+09:00  WARN 37152 --- [d | producer-11] org.apache.kafka.clients.NetworkClient   : [Producer clientId=producer-11] Bootstrap broker localhost:6865 (id: -1 rack: null isFenced: false) disconnected
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

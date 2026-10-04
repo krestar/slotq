@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.mcp.McpAccountingTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:00:06.935Z" hostname="KRESTAR" time="0.035">
+  <properties/>
+  <testcase name="clockRegressionCannotExtendDeadlineOrDispatchAContextFromTheFuture()" classname="com.slotq.mcp.McpAccountingTests" time="0.006"/>
+  <testcase name="productOriginCannotBeCallerSelectedRemoteRedirectOrContainCredentials()" classname="com.slotq.mcp.McpAccountingTests" time="0.004"/>
+  <testcase name="cardinalitySaturationCannotEvictInFlightOrIndebtedKeysAndClockFailureClosesAdmission()" classname="com.slotq.mcp.McpAccountingTests" time="0.006"/>
+  <testcase name="fileSinkEnforcesSevenDayRetentionAndFiniteBytesWithoutDeletingUnrelatedFiles()" classname="com.slotq.mcp.McpAccountingTests" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

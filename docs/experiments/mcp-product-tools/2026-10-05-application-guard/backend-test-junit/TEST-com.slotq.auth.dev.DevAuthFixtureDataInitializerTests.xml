@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.slotq.auth.dev.DevAuthFixtureDataInitializerTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:52:47.723Z" hostname="KRESTAR" time="0.35">
+  <properties/>
+  <testcase name="uses_a_mysql_timestamp_safe_policy_creation_time()" classname="com.slotq.auth.dev.DevAuthFixtureDataInitializerTests" time="0.35"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
