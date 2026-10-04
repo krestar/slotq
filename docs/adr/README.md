@@ -28,6 +28,7 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | [0006](0006-use-targeted-pessimistic-locks-for-reservation-consistency.md) | Reservation 정합성 경계에 대상 row pessimistic lock 사용 | `Accepted` |
 | [0007](0007-use-transactional-event-record-and-db-delivery.md) | Transactional event record와 DB 기반 전달 경계 사용 | `Superseded` (초기 transport/runtime은 0008, transactional 계약 보존) |
 | [0008](0008-m5-event-transport-and-runtime-status.md) | DB direct 기본 전달과 Kafka experimental topology 유지 | `Accepted` |
+| [0009](0009-m6-authenticated-access-and-knowledge.md) | 인증된 Product API와 위임 접근·지식 경계로 M6 구성 | `Accepted` (구현/활성화 evidence는 #131~#135) |
 
 ## 후보 등록부
 
@@ -50,7 +51,7 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | Kafka 상시 운영 adoption | `Deferred` | #107~#109 구현과 #111 실제 비교/drill은 experimental topology로 유지합니다. Default와 repository/runtime 지위를 별도로 확정했으며 retention/장기 운영 부담과 추가 요구/evidence 없이 supported production alternative로 채택하지 않습니다. |
 | Redis | `Deferred` | DB만으로 충족하지 못하는 지연·부하·분산 조정 문제가 측정되어야 하며 캐시 정합성 비용을 비교해야 합니다. |
 | Observability stack | `Accepted` (local/container) | #106/#111의 Actuator/Micrometer, protected scrape/read-only inventory, Prometheus/Grafana/Tempo 및 실제 alert/trace/drill. Production SLO/HA 승인은 아닙니다. |
-| MCP Gateway | `Deferred` | Product API와 권한 경계가 안정되고 둘 이상의 AI 기능이 공통 tool 실행 기반을 요구해야 합니다. |
-| RAG | `Deferred` | 비정형 지식 corpus, 갱신 주기, 검색 품질 기준과 transactional state와의 책임 분리가 정의되어야 합니다. |
+| MCP Gateway | `Accepted` (M6 bounded profile) | #130/ADR-0009에서 Customer 접근과 management 지식/조회가 공유할 인증·registry·admission 요구, single-instance co-location과 HTTP Product invocation을 확정합니다. SDK/runtime 활성화 검증은 #131/#132가 소유합니다. |
+| RAG | `Accepted` (책임/비교 계약) | #130/ADR-0009에서 corpus authoring/visibility/version/publication과 Product authority 분리, 동일 seed/query/oracle의 lexical·actual embedding 비교를 확정합니다. Concrete retrieval default와 index/provider 선택은 #134 evidence로 결정하며 vector DB는 채택하지 않습니다. |
 | Model Router | `Deferred` | 복수 모델을 비교할 실제 traffic과 cost, latency, quality, security 평가 결과가 있어야 합니다. |
 | Agent Runtime | `Deferred` | 단일 요청·tool 호출로 해결되지 않는 장기 실행, 상태 유지, 재시도 또는 승인 흐름이 확인되어야 합니다. |
