@@ -160,7 +160,12 @@ class AuthWebIntegrationTests {
                 // Human credentials persist only a public UUID and SHA-256, never a Product/dev token.
                 + "AND NOT (table_name = 'operations_credentials' AND data_type = 'binary' AND ("
                 + "(column_name = 'credential_id' AND character_maximum_length = 16) OR "
-                + "(column_name = 'token_hash' AND character_maximum_length = 32)))",
+                + "(column_name = 'token_hash' AND character_maximum_length = 32))) "
+                // Auth-owned opaque bearer values persist only SHA-256 and UUID references.
+                + "AND NOT (table_name = 'auth_access_credentials' AND column_name = 'token_digest' "
+                + "AND data_type = 'char' AND character_maximum_length = 64) "
+                + "AND NOT (table_name = 'auth_access_delegations' AND column_name = 'original_credential_id' "
+                + "AND data_type = 'binary' AND character_maximum_length = 16)",
             Integer.class
         );
         assertThat(credentialColumns).isZero();

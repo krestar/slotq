@@ -20,6 +20,10 @@ public class AuthorizationUseCase {
 
     @Transactional(readOnly = true)
     public ActorContext requireVenueAccess(AuthenticatedPrincipal principal, VenueId targetVenueId) {
+        if (principal.restriction() != null && (principal.restriction().ownReservationOnly()
+            || !principal.restriction().venueId().equals(targetVenueId))) {
+            throw new ResourceNotFoundException();
+        }
         return repository.findActorForVenue(principal.principalId(), targetVenueId)
             .filter(actor -> actor.canAccess(targetVenueId))
             .orElseThrow(ResourceNotFoundException::new);
@@ -42,6 +46,12 @@ public class AuthorizationUseCase {
         AuthenticatedPrincipal principal,
         ReservationAccessTarget target
     ) {
+        if (principal.restriction() != null && (!principal.restriction().tenantId().equals(target.tenantId())
+            || !principal.restriction().venueId().equals(target.venueId())
+            || (principal.restriction().ownReservationOnly()
+                && !principal.principalId().equals(target.customerPrincipalId())))) {
+            throw new ResourceNotFoundException();
+        }
         if (principal.principalId().equals(target.customerPrincipalId())) {
             return ReservationAccess.customer(principal.principalId());
         }

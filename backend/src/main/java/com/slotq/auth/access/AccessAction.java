@@ -1,0 +1,5 @@
+package com.slotq.auth.access;
+
+public enum AccessAction {
+    RESERVATION_READ, RESERVATION_WRITE, MANAGEMENT_READ, KNOWLEDGE_PUBLIC, KNOWLEDGE_OPERATOR
+}
