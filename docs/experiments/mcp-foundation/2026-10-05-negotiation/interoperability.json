@@ -1,0 +1,90 @@
+[ {
+  "id" : 1,
+  "result" : {
+    "capabilities" : {
+      "tools" : {
+        "listChanged" : false
+      }
+    },
+    "serverInfo" : {
+      "name" : "slotq",
+      "version" : "1.0"
+    },
+    "protocolVersion" : "2025-11-25"
+  },
+  "jsonrpc" : "2.0"
+}, {
+  "id" : 3,
+  "result" : {
+    "tools" : [ {
+      "name" : "test.customer",
+      "description" : "Synthetic test only",
+      "inputSchema" : {
+        "required" : [ "query", "count" ],
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "maximum" : 10
+          },
+          "query" : {
+            "maxLength" : 128,
+            "type" : "string"
+          }
+        }
+      },
+      "outputSchema" : {
+        "required" : [ "scope" ],
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "scope" : {
+            "maxLength" : 128,
+            "type" : "string"
+          }
+        }
+      }
+    } ]
+  },
+  "jsonrpc" : "2.0"
+}, {
+  "id" : 4,
+  "result" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"scope\":\"3ddb8867-aefb-437c-b1c7-8c1e94e85e51\"}"
+    } ],
+    "isError" : false,
+    "structuredContent" : {
+      "scope" : "3ddb8867-aefb-437c-b1c7-8c1e94e85e51"
+    },
+    "_meta" : {
+      "requestId" : "1f544200-dfa5-44b7-847a-5707fa51a384"
+    }
+  },
+  "jsonrpc" : "2.0"
+}, {
+  "id" : 5,
+  "result" : {
+    "content" : [ {
+      "type" : "text",
+      "text" : "{\"category\":\"forbidden\",\"requestId\":\"b90e595c-1c49-4d76-9047-50edb8678868\",\"outcome\":\"not_dispatched\"}"
+    } ],
+    "isError" : true,
+    "structuredContent" : {
+      "category" : "forbidden",
+      "requestId" : "b90e595c-1c49-4d76-9047-50edb8678868",
+      "outcome" : "not_dispatched"
+    }
+  },
+  "jsonrpc" : "2.0"
+}, {
+  "jsonrpc" : "2.0",
+  "id" : 6,
+  "error" : {
+    "message" : "UNKNOWN_TOOL",
+    "code" : -32602
+  }
+} ]

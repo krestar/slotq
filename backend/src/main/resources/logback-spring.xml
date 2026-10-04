@@ -14,6 +14,10 @@
         <appender-ref ref="TELEMETRY_CONSOLE"/>
     </appender>
     <logger name="slotq.telemetry" level="INFO" additivity="false"><appender-ref ref="TELEMETRY"/></logger>
+    <!-- MCP's own bounded worker owns failure/drop accounting. Operational retention requires a protected sink. -->
+    <logger name="slotq.mcp.audit" level="INFO" additivity="false"><appender-ref ref="TELEMETRY_CONSOLE"/></logger>
+    <logger name="io.modelcontextprotocol" level="OFF"/>
+    <logger name="com.networknt.schema" level="OFF"/>
     <!-- JDBC/ORM/exporter exception messages can contain SQL, parameters or endpoint credentials. -->
     <logger name="org.hibernate.SQL" level="OFF"/>
     <logger name="org.hibernate.orm.jdbc" level="OFF"/>

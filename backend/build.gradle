@@ -28,6 +28,8 @@ dependencies {
     implementation 'io.opentelemetry:opentelemetry-sdk'
     implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
     implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'io.modelcontextprotocol.sdk:mcp-core:2.0.1'
+    implementation 'io.modelcontextprotocol.sdk:mcp-json-jackson3:2.0.1'
 
     runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'org.flywaydb:flyway-mysql'

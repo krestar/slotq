@@ -1,0 +1,22 @@
+[ {
+  "requestId" : "3190251b-c1bf-4b72-b15b-83388b4cfbcb",
+  "principalId" : "0e5abf0d-5232-4eaf-92cd-dcfab7126b5a",
+  "delegationId" : "e3687e5e-2988-4247-8b93-019860db0cb6",
+  "tenantId" : "2576b502-1236-47b9-a723-34548d5c8de4",
+  "venueId" : "c8f19d02-3b5b-4130-8549-e65830a5724c",
+  "registeredTool" : "test.customer",
+  "action" : "KNOWLEDGE_PUBLIC",
+  "allowed" : true,
+  "reason" : "TIMEOUT",
+  "dispatch" : "REPORTED",
+  "outcome" : "UNKNOWN",
+  "latencyMillis" : 1,
+  "handlerTimeout" : false,
+  "timeoutLayer" : "PRODUCT_RESPONSE",
+  "confirmationId" : null,
+  "intentId" : null,
+  "knownTarget" : "b4bb9ebd-d848-4bb9-b1c9-9907778ba642",
+  "productRequestId" : "525e4941-35ad-44dc-bcc4-110243b6b077",
+  "documentId" : null,
+  "versionId" : null
+} ]

@@ -1,0 +1,246 @@
+{
+  "baseRevision": "40e764bf0c7d23a6a3fd98c274ca634f60a1ac77",
+  "protocol": "2025-11-25",
+  "transport": "Streamable HTTP",
+  "capability": "tools",
+  "jdk": "25.0.4",
+  "springBoot": "4.1.1",
+  "gradle": "9.7.1",
+  "sdk": "2.0.1",
+  "jackson": "3.1.5",
+  "sourceFiles": [
+    {
+      "path": "backend/build.gradle",
+      "sha256": "d8ec999553a15f11ad8f6b552e899f6594415e39c309963c3917bb1d689a4713"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/AccessAction.java",
+      "sha256": "aa29cc28637d83b8a0c73a55a15008ab6a6ce81c2ab360aeaf347980d53a68f9"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/AccessFailure.java",
+      "sha256": "3836cdf98c542456bb34a0d1c30b8d09c9bba3654a3288350d221b3061182aa8"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/AccessProfile.java",
+      "sha256": "37a590b2921b9b99b1ca3ebb0044b22875cd19cfb5e1ec13e0dde34662db6e38"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/ActorAccess.java",
+      "sha256": "ff463d4825671054f3b3402acb94ada42d67e3941b4af0f19f986ac60a544d3f"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/DelegatedActor.java",
+      "sha256": "558ad5b4cbf150757c20b9083b918b9c2a67aa895fd0a7ca2d135f13f71b64c7"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/ProductAccessCredential.java",
+      "sha256": "006ba2b4dc7881ee175df642cd7665f437bfcaf744452ee8e59f3f8c19d9d1f0"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/ProductCredentialAccess.java",
+      "sha256": "0d3772386877b5915e61aa1160c6817222519ebe9b692f8868938bee28aac579"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/access/ProductOperation.java",
+      "sha256": "1e35cf6f23a1285359c36c25cd939196d4d803c9ee648b36600414268d5bbddb"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/application/AuthorizationUseCase.java",
+      "sha256": "7b7faa7d5befd756b29ff0cd7ab26c2635bb05d40f1195ac930778878cfe8893"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/domain/AuthenticatedPrincipal.java",
+      "sha256": "bfb1342f5c383674f081c7deae9359921cafb26e36188bf7ace7fb5d39bf76f0"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/domain/ConsumerRestriction.java",
+      "sha256": "7deb560eb35844a82d5b294b6e14381f02c8dba8d3a0eaab2a339552ba1c61bd"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/persistence/ActorAccessService.java",
+      "sha256": "f00879aaa25df5289275b0f785d1f3d2a518ff7abbd9c69de25f6c187411f315"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/web/BearerCredentialAuthenticationFilter.java",
+      "sha256": "6993a32e9d596bea50d11c9058e8e822784b4b162ee67ab9b37f92022ee92ce2"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/auth/web/SecurityConfiguration.java",
+      "sha256": "64932ab8906857558ce3bf1ac1427d82abaac80a9c5e49044b4501185843cf98"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/JsonData.java",
+      "sha256": "9c156e8e2e1c60a8ae8b67c60d43451ef287c7de6607e05acf98f5702a89b69a"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/LocalAdmission.java",
+      "sha256": "bc55d1ddae6e2072e1160895cc48354b413954393ab009bc1876063244ec19cb"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/McpAudit.java",
+      "sha256": "2cfad4ec14cc67d88e43591609b46b4fc3b4824bf17155a1497b40af1cf815f5"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/McpEngine.java",
+      "sha256": "201f46cccf7cd1f2d5e1cf3c4252d5e225fe7c310d1f62e1e51a7c8389a6f145"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/McpFailure.java",
+      "sha256": "d6e697f722109f5ab2d95f0f44d9979b75817954537057623a43a991bc87f999"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/McpRegistrations.java",
+      "sha256": "5ed71ae0cbc7a4469516fc2d8022a5446fe897d98eb8b4d35df53886a9940c1c"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/MetadataFileSink.java",
+      "sha256": "a6a7d926d58f51e7837a73667df81b71ce8a8a7754257fd7685174b01abaa5d7"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/ProductHttpBinding.java",
+      "sha256": "7743ededf58a40eb4b417003ebfd720c79c913a0e3fc1fa1f2a2b74fb25f8a37"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/RequestContext.java",
+      "sha256": "601d24a94a42d82be6a732f7a7f9fe477390d7177227f61632433e042aa43cff"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/ToolDefinition.java",
+      "sha256": "529288ef52daf8480b9324bd3849167bcdb5ff5916c17148018a68cb49e386b5"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/ToolOutcome.java",
+      "sha256": "7d793e3a17ae872b43537a9ead92adafc757bee9240a06d4faa0b9e7d90413c1"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/ToolRegistry.java",
+      "sha256": "8174f0d1df19bd3ab18cf91c35d58ae801368190958464b80f77c5f128e73af6"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/web/McpConfiguration.java",
+      "sha256": "79a6435a2f2bc3cb82034d0df088b71dc32a8ca83102a3e9796ef98d1d1489ae"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/web/McpExposureFilter.java",
+      "sha256": "2497beee5e1fdb1e6e569afb3737ddeac081cce21eb04f747d479b328f3a9010"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/web/McpServlet.java",
+      "sha256": "377405bc5cfe57e5a46103a206868584ccd7291a2f1640d4877a4e1859f7129f"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/mcp/web/McpTopologyConfiguration.java",
+      "sha256": "83282a4f87d7e6f9457bd6e81d97aeea8254918e6b4a2b21dd790c482b4848d2"
+    },
+    {
+      "path": "backend/src/main/java/com/slotq/observability/web/RequestCorrelationFilter.java",
+      "sha256": "d868512fdc77f5ab77d30814414be48ed1733ebbe60e4d657a4016b51aa44c05"
+    },
+    {
+      "path": "backend/src/main/resources/application.properties",
+      "sha256": "84cf92aa9f3b3ddcdbd8061cc0bf9264f3254bcf0506c6335e2de1cc4442af9c"
+    },
+    {
+      "path": "backend/src/main/resources/db/migration/V21__create_actor_access_credentials.sql",
+      "sha256": "6c5edc1dbfbcb94d50ba8ce80cff572708275a4b690620368fc451d51db35a7c"
+    },
+    {
+      "path": "backend/src/main/resources/logback-spring.xml",
+      "sha256": "69b92d808c7d035c289750631447551ae93099fc91303c8d39de262ef66ebbb2"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/architecture/McpArchitectureTests.java",
+      "sha256": "7117273d72f0c979e7b08736e7436f86dde93d13178da9ccbda3c007a66a91b2"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/mcp/McpAccountingTests.java",
+      "sha256": "b273b92960919b51fcf9b03238a7fbaf66cab4ca61193d8a04f35cc798f875a6"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/mcp/McpActivationTests.java",
+      "sha256": "efca5d2d340751ab19f9a4090435ea6c3d87e41ad4dca8910e453f939e047220"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/mcp/McpFoundationTests.java",
+      "sha256": "ed43326753c48af7c2a3bd64297bc2e5ae3b2dfd1e36b2ec8462b2f7d376aa7d"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/mcp/McpHttpIntegrationTests.java",
+      "sha256": "c80028ab748240b2c47d8261bada307ba43f16d6343b765bbc4f526868e83f64"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/AuthWebIntegrationTests.java",
+      "sha256": "172aabd74a16d2ba2638f4a37c8defebe7d2c32aa5ca729338b5d228faa7307e"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/HoldIdempotencyScopeMigrationTests.java",
+      "sha256": "23b4ae3c23323d5a258d72bddc75db864c9a46b0386e4b423b8ca877abe68510"
+    },
+    {
+      "path": "backend/src/test/java/com/slotq/SlotqApplicationTests.java",
+      "sha256": "5b0c2cace380e7b68b1942d7a0cfb164fa60266aff990f3139552df22384aa97"
+    }
+  ],
+  "targeted": {
+    "status": "PASS",
+    "suites": 13,
+    "tests": 75,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed": "1m 28s"
+  },
+  "backendTest": {
+    "status": "PASS",
+    "suites": 92,
+    "tests": 734,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 9,
+    "skippedCases": [
+      "com.slotq.BookingCapacityLockEvidenceTests.narrowingLockToSlotOrDiscoveringIdsWithSnapshotMissesCommittedCapacity()",
+      "com.slotq.BookingCapacityLockEvidenceTests.differentSlotsRecordHeldGapsAndActualOrmInsertCycle(Scenario)",
+      "com.slotq.events.application.KafkaRelayFaultEvidenceIntegrityTests.recalculatesRollbackAckAmbiguityFencingOutageAndRetentionGap()",
+      "com.slotq.events.application.KafkaSecurityProfileTests.tlsAuthenticationAndRoleAclAreEnforced()",
+      "com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests.oldDbOwnerCannotConsumeKafkaOrLaterRollbackEpoch()",
+      "com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests.recalculatesProcessFaultOraclesFromRawSnapshots()",
+      "com.slotq.events.persistence.KafkaFaultProcessIntegrationTests.realGroupsScaleRebalanceLeaderRestartAndOutageRecover()",
+      "com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests.brokerOffsetNeverOutrunsDurableIntakeAndPendingTargetRunsWithoutRedelivery()",
+      "com.slotq.WaitlistPromotionDeliveryIntegrationTests.diagnosticBaselineCapacityGapIsEngineTransient()"
+    ],
+    "elapsed": "16m 2s",
+    "command": ".\\gradlew.bat test --offline --no-daemon --console=plain"
+  },
+  "cleanBuild": {
+    "status": "PASS",
+    "suites": 92,
+    "tests": 734,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 9,
+    "elapsed": "16m 19s",
+    "command": ".\\gradlew.bat clean build --offline --no-daemon --console=plain"
+  },
+  "architecture": {
+    "status": "PASS",
+    "suites": 5,
+    "tests": 28,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "remoteCi": "not_tracked",
+  "limitations": [
+    "single live MCP instance/local quota",
+    "controlled pre-provisioned non-OAuth client",
+    "production registry empty; test-only handlers",
+    "write credential/tools closed until #132 gate",
+    "best-effort audit; retention needs protected configured sink",
+    "unresolved handler retains permit until actual exit"
+  ],
+  "artifact": {
+    "path": "backend/build/libs/slotq-0.0.1-SNAPSHOT.jar",
+    "sha256": "eead75e976e94b781536975d0f360fbec60d998a4de5890123ff0d9968618a31"
+  }
+}

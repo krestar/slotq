@@ -1,0 +1,16 @@
+[ {
+  "status" : 400,
+  "stage" : "missing_session"
+}, {
+  "status" : 400,
+  "stage" : "unsupported_delete_revision"
+}, {
+  "status" : 200,
+  "stage" : "deleted_session"
+}, {
+  "status" : 404,
+  "stage" : "terminated_session"
+}, {
+  "status" : 200,
+  "stage" : "reinitialized_session"
+} ]

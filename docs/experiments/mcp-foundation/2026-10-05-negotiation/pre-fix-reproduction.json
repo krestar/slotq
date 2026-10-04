@@ -1,0 +1,22 @@
+{
+  "baselineRevision": "b0481fbd7cb21109657f9565547476b475ef5820",
+  "productionSource": "backend/src/main/java/com/slotq/mcp/web/McpServlet.java",
+  "command": ".\\gradlew.bat test --tests '*McpHttpIntegrationTests.initializeNegotiatesSupportedRevisionBeforeClientChoosesWhetherToContinue' --tests '*McpHttpIntegrationTests.clientCapabilitiesDoNotEnableUnsupportedServerFeatures' --offline --no-daemon --console=plain",
+  "result": "FAILED as expected before production correction",
+  "exitCode": 1,
+  "tests": 2,
+  "failures": 2,
+  "xmlTimestampUtc": "2026-10-04T15:36:44.859Z",
+  "cases": [
+    {
+      "test": "clientCapabilitiesDoNotEnableUnsupportedServerFeatures()",
+      "observedFailure": "org.opentest4j.AssertionFailedError: \r\nexpected: {\"tools\":{\"listChanged\":false}}\r\n but was: "
+    },
+    {
+      "test": "initializeNegotiatesSupportedRevisionBeforeClientChoosesWhetherToContinue()",
+      "observedFailure": "org.opentest4j.AssertionFailedError: \r\nexpected: \"2025-11-25\"\r\n but was: \"\""
+    }
+  ],
+  "stdoutSourceSha256": "aaaac4ad9f293a49c99c1800f3e040cb265d64cd56933fa3a449b42609482e86",
+  "stdoutNormalization": "Trailing whitespace removed in shared Gradle output; test results unchanged. Original output retained in backend/build/mcp-negotiation-reproduce.txt."
+}
