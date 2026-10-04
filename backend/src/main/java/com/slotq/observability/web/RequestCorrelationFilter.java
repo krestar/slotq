@@ -40,6 +40,11 @@ public final class RequestCorrelationFilter extends OncePerRequestFilter {
         // No incoming correlation header or remote parent is accepted, including on authentication failures.
         String requestId = UUID.randomUUID().toString();
         response.setHeader(HEADER, requestId);
+        if (request.getRequestURI().equals(request.getContextPath() + "/mcp")) {
+            // The async MCP boundary records its actual outcome; servlet return is not completion.
+            chain.doFilter(request, response);
+            return;
+        }
         long start = System.nanoTime();
         boolean completed = false;
         try (ProductTelemetry.Operation operation = telemetry.request(requestId)) {

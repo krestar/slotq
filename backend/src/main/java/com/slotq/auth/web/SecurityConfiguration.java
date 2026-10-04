@@ -51,6 +51,17 @@ class SecurityConfiguration {
     }
 
     @Bean
+    @Order(2)
+    SecurityFilterChain mcpSecurityFilterChain(HttpSecurity http) throws Exception {
+        // Independent matcher; servlet authenticates EVERY lifecycle request with Auth-owned MCP audience.
+        return http.securityMatcher("/mcp", "/mcp/**")
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .requestCache(cache -> cache.disable()).formLogin(form -> form.disable()).httpBasic(basic -> basic.disable())
+            .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll()).build();
+    }
+
+    @Bean
     FilterRegistrationBean<BearerCredentialAuthenticationFilter> disableContainerRegistration(
         BearerCredentialAuthenticationFilter filter
     ) {
