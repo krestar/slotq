@@ -129,7 +129,12 @@ Crash 후 완전성, durable business ledger, tamper-proof audit 또는 실제 d
 
 Target은 MCP `2025-11-25`, initialize/initialized lifecycle, tools only, Streamable HTTP다.
 POST의 JSON response를 사용하고 optional GET SSE stream은 405다. Sessions는 authority가 아니며
-every request의 credential/principal/delegation에 bind된다. Unsupported revision/capability는 거부한다.
+every request의 credential/principal/delegation에 bind된다. Initialize의 requested revision이 지원되지
+않아도 서버의 유일한 supported revision `2025-11-25`를 반환한다. Client가 반환된 revision을
+수용하면 initialized와 이후 요청에 그 revision을 사용하고, 수용할 수 없으면 disconnect한다.
+이는 다른 revision의 runtime semantics를 지원한다는 뜻이 아니다. Client capabilities는 bounded
+metadata object로 받아들이지만 authority로 쓰거나 optional client feature를 호출하지 않는다.
+Server capability는 `tools: {listChanged: false}`만 광고한다.
 Missing session은 400, 종료/unknown/다른 delegation의 session은 404다. 종료 후에는 새 initialize가
 필요하다. GET/DELETE를 포함해 unsupported protocol header는 400이며 받아들일 수 없는
 notification/response와 malformed RPC도 HTTP error로 거부한다.
@@ -138,4 +143,5 @@ Tasks, roots, sampling, elicitation, resources/prompts, resumable/redelivery, OA
 resumption/auth retry handler를 사용하지 않는다. Production adapter는 SDK scheduler/transport
 executor를 활성화하지 않으며 retry/redirect/replay를 구현하지 않는다.
 
-[실제 검증/evidence](../experiments/mcp-foundation/2026-10-04/README.md)를 참고한다.
+[실제 검증/evidence](../experiments/mcp-foundation/2026-10-04/README.md)와
+[PR #137 negotiation 보정 검증](../experiments/mcp-foundation/2026-10-05-negotiation/README.md)을 참고한다.

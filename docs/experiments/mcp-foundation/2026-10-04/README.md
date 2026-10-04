@@ -5,6 +5,12 @@ merge 뒤의 ADR-0009/M6 contract를 적용했다. Runtime/runbook과 후속 own
 [MCP access](../../../runbooks/mcp-access.md)에 기록한다. 여기의 wire/audit data는 synthetic
 test fixture이며 credential, 원문 query/document 또는 실제 Customer 데이터가 아니다.
 
+이 디렉터리는 PR #137 최초 구현의 역사적 실행 결과다. 당시 unsupported initialize revision과
+non-empty client capability를 거부했던 기대값은 공식 lifecycle과 충돌하여
+[2026-10-05 negotiation 보정 검증](../2026-10-05-negotiation/README.md)에서 교체한다.
+아래 raw sample/source hash/검증 결과는 당시 실행 그대로 보존하며 현재 negotiation의 정답으로
+사용하지 않는다. 이후 request의 unsupported version header → HTTP 400 계약은 유지된다.
+
 ## 선택한 implementation
 
 Java SDK **2.0.1**의 `mcp-core` wire result/tool model과 `mcp-json-jackson3` schema validator를
@@ -30,7 +36,7 @@ JSON-RPC transcript를 검증한다. SDK upstream conformance 전체 PASS를 주
 
 | 요구 | Regression/evidence |
 | --- | --- |
-| Real lifecycle/version/capability/result/error | Actual HTTPS SDK client + initialize → initialized → list/call. Unsupported revision/capability, premature list, wrong header/session, missing session 400, terminated/bound session 404와 reinitialize, GET/DELETE version header, malformed/duplicate JSON, unknown tool, structured success/`isError`, error RPC ID matching |
+| Real lifecycle/version/capability/result/error | Actual HTTPS SDK client + initialize → initialized → list/call. 당시 unsupported initialize revision/non-empty client capability 거부 기대값은 위 정정 참고. Premature list, wrong header/session, missing session 400, terminated/bound session 404와 reinitialize, GET/DELETE version header, malformed/duplicate JSON, unknown tool, structured success/`isError`, error RPC ID matching |
 | Profiles/enumeration/direct authorization | Customer/management enumeration과 direct forbidden call. 한 tool의 immutable profile별 permission 등록, current action/tool grant 각각 없는 호출 거부. Same subject의 다른 delegation으로 session 사용 거부. Extra/type/required/min/max/oversize와 principal/tenant/role/allowlist injection 거부 |
 | Trusted original/current delegation | MySQL digest/audience record. Exact expiry, delegation/original credential revoke, underlying membership 제거, capability 확대 issuance 거부. RR outer snapshot 뒤 revoke를 별도 current read에서 확인 |
 | M5 substitution/authoring boundary | 실제 operations store가 인정한 generated M5 recovery token과 configured scrape token을 MCP/Product/original validator에서 거부. Original configuration validator는 delegate를 거부 |

@@ -97,8 +97,12 @@ class McpHttpIntegrationTests {
             .requestBuilder(HttpRequest.newBuilder().header("Authorization","Bearer "+customer.value()))
             .supportedProtocolVersions(List.of("2025-11-25")).resumableStreams(false).openConnectionOnStartup(false)
             .maxResponseSize(131072).jsonMapper(new JacksonMcpJsonMapper(json)).build();
-        try(var client=McpClient.sync(transport).requestTimeout(Duration.ofSeconds(3)).build()) {
-            assertThat(client.initialize().protocolVersion()).isEqualTo("2025-11-25");
+        try(var client=McpClient.sync(transport).requestTimeout(Duration.ofSeconds(3))
+            .capabilities(McpSchema.ClientCapabilities.builder().roots(true).build()).build()) {
+            var initialized=client.initialize();
+            assertThat(initialized.protocolVersion()).isEqualTo("2025-11-25");
+            tools.jackson.databind.JsonNode capabilities=json.valueToTree(initialized.capabilities());
+            assertThat(capabilities).isEqualTo(json.valueToTree(Map.of("tools",Map.of("listChanged",false))));
             assertThat(client.listTools().tools()).extracting(McpSchema.Tool::name).containsExactly("test.customer");
             var result=client.callTool(new McpSchema.CallToolRequest("test.customer",Map.of("query","synthetic","count",1)));
             assertThat(result.isError()).isFalse();assertThat(result.structuredContent().toString()).contains(tenant.toString());
@@ -112,6 +116,7 @@ class McpHttpIntegrationTests {
         List<Object> transcript=new ArrayList<>();
         var init=rpc(customer.value(),null,"initialize",Map.of("protocolVersion","2025-11-25","capabilities",Map.of(),
             "clientInfo",Map.of("name","deterministic","version","1")),null,1);
+        assertThat(json.readTree(init.body()).path("result").path("protocolVersion").asString()).isEqualTo("2025-11-25");
         transcript.add(json.readTree(init.body()));
         String session=init.headers().firstValue("Mcp-Session-Id").orElseThrow();
         assertThat(rpc(customer.value(),session,"tools/list",Map.of(),"2025-11-25",2).body()).contains("PROTOCOL");
@@ -131,14 +136,80 @@ class McpHttpIntegrationTests {
                 .contains("validation","not_dispatched");
         }
         assertThat(rpc(customer.value(),session,"tools/list",Map.of(),"2026-07-28",8).statusCode()).isEqualTo(400);
-        assertThat(rpc(customer.value(),null,"initialize",Map.of("protocolVersion","1999-01-01","capabilities",Map.of(),"clientInfo",Map.of()),null,9).body()).contains("PROTOCOL");
-        assertThat(rpc(customer.value(),null,"initialize",Map.of("protocolVersion","2025-11-25","capabilities",Map.of("tasks",Map.of()),"clientInfo",Map.of()),null,10).body()).contains("PROTOCOL");
         assertThat(rpc(management.value(),session,"tools/list",Map.of(),"2025-11-25",11).statusCode()).isEqualTo(404);
         String m=initialized(management.value());
         assertThat(rpc(management.value(),m,"tools/list",Map.of(),"2025-11-25",12).body()).contains("test.management").doesNotContain("test.customer");
         assertThat(rpc(management.value(),m,"tools/call",Map.of("name","test.customer","arguments",Map.of()),"2025-11-25",13).body()).contains("forbidden");
         Path output=Path.of("build/mcp/interoperability.json");Files.createDirectories(output.getParent());
         Files.writeString(output,json.writerWithDefaultPrettyPrinter().writeValueAsString(transcript));
+    }
+    @Test void initializeNegotiatesSupportedRevisionBeforeClientChoosesWhetherToContinue() throws Exception {
+        List<Object> transcript=new ArrayList<>();
+        for(String requested:List.of("2025-11-25","1999-01-01","unknown-revision")) {
+            var init=rpc(customer.value(),null,"initialize",Map.of("protocolVersion",requested,"capabilities",Map.of(),
+                "clientInfo",Map.of("name","negotiation-harness","version","1")),null,1);
+            assertThat(init.statusCode()).isEqualTo(200);
+            var result=json.readTree(init.body()).path("result");
+            assertThat(result.path("protocolVersion").asString()).isEqualTo("2025-11-25");
+            assertThat(json.readTree(init.body()).has("error")).isFalse();
+            assertThat(result.path("capabilities")).isEqualTo(json.valueToTree(Map.of("tools",Map.of("listChanged",false))));
+            String session=init.headers().firstValue("Mcp-Session-Id").orElseThrow();
+            var ready=rpc(customer.value(),session,"notifications/initialized",Map.of(),"2025-11-25",null);
+            assertThat(ready.statusCode()).isEqualTo(202);assertThat(ready.body()).isEmpty();
+            var list=rpc(customer.value(),session,"tools/list",Map.of(),"2025-11-25",2);
+            assertThat(list.statusCode()).isEqualTo(200);assertThat(list.body()).contains("test.customer").doesNotContain("test.management");
+            var call=rpc(customer.value(),session,"tools/call",Map.of("name","test.customer","arguments",Map.of("query","x","count",1)),"2025-11-25",3);
+            assertThat(call.statusCode()).isEqualTo(200);
+            assertThat(json.readTree(call.body()).path("result").path("isError").asBoolean()).isFalse();
+            assertThat(json.readTree(call.body()).path("result").path("structuredContent").path("scope").asString()).isEqualTo(tenant.toString());
+            List<Object> rejectedHeaders=new ArrayList<>();
+            for(String wrong:List.of("1999-01-01","2026-07-28","invalid")) {
+                var rejected=rpc(customer.value(),session,"tools/list",Map.of(),wrong,4);
+                assertThat(rejected.statusCode()).isEqualTo(400);
+                rejectedHeaders.add(Map.of("header",wrong,"status",rejected.statusCode()));
+            }
+            assertThat(rpc(customer.value(),session,"tools/list",Map.of(),null,5).statusCode()).isEqualTo(400);
+            transcript.add(Map.of("requested",requested,"initialize",json.readTree(init.body()),"initializedStatus",ready.statusCode(),
+                "list",json.readTree(list.body()),"call",json.readTree(call.body()),"rejectedHeaders",rejectedHeaders));
+        }
+        // A client that cannot accept the returned revision leaves the session uninitialized and disconnects.
+        var declined=rpc(customer.value(),null,"initialize",Map.of("protocolVersion","1999-01-01","capabilities",Map.of(),
+            "clientInfo",Map.of("name","declining-client","version","1")),null,1);
+        assertThat(json.readTree(declined.body()).path("result").path("protocolVersion").asString()).isEqualTo("2025-11-25");
+        String session=declined.headers().firstValue("Mcp-Session-Id").orElseThrow();
+        assertThat(rpc(customer.value(),session,"tools/list",Map.of(),"2025-11-25",2).body()).contains("PROTOCOL");
+        assertThat(http.send(builder(customer.value(),session,"2025-11-25").DELETE().build(),HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(200);
+        assertThat(rpc(customer.value(),session,"tools/list",Map.of(),"2025-11-25",3).statusCode()).isEqualTo(404);
+        Path output=Path.of("build/mcp/protocol-negotiation.json");Files.createDirectories(output.getParent());
+        Files.writeString(output,json.writerWithDefaultPrettyPrinter().writeValueAsString(transcript));
+    }
+    @Test void clientCapabilitiesDoNotEnableUnsupportedServerFeatures() throws Exception {
+        var capabilities=Map.of("roots",Map.of("listChanged",true),"sampling",Map.of(),"elicitation",Map.of("form",Map.of()),
+            "tasks",Map.of("requests",Map.of("sampling",Map.of("createMessage",Map.of()))));
+        var init=rpc(customer.value(),null,"initialize",Map.of("protocolVersion","2025-11-25","capabilities",capabilities,
+            "clientInfo",Map.of("name","capability-harness","version","1")),null,1);
+        assertThat(init.statusCode()).isEqualTo(200);
+        assertThat(json.readTree(init.body()).path("result").path("capabilities"))
+            .isEqualTo(json.valueToTree(Map.of("tools",Map.of("listChanged",false))));
+        String session=init.headers().firstValue("Mcp-Session-Id").orElseThrow();
+        assertThat(rpc(customer.value(),session,"notifications/initialized",Map.of(),"2025-11-25",null).statusCode()).isEqualTo(202);
+        for(String method:List.of("tasks/list","resources/list","prompts/list")) {
+            assertThat(json.readTree(rpc(customer.value(),session,method,Map.of(),"2025-11-25",2).body()).path("error").path("code").asInt()).isEqualTo(-32601);
+        }
+        assertThat(rpc(customer.value(),session,"tools/list",Map.of(),"2025-11-25",3).body()).contains("test.customer").doesNotContain("test.management");
+        assertThat(rpc(customer.value(),session,"tools/call",Map.of("name","test.customer","arguments",Map.of("query","x","count",1)),"2025-11-25",4).body()).contains("\"isError\":false");
+        Path output=Path.of("build/mcp/client-capabilities.json");Files.createDirectories(output.getParent());
+        Files.writeString(output,json.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of("clientCapabilities",capabilities,"initialize",json.readTree(init.body()))));
+    }
+    @Test void initializeStillRequiresVersionStringCapabilityObjectAndValidClientInfo() throws Exception {
+        for(var params:List.of(
+            Map.of("protocolVersion",25,"capabilities",Map.of(),"clientInfo",Map.of("name","harness","version","1")),
+            Map.of("protocolVersion","2025-11-25","capabilities",List.of(),"clientInfo",Map.of("name","harness","version","1")),
+            Map.of("protocolVersion","1999-01-01","capabilities",Map.of(),"clientInfo",Map.of()))) {
+            var invalid=rpc(customer.value(),null,"initialize",params,null,1);
+            assertThat(invalid.body()).contains("PROTOCOL");
+            assertThat(invalid.headers().firstValue("Mcp-Session-Id")).isEmpty();
+        }
     }
     @Test void streamableHttpSessionTerminationHeadersAndReinitializationHaveProtocolStatusSemantics() throws Exception {
         List<Object> statuses=new ArrayList<>();

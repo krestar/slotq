@@ -137,14 +137,18 @@ public final class McpServlet extends HttpServlet {
             String method=(String)rpc.get("method");
             if(method.equals("initialize")) {
                 if(rpcId==null || id!=null || !params.keySet().equals(Set.of("protocolVersion","capabilities","clientInfo"))
-                    || !REVISION.equals(params.get("protocolVersion")) || !object(params.get("capabilities")).isEmpty())
+                    || !(params.get("protocolVersion") instanceof String))
                     throw new McpFailure(McpFailure.Reason.PROTOCOL);
+                // Client capabilities are bounded metadata, not server features or authority. None are used.
+                object(params.get("capabilities"));
                 Map<String,Object> info=object(params.get("clientInfo"));
                 if(!(info.get("name") instanceof String) || !(info.get("version") instanceof String)
                     || !Set.of("name","version","title","description","websiteUrl","icons").containsAll(info.keySet()))
                     throw new McpFailure(McpFailure.Reason.PROTOCOL);
                 String session=initialize(actor);
                 response.setHeader("Mcp-Session-Id",session);
+                // Our only supported revision is returned even if the client's proposal differs.
+                // The client decides whether to accept it; subsequent HTTP headers must use REVISION.
                 result(response,rpcId,Map.of("protocolVersion",REVISION,"capabilities",Map.of("tools",Map.of("listChanged",false)),
                     "serverInfo",Map.of("name","slotq","version","1.0")));
                 return;
