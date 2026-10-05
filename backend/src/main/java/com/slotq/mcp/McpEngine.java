@@ -15,16 +15,25 @@ public final class McpEngine implements AutoCloseable {
     private final McpAudit audit;
     private final Clock clock;
     private final Duration budget;
-    private final ThreadPoolExecutor workers;
+    private final ExecutorService workers;
+    private final Semaphore workerCapacity;
+    private final int workerLimit;
     private final JsonMapper json=JsonMapper.builder().build();
     public McpEngine(ActorAccess authority, ToolRegistry registry, LocalAdmission admission, McpAudit audit,
             Clock clock, Duration budget, int concurrency) {
+        this(authority,registry,admission,audit,clock,budget,concurrency,
+            Thread.ofPlatform().daemon().name("mcp-handler-",0).factory());
+    }
+    McpEngine(ActorAccess authority, ToolRegistry registry, LocalAdmission admission, McpAudit audit,
+            Clock clock, Duration budget, int concurrency, ThreadFactory workerThreads) {
         if(budget.isNegative() || budget.isZero() || budget.compareTo(Duration.ofSeconds(30))>0
                 || concurrency<1 || concurrency>32) throw new IllegalArgumentException("MCP execution bound");
         this.authority=authority; this.registry=registry; this.admission=admission; this.audit=audit;
         this.clock=clock; this.budget=budget;
-        workers=new ThreadPoolExecutor(concurrency,concurrency,0,TimeUnit.SECONDS,new SynchronousQueue<>(),
-            Thread.ofPlatform().daemon().name("mcp-handler-",0).factory(),new ThreadPoolExecutor.AbortPolicy());
+        workerLimit=concurrency;
+        workerCapacity=new Semaphore(concurrency);
+        // No handoff queue: only admitted work gets a thread. Completion never depends on an idle pool worker.
+        workers=Executors.newThreadPerTaskExecutor(workerThreads);
     }
     public RequestContext context(DelegatedActor actor, UUID serverId) {
         return context(actor,serverId,clock.instant());
@@ -67,17 +76,27 @@ public final class McpEngine implements AutoCloseable {
             handlerContext.remaining(clock,budget);
             Map<String,Object> frozen=JsonData.freeze(input);
             Future<ToolOutcome> running;
+            if(!workerCapacity.tryAcquire()) throw new McpFailure(McpFailure.Reason.RATE_LIMITED);
             try {
                 running=workers.submit(()-> {
-                    try(runnerPermit) {
-                        handlerContext.revalidate(authority,clock);
-                        ToolOutcome outcome=selected.handler().execute(handlerContext,frozen);
-                        registry.validateOutput(selected,outcome.content());
-                        if(json.writeValueAsBytes(outcome.content()).length>65536) throw new McpFailure(McpFailure.Reason.UNKNOWN);
-                        return outcome;
+                    try {
+                        try(runnerPermit) {
+                            handlerContext.revalidate(authority,clock);
+                            ToolOutcome outcome=selected.handler().execute(handlerContext,frozen);
+                            registry.validateOutput(selected,outcome.content());
+                            if(json.writeValueAsBytes(outcome.content()).length>65536) throw new McpFailure(McpFailure.Reason.UNKNOWN);
+                            return outcome;
+                        }
+                    } finally {
+                        // Release after actual work/accounting ends and before its Future publishes completion.
+                        workerCapacity.release();
                     }
                 });
-            } catch(RejectedExecutionException rejected) { throw new McpFailure(McpFailure.Reason.RATE_LIMITED); }
+            } catch(RuntimeException | Error failedStart) {
+                workerCapacity.release();
+                if(failedStart instanceof RejectedExecutionException) throw new McpFailure(McpFailure.Reason.RATE_LIMITED);
+                throw failedStart;
+            }
             permit=null; // The runner alone owns release, even after timeout/disconnect/interruption.
             try {
                 long remaining=Math.max(1,Math.min(budget.toNanos()-(System.nanoTime()-start),
@@ -143,5 +162,5 @@ public final class McpEngine implements AutoCloseable {
             result==null?null:result.documentId(),result==null?null:result.versionId()));
     }
     @Override public void close() { admission.unavailable(); workers.shutdown(); }
-    public int activeWorkers() { return workers.getActiveCount(); }
+    public int activeWorkers() { return workerLimit-workerCapacity.availablePermits(); }
 }

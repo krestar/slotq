@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.slotq.auth.application.AuthorizationUseCase;
+import com.slotq.auth.access.ProductCredentialAccess;
+import com.slotq.auth.access.ProductOperation;
 import com.slotq.auth.application.ReservationAction;
 import com.slotq.auth.application.ResourceNotFoundException;
 import com.slotq.auth.domain.ActorContext;
@@ -58,6 +60,7 @@ class ManagementService implements ManagementUseCase {
     private final ReservationRepository reservationRepository;
     private final ReservationTransitionPolicy transitionPolicy;
     private final Clock clock;
+    private final ProductCredentialAccess productAccess;
 
     ManagementService(
         AuthorizationUseCase authorization,
@@ -68,7 +71,7 @@ class ManagementService implements ManagementUseCase {
         SlotInventoryRepository slotRepository,
         ReservationRepository reservationRepository,
         ReservationTransitionPolicy transitionPolicy,
-        Clock clock
+        Clock clock, ProductCredentialAccess productAccess
     ) {
         this.authorization = authorization;
         this.venueUseCase = venueUseCase;
@@ -79,6 +82,7 @@ class ManagementService implements ManagementUseCase {
         this.reservationRepository = reservationRepository;
         this.transitionPolicy = transitionPolicy;
         this.clock = clock;
+        this.productAccess = productAccess;
     }
 
     @Override
@@ -224,6 +228,7 @@ class ManagementService implements ManagementUseCase {
         LocalDate date,
         ReservationState status
     ) {
+        productAccess.requireAdmission(principal, ProductOperation.MANAGEMENT_LIST, venueId, null);
         ActorContext actor = authorization.requireVenueAccess(principal, venueId);
         Venue venue = venueUseCase.getVenue(actor.tenantId(), venueId);
         DateWindow window = dateWindow(date, venue);

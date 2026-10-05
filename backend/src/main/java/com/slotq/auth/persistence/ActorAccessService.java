@@ -28,13 +28,16 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
     private final AuthorizationUseCase authorization;
     private final Clock clock;
     private final TransactionTemplate current;
+    private final PlatformTransactionManager transactions;
     private final SecureRandom random = new SecureRandom();
+    private final java.util.concurrent.ConcurrentHashMap<UUID,Exchange> exchanges=new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<String,UUID> exchangeTokens=new java.util.concurrent.ConcurrentHashMap<>();
 
     public ActorAccessService(JdbcTemplate jdbc, AuthorizationUseCase authorization, Clock clock,
             PlatformTransactionManager transactions) {
         this.jdbc = new JdbcTemplate(Objects.requireNonNull(jdbc.getDataSource()));
         this.jdbc.setQueryTimeout(2);
-        this.authorization = authorization; this.clock = clock;
+        this.authorization = authorization; this.clock = clock; this.transactions = transactions;
         current = new TransactionTemplate(transactions);
         current.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         current.setTimeout(2);
@@ -99,6 +102,7 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
 
     @Override public ProductAccessCredential issueProduct(UUID delegation, ProductOperation operation,
             UUID target, Instant deadline) {
+        if (operation == ProductOperation.RESERVATION_HOLD) throw denied(); // material-bound issuance only
         return boundary(() -> {
             DelegatedActor actor = live(delegation);
             if (actor.profile() != operation.profile || !actor.actions().contains(operation.action) || !actor.tools().contains(operation.tool)
@@ -108,8 +112,61 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
             Instant expires = earlier(earlier(clock.instant().plusSeconds(60), deadline), actor.expiresAt());
             ProvisionedCredential issued = credential("PRODUCT", actor.original().principalId(), delegation,
                     expires, operation.name(), target);
-            return new ProductAccessCredential(issued.value(), expires);
+            return new ProductAccessCredential(issued.value(), expires, issued.id());
         });
+    }
+
+    /** Controlled consumer integration calls this only for an approved immutable HOLD intent. */
+    @Override public ProductAccessCredential issueHold(UUID delegation, UUID slot, int partySize, String key, Instant deadline) {
+        requireBoundedExecution();
+        return boundary(() -> {
+            DelegatedActor actor = live(delegation);
+            if (slot == null || partySize < 1 || key == null || key.isEmpty() || key.length() > 255
+                    || !actor.permits(ProductOperation.RESERVATION_HOLD.tool, AccessProfile.CUSTOMER, AccessAction.RESERVATION_WRITE)
+                    || !deadline.isAfter(clock.instant())) throw denied();
+            Instant expires = earlier(earlier(clock.instant().plusSeconds(60), deadline), actor.expiresAt());
+            var issued = credential("PRODUCT", actor.original().principalId(), delegation, expires,
+                ProductOperation.RESERVATION_HOLD.name(), slot);
+            jdbc.update("UPDATE auth_access_credentials SET hold_party_size=?,hold_key_digest=? WHERE id=?",
+                partySize,digest(key),bytes(issued.id()));
+            return new ProductAccessCredential(issued.value(),expires,issued.id());
+        });
+    }
+
+    @Override public void requireBoundedExecution() {
+        if (!(jdbc.getDataSource() instanceof com.zaxxer.hikari.HikariDataSource pool)
+                || pool.getConnectionTimeout() > 2000 || !boundedProperty(pool,"socketTimeout",2000)
+                || !boundedProperty(pool,"connectTimeout",2000)
+                || !(transactions instanceof org.springframework.transaction.support.AbstractPlatformTransactionManager manager)
+                || manager.getDefaultTimeout() < 1 || manager.getDefaultTimeout() > 10
+                || Boolean.parseBoolean(pool.getDataSourceProperties().getProperty("autoReconnect","false"))
+                || Boolean.parseBoolean(pool.getDataSourceProperties().getProperty("autoReconnectForPools","false"))
+                || !boundedUrl(pool.getJdbcUrl()))
+            throw new IllegalStateException("Narrowed Product writes require bounded acquisition/socket/connect/transaction and no reconnect");
+        boundary(() -> {
+            var settings=jdbc.queryForMap("SELECT @@SESSION.innodb_lock_wait_timeout row_wait,@@SESSION.lock_wait_timeout metadata_wait,"
+                +"@@SESSION.wait_timeout idle_wait,@@SESSION.max_execution_time select_wait");
+            for(var setting:settings.entrySet()) {
+                long max=switch(setting.getKey()){case "row_wait","metadata_wait"->2;case "idle_wait"->10;default->2000;};
+                long value=((Number)setting.getValue()).longValue();
+                if(value<1 || value>max)throw new IllegalStateException("Unbounded Product DB session");
+            }
+            return null;
+        });
+    }
+    private static boolean boundedProperty(com.zaxxer.hikari.HikariDataSource pool,String name,int max) {
+        try {int n=Integer.parseInt(pool.getDataSourceProperties().getProperty(name));return n>0 && n<=max;}
+        catch(RuntimeException missing){return false;}
+    }
+    private static boolean boundedUrl(String url) {
+        if(url==null || !url.startsWith("jdbc:mysql://"))return false;
+        try {
+            var uri=java.net.URI.create(url.substring("jdbc:".length()));
+            if(uri.getHost()==null || uri.getUserInfo()!=null)return false;
+            String query=uri.getRawQuery();
+            // These driver overrides would invalidate the checked Hikari properties or add reconnect/redelivery.
+            return query==null || !query.matches("(?i).*(^|&)(socketTimeout|connectTimeout|autoReconnect|autoReconnectForPools|retriesAllDown)=.*");
+        }catch(IllegalArgumentException failure){return false;}
     }
 
     @Override public Optional<AuthenticatedPrincipal> authenticateProduct(String token, String method, String path) {
@@ -120,15 +177,95 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
             Credential credential = lookup(token, "PRODUCT");
             DelegatedActor actor = live(credential.delegation());
             ProductOperation operation = ProductOperation.valueOf(credential.operation());
-            if (!method.equals("GET") || actor.profile() != operation.profile
+            if (!method.equals(operation == ProductOperation.RESERVATION_HOLD ? "POST" : "GET") || actor.profile() != operation.profile
                     || !actor.actions().contains(operation.action) || !actor.tools().contains(operation.tool)) throw denied();
-            String expected = operation == ProductOperation.RESERVATION_GET
-                    ? "/api/v1/venues/" + actor.venueId().value() + "/reservations/" + credential.target()
-                    : "/api/v1/management/venues/" + actor.venueId().value() + "/reservations";
+            String expected = switch(operation) {
+                case RESERVATION_GET -> "/api/v1/venues/" + actor.venueId().value() + "/reservations/" + credential.target();
+                case RESERVATION_HOLD -> "/api/v1/venues/" + actor.venueId().value() + "/reservations/holds";
+                case MANAGEMENT_LIST -> "/api/v1/management/venues/" + actor.venueId().value() + "/reservations";
+            };
             if (!path.equals(expected)) throw denied();
             return Optional.of(new AuthenticatedPrincipal(actor.original().principalId(), new ConsumerRestriction(
-                    actor.tenantId(), actor.venueId(), actor.profile() == AccessProfile.CUSTOMER)));
+                    actor.tenantId(), actor.venueId(), actor.profile() == AccessProfile.CUSTOMER, credential.id())));
         });
+    }
+
+    @Override public void requireAdmission(AuthenticatedPrincipal principal, ProductOperation operation,
+            VenueId venue, UUID target) {
+        admission(principal,operation,venue,target,null,null);
+    }
+    @Override public void requireHoldAdmission(AuthenticatedPrincipal principal, VenueId venue, UUID slot,int partySize,String key) {
+        admission(principal,ProductOperation.RESERVATION_HOLD,venue,slot,partySize,key);
+    }
+    private void admission(AuthenticatedPrincipal principal, ProductOperation operation, VenueId venue, UUID target,
+            Integer partySize,String key) {
+        if (principal.restriction() == null) return;
+        boundary(() -> {
+            UUID id = principal.restriction().productCredentialId();
+            if (id == null) throw unauthenticated();
+            Exchange exchange=exchanges.get(id);
+            if(exchange==null || exchange.expired())throw unauthenticated();
+            var rows = jdbc.query("SELECT * FROM auth_access_credentials WHERE id=? AND audience='PRODUCT'",
+                (rs, i) -> {
+                    if (rs.getTimestamp("revoked_at") != null) throw unauthenticated();
+                    return new Credential(uuid(rs.getBytes("id")), new PrincipalId(uuid(rs.getBytes("principal_id"))),
+                        nullableUuid(rs.getBytes("delegation_id")), rs.getTimestamp("expires_at").toInstant(),
+                        rs.getString("operation"), nullableUuid(rs.getBytes("target_id")));
+                }, bytes(id));
+            if (rows.size() != 1) throw unauthenticated();
+            Credential credential = rows.getFirst();
+            if(operation == ProductOperation.RESERVATION_HOLD) {
+                if(partySize==null || key==null)throw denied();
+                var material=jdbc.queryForMap("SELECT hold_party_size,hold_key_digest FROM auth_access_credentials WHERE id=?",bytes(id));
+                if(!Objects.equals(partySize,material.get("hold_party_size")) || !digest(key).equals(material.get("hold_key_digest")))throw denied();
+            }
+            DelegatedActor actor = live(credential.delegation());
+            if (!principal.principalId().equals(credential.principal())
+                    || !principal.principalId().equals(actor.original().principalId())
+                    || !principal.restriction().tenantId().equals(actor.tenantId())
+                    || !principal.restriction().venueId().equals(actor.venueId())
+                    || principal.restriction().ownReservationOnly() != (actor.profile() == AccessProfile.CUSTOMER)
+                    || !venue.equals(actor.venueId()) || !operation.name().equals(credential.operation())
+                    || !Objects.equals(target, credential.target()) || actor.profile() != operation.profile
+                    || !actor.permits(operation.tool, operation.profile, operation.action)) throw denied();
+            // Check AFTER current authority reads: a query wait must not preserve an earlier expiry snapshot.
+            if (!clock.instant().isBefore(credential.expiry()) || exchange.expired()) throw unauthenticated();
+            return null;
+        });
+    }
+
+    @Override public RequestLease trackRequest(String credential) {
+        UUID id=exchangeTokens.get(digest(credential));
+        if(id==null)return ()->{};
+        Exchange exchange=exchanges.get(id);
+        if(exchange==null)return ()->{};
+        synchronized(exchange) {
+            if(exchange.expired() || clock.instant().isBefore(exchange.issued))throw unauthenticated();
+            exchange.started=true;exchange.active++;
+        }
+        return ()->{synchronized(exchange){exchange.active--;exchange.notifyAll();}};
+    }
+    @Override public void awaitRequestEnd(ProductAccessCredential credential) {
+        Exchange exchange=exchanges.get(credential.id());if(exchange==null)return;
+        boolean interrupted=false;
+        synchronized(exchange) {
+            while(exchange.active>0 || (!exchange.started && !exchange.expired())) {
+                try {exchange.wait(50);}catch(InterruptedException e){interrupted=true;}
+            }
+        }
+        forgetExchange(credential.id(),exchange);
+        if(interrupted)Thread.currentThread().interrupt();
+    }
+    private final class Exchange {
+        final Instant issued=clock.instant();final long start=System.nanoTime(),budget;
+        final Instant expiry;final String tokenDigest;boolean started;int active;
+        Exchange(Instant expiry,String tokenDigest){this.expiry=expiry;this.tokenDigest=tokenDigest;budget=Duration.between(issued,expiry).toNanos();}
+        boolean expired(){return System.nanoTime()-start>=budget || !clock.instant().isBefore(expiry);}
+    }
+    private void forgetExchange(UUID id,Exchange exchange) {
+        synchronized(exchanges) {
+            if(exchanges.remove(id,exchange))exchangeTokens.remove(exchange.tokenDigest,id);
+        }
     }
 
     private DelegatedActor live(UUID id) {
@@ -191,6 +328,17 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
                 + "(id,token_digest,audience,principal_id,delegation_id,expires_at,operation,target_id) VALUES (?,?,?,?,?,?,?,?)",
                 bytes(id), digest(value), audience, bytes(principal.value()), nullableBytes(delegation),
                 Timestamp.from(expiry), operation, nullableBytes(target));
+        if(audience.equals("PRODUCT")) {
+            synchronized(exchanges) {
+                for(var entry:exchanges.entrySet()) {
+                    synchronized(entry.getValue()) {
+                        if(entry.getValue().active==0 && entry.getValue().expired())forgetExchange(entry.getKey(),entry.getValue());
+                    }
+                }
+                if(exchanges.size()>=4096)throw new AccessFailure(AccessFailure.Reason.UNAVAILABLE);
+                Exchange exchange=new Exchange(expiry,digest(value));exchanges.put(id,exchange);exchangeTokens.put(exchange.tokenDigest,id);
+            }
+        }
         return new ProvisionedCredential(id, delegation, value);
     }
     private <T> T boundary(Supplier<T> task) {

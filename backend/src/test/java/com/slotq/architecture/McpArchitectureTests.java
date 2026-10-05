@@ -17,11 +17,22 @@ class McpArchitectureTests {
                     String content=new String(Files.readAllBytes(file),StandardCharsets.ISO_8859_1);
                     List<String> forbidden=owner.equals("mcp")?List.of("com/slotq/booking/","com/slotq/management/",
                         "com/slotq/knowledge/","com/slotq/integration/mcp/"):
-                        List.of("com/slotq/mcp/","com/slotq/knowledge/");
+                        List.of("com/slotq/mcp/","com/slotq/knowledge/","com/slotq/integration/mcp/");
                     for(String dependency:forbidden)if(content.contains(dependency))violations.add(root.relativize(file)+" -> "+dependency);
                 }
             }
         }
         assertThat(violations).isEmpty();
+    }
+
+    @Test void productToolIntegrationCannotBypassProductHttpOrReadReliabilityTables() throws Exception {
+        Path root=Path.of(McpEngine.class.getProtectionDomain().getCodeSource().getLocation().toURI()).resolve("com/slotq/integration/mcp");
+        try(var files=Files.walk(root)) {
+            for(Path file:files.filter(p->p.toString().endsWith(".class")).toList()) {
+                String content=new String(Files.readAllBytes(file),StandardCharsets.ISO_8859_1);
+                assertThat(content).as(file.toString()).doesNotContain("com/slotq/booking/","com/slotq/management/",
+                    "com/slotq/auth/persistence/","jakarta/persistence/","hold_idempotency_records","capacity_allocations");
+            }
+        }
     }
 }

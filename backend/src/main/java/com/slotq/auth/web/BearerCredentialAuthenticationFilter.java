@@ -36,6 +36,7 @@ final class BearerCredentialAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String authorization = request.getHeader("Authorization");
         BearerCredentialResolver resolver = resolverProvider.getIfAvailable();
+        ProductCredentialAccess.RequestLease lease=()->{};
         if (authorization != null && authorization.startsWith(BEARER_PREFIX)) {
             String credential = authorization.substring(BEARER_PREFIX.length());
             // Dev credentials remain a local/test-only alternative, never an MCP identity.
@@ -43,10 +44,12 @@ final class BearerCredentialAuthenticationFilter extends OncePerRequestFilter {
                 : resolver.resolve(credential);
             try {
                 if (principal.isEmpty() && productAccess.getIfAvailable() != null) {
+                    lease=productAccess.getObject().trackRequest(credential);
                     principal = productAccess.getObject().authenticateProduct(credential, request.getMethod(),
                         request.getRequestURI().substring(request.getContextPath().length()));
                 }
             } catch (AccessFailure failure) {
+                lease.close();
                 response.setStatus(failure.reason() == AccessFailure.Reason.UNAVAILABLE ? 503 : 401);
                 response.setHeader("Cache-Control", "no-store");
                 return;
@@ -55,6 +58,6 @@ final class BearerCredentialAuthenticationFilter extends OncePerRequestFilter {
                 .map(AuthenticatedPrincipalAuthentication::new)
                 .ifPresent(authentication -> SecurityContextHolder.getContext().setAuthentication(authentication));
         }
-        filterChain.doFilter(request, response);
+        try {filterChain.doFilter(request, response);}finally{lease.close();}
     }
 }

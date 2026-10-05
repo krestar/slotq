@@ -345,6 +345,37 @@ class McpHttpIntegrationTests {
         assertThatThrownBy(()->access.approveDelegation(original.value(),new VenueId(venue),AccessProfile.CUSTOMER,
             Set.of(AccessAction.KNOWLEDGE_PUBLIC),Set.of("test.customer"),Duration.ofMinutes(16))).isInstanceOf(AccessFailure.class);
     }
+    @Test void applicationAdmissionRechecksCredentialDelegationOperationTargetAndExactExpiry() {
+        for(String fault:List.of("expiry","credential-revoke","delegation-revoke","original-revoke","operation","target","record-loss")) {
+            var d=access.approveDelegation(original.value(),new VenueId(venue),AccessProfile.CUSTOMER,
+                Set.of(AccessAction.RESERVATION_READ),Set.of("reservation.get"),Duration.ofMinutes(5));
+            UUID target=UUID.randomUUID();
+            var credential=access.issueProduct(d.delegationId(),ProductOperation.RESERVATION_GET,target,Instant.now().plusSeconds(30));
+            var principal=access.authenticateProduct(credential.value(),"GET","/api/v1/venues/"+venue+"/reservations/"+target).orElseThrow();
+            access.requireAdmission(principal,ProductOperation.RESERVATION_GET,new VenueId(venue),target);
+            switch(fault) {
+                case "expiry" -> {
+                    var atExpiry=new ActorAccessService(db,authorization,Clock.fixed(credential.expiresAt(),ZoneOffset.UTC),transactions);
+                    assertThatThrownBy(()->atExpiry.requireAdmission(principal,ProductOperation.RESERVATION_GET,new VenueId(venue),target))
+                        .isInstanceOf(AccessFailure.class);continue;
+                }
+                case "credential-revoke" -> access.revokeCredential(principal.restriction().productCredentialId());
+                case "delegation-revoke" -> access.revokeDelegation(d.delegationId());
+                case "original-revoke" -> {
+                    access.revokeCredential(original.id());
+                    assertThatThrownBy(()->access.requireAdmission(principal,ProductOperation.RESERVATION_GET,new VenueId(venue),target))
+                        .isInstanceOf(AccessFailure.class);
+                    db.update("UPDATE auth_access_credentials SET revoked_at=NULL WHERE id=?",bytes(original.id()));continue;
+                }
+                case "operation" -> db.update("UPDATE auth_access_credentials SET operation='MANAGEMENT_LIST' WHERE id=?",bytes(principal.restriction().productCredentialId()));
+                case "target" -> db.update("UPDATE auth_access_credentials SET target_id=? WHERE id=?",bytes(UUID.randomUUID()),bytes(principal.restriction().productCredentialId()));
+                case "record-loss" -> db.update("DELETE FROM auth_access_credentials WHERE id=?",bytes(principal.restriction().productCredentialId()));
+            }
+            assertThatThrownBy(()->access.requireAdmission(principal,ProductOperation.RESERVATION_GET,new VenueId(venue),target))
+                .isInstanceOf(AccessFailure.class);
+        }
+        access.requireAdmission(new AuthenticatedPrincipal(new PrincipalId(principal)),ProductOperation.RESERVATION_GET,new VenueId(venue),UUID.randomUUID());
+    }
     @Test void exactExpiryAndNewCurrentReadIgnorePriorRepeatableReadSnapshot() {
         var observed=access.authenticateMcp(customer.value());
         var atExpiry=new ActorAccessService(db,authorization,Clock.fixed(observed.expiresAt(),ZoneOffset.UTC),transactions);

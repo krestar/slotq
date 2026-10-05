@@ -47,6 +47,8 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
+    systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
     if (project.hasProperty('secureFixture')) {
         systemProperty 'slotq.kafka.secure.fixture', project.property('secureFixture')
     }
