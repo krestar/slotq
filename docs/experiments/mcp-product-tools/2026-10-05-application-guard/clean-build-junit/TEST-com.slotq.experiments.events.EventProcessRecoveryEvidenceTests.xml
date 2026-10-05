@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.slotq.experiments.events.EventProcessRecoveryEvidenceTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:18:52.819Z" hostname="KRESTAR" time="0.006">
-  <properties/>
-  <testcase name="cleanProcessRecoveryEvidenceCoversTheWp3FaultMatrixFromAuthoritativeDatabaseState()" classname="com.slotq.experiments.events.EventProcessRecoveryEvidenceTests" time="0.005"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

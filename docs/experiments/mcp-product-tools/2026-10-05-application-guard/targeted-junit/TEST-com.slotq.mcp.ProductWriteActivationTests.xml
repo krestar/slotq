@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.slotq.mcp.ProductWriteActivationTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-04T19:46:17.231Z" hostname="KRESTAR" time="0.126">
-  <properties/>
-  <testcase name="unsafeAcquisitionSocketConnectionTransactionReconnectAndMultiHostProfilesAreRejectedBeforeDbUse()" classname="com.slotq.mcp.ProductWriteActivationTests" time="0.123"/>
-  <testcase name="httpRedirectProfileCannotActivate()" classname="com.slotq.mcp.ProductWriteActivationTests" time="0.003"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

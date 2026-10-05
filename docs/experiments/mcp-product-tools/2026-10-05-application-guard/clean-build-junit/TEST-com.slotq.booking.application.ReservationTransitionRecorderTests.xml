@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.slotq.booking.application.ReservationTransitionRecorderTests" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:12:54.028Z" hostname="KRESTAR" time="0.283">
-  <properties/>
-  <testcase name="missingConfigurationIsDisabledAndDoesNotRequireReadinessOrRegistration()" classname="com.slotq.booking.application.ReservationTransitionRecorderTests" time="0.25"/>
-  <testcase name="inactiveAllocationDoesNotPublishEvenIfStateNamesDiffer()" classname="com.slotq.booking.application.ReservationTransitionRecorderTests" time="0.004"/>
-  <testcase name="enabledWithoutAReadinessProviderFailsClosedRatherThanOpeningByConfigurationAlone()" classname="com.slotq.booking.application.ReservationTransitionRecorderTests" time="0.004"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

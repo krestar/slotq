@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.slotq.events.application.KafkaRelayFailureClassificationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:54:17.284Z" hostname="KRESTAR" time="0.411">
-  <properties/>
-  <testcase name="springKafkaWrappedAuthorizationErrorBecomesTerminalStableCode()" classname="com.slotq.events.application.KafkaRelayFailureClassificationTests" time="0.411"/>
-  <system-out><![CDATA[operation=product.event.publication outcome=unknown request_id=null trace_id=00000000000000000000000000000000 span_id=0000000000000000 event_id=ccabd11d-351e-4493-8a40-dd8210b5fa4e fencing_token=1 
-]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

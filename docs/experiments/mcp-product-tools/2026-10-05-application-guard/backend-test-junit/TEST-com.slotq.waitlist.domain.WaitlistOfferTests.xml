@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.slotq.waitlist.domain.WaitlistOfferTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-04T21:03:57.744Z" hostname="KRESTAR" time="0.001">
-  <properties/>
-  <testcase name="pendingOfferTransitionsOnceWithTheContractedReason()" classname="com.slotq.waitlist.domain.WaitlistOfferTests" time="0.001"/>
-  <testcase name="entryOfferLifecycleDoesNotReopenTerminalState()" classname="com.slotq.waitlist.domain.WaitlistOfferTests" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

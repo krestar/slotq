@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.slotq.experiments.waitlist.WaitlistProcessRecoveryEvidenceTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:59:06.761Z" hostname="KRESTAR" time="0.075">
-  <properties/>
-  <testcase name="bothSpringFixedDelayOverloadsRespectTheTestOnlyPause()" classname="com.slotq.experiments.waitlist.WaitlistProcessRecoveryEvidenceTests" time="0.066"/>
-  <testcase name="checkedInEvidenceUsesRealBusinessStateAcrossFivePhysicalProcessFaults()" classname="com.slotq.experiments.waitlist.WaitlistProcessRecoveryEvidenceTests" time="0.008"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

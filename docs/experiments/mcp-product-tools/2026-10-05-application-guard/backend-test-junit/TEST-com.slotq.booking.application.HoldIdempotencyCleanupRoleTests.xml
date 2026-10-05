@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.slotq.booking.application.HoldIdempotencyCleanupRoleTests" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-04T20:52:48.075Z" hostname="KRESTAR" time="0.358">
-  <properties/>
-  <testcase name="relayDoesNotRegisterOrRunProductCleanup()" classname="com.slotq.booking.application.HoldIdempotencyCleanupRoleTests" time="0.221"/>
-  <testcase name="productRoleStillRunsScheduledCleanup()" classname="com.slotq.booking.application.HoldIdempotencyCleanupRoleTests" time="0.019"/>
-  <system-out><![CDATA[2026-10-05T05:52:48.420+09:00  INFO 37152 --- [    Test worker] o.s.s.config.TaskSchedulerRouter         : No TaskScheduler/ScheduledExecutorService bean found for scheduled processing
-]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
