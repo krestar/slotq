@@ -5,6 +5,10 @@ import com.slotq.knowledge.domain.Corpus.*;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
+import java.util.Set;
+import com.slotq.tenancy.domain.TenantId;
+import com.slotq.venue.domain.VenueId;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +16,24 @@ import org.springframework.stereotype.Component;
 class JdbcCorpusStore implements CorpusStore {
     private final JdbcTemplate jdbc;
     JdbcCorpusStore(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+
+    @Override public List<PublishedVersion> publications(TenantId tenant, VenueId venue, Set<Visibility> visibility, int limit) {
+        if (visibility.isEmpty() || limit < 1 || limit > 65) throw new IllegalArgumentException("Bounded publication read required");
+        var args = new java.util.ArrayList<Object>();
+        args.add(bytes(tenant.value())); args.add(bytes(venue.value()));
+        visibility.stream().sorted().forEach(v -> args.add(v.name())); args.add(limit);
+        String slots = String.join(",", java.util.Collections.nCopies(visibility.size(), "?"));
+        return jdbc.query("SELECT v.*,d.revision FROM knowledge_documents d JOIN knowledge_versions v "
+                + "ON v.tenant_id=d.tenant_id AND v.venue_id=d.venue_id AND v.document_id=d.document_id "
+                + "AND v.version_id=d.current_version_id WHERE d.tenant_id=? AND d.venue_id=? "
+                + "AND v.visibility IN (" + slots + ") AND d.state='ACTIVE' AND v.state='PUBLISHED' "
+                + "AND v.content IS NOT NULL ORDER BY d.document_id LIMIT ?",
+                (rs, n) -> new PublishedVersion(new VersionMetadata(new VersionReference(
+                        new DocumentKey(tenant, venue, uuid(rs.getBytes("document_id"))), uuid(rs.getBytes("version_id")),
+                        rs.getString("content_digest"), Visibility.valueOf(rs.getString("visibility"))),
+                        new Source(uuid(rs.getBytes("source_id")), rs.getString("source_reference"), rs.getString("source_title")),
+                        VersionState.PUBLISHED, rs.getLong("staged_revision")), rs.getLong("revision"), rs.getString("content")), args.toArray());
+    }
 
     @Override public void createDocument(DocumentKey key) {
         jdbc.update("INSERT INTO knowledge_documents (tenant_id,venue_id,document_id,state,revision) "

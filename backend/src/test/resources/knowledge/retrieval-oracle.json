@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "queries": [
+    {
+      "id": "tenant-a-hours",
+      "query": "open daily",
+      "scenario": "base",
+      "category": "evidence",
+      "document": "30000000-0000-0000-0000-000000000001",
+      "versionId": "40000000-0000-0000-0000-000000000001",
+      "sourceId": "50000000-0000-0000-0000-000000000001"
+    },
+    {
+      "id": "tenant-a-menu",
+      "query": "tea oat biscuits",
+      "scenario": "base",
+      "category": "evidence",
+      "document": "30000000-0000-0000-0000-000000000002",
+      "versionId": "40000000-0000-0000-0000-000000000002",
+      "sourceId": "50000000-0000-0000-0000-000000000002"
+    },
+    {
+      "id": "semantic-hours",
+      "query": "visiting hours",
+      "scenario": "base",
+      "category": "insufficient",
+      "document": "30000000-0000-0000-0000-000000000001",
+      "versionId": "40000000-0000-0000-0000-000000000001",
+      "sourceId": "50000000-0000-0000-0000-000000000001"
+    },
+    {
+      "id": "no-answer",
+      "query": "spaceship propulsion",
+      "scenario": "base",
+      "category": "no_answer"
+    },
+    {
+      "id": "insufficient-allergy",
+      "query": "menu allergy guarantee",
+      "scenario": "base",
+      "category": "insufficient",
+      "document": "30000000-0000-0000-0000-000000000002",
+      "versionId": "40000000-0000-0000-0000-000000000002",
+      "sourceId": "50000000-0000-0000-0000-000000000002"
+    },
+    {
+      "id": "operator-hidden",
+      "query": "verify posted information",
+      "scenario": "base",
+      "category": "no_answer"
+    },
+    {
+      "id": "operator-known",
+      "query": "verify posted information",
+      "scenario": "operator",
+      "category": "evidence",
+      "document": "30000000-0000-0000-0000-000000000003",
+      "versionId": "40000000-0000-0000-0000-000000000003",
+      "sourceId": "50000000-0000-0000-0000-000000000003"
+    },
+    {
+      "id": "tenant-b-known",
+      "query": "open daily",
+      "scenario": "tenant-b",
+      "category": "evidence",
+      "document": "30000000-0000-0000-0000-000000000005",
+      "versionId": "40000000-0000-0000-0000-000000000005",
+      "sourceId": "50000000-0000-0000-0000-000000000005"
+    },
+    {
+      "id": "tenant-b-substitution",
+      "query": "oat biscuits",
+      "scenario": "tenant-b",
+      "category": "no_answer"
+    },
+    {
+      "id": "malicious",
+      "query": "malicious instruction",
+      "scenario": "base",
+      "category": "evidence",
+      "document": "30000000-0000-0000-0000-000000000004",
+      "versionId": "40000000-0000-0000-0000-000000000004",
+      "sourceId": "50000000-0000-0000-0000-000000000004"
+    },
+    {
+      "id": "superseded",
+      "query": "open daily",
+      "scenario": "superseded",
+      "category": "no_answer"
+    },
+    {
+      "id": "withdrawn-residue",
+      "query": "open daily",
+      "scenario": "withdrawn",
+      "category": "no_answer"
+    },
+    {
+      "id": "update-during-query",
+      "query": "open daily",
+      "scenario": "update-during",
+      "category": "no_answer"
+    },
+    {
+      "id": "withdraw-during-query",
+      "query": "open daily",
+      "scenario": "withdraw-during",
+      "category": "no_answer"
+    },
+    {
+      "id": "revoked",
+      "query": "open daily",
+      "scenario": "revoked",
+      "category": "denied"
+    },
+    {
+      "id": "expired",
+      "query": "open daily",
+      "scenario": "expired",
+      "category": "denied"
+    },
+    {
+      "id": "unavailable",
+      "query": "open daily",
+      "scenario": "unavailable",
+      "category": "unavailable"
+    },
+    {
+      "id": "timeout",
+      "query": "open daily",
+      "scenario": "timeout",
+      "category": "unavailable"
+    }
+  ]
+}

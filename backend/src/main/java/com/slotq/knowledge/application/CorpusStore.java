@@ -2,10 +2,15 @@ package com.slotq.knowledge.application;
 
 import com.slotq.knowledge.domain.Corpus.*;
 import java.util.Optional;
+import java.util.List;
+import java.util.Set;
+import com.slotq.tenancy.domain.TenantId;
+import com.slotq.venue.domain.VenueId;
 import java.util.UUID;
 
 /** Module-owned persistence port. Mutations run under the document row lock. */
 public interface CorpusStore {
+    List<PublishedVersion> publications(TenantId tenant, VenueId venue, Set<Visibility> visibility, int limit);
     void createDocument(DocumentKey key);
     Optional<DocumentMetadata> document(DocumentKey key, boolean lock);
     Optional<StoredVersion> version(DocumentKey key, UUID version);

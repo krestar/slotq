@@ -8,6 +8,19 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 class KnowledgeArchitectureTests {
+    @Test void concreteRetrievalUsesCatalogAndCannotReadAuthorityOrProductPersistence() throws Exception {
+        Path root=Path.of(CorpusService.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .resolve("com/slotq/integration/mcp/knowledge");
+        try(var files=Files.walk(root)) {
+            for(Path file:files.filter(p->p.toString().endsWith(".class")).toList()) {
+                String content=new String(Files.readAllBytes(file),StandardCharsets.ISO_8859_1);
+                assertThat(content).as(file.toString()).doesNotContain("org/springframework/jdbc/","jakarta/persistence/",
+                        "com/slotq/knowledge/persistence/","com/slotq/knowledge/application/CorpusStore",
+                        "com/slotq/auth/persistence/","com/slotq/booking/","com/slotq/management/",
+                        "knowledge_documents","knowledge_versions","java/net/http/","java/lang/ProcessBuilder");
+            }
+        }
+    }
     @Test void corpusUsesPublicAccessAndVenuePortsWithoutProductPersistenceOrRetrievalRuntime() throws Exception {
         Path root = Path.of(CorpusService.class.getProtectionDomain().getCodeSource().getLocation().toURI()).resolve("com/slotq/knowledge");
         try (var paths = Files.walk(root)) {
