@@ -125,8 +125,8 @@ test fixture로 대체한다.
   fence만 기다리고 Slot X를 유지한 채 fence만 풀어도 양쪽이 완료한다. committed release target은 한 건이다.
 - outer business transaction에서 bootstrap/inspection 거부.
 
-[MySQL 잠금 원자료와 종료 oracle](../experiments/evidence/waitlist-activation-2026-09-22/LOCKS.txt)을
-보존한다. bootstrap은 event_boundary만 기다리고 release는 Reservation/Allocation을 보유한 채 같은
+당시 MySQL 잠금 관찰과 종료 oracle을 이 문서에 요약한다.
+`WaitlistActivationIntegrationTests`의 실제 경쟁 regression은 유지한다. bootstrap은 event_boundary만 기다리고 release는 Reservation/Allocation을 보유한 채 같은
 fence를 기다렸다. Slot X를 유지한 채 fence만 풀어 양쪽이 완료되고 release target 한 건이 DONE에
 도달했다. 이 capture를 implicit FK/unique/secondary-index 잠금 전체 목록이라고 주장하지 않는다.
 

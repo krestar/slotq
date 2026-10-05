@@ -66,6 +66,10 @@ Git에서 추적:
 run별 raw output 디렉터리를 `docs/experiments/` 아래에 새로 만드는 것을 기본 패턴으로 사용하지 않는다.
 역사적으로 이미 추적된 evidence는 그대로 둘 수 있지만 신규 작업의 선례로 간주하지 않는다.
 
+PR #139 정책을 과거 산출물에 적용한 [historical cleanup](historical-artifact-cleanup.md)은
+현재 tree의 raw output을 제거하고 재현 입력/harness와 중요한 관찰·한계를 유지한다.
+과거 commit의 bytes는 Git history에 남는다.
+
 ## Reservation concurrency
 
 현재 Product HOLD의 naive check-then-write 측정 절차와 JSON 계약은
@@ -195,7 +199,7 @@ runtime/crash recovery gate나 M4 실제 consumer 완료를 대신하지 않는�
 
 #86의 production process recovery 종료 검증은
 [Measured summary](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/summary.md)와
-기존 [historical raw DB artifact](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/raw/report.json)에 기록돼 있다.
+기존 historical raw DB artifact에 기록돼 있다.
 이 historical artifact는 신규 run에서 raw output을 Git에 추가해야 한다는 선례가 아니다.
 
 #105의 실제 M4 workload와 DB direct 1-worker 기준선 및 M5 후속 전달 계약은

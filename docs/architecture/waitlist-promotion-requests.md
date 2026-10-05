@@ -123,7 +123,7 @@ test만 두 route의 registration과 readiness를 공급한다.
 
 lock fixture는 `build/waitlist-request-lock-evidence.txt`에 원자료를 재생성한다. 수정된 C3를 그대로
 적용하며 observed 1213은 trace로 application inverse edge/engine physical transient를 구분한다.
-[admission/fence 원자료](../experiments/evidence/promotion-request-2026-09-21/ADMISSION_APPEND_FENCE.txt)는
+admission/fence 원자료는
 2026-09-21 HEAD `4156053` 위 이 checkpoint source, Java 25 / Gradle 9.7.1 / MySQL 8.4.11 / RR에서
 수집했다. 정확한 admission PK의 X record와 event_boundary X 대기만 있고 Slot/Reservation/Allocation/
 Entry/Offer record lock은 없다. fixture UUID는 일회용 synthetic 값이다. 별도 외부 Slot X를 계속

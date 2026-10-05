@@ -1,7 +1,0 @@
-{
-  "databaseAccessFailureObserved" : true,
-  "entryPoint" : "EventDeliveryWorker.runCycle",
-  "childExitCode" : 90,
-  "failureType" : "com.mysql.cj.jdbc.exceptions.CommunicationsException",
-  "contextReadyBeforePause" : true
-}

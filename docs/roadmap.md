@@ -272,7 +272,7 @@ confirm/expiry 경합을 기존 Reservation lock으로 검증했고, #71은 runt
 명시적 same-intent HOLD retry와 reload no-replay 경계를 구현했다.
 
 종료 감사 corrective Bug #78은 #16 후보 비교를 clean commit의 동일 환경에서 다시 실행해
-environment manifest와 raw request/counter를 보존했고, #71 내부 navigation retry가
+동일 환경의 request/counter를 측정해 historical summary에 기록했고, #71 내부 navigation retry가
 Reservation Venue timezone을 복구하도록 보정했다. 또한 #17 reliability row의 Reservation
 참조를 tenant/Venue까지 묶는 composite foreign key를 추가했다. 세 finding의 regression
 test와 전체 검증을 통과해 M2는 Complete이다.
@@ -306,8 +306,8 @@ Milestone을 다시 나누지 않고 다음 누적 성공 지점을 둔다.
 | `v1.0 SlotQ Platform` | M0~M8 | Product와 AI Platform의 통합 경계, 평가와 release 기준 |
 
 Checkpoint는 완료되지 않은 Milestone을 완료로 보이게 하거나 scope를 건너뛰는 수단이
-아니다. 각 시점에 clean environment 재현 절차, test report, ADR과 측정 원자료를 묶어
-실행 가능한 상태를 보존한다.
+아니다. 각 시점에 clean environment 재현 절차, test/harness, 결과 요약과 ADR을 묶어
+실행 가능한 상태를 보존한다. Run별 report와 측정 원자료는 gitignored output에 생성한다.
 
 ## M0 Foundation
 
@@ -462,8 +462,8 @@ Customer-bound command idempotency를 해결하며 Customer UI의 안전한 retr
   capacity-consuming Allocation units가 1을 넘지 않는다.
 - Optimistic Lock과 Pessimistic Lock을 동일 workload로 비교하고 선택 근거를 ADR에
   기록한다.
-- 두 전략의 clean commit SHA, full environment manifest, workload, raw request·Slot·counter와
-  raw에서 재계산 가능한 summary를 보존한다.
+- 두 전략의 source/environment/workload와 결과·한계를 summary에 기록하고 재현 harness를 유지한다.
+  Raw request·Slot·counter는 gitignored output에서 재계산하며 Git 추적을 완료조건으로 삼지 않는다.
 - 선택한 전략이 stale concurrent write를 방지하고, `RESERVATION_STATE_CONFLICT`가 필요한
   전략이라면 authoritative business result로 확정할 수 없는 정확한 조건을 정의·검증한다.
 - 동일 tenant, authenticated customerPrincipalId, idempotency key와 fingerprint의 재전송은
@@ -499,7 +499,7 @@ M1 Reservation Core.
 
 ### 검증 결과물
 
-- 재현 가능한 concurrency runner와 원자료.
+- 재현 가능한 concurrency runner와 결과·환경 summary; raw는 gitignored output에 생성.
 - 전략별 correctness·latency·throughput·lock wait 비교 보고서.
 - 선택 전략 ADR과 CI용 invariant 통합 test.
 - due stored HELD를 포함한 effective occupancy와 raw active row diagnostic 대조 기록.

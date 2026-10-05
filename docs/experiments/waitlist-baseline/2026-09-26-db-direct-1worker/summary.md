@@ -1,17 +1,19 @@
 # Waitlist DB direct 1-worker 기준선
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 상태: **Measured**, correctness oracle **PASS**. Issue #105의 비교 입력이며 transport 채택 결정은 아니다.
 
 ## 실행 근거
 
 - 실행 revision: `7ddbf241b91c7ac5597c68476bed92701d4a821d`, `dirty=false`.
-- 원자료: [raw.json](raw.json), [manifest.json](manifest.json), 재계산 결과: [summary.json](summary.json), [correspondence.csv](correspondence.csv).
 - Java `25.0.4.1+1-LTS`, Spring Boot `4.1.1`, Gradle `9.7.1`, MySQL `8.4.11`, `REPEATABLE-READ`.
 - Windows 11, CPU `AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD`, logical processors 16, host RAM 16,329,510,912 bytes.
 - Docker VM 16 processors / RAM 7,910,817,792 bytes. Container CPU/memory limits는 0(명시적 제한 없음); image ID와 kernel/version은 manifest에 보존.
 - MySQL buffer pool 128MiB, max connections 151, flush-log-at-commit=1, sync-binlog=1; Hikari maximum/minimumIdle=10, connection timeout=30s.
 - seed `10501`, tenant 2, batch 2, worker 1, hot Slot 등록 clients 4와 public HOLD contenders 4, backlog inputs 6.
-- Product/main 및 harness/build의 정확한 실행 bytes SHA-256 **256개**는 원 측정 revision의 source를 나타낸다. 원 측정 당시 모두 일치함을 확인했으며, 아래 summary 보정 계산기의 source와 구분한다.
 
 자동 timer는 test-only scheduler에서 억제하고 기존 worker/public use case를 호출했다. 활성화·registration·handler·transaction·lock·receipt·DONE 구현은 그대로 사용했다.
 고정 business clock과 DB UTC lease clock을 분리했고, elapsed window는 `System.nanoTime`, command/cycle/DB 조회 구간은 host UTC도 함께 남겼다.
@@ -63,17 +65,17 @@ saturation, production SLO 또는 Kafka/DB direct의 상대 우위를 주장하�
 Java 25와 Docker가 준비된 `backend/`에서 새 output directory를 사용한다.
 
 ```powershell
-.\gradlew.bat waitlistBaseline '-Pseed=10501' '-Poutput=../docs/experiments/waitlist-baseline/new-run'
-.\gradlew.bat waitlistBaseline '-Precalculate=../docs/experiments/waitlist-baseline/2026-09-26-db-direct-1worker'
+.\gradlew.bat waitlistBaseline '-Pseed=10501' '-Poutput=build/reports/waitlist-baseline/new-run'
+.\gradlew.bat waitlistBaseline '-Precalculate=build/reports/waitlist-baseline/new-run'
 ```
 
 저장 run은 raw JSON에서 summary와 correspondence CSV를 재계산해 양쪽 동일성 검사 **PASS**.
 PR #112의 idle drain 보정은 새 workload 실행이 아니라 보존된 raw의 deterministic 재계산이다.
-`raw.json`, `manifest.json`, `correspondence.csv`는 원 측정 그대로이며, `summary.json`에서는 idle의
-drain 관련 두 field만 제거했다. normal/hot-slot/independent-slots/backlog의 drain 값과 다른 수치는
-동일하다. [recalculation.json](recalculation.json)에 원 측정 revision, 입력/출력 hash와 보정 계산기의
-revision/dirty/source hash를 별도로 기록한다. 원 manifest의 `revision`/`dirty=false`/source hash는
-원 workload 실행의 provenance이며 현재 보정 계산기가 그 revision에서 실행됐다는 주장이 아니다.
+당시 보정에서는 idle의 drain 관련 두 field만 제거했고 normal/hot/independent/backlog 및 다른
+수치는 그대로였다. 원 workload 실행과 보정 계산기의 revision/provenance를 분리해 검증했다.
+이 문서와 `WaitlistBaselineRunner` / `WaitlistBaselineEvidence`의 oracle 및 synthetic negative
+regression은 유지한다. 과거 raw 동일 bytes는 Git history에서 확인할 수 있으며 새 실행의
+재계산은 새 output을 사용한다.
 Product가 생성하는 UUID와 thread scheduling은 seed로 고정되지 않는다. 다음 run에서 같은 seed여도
 hot Slot winner, event 수와 latency가 달라질 수 있으며 원 identity와 결과는 해당 run raw가 권위다.
 Kafka broker/relay/consumer, 다른 logical consumer fan-out, 장애/retention/cutover 측정은 후속 Issue 소유다.
