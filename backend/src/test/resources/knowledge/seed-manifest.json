@@ -1,0 +1,39 @@
+{
+  "tenantId": "10000000-0000-0000-0000-000000000001",
+  "venueId": "20000000-0000-0000-0000-000000000001",
+  "documents": [
+    {
+      "documentId": "30000000-0000-0000-0000-000000000001",
+      "versionId": "40000000-0000-0000-0000-000000000001",
+      "sourceId": "50000000-0000-0000-0000-000000000001",
+      "sourceReference": "seed:slotq/synthetic/1/v1",
+      "sourceTitle": "Synthetic document 1",
+      "visibility": "VENUE_PUBLIC",
+      "content": "Synthetic venue guide. Open daily from 09:00 to 18:00.",
+      "contentDigest": "bb794bce436f19742672ba34b0b8c634d1a606dfd5bfe9a3f5b00802d80e0999",
+      "expectedRevision": 0
+    },
+    {
+      "documentId": "30000000-0000-0000-0000-000000000002",
+      "versionId": "40000000-0000-0000-0000-000000000002",
+      "sourceId": "50000000-0000-0000-0000-000000000002",
+      "sourceReference": "seed:slotq/synthetic/2/v1",
+      "sourceTitle": "Synthetic document 2",
+      "visibility": "VENUE_PUBLIC",
+      "content": "Synthetic menu: tea and oat biscuits. Ask staff about ingredients.",
+      "contentDigest": "24de8762c7eec096897d9c34dd765e3880b5ad44198d97fba8b47aece84ad702",
+      "expectedRevision": 0
+    },
+    {
+      "documentId": "30000000-0000-0000-0000-000000000003",
+      "versionId": "40000000-0000-0000-0000-000000000003",
+      "sourceId": "50000000-0000-0000-0000-000000000003",
+      "sourceReference": "seed:slotq/synthetic/3/v1",
+      "sourceTitle": "Synthetic document 3",
+      "visibility": "VENUE_OPERATOR",
+      "content": "Synthetic operator guide. Verify posted venue information before answering.",
+      "contentDigest": "2bfd8eda1c5db81245bc4dd9a22c6f0bc1e774605daeea542f93b66fb87f8881",
+      "expectedRevision": 0
+    }
+  ]
+}

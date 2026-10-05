@@ -312,6 +312,9 @@ Confirmation/intent는 §5의 durable state이고 M5 recovery audit는 기존 at
 
 ### Ownership / authoring / lifecycle (#133)
 
+#133의 application/persistence, revision arbitration, bounded seed와 #134 metadata handoff는
+[Tenant 문서 수명주기 구현 계약](knowledge-corpus.md)에 기록한다.
+
 Knowledge owner가 document/version/publication metadata와 자신의 persistence/migration을
 소유한다. Product JPA entity/repository/table을 공유하지 않는다. Auth/active Venue는 공개
 계약으로 조회한다. BookingPolicy version과 policy 설명 document version은 다른 identity다.
