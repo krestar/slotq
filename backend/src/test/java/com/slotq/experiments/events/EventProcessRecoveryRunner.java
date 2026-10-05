@@ -638,7 +638,7 @@ public final class EventProcessRecoveryRunner {
             Backend에서 Java 25와 Docker를 사용한다.
 
             ```powershell
-            .\\gradlew.bat eventProcessRecovery -PrunId=%s "-Poutput=../docs/experiments/events/%s"
+            .\\gradlew.bat eventProcessRecovery -PrunId=%s "-Poutput=build/reports/experiments/events/%s"
             ```
 
             원자료: [`raw/report.json`](raw/report.json)

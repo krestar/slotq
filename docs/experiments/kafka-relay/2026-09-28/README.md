@@ -1,5 +1,9 @@
 # #107 Kafka publication fault evidence (2026-09-28)
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 ## 실행 환경과 재현
 
 - Windows Docker Desktop, Java 25.0.4.1, Spring Boot 4.1.1, Spring Kafka 4.1.1, Kafka clients 4.2.1.
@@ -7,15 +11,15 @@
 - Kafka image `apache/kafka:4.1.1@sha256:0bc1bb2478f45b6cea78864df86acdc11e8df2c5172477819a4d12942cbe5d40`.
 - Testcontainers 단일 broker는 relay/DB fault 테스트에 사용했다. 별도 Compose 3-node KRaft와 SASL_SSL broker로 replication 및 ACL을 검증했다.
 
-`backend`에서 JDK 25 `JAVA_HOME`을 설정하고 다음을 실행한다. `KAFKA_EVIDENCE_DIR`은 이 문서의 디렉터리 절대 경로로 지정한다.
+`backend`에서 JDK 25 `JAVA_HOME`을 설정하고 다음을 실행한다. `KAFKA_EVIDENCE_DIR`은 새 gitignored `backend/build/reports/kafka-relay/<run-id>`의 절대 경로로 지정한다.
 
 ```powershell
 .\gradlew.bat test --tests 'com.slotq.events.application.KafkaRelayIntegrationTests' --tests 'com.slotq.KafkaBookingPublicationIntegrationTests' "-PkafkaEvidenceDir=$env:KAFKA_EVIDENCE_DIR"
 ```
 
-[fault-raw.json](fault-raw.json)은 original event, publication, assignment, 독립 cursor, broker record의 직접 조회 결과다. [business-raw.json](business-raw.json)은 실제 Booking HOLD→CONFIRM→CANCEL과 M4 Waitlist 경로의 원본 event, DB DONE target, Offer 수, broker record다. 각 실행은 새 Testcontainers DB/broker를 사용하므로 fixture UUID와 broker offset은 재실행 시 달라진다.
+fault-raw.json은 original event, publication, assignment, 독립 cursor, broker record의 직접 조회 결과다. business-raw.json은 실제 Booking HOLD→CONFIRM→CANCEL과 M4 Waitlist 경로의 원본 event, DB DONE target, Offer 수, broker record다. 각 실행은 새 Testcontainers DB/broker를 사용하므로 fixture UUID와 broker offset은 재실행 시 달라진다.
 
-이 raw는 구현 working tree에서 위 집중 테스트를 실행해 생성했다. 생성 시 기준 main은 `16ba6b695f19988d944d43434b58b440c592cad7`이며 working tree는 dirty였다. 구현 checkpoint는 `b5d7b27`이다. 마지막 테스트 정리에서 producer factory 종료 코드를 추가했지만 publication production 코드와 raw 생성 경로는 유지했다. [manifest.json](manifest.json)에 각 raw SHA-256을 기록했다.
+이 raw는 구현 working tree에서 위 집중 테스트를 실행해 생성했다. 생성 시 기준 main은 `16ba6b695f19988d944d43434b58b440c592cad7`이며 working tree는 dirty였다. 구현 checkpoint는 `b5d7b27`이다. 마지막 테스트 정리에서 producer factory 종료 코드를 추가했지만 publication production 코드와 raw 생성 경로는 유지했다. 당시 raw/source provenance는 Git history에 남아 있다.
 
 ## 최종 Backend 검증
 
@@ -43,9 +47,9 @@
 
 ## Replication과 ACL
 
-[cluster-raw.txt](cluster-raw.txt)는 [3-node Compose](../../../../infra/kafka/compose.fault.yml)의 topic describe/producer 출력이다. RF=3, min ISR=2, unclean election off에서 ISR 3 및 ISR 2일 때 `acks=all` publish가 완료되었다. 복구 후 broker log에서 두 성공 probe를 다시 읽었다. 두 broker 중단으로 ISR이 요구치 미만일 때 `NotEnoughReplicasException`이 기록되고 거부된 probe는 log에 없었다. 마지막 console consumer의 `TimeoutException`은 제한 시간 동안 추가 record가 없어 종료된 결과다. Docker Compose의 세 broker는 모두 한 host에 있으므로 host failure를 검증하지 않는다.
+cluster-raw.txt는 [3-node Compose](../../../../infra/kafka/compose.fault.yml)의 topic describe/producer 출력이다. RF=3, min ISR=2, unclean election off에서 ISR 3 및 ISR 2일 때 `acks=all` publish가 완료되었다. 복구 후 broker log에서 두 성공 probe를 다시 읽었다. 두 broker 중단으로 ISR이 요구치 미만일 때 `NotEnoughReplicasException`이 기록되고 거부된 probe는 log에 없었다. 마지막 console consumer의 `TimeoutException`은 제한 시간 동안 추가 record가 없어 종료된 결과다. Docker Compose의 세 broker는 모두 한 host에 있으므로 host failure를 검증하지 않는다.
 
-[security-raw.json](security-raw.json)은 [secure Compose](../../../../infra/kafka/compose.secure.yml)에서 일회성 PKCS12/JAAS를 repository 밖에 둔 상태로 수행한 SASL_SSL/StandardAuthorizer 결과다. relay WRITE/DESCRIBE와 log-start 조회, Waitlist READ, monitor DESCRIBE는 허용하고, relay READ, Waitlist WRITE, anonymous SSL은 거부한다. 이 ACL 검증은 #107의 publication 권한 및 후속 intake 권한 분리를 확인하며 Kafka consumer intake 자체를 구현하지 않는다.
+security-raw.json은 [secure Compose](../../../../infra/kafka/compose.secure.yml)에서 일회성 PKCS12/JAAS를 repository 밖에 둔 상태로 수행한 SASL_SSL/StandardAuthorizer 결과다. relay WRITE/DESCRIBE와 log-start 조회, Waitlist READ, monitor DESCRIBE는 허용하고, relay READ, Waitlist WRITE, anonymous SSL은 거부한다. 이 ACL 검증은 #107의 publication 권한 및 후속 intake 권한 분리를 확인하며 Kafka consumer intake 자체를 구현하지 않는다.
 
 보안 fixture는 `infra/kafka/new-secure-fixture.ps1`, `compose.secure.yml`, `secure-acls.ps1` 순으로 생성·시작·설정한 뒤 다음을 실행한다. `KAFKA_SECURE_FIXTURE`는 생성된 임시 디렉터리 절대 경로다.
 

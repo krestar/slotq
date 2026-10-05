@@ -168,8 +168,8 @@ scoped runtime으로 실행할 수 있습니다. Kafka 역할 분리도 shared M
 않습니다. 24h broker retention은 실험 설정이며 DB event/receipt/audit 자동 삭제는 없습니다.
 실제 지원 role, retention guard와 recovery horizon의 한계는 ADR을 따릅니다.
 
-[15회 비교와 원자료](docs/experiments/m5-transport/README.md),
-[fresh 통합 drill](docs/experiments/m5-transport/2026-10-01-drill/summary.json),
+[15회 비교 결과 요약](docs/experiments/m5-transport/README.md),
+[통합 drill 관찰과 한계](docs/experiments/m5-transport/README.md#fresh-integrated-operations-drill),
 [운영 runbook](docs/runbooks/event-operations.md),
 [M5 종료 대조](docs/experiments/m5-transport/closure.md)를 함께 제공합니다.
 

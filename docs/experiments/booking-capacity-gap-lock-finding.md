@@ -1,5 +1,9 @@
 # #96 capacity current-read gap cycle 조사
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 ## 판정
 
 2026-09-21 #96 C3 갱신 이후 판정: **InnoDB physical gap deadlock의 baseline evidence**.
@@ -18,7 +22,7 @@ ORM/FK/unique/secondary-index 증거를 관찰하지 않거나 모든 deadlock�
 
 이 baseline만을 이유로 #95 capacity 구조, Slot-local authority, isolation 또는 transaction
 boundary를 재설계하지 않는다. 대안 확대 탐색도 Commit 2의 선행조건이 아니다.
-아래 raw trace와 실패 후보는 당시 관측 그대로 보존하며 전체 C3 검증은
+아래 lock graph와 실패 후보의 관찰·한계는 summary로 보존하며 전체 C3 검증은
 [Waitlist promotion architecture](../architecture/waitlist-promotion.md)의 실제 경로/회귀와 함께 판단한다.
 
 ## 기준과 재현 환경
@@ -60,7 +64,7 @@ $env:SLOTQ_CAPACITY_LOCK_EVIDENCE='true'
 ```
 
 10개 진단 case 성공: 8개 구조적 cycle/실패 후보, gap 제거 대조군 1개, RR 반례 1개.
-본문과 함께 보존한 원자료는 2026-09-21 01:38 UTC run이다. test의 opt-in gate는 이후 추가했으며
+아래 관찰은 2026-09-21 01:38 UTC run이다. test의 opt-in gate는 이후 추가했으며
 재현 body는 같다. `build/capacity-lock-evidence/*.txt`로 raw lock/trace가 재생성된다.
 원자료에서는 fixture 객체의 반복 출력만 제외했고 lock/SQL/victim 내용을 바꾸지 않았다.
 ID는 전부 일회용 synthetic fixture 값이다.
@@ -69,7 +73,7 @@ ID는 전부 일회용 synthetic fixture 값이다.
 
 ### A. 최신 main의 변경 없는 #95 createTarget
 
-[FIXED_TARGET 원자료](evidence/capacity-gap-2026-09-21/FIXED_TARGET.txt).
+당시 FIXED_TARGET 관찰은 아래 표로 요약한다.
 
 | Transaction | 선행 보유 | 충돌 지점 보유 | 다음 요청 |
 | --- | --- | --- | --- |
@@ -82,7 +86,7 @@ X lock을 보유한다. Slot-first가 이 보조 index의 비어 있는 구간�
 
 ### B. Waitlist/identity 조회를 제거한 capacity-only 대조
 
-[CAPACITY_ONLY 원자료](evidence/capacity-gap-2026-09-21/CAPACITY_ONLY.txt).
+당시 CAPACITY_ONLY 관찰:
 
 같은 #95 Booking public `createHold(CreateCommand, CreateGuard)`를 호출하되 test guard는 PROCEED,
 `findPromotionalCurrent`만 empty로 대체한다. Waitlist Entry/Offer/candidate SQL과 M3 SQL은 없다.
@@ -99,13 +103,13 @@ index 이름 하나만 assertion하는 oracle은 불충분하다. 양쪽 모두 
 
 ### C. #95의 별도 부재 identity / Offer 조회
 
-- [IDENTITY_ONLY](evidence/capacity-gap-2026-09-21/IDENTITY_ONLY.txt): capacity만 false로 대체,
+- IDENTITY_ONLY: capacity만 false로 대체,
   실제 `findPromotionalCurrent` 유지. T2324/T2325가
   `uk_reservations_promotional_identity`의 동일 S GAP을 갖고 INSERT_INTENTION을 서로 기다린다.
-- [OFFER_ONLY](evidence/capacity-gap-2026-09-21/OFFER_ONLY.txt): 실제 fixed target에서 Booking의
+- OFFER_ONLY: 실제 fixed target에서 Booking의
   identity/capacity probe만 제외. T2338/T2339가 `uk_waitlist_offers_entry`의 동일 X GAP을 갖고
   Offer INSERT_INTENTION을 서로 기다린다. X gap도 서로 호환되므로 FOR UPDATE만으로 해결되지 않는다.
-- [NO_GAP_NEGATIVE_CONTROL](evidence/capacity-gap-2026-09-21/NO_GAP_NEGATIVE_CONTROL.txt):
+- NO_GAP_NEGATIVE_CONTROL:
   Booking guard/identity/capacity range read를 test에서 제외하면 실제 context/FK/unique/JPA pair
   INSERT 두 건이 commit한다. **검증을 제거한 대조군이며 production 수정안이 아니다.**
 
@@ -117,15 +121,15 @@ index 이름 하나만 assertion하는 oracle은 불충분하다. 양쪽 모두 
 
 | 후보 | MySQL 결과 | 판단 |
 | --- | --- | --- |
-| 기존 effective Reservation composite index 강제 + STRAIGHT_JOIN | `idx_reservations_effective_occupancy`의 S gap → INSERT, 1213 | 실패; [원자료](evidence/capacity-gap-2026-09-21/FORCE_RESERVATION_INDEX.txt) |
-| Allocation effective index부터 조회 | `idx_capacity_allocations_effective`의 S gap → INSERT, 1213 | 실패; [원자료](evidence/capacity-gap-2026-09-21/FORCE_ALLOCATION_INDEX.txt) |
+| 기존 effective Reservation composite index 강제 + STRAIGHT_JOIN | `idx_reservations_effective_occupancy`의 S gap → INSERT, 1213 | 실패; 해당 opt-in 진단 case |
+| Allocation effective index부터 조회 | `idx_capacity_allocations_effective`의 S gap → INSERT, 1213 | 실패; 해당 opt-in 진단 case |
 | current read를 FOR UPDATE로 강화 | 다른 Tenant의 경계 record까지 X next-key 요청, 아래 mixed cycle로 1213 | 실패; 더 넓은 lock도 얻음 |
-| FOR SHARE NOWAIT | read의 gap lock은 호환되어 둘 다 성공하고 뒤 INSERT에서 1213 | 실패; [원자료](evidence/capacity-gap-2026-09-21/CURRENT_NOWAIT.txt) |
+| FOR SHARE NOWAIT | read의 gap lock은 호환되어 둘 다 성공하고 뒤 INSERT에서 1213 | 실패; 해당 opt-in 진단 case |
 | join의 lock을 이미 잠근 Slot에만 한정 (`FOR SHARE OF s`) | early RR snapshot 이후 commit된 HOLD를 발견하지 못함 | current-read 계약 위반 |
 | nonlocking ID 탐색 후 발견한 PK만 current-read | 같은 early snapshot에서 새 Reservation ID 자체를 발견하지 못함 | current-read 계약 위반 |
 | identity/Offer query와 capacity query의 상대 배치만 변경/제거 | capacity-only도 INSERT 직전 read에서 cycle | 이 두 조회의 순서만으로 제거되지 않음 |
 
-[CURRENT_FOR_UPDATE](evidence/capacity-gap-2026-09-21/CURRENT_FOR_UPDATE.txt)의 정확한 cycle:
+CURRENT_FOR_UPDATE의 정확한 cycle:
 T2297은 경계 record 앞 X GAP을 갖고 T2296이 가진 X next-key record를 기다린다.
 T2296은 그 record를 가진 채 자신의 INSERT가 T2297의 GAP에 막힌다. 후보 read 둘이 모두 끝나기도
 전에 한쪽이 기다리는 형태다. 첫 실험의 “둘 다 read 완료” oracle이 이 경우 timeout했고,

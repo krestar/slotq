@@ -3,9 +3,7 @@
 - 상태: `Accepted`
 - 결정일: 2026-10-01
 - 관련 Issue: [#111](https://github.com/krestar/slotq/issues/111)
-- 근거: [비교 protocol/15회 결과](../experiments/m5-transport/README.md),
-  [canonical 비교](../experiments/m5-transport/2026-10-01-comparison/summary.json),
-  [fresh 통합 drill](../experiments/m5-transport/2026-10-01-drill/summary.json),
+- 근거: [비교 protocol/15회 결과와 통합 drill 관찰·한계](../experiments/m5-transport/README.md),
   [완료조건 대조](../experiments/m5-transport/closure.md)
 - 대체: ADR-0002의 단일 runtime 배포 조항과 ADR-0007의 초기 transport/runtime 선택.
   두 문서의 당시 근거와 아래 보존 계약은 유지한다.
@@ -47,7 +45,7 @@ partial receipt/DONE, capacity violation, missing membership/authority와 unexpl
 instrumented finite **closed-loop production-like workload**다. 실제 production traffic, open-loop
 saturated capacity, HA/SLO 또는 여러 host의 throughput으로 표현하지 않는다. M4 single-consumer
 baseline은 다른 workload의 참고값이다. DB/host clock, transaction timestamp/관측 상한과 sampling
-한계는 비교 manifest를 따른다.
+한계는 비교 summary의 환경·시간 정의를 따른다. Run별 raw/manifest는 현재 tree에서 제거했고 당시 bytes는 Git history에 남아 있다.
 
 비교 cohort는 마지막 empty-partition lag 관측 수정 전의 source다. 전체 production source와
 public trace/비교 runner/calculator hash 대조에서 차이는 이 read-only lag sampler 한 파일뿐이다.

@@ -1,10 +1,13 @@
 # #111 M5 transport 비교와 operations 통합 evidence
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 비교 15회와 fresh integrated operations drill이 PASS했다. 마지막 lag 관측 수정 이후 실제
 broker/DB 장애, authorized human recovery와 quiesced rollback을 끝까지 실행했다.
 관련 regression, 전체 Backend test/clean build와 cumulative Frontend 검증도 통과했다.
-실제 실행 이력은 [진행 기록](progress.json), [최종 검증](verification.json)과 M5 종료 대조는
-[closure](closure.md)를 따른다. Local 종료 gate는 PASS이며 main Complete는 PR #122 반영 이후다.
+당시 실행 결과와 limitation은 이 summary, M5 종료 대조는 [closure](closure.md)를 따른다. Local 종료 gate는 PASS이며 main Complete는 PR #122 반영 이후다.
 
 [Accepted ADR-0008](../../adr/0008-m5-event-transport-and-runtime-status.md)은 기본 transport를
 `DB_DIRECT`로 유지하고, **별도로** Kafka implementation을 reproducible experimental/comparison
@@ -80,64 +83,49 @@ workload 또는 직접적인 상대 성능 분모로 사용하지 않는다.
 
 ## 재현과 canonical evidence
 
-JDK 25 / Docker, `backend/`에서 fresh output을 사용한다. `hostStorage`에는 실행 host의 실제
-volume/device와 IOPS/network 제한을 기입한다. Gradle cache를 사용할 때 `--offline`을 추가할 수 있다.
+JDK 25 / Docker가 필요하다. `backend/`에서 fresh output을 사용하고 `hostStorage`에는 실제
+host storage/network 조건을 기록한다. 재계산/압축 export는 새로 생성한 raw를 입력으로 사용한다.
 
 ```powershell
 ./gradlew.bat m5TransportComparison '-Poutput=build/reports/m5/fresh' '-PhostStorage=<actual host storage/network>'
 ./gradlew.bat m5TransportComparison '-Precalculate=build/reports/m5/fresh'
-./gradlew.bat m5CanonicalEvidence '-Pinput=build/reports/m5/fresh' '-Pexport=../docs/experiments/m5-transport/<fresh-cohort>'
-./gradlew.bat m5CanonicalEvidence '-Precalculate=../docs/experiments/m5-transport/<fresh-cohort>'
+./gradlew.bat m5CanonicalEvidence '-Pinput=build/reports/m5/fresh' '-Pexport=build/reports/m5/canonical-fresh'
+./gradlew.bat m5CanonicalEvidence '-Precalculate=build/reports/m5/canonical-fresh'
 ./gradlew.bat m5OperationsDrill '-Poutput=build/reports/m5-drill/fresh'
 ./gradlew.bat m5OperationsDrill '-Precalculate=build/reports/m5-drill/fresh'
 ```
 
-`M5CanonicalEvidence`는 동일 tenant row의 **version**을 SHA-256 dictionary에 한 번 저장하고
-모든 observation 순서/시각과 row reference를 보존한다. Lossless round-trip을 검사하고, raw→summary와
-#105 correspondence CSV 재생성 hash를 대조한다. Per-run CSV와 summary 복제본은 commit하지 않는다.
-Canonical raw는 lossless gzip 한 형식(`raw.json.gz`)으로 보존하며 verifier가 직접 읽는다.
-이 디렉터리의 `.gitattributes`는 JSON의 LF와 gzip binary를 고정해 Windows checkout의
-자동 CRLF 변환이 manifest/summary byte hash를 바꾸지 않도록 한다.
-압축되지 않은 JSON 복제본은 commit하지 않는다. Canonical verifier는 row/manifest/raw/root-summary hash, cohort inventory, 두 logical consumer,
-seed, profile별 3회 이상 반복을 확인한다. Root summary와 integrity는 raw만으로 재계산 가능하다.
-
-| 보존 파일 | 직접 충족하는 gate |
-| --- | --- |
-| 비교 run별 `manifest.json` | 실제 환경·workload·budget·시간·source provenance |
-| 비교 run별 `raw.json.gz` | latency/backlog/resource와 두 consumer correctness의 재계산 source |
-| 비교 root `summary.json`, `integrity.json` | 15 run의 최종 판정과 raw/CSV 재계산 hash |
-| Drill `manifest.json` / `raw.json.gz` / `summary.json` / `integrity.json` | 대표 장애, actual alert/dashboard/trace, TLS human audit, durable convergence와 rollback |
-| `intake-correction.json` | 실제 two-consumer cold-target deadlock 전/후 repeated regression 결과 |
-| `progress.json` | 실패한 시도와 fresh PASS, source 영향 평가를 구분하는 진행 기록 |
-| `verification.json` | 실제 최종 검증 명령/결과와 opt-in skip, source 및 log hash |
-| Harness·이 문서·통합 runbook | 재현 명령, 검증한 대표 운영 절차와 적용 한계 |
-| `closure.md` / ADR-0008 | #105~#111 완료조건 대조와 두 독립 architecture 결정 |
-
-Warm-up/exploratory 실패·중간 dump·전체 console/application/container log, argument/credential/TLS
-파일과 동일 상태의 JSON/CSV 복제본은 로컬 ignored `build/`에 남긴다. 과거 main evidence와
-그 source/hash/ADR 관계는 보존한다. `intake-correction.json`의 실패는 수정 전 race 재현이며
-최종 비교 correctness PASS로 세지 않는다.
+`M5CanonicalEvidence`의 lossless row dictionary, gzip round-trip, raw→summary/CSV 재계산과
+새 cohort의 hash/inventory 검증은 유지한다. 이 검증은 local output의 무결성을 검사하며 Git
+artifact 보존을 요구하지 않는다. `M5CanonicalEvidenceTests`, `M5TransportEvidenceTests`,
+`WaitlistBaselineEvidenceTests`는 synthetic input으로 codec와 durable oracle의 거부 조건을 검증한다.
+`M5OperationsDrillEvidenceTests`의 SQL failure/rollback/authority/audit 거부 및 기존 integrity bytes
+보존 검증도 synthetic input과 TempDir로 실행한다. 실제 장애 재현은 `M5OperationsDrillRunner`와
+`KafkaFaultProcessIntegrationTests`가 담당하며 synthetic test를 physical drill PASS로 세지 않는다.
 
 ## 2026-10-01 실제 비교 결과
 
-이 cohort는 empty-partition lag 관측 수정 **이전**에 실행됐다. 각 manifest의 실제 source hash를
-보존하며 최신 변경 후 실행 결과로 재표기하지 않는다. Production source와 public trace/비교
+비교 전에 두 consumer가 cold target을 동시에 만드는 RR 경합을 별도로 재현했다.
+기준 `7a38901`에서 `KafkaIntakeConcurrencyIntegrationTests`의 세 반복이 실제
+`MySQLTransactionRollbackException`으로 실패했고 보정 뒤 세 반복이 통과했다.
+이 실패를 최종 비교 PASS에 합치지 않는다. 해당 actual MySQL concurrency regression은 유지한다.
+
+이 cohort는 empty-partition lag 관측 수정 **이전**에 실행됐다. 당시 manifest의 source를
+기준으로 하며 최신 변경 후 실행 결과로 재표기하지 않는다. Production source와 public trace/비교
 runner/calculator hash를 직접 대조해 차이가 `KafkaIntakeObservability.java` 한 파일뿐임을 확인했다.
 기존 broker end/committed 조회 결과의 빈 partition 판정만 바뀌었고 추가 broker/DB I/O나
 append/intake/executor/receipt/retry/oracle은 바뀌지 않았다. 최신 positive/negative regression과
 fresh broker outage/lag alert 해제를 별도로 검증했다. 기존 15회 측정을 다시 만들지 않았으며
 lossless export와 15 raw→summary/CSV 재계산은 최신 verifier에서도 성공했다.
 
-[Canonical cohort](2026-10-01-comparison/summary.json),
-[integrity](2026-10-01-comparison/integrity.json). `m5TransportComparison`은 27m59s에 성공했고
-15 raw→summary/CSV 대조와 lossless canonical export가 성공했다. 매 run 41 original / 82 target,
-Waitlist receipt 41 / observer receipt 41, Offer/notification 38, 정상 no-op 3이다.
-전체 615 original / 1230 target에서 unexplained loss·duplicate logical effect·partial receipt/DONE·
-effective capacity violation·unexpected DEAD/quarantine·missing membership/authority는 0이다.
-비교에서는 automatic extra claim/retry가 0이며 fault/recovery는 아래 별도 drill의 실제 결과를 따른다.
+당시 `m5TransportComparison`은 27m59s에 성공했고 15 raw→summary/CSV 대조와 lossless export가
+성공했다. 매 run 41 original / 82 target, Waitlist receipt 41 / observer receipt 41,
+Offer/notification 38, 정상 no-op 3이다. 전체 615 original / 1230 target에서 unexplained loss,
+duplicate logical effect, partial receipt/DONE, capacity violation, unexpected DEAD/quarantine와
+missing membership/authority는 0이었다. Automatic extra claim/retry도 0이었다.
 
 각 셀은 **3 run의 해당 통계값 중앙값**이며 pooled percentile이 아니다. 모든 per-run 분포와
-phase별 window/count/rate는 canonical root summary에 있다. Timing 단위 ms, rate 단위 original/s 또는
+phase별 window/count/rate의 당시 canonical bytes는 Git history에 남아 있다. Timing 단위 ms, rate 단위 original/s 또는
 business target/s다. Command p95에는 같은 public trace의 정상 conflict와 lifecycle command를 포함한다.
 
 | Profile | Command p95 | event→DONE p95 | event→intake p95 | demand→Offer 관측 p95 | steady input/s | steady DONE/s |
@@ -173,7 +161,7 @@ Idle는 빈 cycle 비용이며 짧은 idle 구간의 broker background CPU를 �
 
 CPU는 Docker 한 CPU=100% 단위의 실제 finite-window 표본이다. Broker log bytes는 topic과
 `__consumer_offsets`의 replica log size이며 전체 container filesystem/reserved storage가 아니다.
-MySQL/JVM RAM과 container cap, heap 표본을 포함한 원 값은 root summary와 manifest를 따른다.
+MySQL/JVM RAM과 container cap, heap 표본의 원 값은 당시 root summary/manifest에 기록했다.
 BlockIO는 모든 표본 `0B / 0B`로 보고됐고 storage I/O가 없었다는 결론을 내리지 않는다.
 Hikari acquire max는 run별 1.055–2.309ms, boundary active/waiting와 append-fence blocking sample은
 0이었다. 동시에 실제 cumulative row-lock wait가 존재하므로 sampling 한계를 숨기지 않는다.
@@ -193,11 +181,10 @@ Production log를 약화하지 않고 test-only child probe가 장애 중 실제
 Startup/비SQL failure와 메시지 유출은 negative regression으로 제외한다. 그 뒤 **10m49s fresh 전체
 실행과 raw→summary 검사가 PASS**했다. 과거 실패/부분 실행은 이 PASS에 합치지 않는다.
 
-[Canonical drill](2026-10-01-drill/summary.json), [manifest](2026-10-01-drill/manifest.json),
-[integrity](2026-10-01-drill/integrity.json)의 네 파일만 보존한다. Manifest의 revision `114d2da`는
-실행 당시 checkout HEAD이며 당시 미커밋 test harness는 별도 source hash로 식별한다.
-이후 verifier의 기존 integrity 파일 재작성만 제거했고 판단 기준/summary는 바뀌지 않았다.
-Current verifier의 negative/byte-preservation regression과 canonical 재계산을 별도로 실행한다.
+당시 drill의 checkout HEAD는 `114d2da`였고 실행 당시 미커밋 test harness가 포함됐다.
+이후 verifier의 기존 integrity 파일 재작성만 제거했으며 판단 기준/summary는 바뀌지 않았다.
+현재 tree에는 재현 harness와 아래 관찰을 남긴다. 과거 모든 timing/row를 현재 tree만으로
+동일 bytes로 재계산할 수는 없으며, 새 실행은 fresh output과 별도 provenance가 필요하다.
 
 | 대표 flow | 실제 탐지: incident→첫 firing (s) | incident→durable convergence 관측 상한 (s) | 확인한 책임 |
 | --- | ---: | ---: | --- |
@@ -240,7 +227,7 @@ stale authority는 merged #108/#109와 현재 cutover regression 근거로 유�
 
 Issue state/checkbox만으로 완료를 추론하지 않고 최신 main의 merge와 구현·원자료를 대조한다.
 다음 표는 historical evidence의 출처이며 이번 #111의 fresh 비교/drill 또는 최종 test 실행과
-구분한다. 기존 원자료와 hash는 수정하지 않는다.
+구분한다. 과거 결과와 한계를 summary에 남기며 raw bytes는 Git history에 남아 있다.
 
 | Issue / merge | 실제 구현·완료조건 근거 | #111에서 유지·통합하는 경계 |
 | --- | --- | --- |
@@ -254,7 +241,7 @@ Issue state/checkbox만으로 완료를 추론하지 않고 최신 main의 merge
 #108은 Closed이고 PR #119가 merge됐지만 Issue 본문 checkbox는 미체크 상태다. 이를 체크됐다고
 보고하지 않는다. 위 실제 intake/vertical-slice/cutover evidence와 current regression을 기준으로
 완료조건을 대조한다. #109 historical gate에는 당시 미실행 clean build가 명시돼 있으며 이를 PASS로
-세지 않는다. 이번 cumulative 검증은 [최종 검증](verification.json)에서 별도로 기록한다.
+세지 않는다. 당시 cumulative 검증은 아래 결과로 별도 기록한다.
 
 ## Regression 기준
 
@@ -262,7 +249,7 @@ Issue state/checkbox만으로 완료를 추론하지 않고 최신 main의 merge
 `clean build` 및 fresh drill 재계산 PASS(17m58s)다. Clean build JUnit은 84 suite/691 case 중
 682 PASS, 9 existing opt-in skip, failure/error 0이다. Historical fault/security/diagnostic fixture
 property가 필요한 skip을 새 PASS로 세지 않는다. Frontend typecheck/test(12 file/210 case)/build도
-PASS했다. 실제 명령/skip/source·log hash는 verification.json을 따른다.
+PASS했다. 당시 skip 9개는 capacity-lock 진단 3개와 외부 Kafka secure/fault/integrity fixture 6개였다.
 
 - Source/authority/oracle: committed original unexplained loss, duplicate logical effect, partial
   receipt/DONE, effective capacity violation, missing membership/assignment, unexplained DEAD/quarantine는

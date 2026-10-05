@@ -1,8 +1,12 @@
 # M5 / #111 완료조건 대조
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 2026-10-01에 remote main `7a38901`과 PR #122 branch에서 재개해 완료조건을 직접 대조했고,
 PR #122는 이후 squash merge되어 현재 main에 반영됐다. Issue state, merge, historical evidence와
-fresh 실행은 서로 다른 근거다. 아래 [#111 local 검증](verification.json)은 2026-10-01의 역사적
+fresh 실행은 서로 다른 근거다. 아래 #111 local 검증은 2026-10-01의 역사적
 gate PASS다. 이후 Kafka intake 관측 결함 세 건이 #126의 M5 종료 corrective로 확인됐고,
 [#126 수정·검증](../kafka-intake-observability/2026-10-03/README.md)은 PR #127로 main에 반영됐다.
 최신 main에서 #105~#111과 #126 완료조건을 다시 대조해 최종 M5 종료를 PASS로 확정했다.
@@ -43,7 +47,7 @@ gate PASS다. 이후 Kafka intake 관측 결함 세 건이 #126의 M5 종료 cor
 
 2026-10-01 #111에서 선택한 supported DB topology의 correctness/security/transaction/concurrency
 blocker를 관측하지 않았고 당시 필수 local 검증이 통과했다. Opt-in historical fault/security/diagnostic
-9 case는 fixture 없이 skip됐으며 exact 목록을 verification.json에 남겼다. #109 전체 matrix를
+9 case는 capacity-lock 진단 3개와 외부 Kafka secure/fault/integrity fixture 6개이며 fixture 없이 skip됐다. #109 전체 matrix를
 이번 실행으로 재표기하지 않는다.
 
 Kafka의 상시 운영 adoption에는 다음 제약이 남는다. 완료된 PUBLISHED row도 최소 ack offset

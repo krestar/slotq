@@ -139,7 +139,7 @@ capacity-gap 진단은 그대로 유지한다. public expiry에 M3 retry 정책�
 총 228건 성공, 기존 capacity-gap opt-in 진단 1건 제외. 위 routing snapshot integration 실패를
 최소 경계 보정 후 재검증했다. maintenance에서는 1213이 관측되지 않았으며 기존 독립 actual 1213
 M3 rollback/retry/DEAD/replay 회귀가 통과했다.
-[잠금 원자료와 종료 oracle](../experiments/evidence/waitlist-maintenance-2026-09-22/LOCKS.txt)을 보존한다.
+당시 잠금 관찰과 종료 oracle은 이 summary에 남기며 actual MySQL 재현은 `WaitlistMaintenanceIntegrationTests`를 따른다.
 performance_schema에 보이는 explicit record lock은 implicit FK/secondary-index lock 전체 목록이라는
 뜻이 아니다. 기존 constraint와 V14를 적용한 실제 mutation/경쟁/rollback 종료 상태를 함께 검증했다.
 

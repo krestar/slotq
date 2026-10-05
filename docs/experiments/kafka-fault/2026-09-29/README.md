@@ -1,29 +1,13 @@
 # #109 Kafka 독립 JVM / broker / DB fault evidence
 
-이 디렉터리는 #109의 fault workstream에서 생성한 새 raw evidence다. #107·#108의 과거
-결과를 이번 실행으로 재표기하지 않았다. `run-20260929-h/process-raw.json`은 production
-`SlotqApplication`을 별도 JVM으로 실행한 관측이며, `recalculated.json`은 그 raw만 읽는
-`KafkaFaultEvidenceIntegrityTests`가 재계산했다.
-`run-20260929-intake-b/intake-crash-raw.json`은 세 독립 JVM intake crash window를
-기록하며 `intake-crash-recalculated.json`은 별도 integrity test가 재계산했다.
-`../2026-09-30/run-20260930-intake-relay-d`는 동일 intake window 뒤 독립 relay JVM을
-실제 ACK 직후 종료하고 새 physical coordinate가 기존 logical target을 재사용하는지를 검증한다.
-`../2026-09-30/run-20260930-quarantine-b`는 MySQL pause 중 poison record의
-quarantine persistence 실패와 offset 정지, 동일 record의 복구 후 durable 판정을 기록한다.
-`../2026-09-30/run-20260930-j`는 별도 JVM·3-node broker·MySQL outage 뒤 실제
-Waitlist 후보가 `PROMOTED`로 수렴한 run이다.
-`../2026-09-30/run-20260930-q`는 실제 300초 poll timeout 뒤 old/new member가
-동일 intake position의 MySQL 잠금을 기다린 rebalance, 별도 maintenance JVM 둘의
-admission·expiry/release와 전체 original 수렴을 기록한다.
-`../2026-09-30/run-20260930-delivery-c`는 Kafka scope의 DB executor가 실제
-자식 JVM 종료 뒤 lease/fencing/receipt/DONE과 bounded `DEAD`를 유지하는지 기록한다.
-`../2026-09-30/run-20260930-cutover-a`는 DB authority epoch 변경과 rollback의
-durable target 보존을 검사한 별도 MySQL 회귀다. 이 단위에는 broker가 없다.
-`run-20260929-relay-c`는 single-broker relay 미시 fault의 MySQL/Kafka snapshot이다.
-`../2026-09-30/run-20260930-relay-d`는 caught append failure의 business rollback과
-retention gap 시 원본 event/publication의 durable state를 추가한 새 relay run이다.
-`../2026-09-30/run-20260930-cutover-b`는 같은 cutover 회귀에 source/class hash,
-working tree, MySQL container/volume provenance를 추가한 새 run이다.
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
+#109에서 별도 Product/relay/consumer JVM, persistent 3-node broker와 실제 MySQL을 사용했다.
+아래 표는 2026-09-29~30의 서로 다른 fault 실행을 요약한다. #107/#108 또는 현재 cleanup의
+실행 결과로 재표기하지 않는다. 원본 관찰의 재계산용 `Kafka*EvidenceIntegrityTests`는 유지하며
+새 fault harness가 생성한 gitignored output을 입력으로 사용한다.
 
 ## 실행 구성
 
@@ -43,38 +27,23 @@ working tree, MySQL container/volume provenance를 추가한 새 run이다.
 
 ## 실행 명령
 
-Java 25, Docker Desktop 상태에서 repository root와 `backend/` 기준:
+Java 25 / Docker가 필요하다. 새 run ID/topic/volume으로 격리한다. 기존 broker volume을 유지해야
+하는 fault 중에는 `down -v`를 사용하지 않는다. Repository root에서 cluster를 준비한 뒤 `backend/`:
 
 ```powershell
 docker compose -f infra/kafka/compose.fault.yml up -d --wait
 Set-Location backend
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultProcessIntegrationTests -PkafkaFaultBootstrap=localhost:29092,localhost:39092,localhost:49092 -PkafkaFaultRunId=run-20260929-h -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests -PkafkaFaultRunId=run-20260929-h -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-intake-b -PkafkaEvidenceRevision=888233aaa93f6947b141d4786edffdf7c7a83826 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-intake-b --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-relay-c --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-29/run-20260929-relay-c --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-intake-relay-d --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-intake-relay-d --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-quarantine-b --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-quarantine-b --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultProcessIntegrationTests -PkafkaFaultBootstrap=localhost:29092,localhost:39092,localhost:49092 -PkafkaFaultRunId=run-20260930-j -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests -PkafkaFaultRunId=run-20260930-j -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-delivery-c --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-delivery-c --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.EventTransportCutoverIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-a -PkafkaEvidenceRevision=560311f741dea48088563c4dd222f7f25be25ac7 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-a --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultProcessIntegrationTests -PkafkaFaultBootstrap=localhost:29092,localhost:39092,localhost:49092 -PkafkaFaultRunId=run-20260930-q -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaFaultEvidenceIntegrityTests -PkafkaFaultRunId=run-20260930-q -PkafkaFaultEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30 --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-relay-d -PkafkaEvidenceRevision=79d4825640ec687a4655d316feca3adf9abba69a --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.application.KafkaRelayFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-relay-d --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.EventTransportCutoverIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-b -PkafkaEvidenceRevision=79d4825640ec687a4655d316feca3adf9abba69a --no-daemon --offline --console=plain
-.\gradlew.bat test --tests com.slotq.events.KafkaCutoverFaultEvidenceIntegrityTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-fault/2026-09-30/run-20260930-cutover-b --no-daemon --offline --console=plain
+$runId = 'fresh-' + [guid]::NewGuid().ToString('N')
+./gradlew.bat test --tests '*KafkaFaultProcessIntegrationTests' '-PkafkaFaultBootstrap=localhost:29092,localhost:39092,localhost:49092' "-PkafkaFaultRunId=$runId" '-PkafkaFaultEvidenceDir=build/reports/kafka-fault' --no-daemon --console=plain
+./gradlew.bat test --tests '*KafkaFaultEvidenceIntegrityTests' "-PkafkaFaultRunId=$runId" '-PkafkaFaultEvidenceDir=build/reports/kafka-fault' --no-daemon --console=plain
 ```
 
-같은 run ID를 재사용하면 이미 생성된 Kafka topic과 MySQL volume 때문에 실패한다.
-새 실험에는 새 run ID를 지정해야 한다. Docker Compose를 재기동할 때 `down -v`를
-사용하지 않아야 broker volume이 보존된다.
+추가 창별 재현은 `KafkaIntakeCrashIntegrationTests`→`KafkaIntakeCrashEvidenceIntegrityTests`,
+`KafkaRelayIntegrationTests`→`KafkaRelayFaultEvidenceIntegrityTests`,
+`EventTransportCutoverIntegrationTests`→`KafkaCutoverFaultEvidenceIntegrityTests` 순으로 실행한다.
+각 producer와 calculator에는 동일한 fresh `-PkafkaEvidenceDir=build/reports/<fresh-case>`를 지정한다.
+`-PkafkaEvidenceRevision`을 기록할 때는 실제 checkout revision을 사용한다.
+`backend/build.gradle`의 property forwarding, process hook, durable oracle와 Compose는 유지한다.
 
 ## 직접 확인한 fault
 
@@ -111,16 +80,6 @@ original event의 최종 target을 재계산했고 unexplained loss, duplicate l
 partial receipt/DONE, 설명되지 않는 DEAD/quarantine, no-candidate 결과에서 예상 밖
 promotional Reservation/Offer가 0이었다. `2026-09-30/run-20260930-j`는 실제
 `PROMOTED` 결과와 active Allocation / Slot capacity를 추가로 검증했다.
-
-Raw SHA-256: `ec7eb78a2fccb12d9417e102516e8ebc29e965458e52ec3a11a796e3889f4913`
-(`process-raw.json`; `recalculated.json`의 `rawSha256`과 동일).
-2026-09-30 candidate run raw SHA-256은
-`7d5149feb413b09437dff4b942d4ab5e2f89f60b1ee74745e9872a6817535f94`다.
-2026-09-30 slow-intake·maintenance run raw SHA-256은
-`7328a8f847442fb4a4755e8ecc57a873fab603e6abf58a67628165645680c60c`다.
-새 relay/cutover raw SHA-256은 각각
-`972b03fb6a8e77ebbd4e3cbcbbb5c958390a357af51e79927aa9c69bf2662d07`,
-`8befe125cb58a128d6c70fa9a00ca5a9f5e7c2416d04cfda36fc4c1b05a912b4`다.
 
 ## 검증 경계
 

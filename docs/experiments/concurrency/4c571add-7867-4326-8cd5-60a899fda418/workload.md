@@ -1,5 +1,9 @@
 # Pessimistic concurrency run workload
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 ## 실행 명령
 
 backend 디렉터리의 PowerShell에서 다음 명령을 실행했다.

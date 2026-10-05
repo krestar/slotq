@@ -1,4 +1,4 @@
-param([string]$OutputPath = (Join-Path $PSScriptRoot '../../docs/experiments/kafka-relay/2026-09-28-blocker-regression/cluster-raw.txt'))
+param([string]$OutputPath = (Join-Path $PSScriptRoot '../../backend/build/reports/kafka-fault/cluster-raw.txt'))
 
 $ErrorActionPreference = 'Stop'
 $compose = Join-Path $PSScriptRoot 'compose.fault.yml'
