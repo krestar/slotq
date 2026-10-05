@@ -1,5 +1,9 @@
 # Issue #110 완료 조건 대조와 검증
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 기준 `main`: `57cfd3c181e84ddd5dabfd1e81dd9c8eda611b7d` (#108/#109 merge 포함).
 선택한 인증은 개인별 opaque bearer token 하나다. [인증 결정과 API 계약](../../../architecture/operator-recovery.md),
 [발급·철회·복구 runbook](../../../runbooks/operator-recovery.md)을 함께 검토한다.
@@ -50,11 +54,11 @@ cd backend
 ./gradlew.bat clean build --no-daemon --offline --console=plain
 ```
 
-최종 집계는 clean build의 JUnit XML에서 생성한 `verification.json`을 따른다.
+당시 clean build의 JUnit 집계는 아래 결과로 요약한다.
 Opt-in skip은 성공으로 집계하지 않는다. GitHub CI 결과를 이번 로컬 결과로 대신 주장하지 않는다.
 
 최종 `clean build`는 **BUILD SUCCESSFUL (16분 40초)**이다. 포함된 전체 Backend test의 JUnit XML은
 77 suite / 664 test node 중 **655 passed, 9 opt-in skipped, 0 failure, 0 error**다.
 Class-level opt-in skip node도 XML 집계에 포함한다. 새 human recovery regression은 **53/53 passed**이고,
 전체 실행에는 기존 delivery/authority/security 및 실제 MySQL baseline smoke도 포함된다.
-`verification.json`은 suite별 수치, human case 목록과 LF로 정규화한 source SHA-256을 보존한다.
+Human case와 fault oracle는 현재 integration test에 유지하며 raw JUnit/hash inventory는 Git history에 남아 있다.

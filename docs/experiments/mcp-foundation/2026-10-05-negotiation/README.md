@@ -1,5 +1,9 @@
 # PR #137 initialization negotiation correction evidence
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 수정 전 PR HEAD는 `b0481fbd7cb21109657f9565547476b475ef5820`, remote main은
 `40e764bf0c7d23a6a3fd98c274ca634f60a1ac77`이다. 기존 PR 브랜치에서 #131의 protocol
 negotiation만 보정했다. Java 25.0.4 / Boot 4.1.1 / Jackson 3.1.5 / Gradle 9.7.1과
@@ -16,10 +20,8 @@ JUnit의 UTC timestamp와 혼동하지 않는다.
 Issue #131, completed #130/merged #136, ADR-0009와 현재 architecture §3을 직접 대조했다.
 기존 두 negative assertion은 `clientInfo`도 비어 있어 version/capability만 검증하지 못했다.
 유효한 clientInfo로 분리한 두 regression이 수정 전 실제 TLS Boot/Tomcat/MySQL endpoint에서
-실패한 결과를 [pre-fix-reproduction.json](pre-fix-reproduction.json)과
-[Gradle output](pre-fix-reproduction.txt)에 보존한다. 이 실패 실행을 PASS로 세지 않는다.
-공유용 Gradle output은 trailing whitespace만 제거했으며 원본 stdout hash와 정규화 provenance는
-reproduction JSON에 기록했다. Test 결과와 기존 역사적 raw evidence는 바꾸지 않았다.
+실패한 관찰을 기록했다. 이 실패 실행을 PASS로 세지 않는다. 두 regression과 실제
+TLS/MySQL harness는 유지하며 당시 실패 output은 Git history에서 확인할 수 있다.
 
 ## 보정 범위와 protocol regression
 
@@ -38,10 +40,8 @@ Tasks/roots/sampling/elicitation 서버 기능, OAuth, 후속 Product/corpus/ret
 - 실제 stable SDK 2.0.1 client는 roots capability를 광고하며 initialize → initialized → list/call, structured success/isError, forbidden direct call과 unknown tool을 실행한다. SDK transport의 redirect/resumption 설정은 기존 그대로다.
 - Malformed version/capability type, invalid clientInfo는 PROTOCOL이며 session을 발급하지 않는다.
 
-Final clean build에서 export한 synthetic raw responses는 [protocol-negotiation.json](protocol-negotiation.json),
-[client-capabilities.json](client-capabilities.json), [session-lifecycle.json](session-lifecycle.json),
-[interoperability.json](interoperability.json)에 남긴다. Credential/session ID/raw prompt는 포함하지 않는다.
-[2026-10-04 evidence](../2026-10-04/README.md)의 raw data와 hash는 당시 결과 그대로 보존한다.
+Wire/session 응답은 `McpHttpIntegrationTests`로 다시 생성할 수 있다. 이전 실행 결과와
+source를 새 실행의 provenance로 사용하지 않는다.
 
 ## 실행 검증과 provenance
 
@@ -53,7 +53,7 @@ Set-Location backend
 .\gradlew.bat clean build --offline --no-daemon --console=plain
 ```
 
-최종 결과는 [verification.json](verification.json)에 기록한다.
+당시 최종 결과는 아래 표에 요약한다.
 
 | 실행 | 결과 |
 | --- | --- |

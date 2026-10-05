@@ -1,5 +1,9 @@
 # Kafka intake 관측 corrective (#126)
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 Base: 최신 main `3fb033291b604673b17bf2f89a4e25a408e68e2b`. #106의 missing/zero·bounded
 advisory observation, #108의 durable intake/offset/scoped authority, #111/ADR-0008의 DB direct
 supported default와 Kafka experimental/comparison 지위를 유지한다.
@@ -44,15 +48,15 @@ count cap이나 성공한 빈 집합으로 해석하지 않는다. Scrape는 mem
 
 ## 검증과 종료 상태
 
-최종 명령, 결과, JUnit 집계와 source SHA-256은 [verification.json](verification.json)에 기록한다.
+당시 명령/결과와 환경은 이 summary에 남긴다.
 구현 commit `66f769c`의 동일 코드로 targeted 12 suite/40 case PASS(7m28s), Backend 전체 test
 PASS(17m38s), clean build PASS(18m15s)를 확인했다. 두 전체 검증 모두 87 suite/707 case 중
 698 PASS, 기존 opt-in 9 skip, failure/error 0이다. #126의 네 suite/19 case는 모두 실행·통과했고
 skip하지 않았다. 실제 Prometheus 3.5.0 rule regression 네 group도 PASS다. Skip 목록과 명령,
-log/source hash는 위 JSON에 있으며 skip을 새 PASS로 세지 않는다. 로컬 suite 진행 출력만을
+source provenance는 당시 history에 있으며 skip을 새 PASS로 세지 않는다. 로컬 suite 진행 출력만을
 위한 Gradle init listener를 사용했으며 test input/filter는 변경하지 않았다.
 Frontend 변경은 없으며 #109 전체 fault matrix, #111 comparison/drill을 새 실행으로 세지 않는다.
-기존 historical evidence와 비교 dataset은 수정하지 않는다. 이번 관측 보정은 original event/business
+당시 기존 비교와 fault drill은 재실행하지 않았다. 이번 관측 보정은 original event/business
 state/target/receipt, durable intake→offset, consumer scope, claim/lease/fencing, retry budget,
 membership/epoch, receipt/effect/DONE와 quiesced manual cutover/rollback을 변경하지 않는다.
 Automatic fallback과 Kafka adoption은 추가하지 않는다.

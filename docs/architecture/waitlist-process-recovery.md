@@ -59,10 +59,11 @@ pause 전 row와 동일해야 한다. 이후 새 JVM의 production scheduler가 
 
 ## Evidence와 한계
 
-[원자료 report.json](../experiments/waitlist-recovery/report.json)이 machine-readable 판정 근거다.
-각 case 폴더에는 manifest, fault 직후/중간/recovery DB snapshot과 fault 진단이 있다. 실행 중 수집한
-빈 child log와 임시 gate 파일은 checkpoint에서 제외했다. log는 oracle이 아니다. parent snapshot은 UTC 세션의 별도 read-only transaction에서
-동일 RR snapshot으로 관련 테이블을 읽는다.
+`WaitlistProcessRecoveryRunner`와 `WaitlistRecoveryDatabase`가 fresh MySQL state를 검증하며
+gitignored `build/`에 report/snapshot을 생성한다. 이 문서의 다섯 case와 당시 관찰값은 summary로
+유지한다. 고정 historical report/hash를 읽던 test만 제거했고 scheduler 두 overload의 실제 pause
+regression은 `WaitlistProcessRecoveryEvidenceTests`에 그대로 남겼다. Child log는 oracle이 아니다.
+Parent snapshot은 UTC 세션의 별도 read-only transaction에서 동일 RR snapshot으로 관련 테이블을 읽는다.
 
 다음 데이터를 tenant별로 함께 기록한다.
 
@@ -74,7 +75,7 @@ pause 전 row와 동일해야 한다. 이후 새 JVM의 production scheduler가 
 source revision, branch, dirty 여부, production source diff 여부, harness SHA-256, child PID/exit code,
 Java/Gradle/Spring/MySQL/Docker/isolation, batch/lease/retry/interval과 business clock을 보존한다.
 이번 작업 트리에서 실행한 증거를 clean revision 실험이라고 꾸미지 않는다. raw report의 dirty 값과
-harness hash가 실제 실행 source를 식별하며 checkpoint commit이 해당 source와 evidence를 함께 보존한다.
+harness hash가 당시 실행 source를 식별했다. 원 bytes는 Git history에 있으며 현재 summary로 같은 bytes 재계산을 주장하지 않는다.
 
 parent의 monotonic `recoveryLaunchToObservationMillis`는 startup/lease recovery를 포함한다.
 `seedLaunchToRecoveredObservationUpperBoundMillis`는 seed JVM 실행 전부터 DB 최종 관측까지의 넓은
@@ -113,17 +114,17 @@ JDK 25와 Docker가 필요하다. `backend/`에서 **새 output 경로**를 지�
 ```powershell
 .\gradlew.bat waitlistProcessRecovery '-Poutput=build/reports/experiments/waitlist-recovery-new-run' --console=plain
 .\gradlew.bat waitlistProcessRecovery '-Ponly=OUTAGE_SEED' '-Poutput=build/reports/experiments/waitlist-outage-new-run' --console=plain
-.\gradlew.bat test --tests '*WaitlistProcessRecoveryEvidenceTests' --tests '*EventProcessRecoveryEvidenceTests'
+.\gradlew.bat test --tests '*WaitlistProcessRecoveryEvidenceTests' --tests '*EventDeliveryIntegrationTests' --tests '*WaitlistPromotionDeliveryIntegrationTests'
 ```
 
 첫 probe의 test timer overload 누락, parent local-time binding 및 null last-event admission mutex의
 미완료 요청 오판을 보정했다. production protocol 결함으로 취급하거나 production 코드를 고치지 않았다.
-타이머 gate 자체와 authoritative event/effect/notification 대응은 evidence regression test로 검증한다.
+타이머 gate는 scheduler regression, authoritative event/effect/notification 대응은 실제 runner의 DB oracle로 검증한다.
 
 focused regression은 총 **307건 성공**, 기존 opt-in capacity-gap diagnostic 1건 제외다.
 [activation checkpoint](waitlist-activation.md)의 Booking/Waitlist/M3/architecture 304건을 다시 실행했고,
 `WaitlistProcessRecoveryEvidenceTests` 2건 및 기존 `EventProcessRecoveryEvidenceTests` 1건이 통과했다.
-실행 source hash 검증은 Git의 LF/CRLF checkout 변환만 허용하며 내용 변경은 허용하지 않는다.
+당시 source hash 검사는 LF/CRLF checkout 변환만 허용했다. 해당 historical file 검사는 새 artifact 정책에 따라 제거했다.
 테스트 container 종료 뒤 기존 Spring context pool에서 발생한 connection 종료 경고는 위 DB pause
 case의 증거로 사용하지 않는다. 실제 outage 판정은 별도 child PID의 gate, production DB 실패 및
 pause 전/복구 직후/최종 DB snapshot에만 근거한다.

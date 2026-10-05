@@ -1,5 +1,9 @@
 # #108 Kafka intake 및 M4 검증 (2026-09-29)
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 ## 기준
 
 - 구현 HEAD: `a3a7718575193eba47b89e612d45e3f187978227`
@@ -12,19 +16,12 @@
 `backend/`에서 Java 25와 Docker Desktop이 실행 중일 때:
 
 ```powershell
-.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests --tests com.slotq.KafkaWaitlistVerticalSliceIntegrationTests --tests com.slotq.events.EventTransportCutoverIntegrationTests --tests com.slotq.integration.operations.OperationsObservationIntegrationTests -PkafkaEvidenceDir=C:/dev/slotq/docs/experiments/kafka-consumer/2026-09-29 -PkafkaEvidenceRevision=a3a7718575193eba47b89e612d45e3f187978227 --no-daemon --offline --console=plain
+$revision = git rev-parse HEAD
+.\gradlew.bat test --tests com.slotq.events.persistence.KafkaIntakeCrashIntegrationTests --tests com.slotq.KafkaWaitlistVerticalSliceIntegrationTests --tests com.slotq.events.EventTransportCutoverIntegrationTests --tests com.slotq.integration.operations.OperationsObservationIntegrationTests -PkafkaEvidenceDir=build/reports/kafka-consumer/fresh "-PkafkaEvidenceRevision=$revision" --no-daemon --offline --console=plain
 .\gradlew.bat clean build --no-daemon --offline --console=plain
 ```
 
 첫 명령은 4 suites, 6 tests, 실패 0으로 완료했다. 전체 clean build는 `BUILD SUCCESSFUL in 13m 21s`로 완료했다. JUnit XML 집계는 71 suites / 605 tests / 601 passed / 4 skipped / failures 0 / errors 0이다.
-
-## Raw SHA-256
-
-| 파일 | SHA-256 |
-| --- | --- |
-| `intake-crash-raw.json` | `7b60ee91776407b8db6a37aecf9863cec91203b2da675d2edb6b0799de0bdafc` |
-| `m4-kafka-vertical-raw.json` | `695f19e830e3db95302f1eca2c65d617248a4559a76c964552a8d4c74cc02006` |
-| `browser-raw.json` | `729833fe65347a785a5edde6937947b8bc97729bc283ca0e68306a194fda0192` |
 
 ## 직접 관측
 

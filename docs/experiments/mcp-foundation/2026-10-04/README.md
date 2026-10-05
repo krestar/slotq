@@ -1,5 +1,9 @@
 # #131 MCP access foundation evidence
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 Baseline은 fetch한 remote main `40e764bf0c7d23a6a3fd98c274ca634f60a1ac77`이다. #130 완료/#136
 merge 뒤의 ADR-0009/M6 contract를 적용했다. Runtime/runbook과 후속 ownership은
 [MCP access](../../../runbooks/mcp-access.md)에 기록한다. 여기의 wire/audit data는 synthetic
@@ -8,7 +12,7 @@ test fixture이며 credential, 원문 query/document 또는 실제 Customer 데�
 이 디렉터리는 PR #137 최초 구현의 역사적 실행 결과다. 당시 unsupported initialize revision과
 non-empty client capability를 거부했던 기대값은 공식 lifecycle과 충돌하여
 [2026-10-05 negotiation 보정 검증](../2026-10-05-negotiation/README.md)에서 교체한다.
-아래 raw sample/source hash/검증 결과는 당시 실행 그대로 보존하며 현재 negotiation의 정답으로
+아래 검증 결과는 당시 관찰 요약이며 현재 negotiation의 정답으로
 사용하지 않는다. 이후 request의 unsupported version header → HTTP 400 계약은 유지된다.
 
 ## 선택한 implementation
@@ -46,19 +50,9 @@ JSON-RPC transcript를 검증한다. SDK upstream conformance 전체 PASS를 주
 | Local quota/accounting | Principal aggregate renewal bypass 거부, rate/burst/concurrency saturation, validation/forbidden/retry no refund, fixed unknown bucket, bounded cardinality, no in-flight/indebted eviction, unavailable/clock failure, restart reset limitation |
 | Audit/redaction/failure | Credential/PII/prompt/client object/provider error sentinel의 success/deny/unknown/timeout 검증. Queue full/drop + sink exception이 success를 뒤집지 않음. Handler/downstream timeout layer, known target/Product ID 보존. File sink 7일/finite bytes 및 unrelated file 보존 |
 
-Raw samples:
-
-- [HTTP JSON-RPC transcript](interoperability.json)
-- [HTTP session lifecycle statuses](session-lifecycle.json)
-- [Allow/deny audit](audit-allow-deny.json)
-- [Handler timeout audit](audit-timeout.json)
-- [Uncontrolled exception → unknown audit](audit-unknown.json)
-- [Declared downstream unknown + known reference audit](audit-downstream-unknown.json)
-
-각 JSON은 해당 regression의 실제 응답/event를 export한다. Test source의 `samples`/transcript export로
-재생성할 수 있다. RPC/UUID/latency 값은 run마다 달라질 수 있으며 raw identity를 다른 run의
-current evidence로 relabel하지 않는다. Known-reference downstream sample은 test-only handler의
-declared result이며 실제 Product mutation/response-loss evidence로 표시하지 않는다.
+Synthetic wire/session/audit export는 `McpHttpIntegrationTests`의 실제 TLS/MySQL regression에서
+재생성할 수 있다. `samples`/transcript 출력은 `build/`에 생성한다. Known-reference downstream
+fixture는 test-only handler의 declared result이며 실제 Product mutation/response-loss 증거가 아니다.
 
 ## 검증 명령과 제한
 
@@ -71,7 +65,7 @@ Set-Location backend
 .\gradlew.bat clean build --offline --no-daemon --console=plain
 ```
 
-최종 결과/source hash와 생성한 Boot JAR의 hash는 [verification.json](verification.json)에 기록한다.
+당시 최종 결과는 아래 표와 실행 source의 history에 남긴다.
 
 | 최종 실행 | 결과 |
 | --- | --- |
@@ -82,7 +76,7 @@ Set-Location backend
 
 Skip은 기존 capacity-lock diagnostic 3개와 Kafka 외부 secure/fault/evidence property 기반 6개다.
 해당 별도 fixture/과거 evidence의 fresh 실행 성공을 주장하지 않는다. #131 관련 regression에는
-skip이 없다. 43개 검증 source hash는 마지막 targeted 뒤 두 final 실행에서 변경 없이 유지됐다.
+skip이 없다. 당시 마지막 targeted 이후 두 final 실행 사이 source hash 변경이 없음을 확인했다.
 
 Final contract 보강 전에 시작했다가 중단한 full test는 PASS evidence로 세지 않는다.
 Final targeted regression 이후 production/test source를 변경하지 않은 상태로 전체 Backend test와

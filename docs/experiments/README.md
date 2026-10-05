@@ -11,7 +11,10 @@
 - 비교 대상은 같은 hardware, runtime, database, schema, dataset과 workload에서 실행한다.
 - business conflict, retry exhaustion, timeout, infrastructure failure를 하나의 failure rate로
   섞지 않는다.
-- raw data, environment manifest와 분석 과정을 함께 보존한다.
+- 검증의 재현성은 실행 가능한 test/runner, 고정 configuration, source revision, 실행 명령과 결과 요약으로 보존한다.
+- JUnit XML, 전체 build log, raw JSON/CSV, source hash 묶음, fault dump, container/provider output 등 run별 실행 산출물은 기본적으로 Git에 commit하지 않는다.
+- 분석에 raw 산출물이 필요하면 `build/`, 임시 디렉터리 또는 다른 gitignored 경로에 생성하고, PR/summary에는 생성 명령·측정 방법·중요 결과·한계를 기록한다.
+- Issue/ADR이 특정 artifact의 장기 버전 관리를 명시적으로 요구하는 예외가 있을 때만 해당 산출물을 Git에서 추적한다.
 - 불리하거나 예상과 다른 결과도 삭제하지 않고 원인과 후속 조건을 기록한다.
 - Secret, credential, 개인정보, 원문 요청 payload를 결과물에 남기지 않는다.
 - benchmark는 고정 환경을 보장하기 어려우므로 기본 PR merge gate로 사용하지 않는다.
@@ -23,7 +26,7 @@
 
 - Planned: 환경과 방법만 정의되었고 아직 측정하지 않았다.
 - Running: 실행 중이며 결론을 내리지 않는다.
-- Measured: raw data와 environment manifest가 있으며 분석을 재현할 수 있다.
+- Measured: 실행 가능한 test/runner와 환경·입력·실행 명령이 기록되어 현재 source에서 결과를 재검증하거나 재계산할 수 있다.
 - Inconclusive: 측정은 했지만 환경 차이, 표본 부족, 오류 등으로 결론을 내릴 수 없다.
 
 Measured가 아닌 문서에는 전략 우열이나 목표 달성 수치를 결론으로 작성하지 않는다.
@@ -43,23 +46,29 @@ Measured가 아닌 문서에는 전략 우열이나 목표 달성 수치를 결�
 | Tooling | load generator와 분석 script version |
 | Limits | container CPU·memory limit, network condition |
 
-권장 evidence 구조는 다음과 같다.
+권장 구조는 **재현 가능한 정의와 실행 산출물을 분리**한다.
+
+Git에서 추적:
 
     docs/experiments/
-      concurrency/
-        <run-id>/
-          environment.md
-          workload.md
-          raw/
-          summary.md
-      events/
-        <run-id>/
-          environment.md
-          fault-matrix.md
-          raw/
-          summary.md
+      <topic-or-summary>.md
+    backend/src/test/...
+    infra/...          # 재현에 필요한 runner/config/script
 
-실제 run을 수행하는 Issue에서만 위 디렉터리를 추가한다.
+기본적으로 추적하지 않음:
+
+    backend/build/experiments/<run-id>/
+      environment.*
+      raw/
+      logs/
+      reports/
+
+run별 raw output 디렉터리를 `docs/experiments/` 아래에 새로 만드는 것을 기본 패턴으로 사용하지 않는다.
+역사적으로 이미 추적된 evidence는 그대로 둘 수 있지만 신규 작업의 선례로 간주하지 않는다.
+
+PR #139 정책을 과거 산출물에 적용한 [historical cleanup](historical-artifact-cleanup.md)은
+현재 tree의 raw output을 제거하고 재현 입력/harness와 중요한 관찰·한계를 유지한다.
+과거 commit의 bytes는 Git history에 남는다.
 
 ## Reservation concurrency
 
@@ -126,13 +135,13 @@ Restaurant 모델이나 production 규모의 처리 능력으로 해석하지 �
 ### 실행 절차
 
 1. clean database에 지정 migration을 적용한다.
-2. environment manifest와 고정 seed를 저장한다.
+2. environment 요약과 고정 seed를 기록한다.
 3. tenant, Venue, Resource, Slot과 초기 Reservation을 생성한다.
 4. warm-up을 수행한다.
 5. barrier를 사용해 workload를 실행한다.
 6. database에서 최종 Reservation과 점유 quantity를 다시 집계한다.
 7. application metric과 MySQL metric을 함께 수집한다.
-8. raw data를 변경하지 않은 채 저장하고 별도 summary를 작성한다.
+8. 필요한 raw data는 gitignored 실행 경로에 생성하고, 재계산 방법과 핵심 결과를 summary에 기록한다.
 9. 같은 조건으로 다른 전략을 실행한다.
 
 ### Metrics
@@ -174,12 +183,12 @@ Database:
 ### Evidence
 
 - 실행 가능한 runner와 workload configuration.
-- environment manifest.
-- timestamp가 있는 raw JSON 또는 CSV.
-- 전략별 correctness와 latency summary.
-- MySQL lock·deadlock 자료.
+- source revision, environment 요약과 재실행 명령.
+- 전략별 correctness와 latency 결과 요약 및 재계산 방법.
+- 필요한 MySQL lock·deadlock 관찰을 재현하는 test/script 또는 진단 명령.
 - 선택과 기각 이유, 재검토 조건을 담은 ADR.
 - 짧고 반복 가능한 CI invariant test.
+- run별 raw JSON/CSV/log/report는 기본적으로 gitignored 경로에 생성하며 Git 추적을 완료조건으로 삼지 않는다.
 
 ## Event processing
 
@@ -190,7 +199,8 @@ runtime/crash recovery gate나 M4 실제 consumer 완료를 대신하지 않는�
 
 #86의 production process recovery 종료 검증은
 [Measured summary](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/summary.md)와
-[authoritative raw DB evidence](events/64a31a31-98a0-4ce3-8f23-e93f966f30c2/raw/report.json)에 기록한다.
+기존 historical raw DB artifact에 기록돼 있다.
+이 historical artifact는 신규 run에서 raw output을 Git에 추가해야 한다는 선례가 아니다.
 
 #105의 실제 M4 workload와 DB direct 1-worker 기준선 및 M5 후속 전달 계약은
 [Waitlist workload / protocol](waitlist-baseline.md)을 따른다. process recovery 시간과
@@ -312,11 +322,12 @@ Performance:
 - event schema와 version 규칙.
 - outbox, inbox 또는 business unique constraint schema.
 - fault injection code와 실행 명령.
-- fault matrix별 raw log와 database snapshot.
-- duplicate, redelivery, crash, partial failure test report.
-- recovery time과 backlog drain raw data.
+- fault matrix를 재현하는 assertion/oracle과 durable database state 검증.
+- duplicate, redelivery, crash, partial failure regression과 실행 결과 요약.
+- recovery time과 backlog drain의 측정 방법·요약·재계산 절차.
 - trusted internal replay durable audit; human operator audit 연계는 M5.
 - transport 선택 또는 보류 ADR.
+- fault log, database dump, timing raw output 등 run별 산출물은 기본적으로 Git에 commit하지 않는다.
 
 ## 결과 보고 규칙
 
@@ -326,9 +337,10 @@ Performance:
 2. 실행 환경과 workload는 무엇인가?
 3. 어떤 대안을 같은 조건에서 비교했는가?
 4. correctness gate를 모두 통과했는가?
-5. raw data로 다시 계산할 수 있는가?
+5. 현재 source의 test/runner와 기록된 명령으로 다시 검증하거나 계산할 수 있는가?
 6. 결론의 적용 범위와 한계는 무엇인가?
 7. 다음 결정이나 재검토 trigger는 무엇인가?
 
-숫자는 raw data가 있는 Measured run에서만 사용한다. 목표치, 예상치와 측정치를 같은
-표에 둘 때는 열을 분리하고, 측정되지 않은 칸은 미측정으로 표시한다.
+숫자는 재현 가능한 Measured run에서만 사용한다. raw artifact의 Git 보존 자체는 Measured 조건이
+아니다. 목표치, 예상치와 측정치를 같은 표에 둘 때는 열을 분리하고, 측정되지 않은 칸은
+미측정으로 표시한다.

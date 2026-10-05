@@ -121,8 +121,8 @@ effect와 DONE이 완료되는 것을 확인한다. `performance_schema.data_loc
 delivery, FK scope index와 capacity secondary-index 잠금을 수집한다. uncontended INSERT의 implicit
 lock이 모두 data_locks record로 나타난다고 가정하지 않으며 저장된 effect pair/FK oracle도 함께 쓴다.
 producer 쪽은 `BookingCapacityReleaseIntegrationTests`의 실제 release/reject/expiry 및 fence 교차 증거를 사용한다.
-2026-09-21 MySQL 8.4.11 / RR 실행의 [registration fence 원자료](../experiments/evidence/promotion-effect-2026-09-21/REGISTRATION_FENCE.txt)를
-보존했다. main `0ee31ab2` 위 Commit 1 `1296912`와 이 checkpoint의 production/test source를 사용했으며,
+2026-09-21 MySQL 8.4.11 / RR 실행의 registration fence 관찰은 위에 요약했고 당시 원자료는
+Git history에 남아 있다. main `0ee31ab2` 위 Commit 1 `1296912`와 이 checkpoint의 production/test source를 사용했으며,
 fixture ID는 전부 일회용 synthetic 값이다. 테스트 실행 시 `build/waitlist-promotion-lock-evidence.txt`에 재생성된다.
 
 최신 C3는 application inverse edge와 InnoDB RR의 physical gap/next-key/insert-intention deadlock을
@@ -137,7 +137,7 @@ public Booking 명령에 worker retry를 역으로 추가하지 않는다.
 매 attempt의 `INNODB_METRICS.lock_deadlocks` 증가, effect 전체 rollback, PENDING→retry 성공 및
 3회 소진→DEAD→자동 claim 불가→trusted replay 후 단일 effect/DONE을 검증한다.
 각 실패 attempt의 raw trace는 `build/waitlist-promotion-deadlocks/`에 재생성한다.
-[3회 소진의 마지막 attempt 원자료](../experiments/evidence/promotion-effect-2026-09-21/INDEPENDENT_1213_FINAL_ATTEMPT.txt)는
+3회 소진의 마지막 attempt 원자료는
 2026-09-21 06:55 UTC 실행이다. 외부 test transaction T2615가 probe PK 1을 보유하고 PK 2를 요청하고,
 실제 effect transaction T2618이 PK 2를 보유한 채 PK 1을 요청해 후자가 victim이 됐다.
 이 역순은 failure 주입용 **test-only probe**에만 존재하며 production application cycle 증거가 아니다.

@@ -1,5 +1,9 @@
 # Reservation 동시성 전략 비교
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 > 상태: Measured
 >
 > 실행일: 2026-09-08
@@ -88,12 +92,12 @@ Optimistic run은 5개의 committed Reservation과 5개의 active Allocation, ef
 `CAPACITY_UNAVAILABLE`로 끝났다. Pessimistic run도 Slot별 Reservation/Allocation이
 각각 1개이고 effective occupancy가 1임을 같은 `verificationNow`로 확인했다.
 
-각 run의 [optimistic raw JSON](concurrency/3a9e8a98-a105-4734-a91d-1617c26ead2c/raw/report.json)과
-[pessimistic raw JSON](concurrency/4c571add-7867-4326-8cd5-60a899fda418/raw/report.json)은
-요청별 outcome·latency·시작/종료 시각, Slot별 최종 재조회, MySQL/strategy counter의
-before·after를 보존한다.
-[ConcurrencyBaselineRawEvidenceTests](../../backend/src/test/java/com/slotq/experiments/concurrency/ConcurrencyBaselineRawEvidenceTests.java)는
-표의 correctness, latency, throughput, retry와 lock 수치를 이 원자료에서 다시 계산한다.
+당시 요청/Slot/counter 원자료에서 위 값을 재계산했다. 현재 tree에는 환경·workload·결과 요약과
+`ConcurrencyBaselineRunner`를 유지한다. `ConcurrencyBaselineSmokeTests`와
+`OptimisticConcurrencyExperimentTests`가 실제 MySQL/Product correctness를 실행하고,
+`ConcurrencyBaselineSupportTests`가 입력/동기화/집계를 검증한다. 고정 historical report만
+검사하던 `ConcurrencyBaselineRawEvidenceTests`는 artifact 보존 계약과 함께 제거했다.
+새 실행의 row/latency는 새 output에서 검증하며 과거 bytes와 같다는 주장은 하지 않는다.
 
 ## 해석과 선택
 

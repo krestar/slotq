@@ -1,7 +1,7 @@
 # Event operations 통합 runbook
 
 2026-10-01 fresh 통합 drill에서 아래 대표 탐지/authorized recovery/rollback flow가 PASS했다.
-[원자료와 실제 timing](../experiments/m5-transport/README.md#fresh-integrated-operations-drill)을
+[당시 관찰과 실제 timing 요약](../experiments/m5-transport/README.md#fresh-integrated-operations-drill)을
 따른다. 전체 production 배포, HA 또는 모든 recovery 상황을 검증한 runbook은 아니다.
 [ADR-0008](../adr/0008-m5-event-transport-and-runtime-status.md)에 따라 기본값은 DB direct,
 Kafka role은 opt-in experimental/comparison topology다.
@@ -67,7 +67,7 @@ maintenance 타이머 제어는 test-only다. 실제 MySQL pause 중 scoped prod
 호출하는 probe도 test-only이며 실제 JDBC exception class/entrypoint만 보존한다. Scheduler의
 redacted log를 SQL/stack trace 전문으로 바꾸지 않는다. 실제 HTTPS operator credential hash/grant/security chain,
 production intake/DB executor/cutover, Prometheus alert·Grafana query·Tempo trace가 실행된다.
-Secret/전체 log는 로컬 `build/`에만 남으며 성공한 canonical raw와 summary만 보존한다.
+Run별 raw/log/canonical export는 gitignored `build/`에 생성한다. Git에는 재현 harness/config와 필요한 결과·limitation summary를 남긴다.
 
 ```powershell
 cd backend

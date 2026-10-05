@@ -1,2 +1,0 @@
-# CSV recalculation compares exact bytes; preserve LF on Windows checkouts too.
-*.csv text eol=lf

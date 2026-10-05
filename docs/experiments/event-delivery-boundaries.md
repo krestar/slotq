@@ -1,9 +1,12 @@
 # Event 전달 경계 비교
 
+> 이 문서는 당시 실행의 관찰과 한계를 보존하는 historical summary다. PR #139 정책에 따라
+> run별 raw output은 현재 tree에서 제거했다. 과거 bytes는 Git history에 남아 있으며,
+> 아래 수치를 이번 cleanup의 새 실행 결과로 해석하지 않는다. 새 raw는 gitignored `build/`에 생성한다.
+
 - 상태: Measured
 - Issue: [#80](https://github.com/krestar/slotq/issues/80)
 - 결정: [ADR-0007](../adr/0007-use-transactional-event-record-and-db-delivery.md)
-- 원자료: [clean/report.json](events/clean/report.json)
 - 당시 실행 코드: `01158e9c5f7a6e65d490f54753817b03ce0b6a57`,
   branch `chore/event-delivery-boundaries`, dirty=false
 
@@ -13,14 +16,15 @@ JDK 25와 실행 중인 Docker가 필요하다. backend에서 다음을 실행�
 
 ```powershell
 .\gradlew.bat eventExperiment
-.\gradlew.bat test --tests '*EventBoundaryTests' --tests '*EventRawEvidenceTests'
+.\gradlew.bat test --tests '*EventBoundaryTests'
 ```
 
 Linux/macOS는 `./gradlew eventExperiment`를 사용한다. 출력 기본값은
 `backend/build/reports/experiments/events/report.json`이며 `-Poutput=<경로>`로 변경할 수 있다.
-clean source에서 실행하고 생성 결과는 실행 완료 뒤 evidence 위치로 복사한다.
-`EventRawEvidenceTests`는 repository에 보존된 clean report를 읽고 summary 전체와 fault별
-DB 결과를 재계산·검증한다. 새 run을 채택할 때만 해당 원자료를 명시적으로 교체한다.
+clean source에서 실행하고 생성 결과는 gitignored `build/`에 둔다. Runner는 새 MySQL row에서
+`EventEvidence`의 summary/oracle를 실행한다. `EventBoundaryTests`는 actual outer rollback,
+standalone append 거부와 JSON round-trip/중복 effect를 검증한다. 고정 historical report만 검사하던
+`EventRawEvidenceTests`는 제거했다. 과거 결과의 동일 bytes 재계산은 Git history가 필요하다.
 
 테스트 전용 schema는 독립 Testcontainers MySQL에 생성한다. production Flyway migration,
 event endpoint, worker service, Product event는 없다. runner/fixture/probe는 모두
@@ -133,7 +137,7 @@ ambiguous outcome를 검증하기 전 외부 전송의 중복 방지 완료를 �
 | broker 보류/재검토 | ADR의 측정 기반 trigger |
 | 새 Accepted ADR | ADR-0007 |
 | Register/experiment/roadmap 일치 | 관련 문서의 선택·ownership 동기화 |
-| clean/raw/integrity 보존 | clean/report.json + EventRawEvidenceTests |
+| 재현과 summary | EventExperimentRunner / EventEvidence / EventBoundaryTests와 이 historical summary |
 | test 전용 경계 | 모든 실행 코드 src/test, production schema/event/worker 변경 없음 |
 | Backend tests/clean build | 관련 event tests, 전체 test 193개 및 clean build 성공; 실패·오류·skip 0 |
 
@@ -148,6 +152,5 @@ M4가 request contract만 구현하면 provider timeout 검증은 실제 연결 
 검증 기록: 동일 Backend 코드 revision `01158e9`에서 event regression/integrity test와
 전체 `test`(193개)가 성공했다. 이어 `clean build`도 2026-09-09에 4m 31s로 성공했고
 193개 tests의 failures/errors/skipped는 모두 0이다. 재개 시 보존된 Gradle 완료 로그와
-XML, Backend diff 없음, clean raw SHA-256
-`a61bf2d5404374015e45059473dfa7ed8d70f3450ab09f4ac3aa1a98133fc8bc`를 확인했다.
+XML과 Backend diff 없음을 확인했다.
 후속 변경은 문서뿐이므로 실험과 Backend 검증을 반복하지 않았다.

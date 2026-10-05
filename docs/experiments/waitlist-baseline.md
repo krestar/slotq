@@ -59,10 +59,10 @@ Java 25와 실행 중인 Docker가 필요하다. Backend directory에서 실행�
 cd C:\dev\slotq\backend
 .\gradlew.bat waitlistBaseline `
   "-Pseed=10501" `
-  "-Poutput=../docs/experiments/waitlist-baseline/<new-run-id>"
+  "-Poutput=build/reports/experiments/waitlist-baseline/<new-run-id>"
 
 .\gradlew.bat waitlistBaseline `
-  "-Precalculate=../docs/experiments/waitlist-baseline/<new-run-id>"
+  "-Precalculate=build/reports/experiments/waitlist-baseline/<new-run-id>"
 ```
 
 focused correctness 및 기존 M4/Event regression의 진입점은 다음과 같다. 실제 성공 여부는
