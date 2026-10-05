@@ -6,6 +6,14 @@
 >
 > 확인일: 2026-10-04, remote main `688c1a58cd9b8a95b41ba1fc7f2d763bb13b73b4`.
 
+### 검증 산출물 정책
+
+M6의 `evidence`는 기본적으로 최신 source에서 재실행 가능한 test/harness, 실행 명령,
+CI/local 결과 요약과 필요한 architecture/runbook을 뜻한다. JUnit XML, 전체 build log,
+raw JSON/CSV, source hash 묶음, fault dump, provider/container output 등 run별 실행 산출물은
+Git에 commit하지 않는다. 필요한 raw output은 `build/` 또는 다른 gitignored 경로에서 생성한다.
+Issue/ADR이 특정 artifact의 장기 버전 관리를 명시적으로 요구할 때만 예외로 추적한다.
+
 ## 1. 현재 사실과 변경 경계
 
 Remote main은 #129 M5 완료 문서 commit이며 프롬프트 baseline과 같다. 현재 #130~#135는
@@ -278,7 +286,7 @@ decision이 필요하다. DB/shared mechanism/Redis 비교는 그때 수행한�
 MCP audit는 allowlisted structured metadata를 bounded 비차단 sink로 전달한다. Durable delivery,
 crash 후 완전성, 법적 tamper-proof audit를 보장하지 않는다. 기본 보존은 접근 제한된 운영
 sink에서 7일이며 sink/rotation이 없으면 이 보존도 보장했다고 표시하지 않는다. #131은
-보존 설정과 sink unavailable/drop count evidence를 남긴다. Sink 실패/queue full은 안전한
+보존 설정과 sink unavailable/drop count를 재현하는 regression과 실행 결과 요약을 남긴다. Sink 실패/queue full은 안전한
 관측 failure signal을 만들지만 admission, Product transaction/응답 또는 confirmation 상태를
 변경하지 않는다. Product mutation 재시도를 유발할 audit failure 응답을 만들지 않는다.
 
@@ -377,20 +385,24 @@ Caller가 requested scope 밖의 document ID/count/content를 알 수 있는 dia
 Provider timeout은 tenant/global fallback을 허용하지 않는다. Separate public retrieval HTTP API는
 필요 없으며 `knowledge.search`는 #131 registry/common controls와 knowledge public port를 연결한다.
 
-## 9. #134 comparison oracle와 evidence
+## 9. #134 comparison oracle와 검증
 
 Canonical manifest를 고정하고 두 candidate를 실제 실행한다. A는 lexical/full-text baseline,
 B는 실제 document/query vector를 생성하는 pinned embedding model/service + index다.
-Random/fixed/hash vector, mock만 실행, dependency 설치는 B evidence가 아니다. Vector DB는
+Random/fixed/hash vector, mock만 실행, dependency 설치는 B 검증이 아니다. Vector DB는
 필수가 아니며 같은 approved eligible corpus와 query/oracle, result bounds를 사용한다.
 
-| Evidence | Required fields/판정 |
+| 검증 항목 | Required fields/판정 |
 | --- | --- |
 | Provenance manifest | source revision, corpus/query/oracle digest, seed, exact immutable versions/content hashes, environment/CPU/RAM, candidate/model/tokenizer/library version, chunk/index config, provider disclosure approval/reference |
 | Query oracle | queryId, trusted Actor profile/Tenant/Venue/visibility, known-answer/no-answer/insufficient/unavailable case, expected source/document/version 또는 allowed set, forbidden source set/lifecycle negative |
-| Per-query raw result | candidate/run/query ID, category, ranked source/document/version/rank/score, bounded synthetic result, source-hit 판정, safety failure, failure category, executed timestamps/duration |
-| Cost/resource raw | build/index latency, per-query latency, repetitions/warm/cold distinction, CPU/memory/storage sampling method, provider invocation/token/cost 관측 또는 `unavailable`/`not_applicable` |
-| Recalculation | raw→summary script/command, counts/denominator, latency aggregation, source/version hit, no-answer/insufficient 판정, lifecycle/tenant violations, limitations |
+| Per-query result | candidate/run/query ID, category, ranked source/document/version/rank/score, bounded synthetic result, source-hit 판정, safety failure, failure category, executed timestamps/duration |
+| Cost/resource observation | build/index latency, per-query latency, repetitions/warm/cold distinction, CPU/memory/storage sampling method, provider invocation/token/cost 관측 또는 `unavailable`/`not_applicable` |
+| Recalculation | 실행 결과→summary script/command, counts/denominator, latency aggregation, source/version hit, no-answer/insufficient 판정, lifecycle/tenant violations, limitations |
+
+Per-query/resource raw output이 재계산에 필요하면 gitignored 실행 경로에서 생성한다. Repository에는
+canonical manifest/oracle, 재실행 가능한 harness/config, 선택 근거와 결과 요약을 남기며 run별
+raw artifact 보존 자체를 완료조건으로 삼지 않는다.
 
 Oracle는 explicit labelled expected evidence/coverage로 no-answer와 insufficient를 구분한다.
 임의 score threshold를 production accuracy 기준으로 발명하지 않는다. Safety(tenant/visibility/
@@ -401,7 +413,7 @@ default/근거 있는 좁은 hybrid 중 결과로 선택하고 rejected candidat
 
 필수 query/oracle에는 tenant별 known-answer, 다른 tenant/venue parameter, no-answer,
 insufficient, superseded, withdrawn+stale index, query 중 update/withdraw, malicious instruction,
-provider unavailable/timeout을 포함한다. #135는 두 실제 candidate의 raw evidence와 recalculation을
+provider unavailable/timeout을 포함한다. #135는 두 실제 candidate를 최신 source에서 실행하고 recalculation 경로와 결과 요약을
 검증하며 comparison을 새로 설계하거나 M8 generic evaluation framework를 만들지 않는다.
 
 ## 10. Threat model / adversarial handoff
@@ -430,18 +442,18 @@ forbidden call을 시도하는 것으로 충분하고 Agent Runtime이 필요하
 | 15. M7 Agent Runtime/Router가 M6에 선도입 | §1/§9 bounded tools/comparison만, no model routing/workflow | #131~#134 architecture, #135 closure |
 | Session hijack / concurrent context mix | §3 every request auth, session-ID 자체 권한 아님, immutable context, current expiry/revoke | #131 concurrent profiles + revoke |
 | HTTP DNS rebinding/Origin abuse / SSRF | §3 Host/Origin/TLS, fixed Product/provider destinations, no arbitrary URL/redirect forwarding | #131/#134 |
-| Provider로 unauthorized corpus disclosure | §8 pre-query scope + approval + exact version, response-only filter 금지 | #134 provider spy/real candidate evidence |
+| Provider로 unauthorized corpus disclosure | §8 pre-query scope + approval + exact version, response-only filter 금지 | #134 provider spy/real candidate verification |
 | Quota exhaustion/timeout surviving work | §6/§7 bounded pools/no queue, permit은 실제 종료까지 유지 | #131/#132/#134 |
 
 ## 11. Dependency / implementation gate / 검증 상태
 
-| Issue | 선행 | 소유하는 contract/evidence | 소유하지 않는 책임 |
+| Issue | 선행 | 소유하는 contract/verification | 소유하지 않는 책임 |
 | --- | --- | --- | --- |
 | [#131](https://github.com/krestar/slotq/issues/131) | #130 | Auth-owned minimum original Actor mapping/delegation, independent MCP/Product credential scopes, protocol/registry/common controls, exact Java25/Boot4.1.1 interoperability gate | Product business, confirmation, corpus, shared quota topology |
 | [#132](https://github.com/krestar/slotq/issues/132) | #130 + #131 | 실제 세 HTTP tool, durable intent/approval, same-key/reconciliation/unknown, §6 admission bound + real MySQL/response drop | Domain/idempotency redesign, reliability lookup API, auto retry runtime |
 | [#133](https://github.com/krestar/slotq/issues/133) | #130 + #131 | Shared Auth validator를 쓰는 original operator authoring, document/version/publication/stale work/seed | MCP upload, concrete retrieval algorithm |
-| [#134](https://github.com/krestar/slotq/issues/134) | #131 + #133 (#130 계약) | Scoped retrieval/index/knowledge bridge, actual A/B evidence/default selection | Product authority, common auth 재구현, vector DB 선채택 |
-| [#135](https://github.com/krestar/slotq/issues/135) | #131~#134 완료 | Two profiles/four tools fresh integration, criterion→owner→verification→evidence→revision→limitation, M6 closure | 새 security/architecture policy, M7/M8 |
+| [#134](https://github.com/krestar/slotq/issues/134) | #131 + #133 (#130 계약) | Scoped retrieval/index/knowledge bridge, actual A/B verification/default selection | Product authority, common auth 재구현, vector DB 선채택 |
+| [#135](https://github.com/krestar/slotq/issues/135) | #131~#134 완료 | Two profiles/four tools fresh integration, criterion→owner→verification→test/harness/CI reference→revision→limitation, M6 closure | 새 security/architecture policy, M7/M8 |
 
 #133 본문의 conditional dependency gate에 따라 shared original Actor validator를 재사용하는
 선택을 확정했다. Corpus 생산 기능을 #131로 옮기지 않으며 #133은 이 선행이 준비된 뒤
