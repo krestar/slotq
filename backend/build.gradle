@@ -49,6 +49,9 @@ tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
     systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    ['knowledgePython', 'knowledgeModel'].each { key ->
+        if (project.hasProperty(key)) systemProperty "slotq.knowledge.${key == 'knowledgePython' ? 'python' : 'model'}", project.property(key)
+    }
     if (project.hasProperty('secureFixture')) {
         systemProperty 'slotq.kafka.secure.fixture', project.property('secureFixture')
     }

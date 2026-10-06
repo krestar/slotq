@@ -72,6 +72,11 @@ command가 거부되며, cleanup에도 유효한 original Actor와 active scope�
 
 ## #134 공개 metadata contract
 
+#134의 scoped publication enumeration과 concrete retrieval/최종 observation 구현은
+[검색 integration 계약](knowledge-retrieval.md)을 따른다. `publications`는 live delegation에서
+얻은 Tenant/Venue/visibility를 joined SQL의 WHERE에 적용한 뒤 최대 64개 current payload를
+반환하며 overflow는 실패한다. Authority module의 MCP/embedding runtime 의존은 없다.
+
 `CorpusCatalog`는 내부의 Auth-검증된 delegation ID를 받아 매 호출 `ActorAccess.revalidate`와
 active Venue/Tenant를 확인한다. Caller가 만든 `DelegatedActor`나 Tenant 값을 authority로 받지 않는다.
 `knowledge.search` allowlist와 `KNOWLEDGE_PUBLIC`/`KNOWLEDGE_OPERATOR` action을 확인한다.

@@ -62,6 +62,7 @@ class ProductToolsIntegrationTests {
     @Autowired TenantUseCase tenants;@Autowired VenueConfigurationUseCase venues;@Autowired ResourceUseCase resources;
     @Autowired SlotInventoryUseCase slots;@Autowired ReservationUseCase reservations;@Autowired ToolRegistry registry;
     @Autowired McpEngine engine;@Autowired ResponseFault fault;@Autowired TestClock clock;
+    @Autowired com.slotq.knowledge.application.CorpusAuthoring corpus;
     final JsonMapper json=JsonMapper.builder().build();HttpClient http;
     VenueId venue;UUID tenant,subject,slot;LocalDate day;
     ActorAccessService.ProvisionedCredential original,delegated;String session;
@@ -78,7 +79,7 @@ class ProductToolsIntegrationTests {
     }
     @AfterEach void release(){fault.release.countDown();clock.now=Instant.now();await().atMost(Duration.ofSeconds(10)).untilAsserted(()->assertThat(engine.activeWorkers()).isZero());}
     @Test void productionRegistryOwnReadHoldManagementAndMetadataOnlyAudit(CapturedOutput output) throws Exception {
-        assertThat(registry.all()).extracting(t->t.wire().name()).containsExactly("management.reservations.list","reservation.get","reservation.hold");
+        assertThat(registry.all()).extracting(t->t.wire().name()).containsExactly("knowledge.search","management.reservations.list","reservation.get","reservation.hold");
         var approved=approved(slot,2);var hold=call("reservation.hold",arguments(approved));
         assertSuccess(hold);UUID id=UUID.fromString(hold.path("structuredContent").path("data").path("id").asString());
         assertThat(hold.path("structuredContent").path("productStatus").asInt()).isEqualTo(201);assertRows(slot,1);
@@ -106,6 +107,16 @@ class ProductToolsIntegrationTests {
         db.update("INSERT INTO tenant_memberships(tenant_id,principal_id,role) VALUES(?,?,'OWNER')",bytes(tenant),bytes(principal(otherOriginal)));
         assertThat(call(other.value(),otherSession,"reservation.get",Map.of("reservationId",id)).path("structuredContent").path("productStatus").asInt()).isEqualTo(404);
         assertThat(call("management.reservations.list",Map.of("date",day.toString())).toString()).contains("forbidden");
+        var owner=otherOriginal;
+        String text="Synthetic venue information. Tea service.";
+        var staged=corpus.stage(owner.value(),venue,new com.slotq.knowledge.domain.Corpus.VersionInput(UUID.randomUUID(),UUID.randomUUID(),
+                new com.slotq.knowledge.domain.Corpus.Source(UUID.randomUUID(),"seed:product-and-knowledge","Synthetic"),
+                com.slotq.knowledge.domain.Corpus.Visibility.VENUE_PUBLIC,text,com.slotq.knowledge.domain.Corpus.digest(text)),0);
+        corpus.validate(owner.value(),staged.reference());corpus.publish(owner.value(),staged.reference());
+        var knowledge=access.approveDelegation(original.value(),venue,AccessProfile.CUSTOMER,Set.of(AccessAction.KNOWLEDGE_PUBLIC),Set.of("knowledge.search"),Duration.ofMinutes(10));
+        var retrieved=call(knowledge.value(),initialize(knowledge.value()),"knowledge.search",Map.of("query","tea service"));
+        assertThat(retrieved.path("structuredContent").path("category").asString()).isEqualTo("evidence");
+        assertThat(retrieved.path("structuredContent").path("results").get(0).path("versionId").asString()).isEqualTo(staged.reference().versionId().toString());
         assertThat(output.getAll()).doesNotContain(original.value(),delegated.value(),approved.review().idempotencyKey(),"Product tools");
         assertThat(approvals.review(original.value(),approved.review().intentId()).knownReservationId()).isEqualTo(id);
     }

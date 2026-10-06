@@ -7,6 +7,8 @@ import com.slotq.knowledge.domain.Corpus.*;
 import com.slotq.tenancy.domain.TenantId;
 import com.slotq.venue.domain.VenueId;
 import java.util.Optional;
+import java.util.List;
+import java.util.EnumSet;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
@@ -131,6 +133,17 @@ public class CorpusService implements CorpusAuthoring, CorpusCatalog {
                             && v.content() != null).isPresent();
     }
 
+    @Override public List<PublishedVersion> publications(UUID delegation, VenueId venue) {
+        return read(() -> {
+            DelegatedActor actor = reader(delegation, venue);
+            var visibility = EnumSet.noneOf(Visibility.class);
+            for (Visibility value : Visibility.values()) if (visible(actor, value)) visibility.add(value);
+            var result = store.publications(actor.tenantId(), venue, visibility, 65);
+            // Never represent a truncated corpus as complete/no-answer.
+            if (result.size() > 64) throw failure(INVALID_STATE);
+            return List.copyOf(result);
+        });
+    }
     @Override public Optional<PublishedVersion> current(UUID delegation, VenueId venue, UUID document) {
         return read(() -> {
             DelegatedActor actor = reader(delegation, venue);

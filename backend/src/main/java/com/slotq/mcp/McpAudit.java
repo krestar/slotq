@@ -14,7 +14,20 @@ public final class McpAudit implements AutoCloseable {
     public record Event(UUID requestId, UUID principalId, UUID delegationId, UUID tenantId, UUID venueId,
         String registeredTool, AccessAction action, boolean allowed, McpFailure.Reason reason,
         Dispatch dispatch, Outcome outcome, long latencyMillis, boolean handlerTimeout, TimeoutLayer timeoutLayer,
-        UUID confirmationId, UUID intentId, UUID knownTarget, UUID productRequestId, UUID documentId, UUID versionId) { }
+        UUID confirmationId, UUID intentId, UUID knownTarget, UUID productRequestId, UUID documentId, UUID versionId,
+        java.util.List<RetrievalReference> retrievalReferences) {
+        public Event {
+            retrievalReferences=java.util.List.copyOf(retrievalReferences);
+            if(retrievalReferences.size()>5)throw new IllegalArgumentException("Provenance bound");
+        }
+        public Event(UUID requestId, UUID principalId, UUID delegationId, UUID tenantId, UUID venueId,
+                String registeredTool, AccessAction action, boolean allowed, McpFailure.Reason reason,
+                Dispatch dispatch, Outcome outcome, long latencyMillis, boolean handlerTimeout, TimeoutLayer timeoutLayer,
+                UUID confirmationId, UUID intentId, UUID knownTarget, UUID productRequestId, UUID documentId, UUID versionId) {
+            this(requestId,principalId,delegationId,tenantId,venueId,registeredTool,action,allowed,reason,dispatch,outcome,
+                    latencyMillis,handlerTimeout,timeoutLayer,confirmationId,intentId,knownTarget,productRequestId,documentId,versionId,java.util.List.of());
+        }
+    }
     private final ArrayBlockingQueue<Event> queue;
     private final Consumer<Event> sink;
     private final LongAdder dropped=new LongAdder(), failed=new LongAdder(), delivered=new LongAdder();

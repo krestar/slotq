@@ -1,0 +1,17 @@
+{
+  "tenantId": "10000000-0000-0000-0000-000000000002",
+  "venueId": "20000000-0000-0000-0000-000000000002",
+  "documents": [
+    {
+      "documentId": "30000000-0000-0000-0000-000000000005",
+      "versionId": "40000000-0000-0000-0000-000000000005",
+      "sourceId": "50000000-0000-0000-0000-000000000005",
+      "sourceReference": "seed:slotq/synthetic/other-tenant/v1",
+      "sourceTitle": "Synthetic other tenant guide",
+      "visibility": "VENUE_PUBLIC",
+      "content": "Other tenant venue guide. Open daily from 13:00 to 21:00. Serve coffee.",
+      "contentDigest": "315095257d549c7a99349a9bfb41514c5618f4b63ec8087ff1f1efe6d819a54d",
+      "expectedRevision": 0
+    }
+  ]
+}

@@ -213,3 +213,14 @@ durable intent에 기억하고 `_meta.knownTarget`으로 제공하며 `reservati
 Target을 모르면 unknown을 유지한다. 다른 ID의 GET 404는 mutation failure의 근거가 아니다.
 
 [#132 실제 gate·Product fault·최종 검증 기록](../experiments/mcp-product-tools/2026-10-05-application-guard/README.md)을 참조한다.
+
+## Knowledge search
+
+같은 explicit registration root에 `knowledge.search`가 포함된다. Original Actor가 승인한
+Customer `KNOWLEDGE_PUBLIC` 또는 management의 public/operator action과 tool allowlist가 필요하다.
+입력은 `query`(최대 512 character), optional `limit`(1~5)뿐이다. Scope는 delegation/catalog에서
+derive하며 corpus upload/tenant selector/provider URL/answer generation endpoint는 없다.
+Default는 local lexical retrieval이다. Excerpt는 untrusted source data이며 HOLD approval 또는
+Product 권한을 부여하지 않는다. Strict result/failure, final publication observation, audit와
+한계는 [검색 계약](../architecture/knowledge-retrieval.md), 실제 embedding 비교 재현은
+[comparison runbook](../experiments/knowledge-retrieval/README.md)을 따른다.

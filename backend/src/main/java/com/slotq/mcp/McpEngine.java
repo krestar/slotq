@@ -109,16 +109,21 @@ public final class McpEngine implements AutoCloseable {
                 return new McpSchema.CallToolResult(List.of(new McpSchema.TextContent(null,
                     json.writeValueAsString(result.content()),null)),result.failure()!=null,result.content(),resultMetadata(context,result));
             } catch(TimeoutException timeout) {
-                sample(context,tool,McpFailure.Reason.TIMEOUT,McpAudit.Outcome.UNKNOWN,true,true,null,start);
-                return error(context,McpFailure.Reason.TIMEOUT,"unknown");
+                boolean retrieval=tool.failureOutcome()==McpAudit.Outcome.UNAVAILABLE;
+                sample(context,tool,McpFailure.Reason.TIMEOUT,retrieval?McpAudit.Outcome.UNAVAILABLE:McpAudit.Outcome.UNKNOWN,true,true,null,start);
+                return error(context,McpFailure.Reason.TIMEOUT,retrieval?"unavailable":"unknown");
             } catch(InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-                sample(context,tool,McpFailure.Reason.UNKNOWN,McpAudit.Outcome.UNKNOWN,true,false,null,start);
-                return error(context,McpFailure.Reason.UNKNOWN,"unknown");
+                boolean unavailable=tool.failureOutcome()==McpAudit.Outcome.UNAVAILABLE;
+                sample(context,tool,unavailable?McpFailure.Reason.UNAVAILABLE:McpFailure.Reason.UNKNOWN,
+                        unavailable?McpAudit.Outcome.UNAVAILABLE:McpAudit.Outcome.UNKNOWN,true,false,null,start);
+                return error(context,unavailable?McpFailure.Reason.UNAVAILABLE:McpFailure.Reason.UNKNOWN,unavailable?"unavailable":"unknown");
             } catch(ExecutionException failure) {
                 // No provider/SQL/exception text escapes. An executing handler may have committed effects.
-                sample(context,tool,McpFailure.Reason.UNKNOWN,McpAudit.Outcome.UNKNOWN,true,false,null,start);
-                return error(context,McpFailure.Reason.UNKNOWN,"unknown");
+                boolean retrieval=tool.failureOutcome()==McpAudit.Outcome.UNAVAILABLE;
+                sample(context,tool,retrieval?McpFailure.Reason.UNAVAILABLE:McpFailure.Reason.UNKNOWN,
+                        retrieval?McpAudit.Outcome.UNAVAILABLE:McpAudit.Outcome.UNKNOWN,true,false,null,start);
+                return error(context,retrieval?McpFailure.Reason.UNAVAILABLE:McpFailure.Reason.UNKNOWN,retrieval?"unavailable":"unknown");
             }
         } catch(AccessFailure failure) {
             McpFailure safe=accessFailure(failure);
@@ -143,6 +148,7 @@ public final class McpEngine implements AutoCloseable {
         if(result.intentId()!=null)refs.put("intentId",result.intentId().toString());
         if(result.documentId()!=null)refs.put("documentId",result.documentId().toString());
         if(result.versionId()!=null)refs.put("versionId",result.versionId().toString());
+        if(!result.retrievalReferences().isEmpty())refs.put("retrievalReferences",result.retrievalReferences());
         return Map.copyOf(refs);
     }
     private static McpFailure accessFailure(AccessFailure failure) {
@@ -152,14 +158,14 @@ public final class McpEngine implements AutoCloseable {
             boolean allowed,boolean timeout,ToolOutcome result,long start) {
         audit.offer(new McpAudit.Event(c.requestId(),c.actor().original().principalId().value(),c.actor().delegationId(),
             c.actor().tenantId().value(),c.actor().venueId().value(),tool==null?null:tool.wire().name(),
-            tool==null?null:tool.action(c.actor().profile()),
+            tool==null?null:tool.action(c.actor()),
             allowed,reason,result==null?(allowed?McpAudit.Dispatch.UNAVAILABLE:McpAudit.Dispatch.NOT_DISPATCHED)
                 :(result.dispatched()?McpAudit.Dispatch.REPORTED:McpAudit.Dispatch.NOT_DISPATCHED),outcome,
             TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start),timeout,
             timeout?McpAudit.TimeoutLayer.HANDLER:result==null?McpAudit.TimeoutLayer.NONE:result.timeoutLayer(),
             result==null?null:result.confirmationId(),
             result==null?null:result.intentId(),result==null?null:result.knownTarget(),result==null?null:result.productRequestId(),
-            result==null?null:result.documentId(),result==null?null:result.versionId()));
+            result==null?null:result.documentId(),result==null?null:result.versionId(),result==null?List.of():result.retrievalReferences()));
     }
     @Override public void close() { admission.unavailable(); workers.shutdown(); }
     public int activeWorkers() { return workerLimit-workerCapacity.availablePermits(); }
