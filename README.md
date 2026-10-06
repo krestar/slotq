@@ -6,7 +6,7 @@
 
 **동시 예약 · 상태 전이 · 이벤트 기반 대기열 · 멀티테넌시 · 장애 복구**
 
-**현재 상태: M0~M5 완료**
+**현재 상태: M0~M6 완료**
 
 </div>
 
@@ -272,8 +272,8 @@ flowchart LR
     M7 --> M8[M8 Evaluation & Production Hardening]
 ```
 
-- **M0~M5:** 완료
-- **M6~M8:** AI Access & Knowledge → Model Router & Agent Runtime → Evaluation & Production Hardening
+- **M0~M6:** 완료
+- **M7~M8:** Model Router & Agent Runtime → Evaluation & Production Hardening
 
 M0부터 M5까지 Product Backend와 운영 신뢰성을 먼저 완성하고, M6 이후 AI Platform 범위로 이동합니다.
 
@@ -297,9 +297,11 @@ Milestone별 완료 조건, 현재 상태, Issue 의존 관계는 [Roadmap](docs
 
 ## 현재 상태
 
-> **M5 Reliability & Observability — Complete**
+> **M6 AI Access & Knowledge — Complete**
 
-M0 Foundation부터 M4 Waitlist Promotion까지의 선행 Milestone은 완료 상태를 유지합니다.
+M0 Foundation부터 M5 Reliability & Observability까지의 선행 Milestone은 완료 상태를 유지합니다.
+
+M6에서는 original Actor delegation과 공통 MCP foundation에서 Product 세 tool과 `knowledge.search`를 연결했습니다. [#135 통합 종료 검증](docs/experiments/m6-closure/README.md)은 실제 두 profile·네 tool의 security/correctness 경계, 전체 Backend/clean build와 실제 retrieval 재계산을 통과했습니다. 단일 live instance/local quota와 lexical default를 유지하며 embedding 채택은 보류합니다. M7/M8은 미착수입니다.
 
 M5에서는 Product 요청·event 관측, Kafka relay/consumer 실험, multi-instance·fault 검증, tenant 범위 human operator recovery를 구현하고, DB direct와 Kafka를 동일 workload에서 비교했습니다. [ADR-0008](docs/adr/0008-m5-event-transport-and-runtime-status.md)에 따라 DB direct를 기본 transport로 유지하고 Kafka는 experimental/comparison topology로 보존합니다.
 

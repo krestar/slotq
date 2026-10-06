@@ -1,7 +1,7 @@
 # SlotQ Roadmap
 
 이 문서는 README의 Product Charter를 실행 가능한 Milestone과 선행 관계로 구체화한다.
-현재 저장소는 M0 Foundation부터 M5 Reliability & Observability까지 완료했다. M3는 #80 전달 경계
+현재 저장소는 M0 Foundation부터 M6 AI Access & Knowledge까지 완료했다. M3는 #80 전달 경계
 결정, #84 production runtime, #86 process failure recovery gate와 종료 감사 corrective #88을
 포함하며 PR #90에서 DB unavailable evidence의 실제 production DB access 진입까지 보강했다.
 M4는 #94~#97로 등록→Promotional HOLD Offer→event 기반 승급·만료·next→Thin UI를 연결했고,
@@ -79,6 +79,10 @@ Status의 의미는 다음과 같다.
 - M5 Reliability & Observability: Complete. #105~#111과 종료 corrective #126이 모두 Done이며,
   PR #122의 비교·drill·ADR gate와 PR #127의 Kafka intake observability 보정이 main에 반영됐다.
   M6는 완료된 M5의 Product operations/security boundary를 선행 조건으로 사용한다.
+- M6 AI Access & Knowledge: Complete. #130~#134의 merged contract/구현과 #135의
+  [fresh 통합 종료 검증](experiments/m6-closure/README.md)을 대조했다. 두 profile·네 production tool,
+  adversarial integration, 전체 Backend/clean build와 실제 retrieval 재계산을 통과했으며 unresolved
+  M6 blocker가 없다. 단일 live instance/local quota와 lexical default를 유지하며 M7/M8은 미착수다.
 
 이후에도 한 작업이 끝났다는 이유만으로 모든 후속 Issue를 Ready로 옮기지 않는다.
 dependency graph에서 모든 선행 간선이 충족된 Issue만 Ready가 될 수 있다.
@@ -701,6 +705,15 @@ M4 Waitlist Promotion.
 
 ## M6 AI Access & Knowledge
 
+### 실제 구현과 종료 판정
+
+#130/ADR-0009, #131 MCP foundation, #132 Product tools/confirmation/reconciliation,
+#133 corpus lifecycle, #134 tenant-safe retrieval이 main에 병합됐다. #135는 현재 source에서
+Customer/management의 네 tool을 실제 HTTPS MCP/Product HTTP와 MySQL state로 함께 검증하고,
+owner regression·전체 Backend·clean build·actual lexical/embedding 재계산으로 종료 gate를 통과했다.
+[Criterion/owner/revision/limitation 대조](experiments/m6-closure/README.md)에서 M6 Complete를 확정한다.
+Historical summary와 미실행/unsupported는 fresh PASS에 포함하지 않는다.
+
 ### 목표
 
 Product API를 안전하게 호출하는 MCP Gateway 최소 기능과 비정형 지식 검색의 책임 경계를
@@ -725,14 +738,14 @@ M5 Reliability & Observability.
 - Product API와 RAG source of truth 분리.
 - retrieval tenant isolation과 문서 versioning.
 
-### 구현 전 계약과 Issue ownership
+### 현재 계약과 Issue ownership
 
 [#130](https://github.com/krestar/slotq/issues/130)의
 [ADR-0009](adr/0009-m6-authenticated-access-and-knowledge.md)와
-[M6 Access & Knowledge 계약](architecture/m6-access-knowledge.md)을 후속 구현 기준으로 사용한다.
+[M6 Access & Knowledge 계약](architecture/m6-access-knowledge.md)을 구현·검증 기준으로 사용한다.
 한 live Product JVM의 opt-in MCP, authenticated HTTP Product invocation, narrowed original Actor,
-bounded confirmation/retry와 corpus publication authority를 확정한다. 실제 protocol/runtime,
-security/failure evidence와 M6 종료는 후속 Issue가 소유한다.
+bounded confirmation/retry와 corpus publication authority를 유지한다. 실제 protocol/runtime,
+security/failure evidence와 종료 결과는 #131~#135의 아래 ownership과 closure report를 따른다.
 
 | Issue | 선행 | Primary ownership |
 | --- | --- | --- |
@@ -843,7 +856,7 @@ M7 Model Router & Agent Runtime.
 | 한 명이 완주 가능한가? | Modular Monolith, 한 가지 Restaurant demo와 thin SPA를 사용하고 결제·다업종 UI·복수 Resource 최적화를 제외한다. |
 | Issue 크기와 개수가 적절한가? | M0~M2는 구현·검증·corrective Issue로 관리했고, M3는 #80/#84/#86과 corrective #88, M4는 #94~#97과 #97 corrective PR #103으로 완료했다. |
 | Priority가 부풀려졌는가? | P0는 없고, 흐름을 막지 않는 #4·#7·#12·#17·#18·#19·#20·#23·#45·#71·#97은 P2로 구분한다. |
-| Ready와 Backlog가 dependency를 반영하는가? | M0~M5는 Complete이다. M6는 완료된 M5를 선행 조건으로 별도 Issue 설계와 ownership을 따른다. |
+| Ready와 Backlog가 dependency를 반영하는가? | M0~M6는 Complete이다. M7/M8은 기존 선행 관계와 착수 시점의 Issue 설계를 따른다. |
 | 기술 선택을 설명할 근거가 있는가? | Java는 ADR-0004, module 경계와 최종 event transport/runtime은 Accepted ADR-0008로 기록한다. Gradle Wrapper는 local과 CI의 build 진입점을 통일한다. 동시성과 M3~M5 messaging 선택은 재현 가능한 실험과 ADR에 근거한다. |
 | README Product Charter와 충돌하는가? | Product First, effective capacity invariant, transactional source of truth, 단계적 AI 도입을 유지한다. |
 | 구현 전 필요한 설계가 충분한가? | Product 범위, Actor 권한, Context, 상태 전이, Milestone, 의존 관계, 실험 gate를 문서화했다. 세부 schema와 API는 각 Ready Issue에서 확정한다. |

@@ -5,6 +5,9 @@
 > 결정: [ADR-0009](../adr/0009-m6-authenticated-access-and-knowledge.md)
 >
 > 확인일: 2026-10-04, remote main `688c1a58cd9b8a95b41ba1fc7f2d763bb13b73b4`.
+>
+> 아래의 `현재`/후속 gate 표현은 #130 설계 시점의 snapshot이다. Merged 구현과 현재 source의
+> 실행·종료 판정은 [#135 통합 검증](../experiments/m6-closure/README.md)을 따른다.
 
 ### 검증 산출물 정책
 
