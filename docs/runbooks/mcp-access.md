@@ -1,9 +1,10 @@
-# MCP authenticated access와 Product tools (#131/#132)
+# MCP authenticated access와 Product/Knowledge tools (#131~#134)
 
 ADR-0009의 한 live Product JVM에 opt-in으로 활성화한다. 기본 artifact의 `/mcp`는 404이며
 `relay`, `consumer`, `quiesced` 등 Product 이외 role에서도 활성화하지 않는다.
-Production registry는 `reservation.get`, `reservation.hold`, `management.reservations.list`를
-명시적으로 등록한다. Knowledge bridge는 #134 ownership이다.
+Production registry는 `reservation.get`, `reservation.hold`, `management.reservations.list`,
+`knowledge.search`를 한 composition root에서 명시적으로 등록한다. Knowledge bridge와 검색 제약은
+[#134 계약](../architecture/knowledge-retrieval.md), 통합 검증은 [#135 closure](../experiments/m6-closure/README.md)를 따른다.
 
 ## 활성화 조건
 
@@ -33,7 +34,7 @@ Auth query/transaction은 2초이며 DB failure는 safe unavailable이다. 수�
 | 설정 | 기본값 / 상한 |
 | --- | --- |
 | `slotq.mcp.handler-budget` | `PT30S` / 30초. 요청 body/admission부터 계산 |
-| `slotq.mcp.workers` | 8 / 32, `SynchronousQueue`와 즉시 reject |
+| `slotq.mcp.workers` | 8 / 32, semaphore로 admitted work 제한, 허용된 작업만 thread 실행, queue 없이 즉시 reject |
 | `slotq.mcp.ingress` | 8 / 32, 별도 request executor와 permit |
 | `slotq.mcp.sessions` | 512 / 4096, principal당 4, delegation expiry까지 |
 | HTTP ingress rate/burst | instance 전체 50/초, burst 100. Invalid bearer도 포함 |
