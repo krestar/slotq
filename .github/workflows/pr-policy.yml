@@ -101,45 +101,15 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Verify scope detection regression
+        run: python3 .github/scripts/test_verification_scope.py
+
       - name: Detect changed verification scopes
         id: scope
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import subprocess
-
-          base = os.environ["BASE_SHA"]
-          head = os.environ["HEAD_SHA"]
-          changed = subprocess.check_output(
-              ["git", "diff", "--name-only", base, head],
-              text=True,
-          ).splitlines()
-
-          backend = any(
-              path.startswith("backend/")
-              or path == ".github/workflows/backend-ci.yml"
-              or path == ".github/workflows/pr-policy.yml"
-              for path in changed
-          )
-          frontend = any(
-              path.startswith("frontend/")
-              or path == ".github/workflows/frontend-ci.yml"
-              or path == ".github/workflows/pr-policy.yml"
-              for path in changed
-          )
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"backend={str(backend).lower()}\n")
-              output.write(f"frontend={str(frontend).lower()}\n")
-
-          print("Changed files:")
-          for path in changed:
-              print(f"- {path}")
-          print(f"backend={backend}, frontend={frontend}")
-          PY
+        run: python3 .github/scripts/verification_scope.py
 
   backend:
     name: Backend verification
