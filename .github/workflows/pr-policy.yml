@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  policy:
-    name: PR policy
+  metadata:
+    name: PR metadata
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -83,5 +83,117 @@ jobs:
                   print(f"- {error}")
               sys.exit(1)
 
-          print("PR policy validation passed.")
+          print("PR metadata validation passed.")
+          PY
+
+  changes:
+    name: Detect verification scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.scope.outputs.backend }}
+      frontend: ${{ steps.scope.outputs.frontend }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Detect changed verification scopes
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+
+          base = os.environ["BASE_SHA"]
+          head = os.environ["HEAD_SHA"]
+          changed = subprocess.check_output(
+              ["git", "diff", "--name-only", base, head],
+              text=True,
+          ).splitlines()
+
+          backend = any(
+              path.startswith("backend/")
+              or path == ".github/workflows/backend-ci.yml"
+              or path == ".github/workflows/pr-policy.yml"
+              for path in changed
+          )
+          frontend = any(
+              path.startswith("frontend/")
+              or path == ".github/workflows/frontend-ci.yml"
+              or path == ".github/workflows/pr-policy.yml"
+              for path in changed
+          )
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"backend={str(backend).lower()}\n")
+              output.write(f"frontend={str(frontend).lower()}\n")
+
+          print("Changed files:")
+          for path in changed:
+              print(f"- {path}")
+          print(f"backend={backend}, frontend={frontend}")
+          PY
+
+  backend:
+    name: Backend verification
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/backend-ci.yml
+
+  frontend:
+    name: Frontend verification
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/frontend-ci.yml
+
+  policy:
+    name: PR policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs: [metadata, changes, backend, frontend]
+
+    steps:
+      - name: Require metadata and applicable verification
+        env:
+          METADATA_RESULT: ${{ needs.metadata.result }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BACKEND_REQUIRED: ${{ needs.changes.outputs.backend }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_REQUIRED: ${{ needs.changes.outputs.frontend }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          failures = []
+
+          if os.environ["METADATA_RESULT"] != "success":
+              failures.append(f"PR metadata: {os.environ['METADATA_RESULT']}")
+          if os.environ["CHANGES_RESULT"] != "success":
+              failures.append(f"verification scope detection: {os.environ['CHANGES_RESULT']}")
+
+          for name in ("BACKEND", "FRONTEND"):
+              required = os.environ[f"{name}_REQUIRED"] == "true"
+              result = os.environ[f"{name}_RESULT"]
+              if required and result != "success":
+                  failures.append(f"{name.lower()} verification: {result}")
+              if not required and result not in ("skipped", "success"):
+                  failures.append(f"unexpected {name.lower()} verification result: {result}")
+
+          if failures:
+              print("Required PR verification failed:")
+              for failure in failures:
+                  print(f"- {failure}")
+              sys.exit(1)
+
+          print("PR policy and all applicable verification passed.")
           PY
