@@ -102,7 +102,7 @@ jobs:
           fetch-depth: 0
 
       - name: Verify scope detection regression
-        run: python3 -m unittest .github/scripts/test_verification_scope.py
+        run: python3 .github/scripts/test_verification_scope.py
 
       - name: Detect changed verification scopes
         id: scope
