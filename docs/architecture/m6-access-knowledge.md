@@ -238,10 +238,12 @@ MCP response에는 dispatch category, known target reference, safe Product code�
 
 ## 6. Timeout와 delayed admission gate
 
-MCP request/transport budget과 handler deadline은 최대 30초, Product HTTP connect는 최대 2초,
+MCP request work/admission budget과 handler deadline은 최대 30초, Product HTTP connect는 최대 2초,
 response wait는 최대 15초, retrieval/provider는 최대 10초로 제한한다. 각각 더 짧은 남은
-deadline을 따른다. 수치는 초기 bounded profile의 상한이며 SLA가 아니다. Timeout 뒤 실제
-작업이 계속되면 resource permit을 유지하고 result를 unknown으로 처리한다.
+deadline을 따른다. 수치는 초기 bounded profile의 상한이며 SLA가 아니다. Servlet async
+fail-safe는 work deadline 뒤 최대 1초의 bounded response-completion grace만 허용하며, 이
+grace는 handler/Product/retrieval 실행 deadline을 늘리거나 새 work를 admission하지 않는다.
+Timeout 뒤 실제 작업이 계속되면 resource permit을 유지하고 result를 unknown으로 처리한다.
 
 **MCP admission → Product command admission 최대 60초**를 지원 조건으로 선택한다.
 현재 topology/source 조사에는 HOLD queue/redelivery/durable task가 없지만 현재 설정만으로
