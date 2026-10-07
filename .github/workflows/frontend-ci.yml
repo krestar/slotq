@@ -1,18 +1,14 @@
 name: Frontend CI
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+  workflow_call:
   push:
     branches:
       - main
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
+      - '.github/workflows/pr-policy.yml'
 
 permissions:
   contents: read
