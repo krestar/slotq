@@ -21,6 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Sessions represent lifecycle only; every request separately authenticates and revalidates its Actor. */
 public final class McpServlet extends HttpServlet {
     public static final String REVISION="2025-11-25";
+    private static final Duration ASYNC_COMPLETION_GRACE=Duration.ofSeconds(1);
     private final ActorAccess authority;
     private final McpEngine engine;
     private final Clock clock;
@@ -54,7 +55,10 @@ public final class McpServlet extends HttpServlet {
         if(!ingressRate() || !ingress.tryAcquire()) {response.setStatus(429);return;}
         // Non-blocking body reads: a slow trickle cannot occupy servlet threads or extend the absolute budget.
         Instant admitted=clock.instant();
-        AsyncContext async=request.startAsync();async.setTimeout(Math.max(1,requestBudget.toMillis()));
+        AsyncContext async=request.startAsync();
+        // The work/admission deadline remains requestBudget. This bounded outer grace only lets the
+        // engine serialize its resource-specific timeout result before the generic servlet fail-safe wins.
+        async.setTimeout(Math.max(1,requestBudget.plus(ASYNC_COMPLETION_GRACE).toMillis()));
         AtomicBoolean finished=new AtomicBoolean(),submitted=new AtomicBoolean(),released=new AtomicBoolean();
         Runnable release=()->{if(released.compareAndSet(false,true))ingress.release();};
         Runnable complete=()->{if(finished.compareAndSet(false,true))async.complete();};
