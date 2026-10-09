@@ -795,6 +795,22 @@ M6 AI Access & Knowledge.
 - tool execution state, cancellation과 retry.
 - durable workflow가 실제로 필요한지 판단하는 gate.
 
+### 현재 계약과 Issue ownership
+
+[#151](https://github.com/krestar/slotq/issues/151)의
+[M7 Model Router & Agent Runtime 계약](architecture/m7-model-router-agent-runtime.md)을 공통
+Architecture SSOT로 사용한다. Router eligibility/selection과 Runtime execution authorization을
+구분하고 M6의 current Actor, Product HTTP authority, exact HOLD approval/retry와 unknown 의미를 보존한다.
+
+#152는 실제 모델 비교·provider adapter·Router, #153은 process-local Runtime·Run control·approval/outcome,
+#154는 Owner/Manager-only Ops observation tool, #155는 동일 Runtime의 세 representative flow를 소유한다.
+#156은 실제 duration/wait/restart/cancel/saturation evidence로 durable 필요성을 판정한다.
+필요 없음이면 #157 통합 closure로 진행하고, 필요 있음이면 별도 Issue 설계와 conditional M7-D의
+구현·검증·merge가 #157의 추가 선행이다. #151만으로 Router/Runtime의 Deferred ADR 상태를 승격하지 않는다.
+
+M7의 bounded fixture/oracle/comparison evidence와 M8의 generic evaluation/release gate/production
+hardening ownership은 구분한다. 상세 dependency, decision owner와 limitation은 Architecture SSOT를 따른다.
+
 ### 검증 결과물
 
 - routing 비교표와 선택 기록.

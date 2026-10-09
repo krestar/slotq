@@ -53,5 +53,5 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | Observability stack | `Accepted` (local/container) | #106/#111의 Actuator/Micrometer, protected scrape/read-only inventory, Prometheus/Grafana/Tempo 및 실제 alert/trace/drill. Production SLO/HA 승인은 아닙니다. |
 | MCP Gateway | `Accepted` (M6 bounded profile) | #130/ADR-0009에서 Customer 접근과 management 지식/조회가 공유할 인증·registry·admission 요구, single-instance co-location과 HTTP Product invocation을 확정합니다. SDK/runtime 활성화 검증은 #131/#132가 소유합니다. |
 | RAG | `Accepted` (책임/비교 계약) | #130/ADR-0009에서 corpus authoring/visibility/version/publication과 Product authority 분리, 동일 seed/query/oracle의 lexical·actual embedding 비교를 확정합니다. Concrete retrieval default와 index/provider 선택은 #134 evidence로 결정하며 vector DB는 채택하지 않습니다. |
-| Model Router | `Deferred` | 복수 모델을 비교할 실제 traffic과 cost, latency, quality, security 평가 결과가 있어야 합니다. |
-| Agent Runtime | `Deferred` | 단일 요청·tool 호출로 해결되지 않는 장기 실행, 상태 유지, 재시도 또는 승인 흐름이 확인되어야 합니다. |
+| Model Router | `Deferred` | [M7 공통 계약](../architecture/m7-model-router-agent-runtime.md)을 기준으로 #152의 실제 복수 모델 cost/latency/quality/security 비교, eligibility/selection replay와 provider policy evidence가 필요합니다. #151의 문서 확정만으로 채택하지 않습니다. |
+| Agent Runtime | `Deferred` | [M7 공통 계약](../architecture/m7-model-router-agent-runtime.md)을 기준으로 #153의 bounded process-local 실행/Run authority/approval/outcome evidence와 #155의 실제 flow를 확인합니다. Restart-durable 필요성은 #156의 별도 gate이며 positive decision도 미설계 M7-D의 Accepted 구현을 뜻하지 않습니다. |
