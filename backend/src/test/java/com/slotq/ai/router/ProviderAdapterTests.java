@@ -12,6 +12,56 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.*;
 
 class ProviderAdapterTests {
+    @Test void secretsInSchemaReferencesAreRejectedBeforeTransmissionAndBudgetAdmission() {
+        AtomicInteger calls=new AtomicInteger();
+        var a=adapter((u,p,k,t)->{calls.incrementAndGet();throw new AssertionError("Secret schema must not be transmitted");});
+        for(String reference:List.of(KEY,"credential:product-secret")) {
+            var b=budget();
+            var request=new ProviderProtocol.Request("Synthetic context without secret",1024,Set.of(reference),Set.of());
+            var result=a.generate("gemini-3.5-flash-lite",classification(),request,b);
+            assertThat(result.failure()).isEqualTo(GeminiAdapter.Failure.SLOTQ_REJECTION);
+            assertThat(result.attempts()).isZero();assertThat(b.remainingAttempts()).isEqualTo(2);assertThat(b.inFlight()).isFalse();
+        }
+        assertThat(calls).hasValue(0);
+    }
+    @Test void reasoningOrNativeFunctionPartsAreNotFinalStructuredOutput() {
+        for(var extra:List.of(Map.of("thought",true),Map.of("functionCall",Map.of("name","forbidden")))) {
+            Map<String,Object> part=new HashMap<>(extra);part.put("text",JSON.writeValueAsString(output()));
+            byte[] payload=JSON.writeValueAsBytes(Map.of("candidates",List.of(Map.of("finishReason","STOP","content",Map.of("parts",List.of(part))))));
+            var result=adapter((u,p,k,t)->new GeminiAdapter.Wire(200,payload)).generate("gemini-3.5-flash-lite",classification(),request(),budget());
+            assertThat(result.failure()).isEqualTo(GeminiAdapter.Failure.MALFORMED); assertThat(result.output()).isNull();
+        }
+    }
+    @Test void stalledResponseBodyHasDeadlineAndClosesLocalSubscription() throws Exception {
+        try(var server=new ServerSocket(0,8,InetAddress.getLoopbackAddress());
+                var client=HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()) {
+            server.setSoTimeout(5000);
+            var receiver=CompletableFuture.supplyAsync(()->{
+                try(var socket=server.accept()) {
+                    socket.setSoTimeout(5000); var input=socket.getInputStream(); int suffix=0;
+                    while(suffix!=0x0d0a0d0a) { int value=input.read(); if(value<0) throw new java.io.IOException("Fixture request missing"); suffix=(suffix<<8)|value; }
+                    socket.getOutputStream().write("HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+                    socket.getOutputStream().flush(); return input.read();
+                } catch(Exception failure) { throw new CompletionException(failure); }
+            });
+            String host=server.getInetAddress().getHostAddress(); if(server.getInetAddress() instanceof Inet6Address) host="["+host+"]";
+            URI uri=URI.create("http://"+host+":"+server.getLocalPort()+"/synthetic-stalled-body");
+            var transport=GeminiAdapter.transport(client);
+            assertThatThrownBy(()->transport.send(uri,new byte[0],new GeminiAdapter.Secret(KEY),2000))
+                .isInstanceOf(HttpTimeoutException.class);
+            assertThat(receiver.get(6,TimeUnit.SECONDS)).isEqualTo(-1);
+        }
+    }
+    @Test void hugeUsageIntegerCannotWrapIntoFavorableMeasuredTokens() {
+        String invalid=new String(response(JSON.writeValueAsString(output()),true),StandardCharsets.UTF_8)
+            .replace("\"promptTokenCount\":10","\"promptTokenCount\":18446744073709551626")
+            .replace("\"totalTokenCount\":35","\"totalTokenCount\":18446744073709551651");
+        var b=budget();
+        var result=adapter((u,p,k,t)->new GeminiAdapter.Wire(200,invalid.getBytes(StandardCharsets.UTF_8)))
+            .generate("gemini-3.5-flash-lite",classification(),request(),b);
+        assertThat(result.usage().status()).isEqualTo("unavailable"); assertThat(result.costStatus()).isEqualTo("unavailable");
+        assertThat(b.usageUnknown()).isTrue(); assertThat(b.remainingTokens()).isLessThan(59965);
+    }
     private static final JsonMapper JSON=JsonMapper.builder().build();
     private static final String KEY="fixture-secret-only-never-real";
     ModelRouter.Classification classification() { return new ModelRouter.Classification(ModelRouter.DataClass.SYNTHETIC,true,true,null,null,50000,1024); }

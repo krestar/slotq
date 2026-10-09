@@ -1,14 +1,16 @@
 # M7 Model Router & Agent Runtime 계약
 
-> 상태: [#151](https://github.com/krestar/slotq/issues/151)의 공통 구현 전 계약과 후속 decision 기준.
-> Production Router/Runtime, 실제 provider 선정과 durable 판정은 아직 구현·확정되지 않았다.
+> 상태: [#151](https://github.com/krestar/slotq/issues/151)의 공통 계약과 후속 decision 기준.
+> #152의 bounded Router/provider 비교는 [구현·실험 기록](../experiments/m7-model-router.md)을 따른다.
+> Runtime, 실제 Product/MCP flow와 durable 판정은 각 후속 owner의 구현·검증 대상이다.
 >
-> 확인일: 2026-10-10. 최신 `origin/main`과 Issue 기준 revision은 모두
-> `047bea6235eae08fca0a1cc02388c4a86c1b60ae`이다.
+> 확인일: 2026-10-10. M6 source/Issue 설계 기준 revision은
+> `047bea6235eae08fca0a1cc02388c4a86c1b60ae`이며, #152 구현 기준은 #151/PR #158을 포함한
+> 최신 main `03a88be6c67140c6cace981fbbdcc8a88806500a`이다.
 >
 > 이 문서는 M7 Architecture SSOT다. **M6 현재 보장**은 해당 revision의 merged source에서
-> 확인한 동작, **M7 요구**는 후속 owner가 구현·검증할 계약을 뜻한다. Source/test 검토를
-> 이번 실행의 test PASS로 표현하지 않는다. 후속 변경 시 실제 merged source와 decision evidence에 맞춰 갱신한다.
+> 확인한 동작, **M7 요구**는 후속 owner가 구현·검증할 계약을 뜻한다. #151의 source/test 검토와
+> #152의 실행 검증은 구분하며, 후자는 위 실험 기록을 따른다. 후속 변경 시 실제 merged source와 decision evidence에 맞춰 갱신한다.
 
 ## 1. 기준과 변경 경계
 
@@ -35,7 +37,7 @@ M6의 durable HOLD approval record와 M7의 process-local Run은 서로 다른 o
 concurrent replay/confirmation expiry/COMMIT response loss/known Location cases,
 [M6IntegrationTests][m6-tests]의 current grant/revoke/unknown reconciliation/malicious content cases,
 [McpEngineConcurrencyTests][mcp-concurrency-tests]의 timeout/interrupt 뒤 capacity 유지가 M6 근거다.
-이 test를 이번 문서 작업에서 재실행하거나 M7 Run/provider regression이 이미 존재한다고 주장하지 않는다.
+#151 문서 확정 당시에는 이 test를 재실행하거나 M7 Run/provider regression이 이미 존재한다고 주장하지 않았다.
 
 ## 2. Representative workload와 disclosure matrix
 

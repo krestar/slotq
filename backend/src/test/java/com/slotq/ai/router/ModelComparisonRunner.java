@@ -48,7 +48,8 @@ public final class ModelComparisonRunner {
         manifest.put("training",true); manifest.put("region","unavailable"); manifest.put("retention","unavailable");
         manifest.put("dataControlSource","https://ai.google.dev/gemini-api/terms");
         manifest.put("retryFallback","none; all failures terminal; no cross-provider support");
-        manifest.put("transportRevision","m7-http-v1");
+        manifest.put("transportRevision","m7-http-v2");
+        manifest.put("bodyDeadline","total transport deadline with local subscription cancellation");
         manifest.put("httpControls",Map.of("version","HTTP_1_1","redirects","NEVER","retryLimit",System.getProperty("jdk.httpclient.redirects.retrylimit"),
             "disableRetryConnect",Boolean.getBoolean("jdk.httpclient.disableRetryConnect"),"enableAllMethodRetry",Boolean.getBoolean("jdk.httpclient.enableAllMethodRetry")));
         manifest.put("generationConfig",Map.of("temperature",1,"candidateCount",1,"maxOutputTokens",1024,"responseMimeType","application/json","apiMode",GeminiAdapter.API_MODE));
@@ -59,7 +60,8 @@ public final class ModelComparisonRunner {
             String model=modelNode.asString();
             ProviderProtocol.Request request=request(specification,testCase);
             var classification=new ModelRouter.Classification(ModelRouter.DataClass.SYNTHETIC,true,true,null,null,50000,1024);
-            var budget=new ProviderBudget(Clock.systemUTC(),Instant.now().plusSeconds(45),1,60000);
+            Instant attemptDeadline=Instant.now().plusSeconds(45);
+            var budget=new ProviderBudget(Clock.systemUTC(),attemptDeadline.isAfter(deadline)?deadline:attemptDeadline,1,60000);
             captured.clear();
             var result=adapter.generate(model,classification,request,budget);
             Map<String,Object> row=new LinkedHashMap<>();

@@ -67,7 +67,8 @@ public final class GeminiAdapter {
                 "responseMimeType","application/json","responseJsonSchema",ProviderProtocol.schema(request))));
         // Conservative byte-based reservation includes the serialized schema and envelope; observed overrun poisons the budget.
         long reserved = (long)body.length * 2 + 1024 + request.maximumOutputTokens();
-        if (body.length > 16384 || disclosure.inputTokens() < reserved-request.maximumOutputTokens()
+        if (body.length > 16384 || unsafe(new String(body,StandardCharsets.UTF_8))
+                || disclosure.inputTokens() < reserved-request.maximumOutputTokens()
                 || disclosure.outputTokens() < request.maximumOutputTokens()) return failed(Failure.SLOTQ_REJECTION,0,0,unknown,null,null);
         long timeout;
         try { timeout=budget.begin(reserved); } catch (RuntimeException rejected) { return failed(Failure.SLOTQ_REJECTION,0,0,unknown,null,null); }
@@ -100,7 +101,8 @@ public final class GeminiAdapter {
                 return failed(Failure.POLICY_REFUSAL,1,elapsed(started),usage,version,status);
             if (!"STOP".equals(finish)) return failed(Failure.MALFORMED,1,elapsed(started),usage,version,status);
             JsonNode parts=candidate.path("content").path("parts");
-            if (!parts.isArray() || parts.size()!=1 || !parts.get(0).path("text").isString())
+            if (!parts.isArray() || parts.size()!=1 || !parts.get(0).path("text").isString()
+                    || parts.get(0).path("thought").asBoolean(false) || parts.get(0).has("functionCall"))
                 return failed(Failure.MALFORMED,1,elapsed(started),usage,version,status);
             var output=ProviderProtocol.parse(parts.get(0).path("text").asString(),request);
             if (unsafe(json.writeValueAsString(output))) return failed(Failure.MALFORMED,1,elapsed(started),usage,version,status);
@@ -153,27 +155,47 @@ public final class GeminiAdapter {
             return new Usage(null,null,null,null,"unavailable");
         return new Usage(input,output,thinking,total,"measured");
     }
-    private static Long number(JsonNode node,String key) { var n=node.path(key); return n.isIntegralNumber() && n.asLong()>=0 ? n.asLong() : null; }
-    private static Transport transport(HttpClient client) {
+    private static Long number(JsonNode node,String key) { var n=node.path(key); return n.isIntegralNumber() && n.canConvertToLong() && n.asLong()>=0 ? n.asLong() : null; }
+    static Transport transport(HttpClient client) {
         if (client.followRedirects()!=HttpClient.Redirect.NEVER || client.version()!=HttpClient.Version.HTTP_1_1
                 || !"1".equals(System.getProperty("jdk.httpclient.redirects.retrylimit")) || !Boolean.getBoolean("jdk.httpclient.disableRetryConnect")
                 || Boolean.getBoolean("jdk.httpclient.enableAllMethodRetry") || client.authenticator().isPresent()
                 || client.cookieHandler().isPresent() || !System.getProperty("jdk.httpclient.HttpClient.log", "").isBlank())
             throw new IllegalStateException("Provider HTTP retry/redirect gate");
         return (uri,body,credential,timeout) -> {
+            long deadlineNanos=System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(timeout);
             HttpRequest request=HttpRequest.newBuilder(uri).timeout(java.time.Duration.ofMillis(timeout))
                 .header("x-goog-api-key",credential.value).header("Content-Type","application/json")
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
-            var response=client.send(request, ignored -> new BoundedBody());
-            return new Wire(response.statusCode(),response.body());
+            var subscriber=new java.util.concurrent.atomic.AtomicReference<BoundedBody>();
+            try {
+                var response=client.send(request, ignored -> { var bodyReader=new BoundedBody(deadlineNanos); subscriber.set(bodyReader); return bodyReader; });
+                return new Wire(response.statusCode(),response.body());
+            } catch(IOException failure) {
+                var bodyReader=subscriber.get();
+                if(bodyReader!=null && bodyReader.timedOut) throw new HttpTimeoutException("Provider response deadline");
+                throw failure;
+            }
         };
     }
-    private static final class BoundedBody implements HttpResponse.BodySubscriber<byte[]> {
-        final CompletableFuture<byte[]> result=new CompletableFuture<>(); final ByteArrayOutputStream bytes=new ByteArrayOutputStream(); Flow.Subscription subscription;
-        public CompletionStage<byte[]> getBody() { return result; }
-        public void onSubscribe(Flow.Subscription s) { subscription=s; s.request(1); }
+    static final class BoundedBody implements HttpResponse.BodySubscriber<byte[]> {
+        final CompletableFuture<byte[]> result=new CompletableFuture<>(); final ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+        final CompletableFuture<byte[]> completion; volatile Flow.Subscription subscription; volatile boolean timedOut;
+        BoundedBody(long deadlineNanos) {
+            completion=result.orTimeout(Math.max(1,deadlineNanos-System.nanoTime()),TimeUnit.NANOSECONDS).handle((body,error)->{
+                if(error==null) return body;
+                // Completion is published only after local subscription cancellation; remote completion remains unknown.
+                timedOut=error instanceof TimeoutException;
+                var active=subscription; if(active!=null) active.cancel();
+                if(error instanceof TimeoutException) throw new CompletionException(new HttpTimeoutException("Provider response deadline"));
+                throw new CompletionException(error);
+            });
+        }
+        public CompletionStage<byte[]> getBody() { return completion; }
+        public void onSubscribe(Flow.Subscription s) { subscription=s; if(result.isDone()) s.cancel(); else s.request(1); }
         public void onNext(List<ByteBuffer> chunks) {
             for (ByteBuffer chunk:chunks) {
+                if(result.isDone()) return;
                 if (bytes.size()+chunk.remaining()>MAX_BODY) { subscription.cancel(); result.completeExceptionally(new IOException("Provider body bound")); return; }
                 byte[] data=new byte[chunk.remaining()]; chunk.get(data); bytes.writeBytes(data);
             }
