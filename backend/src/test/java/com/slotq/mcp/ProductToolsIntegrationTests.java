@@ -365,6 +365,193 @@ class ProductToolsIntegrationTests {
             assertThat(denied.tools().getLast().invocation()).isEqualTo(Invocation.NOT_DISPATCHED);assertThat(denied.productEffect()).isEqualTo(Effect.NOT_APPLICABLE);assertRows(slot,0);
         }
     }
+    @Test
+    void runtimeStaffDelegationKeepsM6ReadButCannotStartOperatorWorkloads() throws Exception {
+        var staff = original(UUID.randomUUID());
+        UUID staffPrincipal = principal(staff);
+        db.update("INSERT INTO tenant_memberships(tenant_id,principal_id,role) VALUES(?,?,'STAFF')",
+            bytes(tenant), bytes(staffPrincipal));
+        db.update("INSERT INTO venue_grants(tenant_id,venue_id,principal_id,role) VALUES(?,?,?,'STAFF')",
+            bytes(tenant), bytes(venue.value()), bytes(staffPrincipal));
+        var staffDelegation = access.approveDelegation(staff.value(), venue, AccessProfile.MANAGEMENT,
+            Set.of(AccessAction.MANAGEMENT_READ), Set.of("management.reservations.list"), Duration.ofMinutes(15));
+        var actor = access.authenticateMcp(staffDelegation.value());
+        assertThat(actor.profile()).isEqualTo(AccessProfile.MANAGEMENT);
+        assertThat(access.revalidate(actor.delegationId())).isEqualTo(actor);
+        var read = call(staffDelegation.value(), initialize(staffDelegation.value()),
+            "management.reservations.list", Map.of("date", day.toString()));
+        assertSuccess(read);
+
+        try (var runtime = runtime(this::runtimeGenerate)) {
+            List<String> admitted = new ArrayList<>();
+            for (String workload : List.of("management", "ops")) {
+                var plan = new Plan("runtime-role-v1", workload, runtimeLimits(Duration.ofSeconds(5)), null, Map.of());
+                try {
+                    runtime.start(staffDelegation.value(), plan);
+                    admitted.add(workload);
+                } catch (RuntimeFailure denied) {
+                    assertThat(denied.reason()).isEqualTo(RuntimeFailure.Reason.AUTHORITY);
+                }
+            }
+            assertThat(admitted).as("Staff의 M7 workload admission").isEmpty();
+        }
+    }
+
+    @Test
+    void runtimeWorkloadAdmissionAcceptsCustomerOwnerAndAssignedManagerWithExactProfile() {
+        try (var runtime = runtime(this::runtimeGenerate)) {
+            UUID customerRun = runtime.start(delegated.value(), runtimePlan(runtimeLimits(Duration.ofSeconds(5))));
+            assertThat(runtime.result(customerRun, delegated.value()).execution()).isEqualTo(Execution.ACTIVE);
+            assertThatThrownBy(() -> access.revalidateOwnerManager(delegated.delegationId()))
+                .isInstanceOf(AccessFailure.class);
+
+            for (String role : List.of("OWNER", "MANAGER")) {
+                var operator = original(UUID.randomUUID());
+                UUID operatorPrincipal = principal(operator);
+                db.update("INSERT INTO tenant_memberships(tenant_id,principal_id,role) VALUES(?,?,?)",
+                    bytes(tenant), bytes(operatorPrincipal), role);
+                if (role.equals("MANAGER")) {
+                    db.update("INSERT INTO venue_grants(tenant_id,venue_id,principal_id,role) VALUES(?,?,?,'MANAGER')",
+                        bytes(tenant), bytes(venue.value()), bytes(operatorPrincipal));
+                }
+                var management = runtimeManagementDelegation(operator, venue);
+                var actor = access.authenticateMcp(management.value());
+                assertThat(access.revalidateOwnerManager(management.delegationId())).isEqualTo(actor);
+                assertThatThrownBy(() -> runtime.start(management.value(), runtimePlan(runtimeLimits(Duration.ofSeconds(5)))))
+                    .hasMessage("AUTHORITY");
+
+                for (String workload : List.of("management", "ops")) {
+                    var plan = runtimeOperatorPlan(workload, runtimeLimits(Duration.ofSeconds(5)));
+                    assertThatThrownBy(() -> runtime.start(delegated.value(), plan)).hasMessage("AUTHORITY");
+                    UUID run = runtime.start(management.value(), plan);
+                    var admitted = runtime.result(run, management.value());
+                    assertThat(admitted.execution()).isEqualTo(Execution.ACTIVE);
+                    assertThat(admitted.budget().steps()).isZero();
+                    assertThat(admitted.budget().providerAttempts()).isZero();
+                    assertThat(admitted.budget().toolAttempts()).isZero();
+                }
+                if (role.equals("MANAGER")) {
+                    db.update("DELETE FROM venue_grants WHERE principal_id=? AND venue_id=?",
+                        bytes(operatorPrincipal), bytes(venue.value()));
+                    assertThatThrownBy(() -> access.revalidate(management.delegationId())).isInstanceOf(AccessFailure.class);
+                    assertThatThrownBy(() -> runtime.start(management.value(), runtimeOperatorPlan("ops", runtimeLimits(Duration.ofSeconds(5)))))
+                        .hasMessage("AUTHORITY");
+                }
+            }
+        }
+    }
+
+    @Test
+    void runtimeOperatorControlsRejectRoleDowngradeEvenWhenM6DelegationRemainsLive() {
+        db.update("INSERT INTO tenant_memberships(tenant_id,principal_id,role) VALUES(?,?,'OWNER')",
+            bytes(tenant), bytes(subject));
+        var management = runtimeManagementDelegation(original, venue);
+        var actor = access.revalidate(management.delegationId());
+        try (var runtime = runtime(this::runtimeGenerate)) {
+            for (String workload : List.of("management", "ops")) {
+                UUID run = runtime.start(management.value(), runtimeOperatorPlan(workload, runtimeLimits(Duration.ofSeconds(5))));
+                var read = runtime.read(run, management.value(), "management.reservations.list", Map.of("date", day.toString()));
+                assertThat(read.tools().getLast().invocation()).isEqualTo(Invocation.RESPONSE_OBSERVED);
+                var budget = read.budget();
+                db.update("UPDATE tenant_memberships SET role='STAFF' WHERE tenant_id=? AND principal_id=?",
+                    bytes(tenant), bytes(subject));
+                db.update("INSERT INTO venue_grants(tenant_id,venue_id,principal_id,role) VALUES(?,?,?,'STAFF')",
+                    bytes(tenant), bytes(venue.value()), bytes(subject));
+                assertThat(access.revalidate(management.delegationId())).isEqualTo(actor);
+                assertThatThrownBy(() -> access.revalidateOwnerManager(management.delegationId()))
+                    .isInstanceOf(AccessFailure.class);
+                for (Runnable control : List.<Runnable>of(
+                        () -> runtime.result(run, management.value()),
+                        () -> runtime.cancel(run, management.value()),
+                        () -> runtime.generate(run, management.value()),
+                        () -> runtime.read(run, management.value(), "management.reservations.list", Map.of("date", day.toString())),
+                        () -> runtime.reconcile(run, management.value()),
+                        () -> runtime.answerDeliveryFailed(run, management.value()),
+                        () -> runtime.reviewHold(run, management.value(), original.value()),
+                        () -> runtime.approveHold(run, management.value(), original.value(), null),
+                        () -> runtime.dispatchHold(run, management.value()),
+                        () -> runtime.retryHold(run, management.value(), original.value()))) {
+                    assertThatThrownBy(control::run).hasMessage("AUTHORITY");
+                }
+                db.update("DELETE FROM venue_grants WHERE tenant_id=? AND venue_id=? AND principal_id=?",
+                    bytes(tenant), bytes(venue.value()), bytes(subject));
+                db.update("UPDATE tenant_memberships SET role='OWNER' WHERE tenant_id=? AND principal_id=?",
+                    bytes(tenant), bytes(subject));
+                assertThat(runtime.result(run, management.value()).budget()).isEqualTo(budget);
+                assertThat(runtime.activeWorkers()).isZero();
+            }
+        }
+    }
+
+    @Test
+    void runtimeOperatorScopeRenewalRevocationAndExpiryCannotResetLiveBudget() {
+        db.update("INSERT INTO tenant_memberships(tenant_id,principal_id,role) VALUES(?,?,'OWNER')",
+            bytes(tenant), bytes(subject));
+        var management = runtimeManagementDelegation(original, venue);
+        var limits = new Limits(4, 1, 1, 100000, 4096, BigDecimal.ZERO, Duration.ofMinutes(10), Duration.ofSeconds(5));
+        var otherVenue = runtimeVenue(tenant);
+        UUID otherTenant = tenants.createTenant().id().value();
+        var crossTenantVenue = runtimeVenue(otherTenant);
+        db.update("INSERT INTO tenant_memberships(tenant_id,principal_id,role) VALUES(?,?,'OWNER')",
+            bytes(otherTenant), bytes(subject));
+        var otherActor = original(UUID.randomUUID());
+        db.update("INSERT INTO tenant_memberships(tenant_id,principal_id,role) VALUES(?,?,'OWNER')",
+            bytes(tenant), bytes(principal(otherActor)));
+
+        try (var runtime = runtime(this::runtimeGenerate)) {
+            UUID run = runtime.start(management.value(), runtimeOperatorPlan("management", limits));
+            var initial = runtime.result(run, management.value()).budget();
+            runtime.read(run, management.value(), "management.reservations.list", Map.of("date", day.toString()));
+            var used = runtime.result(run, management.value()).budget();
+            for (var incompatible : List.of(
+                    runtimeManagementDelegation(original, venue),
+                    runtimeManagementDelegation(original, otherVenue),
+                    runtimeManagementDelegation(original, crossTenantVenue),
+                    runtimeManagementDelegation(otherActor, venue))) {
+                assertThat(access.revalidateOwnerManager(incompatible.delegationId()).profile()).isEqualTo(AccessProfile.MANAGEMENT);
+                assertThatThrownBy(() -> runtime.result(run, incompatible.value())).hasMessage("AUTHORITY");
+                assertThatThrownBy(() -> runtime.read(run, incompatible.value(), "management.reservations.list", Map.of("date", day.toString())))
+                    .hasMessage("AUTHORITY");
+                assertThatThrownBy(() -> runtime.cancel(run, incompatible.value())).hasMessage("AUTHORITY");
+                assertThat(runtime.result(run, management.value()).budget()).isEqualTo(used);
+            }
+            assertThatThrownBy(() -> runtime.read(run, management.value(), "management.reservations.list", Map.of("date", day.toString())))
+                .hasMessage("BUDGET");
+            var ended = runtime.result(run, management.value());
+            assertThat(ended.execution()).isEqualTo(Execution.BUDGET_ENDED);
+            assertThat(ended.budget().toolAttempts()).isEqualTo(1);
+            assertThat(ended.budget().admittedAt()).isEqualTo(initial.admittedAt());
+            assertThat(ended.budget().deadline()).isEqualTo(initial.deadline());
+
+            var revoked = runtimeManagementDelegation(original, venue);
+            UUID revokedRun = runtime.start(revoked.value(), runtimeOperatorPlan("ops", runtimeLimits(Duration.ofSeconds(5))));
+            access.revokeDelegation(revoked.delegationId());
+            assertThatThrownBy(() -> runtime.result(revokedRun, revoked.value())).hasMessage("AUTHORITY");
+            var expiring = runtimeManagementDelegation(original, venue);
+            UUID expiringRun = runtime.start(expiring.value(), runtimeOperatorPlan("ops", runtimeLimits(Duration.ofSeconds(5))));
+            clock.now = access.revalidate(expiring.delegationId()).expiresAt();
+            assertThatThrownBy(() -> runtime.result(expiringRun, expiring.value())).hasMessage("AUTHORITY");
+        }
+    }
+
+    ActorAccessService.ProvisionedCredential runtimeManagementDelegation(
+            ActorAccessService.ProvisionedCredential operator, VenueId scope) {
+        return access.approveDelegation(operator.value(), scope, AccessProfile.MANAGEMENT,
+            Set.of(AccessAction.MANAGEMENT_READ), Set.of("management.reservations.list"), Duration.ofMinutes(15));
+    }
+
+    Plan runtimeOperatorPlan(String workload, Limits limits) {
+        return new Plan("runtime-role-v1", workload, limits, null,
+            Map.of("management.reservations.list", Map.of("date", day.toString())));
+    }
+
+    VenueId runtimeVenue(UUID tenantId) {
+        return venues.createVenue(new VenueConfigurationUseCase.CreateVenue(
+            new com.slotq.tenancy.domain.TenantId(tenantId), "Runtime scope", "UTC",
+            new WeeklyOperatingHours(Map.of(day.getDayOfWeek(), new DailyOperatingHours(LocalTime.of(9, 0), LocalTime.of(22, 0)))),
+            new BookingPolicyTerms(30, 5, 20, 10))).id();
+    }
+
     Limits runtimeLimits(Duration timeout){return new Limits(12,3,6,100000,4096,BigDecimal.ZERO,Duration.ofMinutes(10),timeout);}
     @Test void runtimeScopedKnowledgeRemainsUntrustedAndCannotAuthorizeForbiddenProposal() {
         var owner=original(UUID.randomUUID());

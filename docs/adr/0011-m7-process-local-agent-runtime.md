@@ -28,6 +28,10 @@ absolute deadline이다. 모든 제공 operation은 opaque MCP credential을 현
 기존 Run 접근·approval·retry를 승계하지 못한다. Compatible replacement read re-entry도
 이번 profile에서는 제공하지 않는다. Actor/Auth/Product core는 Runtime을 역참조하지 않는다.
 
+Customer Run은 Customer delegation을, management/ops Run은 현재 Owner 또는 배정된 Manager의
+management delegation을 요구한다. Auth의 현재 역할 검증을 시작·제어·전송 경계에서 다시 적용한다.
+Staff의 기존 M6 예약 조회 권한은 유지하며, Ops tool의 각 단계 인가는 #154가 소유한다.
+
 Server-owned `Plan`은 exact HOLD material과 허용 read arguments를 고정한다. `generate`는
 한 provider step만 수행한다. 모델의 HOLD proposal은 plan과 exact 일치해야 하고, approval은
 `reviewHold`가 반환한 key 없는 immutable review를 original Actor가 확인한 뒤 `approveHold`에서

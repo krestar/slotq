@@ -53,8 +53,7 @@ public final class AgentRuntime implements AutoCloseable {
     }
 
     public UUID start(String credential,Plan plan) {
-        var actor=authenticate(credential);
-        if((plan.workload().equals("customer"))!=(actor.profile()==AccessProfile.CUSTOMER)) throw fail(AUTHORITY);
+        var actor = authenticate(credential, plan.workload());
         synchronized(runs) {
             if(closed) throw fail(UNAVAILABLE);
             // Never evict live budget, unknown effects or actual continuing workers before absolute expiry.
@@ -343,17 +342,47 @@ public final class AgentRuntime implements AutoCloseable {
     }
     public int activeWorkers(){return workerLimit-workersAvailable.availablePermits();}
     private Run run(UUID id){synchronized(runs){Run r=runs.get(id);if(r==null)throw fail(AUTHORITY);return r;}}
-    private DelegatedActor authenticate(String credential) {
-        try {var a=authority.authenticateMcp(credential);var live=authority.revalidate(a.delegationId());
-            if(!a.equals(live) || !clock.instant().isBefore(live.expiresAt()))throw fail(AUTHORITY);return live;
-        }catch(RuntimeException failure){throw fail(AUTHORITY);}
+    private DelegatedActor authenticate(String credential, String workload) {
+        try {
+            var actor = authority.authenticateMcp(credential);
+            boolean customer = workload.equals("customer");
+            if (customer != (actor.profile() == AccessProfile.CUSTOMER)) {
+                throw fail(AUTHORITY);
+            }
+            var live = revalidate(workload, actor.delegationId());
+            if (!actor.equals(live) || !clock.instant().isBefore(live.expiresAt())) {
+                throw fail(AUTHORITY);
+            }
+            return live;
+        } catch (RuntimeException failure) {
+            throw fail(AUTHORITY);
+        }
     }
-    private DelegatedActor current(Run r,String credential){var actor=authenticate(credential);if(!r.origin.equals(actor))throw fail(AUTHORITY);return actor;}
-    private boolean canDispatch(Run r,DelegatedActor admitted) {
-        expire(r);
-        if(closed || r.execution!=Execution.ACTIVE)return false;
-        try {return admitted.equals(authority.revalidate(admitted.delegationId())) && clock.instant().isBefore(admitted.expiresAt());}
-        catch(RuntimeException failure){r.failure="authority_unavailable";terminal(r);return false;}
+    private DelegatedActor revalidate(String workload, UUID delegationId) {
+        return workload.equals("customer")
+            ? authority.revalidate(delegationId)
+            : authority.revalidateOwnerManager(delegationId);
+    }
+    private DelegatedActor current(Run run, String credential) {
+        var actor = authenticate(credential, run.plan.workload());
+        if (!run.origin.equals(actor)) {
+            throw fail(AUTHORITY);
+        }
+        return actor;
+    }
+    private boolean canDispatch(Run run, DelegatedActor admitted) {
+        expire(run);
+        if (closed || run.execution != Execution.ACTIVE) {
+            return false;
+        }
+        try {
+            return admitted.equals(revalidate(run.plan.workload(), admitted.delegationId()))
+                && clock.instant().isBefore(admitted.expiresAt());
+        } catch (RuntimeException failure) {
+            run.failure = "authority_unavailable";
+            terminal(run);
+            return false;
+        }
     }
     private void original(Run r,String credential){try{if(!authority.validateOriginal(credential).principalId().equals(r.origin.original().principalId()))throw fail(APPROVAL);}catch(RuntimeException failure){throw fail(APPROVAL);}}
     private void verifyReview(Run r,HoldApprovals.Review review) {
