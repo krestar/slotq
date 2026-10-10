@@ -100,6 +100,21 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
     }
     @Override public DelegatedActor revalidate(UUID delegationId) { return boundary(() -> live(delegationId)); }
 
+    @Override
+    public DelegatedActor revalidateOwnerManager(UUID delegationId) {
+        return boundary(() -> {
+            DelegatedActor actor = live(delegationId);
+            if (actor.profile() != AccessProfile.MANAGEMENT) {
+                throw denied();
+            }
+            var operator = authorization.requireVenueConfigurationAccess(actor.original(), actor.venueId());
+            if (!operator.tenantId().equals(actor.tenantId())) {
+                throw denied();
+            }
+            return actor;
+        });
+    }
+
     @Override public ProductAccessCredential issueProduct(UUID delegation, ProductOperation operation,
             UUID target, Instant deadline) {
         if (operation == ProductOperation.RESERVATION_HOLD) throw denied(); // material-bound issuance only

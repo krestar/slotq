@@ -39,6 +39,7 @@ class McpFoundationTests {
             public AuthenticatedPrincipal requireOriginalConfigurationAccess(String c,VenueId v){throw new UnsupportedOperationException();}
             public DelegatedActor authenticateMcp(String c){throw new UnsupportedOperationException();}
             public DelegatedActor revalidate(UUID id){return map.get(id);}
+            public DelegatedActor revalidateOwnerManager(UUID id){throw new UnsupportedOperationException();}
         };
     }
     static LocalAdmission limiter(int concurrency) {return new LocalAdmission(new LocalAdmission.Limit(100,100,concurrency),128,System::nanoTime);}
