@@ -49,6 +49,7 @@ tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
     systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
     ['knowledgePython', 'knowledgeModel'].each { key ->
         if (project.hasProperty(key)) systemProperty "slotq.knowledge.${key == 'knowledgePython' ? 'python' : 'model'}", project.property(key)
     }
@@ -65,6 +66,21 @@ tasks.named('test') {
         if (project.hasProperty(key)) {
             systemProperty "slotq.fault.${key}", project.property(key)
         }
+    }
+}
+
+tasks.register('modelComparison', JavaExec) {
+    group = 'verification'
+    description = 'Opt-in free-tier actual Gemini comparison with synthetic fixtures, or offline evidence recalculation.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.ai.router.ModelComparisonRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
+    systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
+    systemProperty 'slotq.modelComparison.gradleVersion', gradle.gradleVersion
+    ['optIn', 'freeTier', 'paidCalls', 'recalculate'].each { key ->
+        systemProperty "slotq.modelComparison.${key}", project.findProperty("modelComparison${key.capitalize()}") ?: 'false'
     }
 }
 
