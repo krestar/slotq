@@ -56,7 +56,17 @@ public final class McpEngine implements AutoCloseable {
         catch(McpFailure failure) { sample(context,null,failure.reason(),McpAudit.Outcome.DENIED,false,false,null,start); throw failure; }
     }
     public McpSchema.CallToolResult call(RequestContext context, String name, Object arguments) {
+        return call(context,name,arguments,Completion.NONE);
+    }
+    /** Controlled in-process observation; never grants authority or changes the wire outcome. */
+    public interface Completion {
+        Completion NONE=new Completion() { };
+        default void observed(ToolOutcome outcome) { }
+        default void finished() { }
+    }
+    public McpSchema.CallToolResult call(RequestContext context, String name, Object arguments, Completion completion) {
         long start=System.nanoTime(); ToolDefinition tool=null; LocalAdmission.Permit permit=null;
+        boolean transferred=false;
         try {
             // Unknown names use one stable bucket, never caller-created cardinality or metric labels.
             tool=registry.all().stream().filter(t->t.wire().name().equals(name)).findFirst().orElse(null);
@@ -85,11 +95,13 @@ public final class McpEngine implements AutoCloseable {
                             ToolOutcome outcome=selected.handler().execute(handlerContext,frozen);
                             registry.validateOutput(selected,outcome.content());
                             if(json.writeValueAsBytes(outcome.content()).length>65536) throw new McpFailure(McpFailure.Reason.UNKNOWN);
+                            try { completion.observed(outcome); } catch(RuntimeException ignored) { }
                             return outcome;
                         }
                     } finally {
                         // Release after actual work/accounting ends and before its Future publishes completion.
                         workerCapacity.release();
+                        try { completion.finished(); } catch(RuntimeException ignored) { }
                     }
                 });
             } catch(RuntimeException | Error failedStart) {
@@ -98,6 +110,7 @@ public final class McpEngine implements AutoCloseable {
                 throw failedStart;
             }
             permit=null; // The runner alone owns release, even after timeout/disconnect/interruption.
+            transferred=true;
             try {
                 long remaining=Math.max(1,Math.min(budget.toNanos()-(System.nanoTime()-start),
                     Duration.between(clock.instant(),handlerContext.deadline()).toNanos()));
@@ -133,7 +146,10 @@ public final class McpEngine implements AutoCloseable {
             sample(context,tool,failure.reason(),McpAudit.Outcome.DENIED,false,false,null,start);
             if(failure.reason()==McpFailure.Reason.UNKNOWN_TOOL) throw failure;
             return error(context,failure.reason(),"not_dispatched");
-        } finally { if(permit!=null) permit.close(); }
+        } finally {
+            if(permit!=null) permit.close();
+            if(!transferred) try { completion.finished(); } catch(RuntimeException ignored) { }
+        }
     }
     private McpSchema.CallToolResult error(RequestContext context,McpFailure.Reason reason,String dispatch) {
         Map<String,Object> safe=Map.of("category",reason.name().toLowerCase(Locale.ROOT),"outcome",dispatch,

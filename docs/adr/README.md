@@ -30,6 +30,7 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | [0008](0008-m5-event-transport-and-runtime-status.md) | DB direct 기본 전달과 Kafka experimental topology 유지 | `Accepted` |
 | [0009](0009-m6-authenticated-access-and-knowledge.md) | 인증된 Product API와 위임 접근·지식 경계로 M6 구성 | `Accepted` (구현/활성화 evidence는 #131~#135) |
 | [0010](0010-m7-bounded-model-router.md) | Synthetic 비교와 snapshot 계산으로 bounded Model Router 구성 | `Accepted` (bounded synthetic profile) |
+| [0011](0011-m7-process-local-agent-runtime.md) | Exact delegation과 outcome 관측으로 bounded process-local Agent Runtime 구성 | `Accepted` (controlled process-local profile) |
 
 ## 후보 등록부
 
@@ -55,4 +56,4 @@ SlotQ의 중요한 기술 선택은 Architecture Decision Record(ADR)로 남깁�
 | MCP Gateway | `Accepted` (M6 bounded profile) | #130/ADR-0009에서 Customer 접근과 management 지식/조회가 공유할 인증·registry·admission 요구, single-instance co-location과 HTTP Product invocation을 확정합니다. SDK/runtime 활성화 검증은 #131/#132가 소유합니다. |
 | RAG | `Accepted` (책임/비교 계약) | #130/ADR-0009에서 corpus authoring/visibility/version/publication과 Product authority 분리, 동일 seed/query/oracle의 lexical·actual embedding 비교를 확정합니다. Concrete retrieval default와 index/provider 선택은 #134 evidence로 결정하며 vector DB는 채택하지 않습니다. |
 | Model Router | `Accepted` (bounded synthetic profile) | [ADR-0010](0010-m7-bounded-model-router.md)/#152의 두 actual 모델 비교, eligibility/selection replay와 provider policy evidence를 채택합니다. Customer는 3.5 Flash-Lite만 eligible하며 Management/Ops는 unavailable입니다. 실제 flow 활성화와 Runtime의 채택은 #153/#155의 별도 evidence가 필요합니다. |
-| Agent Runtime | `Deferred` | [M7 공통 계약](../architecture/m7-model-router-agent-runtime.md)을 기준으로 #153의 bounded process-local 실행/Run authority/approval/outcome evidence와 #155의 실제 flow를 확인합니다. Restart-durable 필요성은 #156의 별도 gate이며 positive decision도 미설계 M7-D의 Accepted 구현을 뜻하지 않습니다. |
+| Agent Runtime | `Accepted` (controlled process-local profile) | [ADR-0011](0011-m7-process-local-agent-runtime.md)/#153의 exact delegation, bounded admission/budget, controlled original approval와 outcome/cancellation accounting을 채택합니다. Actual-provider 세 flow는 #155, restart-durable 필요성은 #156의 별도 gate입니다. |

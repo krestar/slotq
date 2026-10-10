@@ -13,6 +13,20 @@ import static org.assertj.core.api.Assertions.*;
 import static com.slotq.mcp.McpFoundationTests.*;
 
 class McpEngineConcurrencyTests {
+    @Test void completionHookCannotChangeWireResultOrLeakPermitsAndPreDispatchFinishesOnce() {
+        var actor=actor(AccessProfile.CUSTOMER);var observed=new AtomicInteger();var finished=new AtomicInteger();
+        var completion=new McpEngine.Completion() {
+            public void observed(ToolOutcome outcome){observed.incrementAndGet();throw new IllegalStateException("observer unavailable");}
+            public void finished(){finished.incrementAndGet();throw new IllegalStateException("observer unavailable");}
+        };
+        try(var audit=new McpAudit(8,event->{});var engine=engine(actor,audit,Duration.ofSeconds(10),1,quota(1),(c,i)->success(),threads())) {
+            var context=engine.context(actor,UUID.randomUUID());
+            assertThat(engine.call(context,"test.customer",Map.of("query","x","count",2),completion).isError()).isFalse();
+            assertThat(observed).hasValue(1);assertThat(finished).hasValue(1);assertThat(engine.activeWorkers()).isZero();
+            assertThat(engine.call(engine.context(actor,UUID.randomUUID()),"test.customer",Map.of("query","x","count",-1),completion).isError()).isTrue();
+            assertThat(observed).hasValue(1);assertThat(finished).hasValue(2);assertThat(engine.activeWorkers()).isZero();
+        }
+    }
     @Test void completedFutureCanStillBeRejectedByTheOldSynchronousHandoff() throws Exception {
         var completed=new CountDownLatch(1);var leave=new CountDownLatch(1);var executing=new AtomicInteger();
         var pool=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new SynchronousQueue<Runnable>(),
