@@ -183,10 +183,9 @@ describe('고객 예약 guided flow', () => {
         dateStyle: 'medium', timeStyle: 'short',
       })
       const venueStart = venueFormatter.format(new Date(held.startsAt))
-      const venueExpiry = venueFormatter.format(new Date(held.expiresAt))
       expect(browserFormatter.format(new Date(held.startsAt))).not.toBe(venueStart)
-      expect(screen.getByRole('article', { name: '현재 예약' })).toHaveTextContent(venueStart)
-      expect(screen.getByRole('article', { name: '현재 예약' })).toHaveTextContent(venueExpiry)
+      expect(screen.getByRole('article', { name: '현재 예약' })).toHaveTextContent('2099. 9. 1. 오후 6:00 (KST · Asia/Seoul)')
+      expect(screen.getByRole('article', { name: '현재 예약' })).toHaveTextContent('2099. 9. 1. 오후 5:55 (KST · Asia/Seoul)')
     } finally {
       if (previousTimezone === undefined) delete process.env.TZ
       else process.env.TZ = previousTimezone

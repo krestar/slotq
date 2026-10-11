@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { formatVenueTime, venueLocalTimestamp, venueToday } from './venueTime'
 
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 describe('매장 시간대 표시와 입력', () => {
   it.each([
@@ -38,5 +41,17 @@ describe('매장 시간대 표시와 입력', () => {
     expect(formatVenueTime('2026-10-11T00:30:00Z', 'UTC')).toContain('오전 12:30 (UTC)')
     expect(formatVenueTime('2026-10-11T00:30:00Z', 'America/New_York')).toContain('오후 8:30 (America/New_York)')
     expect(formatVenueTime('2026-10-11T00:30:00Z')).toBe('매장 시간대 확인 후 표시')
+  })
+
+  it('Intl이 AM·PM을 반환하는 환경에서도 오전·오후로 표시한다', () => {
+    const formatToParts = Intl.DateTimeFormat.prototype.formatToParts
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'formatToParts').mockImplementation(function (this: Intl.DateTimeFormat, date) {
+      return formatToParts.call(this, date).map((part) => {
+        if (part.type !== 'dayPeriod') return part
+        return { ...part, value: part.value === '오전' ? 'AM' : part.value === '오후' ? 'PM' : part.value }
+      })
+    })
+    expect(formatVenueTime('2026-10-11T00:30:00Z', 'Asia/Seoul')).toContain('오전 9:30 (KST · Asia/Seoul)')
+    expect(formatVenueTime('2026-10-11T00:30:00Z', 'America/New_York')).toContain('오후 8:30 (America/New_York)')
   })
 })

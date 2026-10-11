@@ -12,9 +12,18 @@ export function formatVenueTime(value: string, timezone?: string): string {
   if (!Number.isFinite(date.getTime())) return value
   // A known reservation can arrive before the Venue list; never use browser time as a fallback.
   if (!timezone) return '매장 시간대 확인 후 표시'
-  return `${new Intl.DateTimeFormat('ko-KR', {
+  const formatter = new Intl.DateTimeFormat('ko-KR', {
     dateStyle: 'medium', timeStyle: 'short', timeZone: timezone,
-  }).format(date)} (${timezone === 'Asia/Seoul' ? 'KST · Asia/Seoul' : timezone})`
+  })
+  // 일부 ICU 버전은 ko-KR에서도 오전·오후를 AM·PM으로 반환한다.
+  const display = formatter.formatToParts(date).map((part) => {
+    if (part.type === 'dayPeriod') {
+      if (part.value === 'AM') return '오전'
+      if (part.value === 'PM') return '오후'
+    }
+    return part.value
+  }).join('')
+  return `${display} (${timezone === 'Asia/Seoul' ? 'KST · Asia/Seoul' : timezone})`
 }
 
 export function venueLocalTimestamp(value: string, timezone: string): string {
