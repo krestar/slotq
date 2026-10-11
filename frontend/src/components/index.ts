@@ -2,6 +2,8 @@ export { Button, type ButtonProps, type ButtonVariant, type ControlDensity } fro
 export { FormField, type FormFieldProps } from './FormField'
 export {
   reservationStatusTone,
+  statusLabel,
+  formatStatus,
   StatusBadge,
   type ReservationStatus,
   type StatusBadgeProps,

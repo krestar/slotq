@@ -78,8 +78,8 @@ function makeApi(overrides: Partial<ManagementApi> = {}): ManagementApi {
 async function selectVenue(api: ManagementApi, id = ownerVenue.id) {
   render(<ManagementVenueFlow api={api} />)
   await screen.findByRole('option', { name: /Owner Venue|Staff Venue/ })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), { target: { value: id } })
-  await screen.findByRole('list', { name: 'Reservation 목록' })
+  fireEvent.change(screen.getByRole('combobox', { name: '매장' }), { target: { value: id } })
+  await screen.findByRole('list', { name: '예약 목록' })
 }
 
 function ManagementFlowWithNavigation({ api }: { api: ManagementApi }) {
@@ -88,12 +88,58 @@ function ManagementFlowWithNavigation({ api }: { api: ManagementApi }) {
     <ManagementVenueFlow
       api={api}
       onNavigationLockChange={setNavigationLocked}
-      navigation={<button disabled={navigationLocked}>Customer 예약</button>}
+      navigation={<button disabled={navigationLocked}>고객 예약</button>}
     />
   )
 }
 
 describe('Management Venue flow', () => {
+  it.each([
+    ['UTC', '2026-10-11T18:00', '2026-10-11T18:00:00+00:00'],
+    ['America/New_York', '2026-07-11T18:00', '2026-07-11T18:00:00-04:00'],
+  ])('%s 매장의 현지 시각을 기존 Slot API에 전달한다', async (timezone, local, instant) => {
+    const venue = { ...ownerVenue, timezone }
+    const api = makeApi({ listVenues: vi.fn().mockResolvedValue([venue]), getVenue: vi.fn().mockResolvedValue(venue) })
+    await selectVenue(api)
+    const input = screen.getByLabelText('시작 날짜와 시간')
+    expect(input).toHaveAttribute('type', 'datetime-local')
+    expect(input).toHaveAccessibleDescription(expect.stringContaining(timezone))
+    fireEvent.change(screen.getByLabelText('테이블', { selector: '#slot-resource' }), { target: { value: resource.id } })
+    fireEvent.change(input, { target: { value: local } })
+    fireEvent.click(screen.getByRole('button', { name: '예약 시간대 생성' }))
+    await waitFor(() => expect(api.createSlot).toHaveBeenCalledWith(venue.id, { resourceId: resource.id, startsAt: instant }))
+  })
+
+  it.each([
+    ['2026-03-08T02:30', '존재하지 않는'], ['2026-11-01T01:30', '중복 시각'],
+  ])('DST %s 입력을 안내하고 API에 전송하지 않는다', async (local, message) => {
+    const venue = { ...ownerVenue, timezone: 'America/New_York' }
+    const api = makeApi({ listVenues: vi.fn().mockResolvedValue([venue]), getVenue: vi.fn().mockResolvedValue(venue) })
+    await selectVenue(api)
+    const input = screen.getByLabelText('시작 날짜와 시간')
+    fireEvent.change(input, { target: { value: local } })
+    fireEvent.submit(input.closest('form')!)
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input).toHaveAccessibleDescription(expect.stringContaining(message))
+    expect(input).toHaveFocus()
+    expect(api.createSlot).not.toHaveBeenCalled()
+    fireEvent.change(input, { target: { value: '2026-07-11T18:00' } })
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(() => expect(api.createSlot).toHaveBeenCalledOnce())
+  })
+
+  it('한국어 상태 필터와 정책 라벨을 표시하며 API enum을 유지한다', async () => {
+    const api = makeApi()
+    await selectVenue(api)
+    const filter = screen.getByLabelText('상태', { selector: '#reservation-status' })
+    expect(within(filter).getByRole('option', { name: '예약 확정' })).toHaveValue('CONFIRMED')
+    expect(screen.getByLabelText('예약 보류 유지 시간')).toHaveAttribute('name', 'holdDurationMinutes')
+    expect(screen.getByLabelText('예약 시작 전 취소 마감 시간')).toHaveValue(60)
+    expect(screen.getByLabelText('예약 시작 후 미방문 처리 유예 시간')).toHaveValue(15)
+    fireEvent.change(filter, { target: { value: 'EXPIRED' } })
+    await waitFor(() => expect(api.listReservations).toHaveBeenLastCalledWith(ownerVenue.id, expect.any(String), 'EXPIRED'))
+  })
+
   it('uses only server Venue choices and keeps the accessibility shell', async () => {
     let resolveVenues: ((value: ManagementVenue[]) => void) | undefined
     const api = makeApi({
@@ -101,10 +147,10 @@ describe('Management Venue flow', () => {
     })
     render(<ManagementVenueFlow api={api} />)
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Venue 운영' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: '매장 운영' })).toBeInTheDocument()
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content')
     expect(screen.getByRole('link', { name: '본문으로 바로가기' })).toHaveAttribute('href', '#main-content')
-    expect(screen.getByRole('status')).toHaveTextContent('접근 가능한 Venue')
+    expect(screen.getByRole('status')).toHaveTextContent('접근 가능한 매장')
     resolveVenues?.([ownerVenue])
     await screen.findByRole('option', { name: /Owner Venue/ })
     expect(screen.getAllByRole('option')).toHaveLength(2)
@@ -124,20 +170,23 @@ describe('Management Venue flow', () => {
     expect(screen.getByRole('button', { name: '체크인' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('설정은 읽기 전용')
-    expect(screen.queryByRole('button', { name: /Venue 저장|Policy 전체 저장|TABLE Resource 추가|Slot 생성/ })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('새 TABLE 이름')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /매장 저장|운영 정책 전체 저장|테이블 추가|예약 시간대 생성/ })).not.toBeInTheDocument()
+    expect(screen.getByText('활성', { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.getByText(/Table A · 4석 · 활성/)).toBeInTheDocument()
+    expect(screen.queryByText('ACTIVE')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('새 테이블 이름')).not.toBeInTheDocument()
   })
 
   it('exposes Owner/Manager configuration controls only from configurationWritable', async () => {
     const api = makeApi()
     await selectVenue(api)
 
-    expect(screen.getByRole('button', { name: 'Venue 저장' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Policy 전체 저장' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'TABLE Resource 추가' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Slot 생성' })).toBeInTheDocument()
-    expect(screen.getByText(/capacity 1/)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/Slot capacity|capacity 편집/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '매장 저장' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '운영 정책 전체 저장' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '테이블 추가' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '예약 시간대 생성' })).toBeInTheDocument()
+    expect(screen.getByText(/예약 가능 수량 1/)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/예약 가능 수량|예약 가능 수량 편집/)).not.toBeInTheDocument()
   })
 
   it('submits Venue, full Policy, Resource create/patch, and offset Slot contracts', async () => {
@@ -146,35 +195,35 @@ describe('Management Venue flow', () => {
 
     fireEvent.change(screen.getByLabelText('이름', { selector: '#venue-name' }), { target: { value: 'Renamed' } })
     fireEvent.change(screen.getByLabelText('상태', { selector: '#venue-status' }), { target: { value: 'INACTIVE' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Venue 저장' }))
+    fireEvent.click(screen.getByRole('button', { name: '매장 저장' }))
     await waitFor(() => expect(api.patchVenue).toHaveBeenCalledWith(ownerVenue.id, {
       name: 'Renamed', status: 'INACTIVE',
     }))
 
-    fireEvent.change(screen.getByLabelText('slotDurationMinutes'), { target: { value: '45' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Policy 전체 저장' }))
+    fireEvent.change(screen.getByLabelText('예약 시간 간격'), { target: { value: '45' } })
+    fireEvent.click(screen.getByRole('button', { name: '운영 정책 전체 저장' }))
     await waitFor(() => expect(api.putPolicy).toHaveBeenCalledWith(ownerVenue.id, {
       slotDurationMinutes: 45, holdDurationMinutes: 5,
       cancellationCutoffMinutes: 60, noShowGraceMinutes: 15,
     }))
 
-    fireEvent.change(screen.getByLabelText('새 TABLE 이름'), { target: { value: 'Table B' } })
+    fireEvent.change(screen.getByLabelText('새 테이블 이름'), { target: { value: 'Table B' } })
     fireEvent.change(screen.getByLabelText('좌석 수', { selector: '#new-resource-seats' }), { target: { value: '6' } })
-    fireEvent.click(screen.getByRole('button', { name: 'TABLE Resource 추가' }))
+    fireEvent.click(screen.getByRole('button', { name: '테이블 추가' }))
     await waitFor(() => expect(api.createResource).toHaveBeenCalledWith(ownerVenue.id, {
       name: 'Table B', seatingCapacity: 6,
     }))
 
     fireEvent.change(screen.getByLabelText('상태', { selector: '#resource-status-resource-a' }), { target: { value: 'INACTIVE' } })
     const resourceForm = screen.getByLabelText('상태', { selector: '#resource-status-resource-a' }).closest('form')
-    fireEvent.click(within(resourceForm!).getByRole('button', { name: 'Resource 저장' }))
+    fireEvent.click(within(resourceForm!).getByRole('button', { name: '테이블 저장' }))
     await waitFor(() => expect(api.patchResource).toHaveBeenCalledWith(ownerVenue.id, resource.id, {
       name: resource.name, seatingCapacity: 4, status: 'INACTIVE',
     }))
 
-    fireEvent.change(screen.getByLabelText('Resource', { selector: '#slot-resource' }), { target: { value: 'resource-new' } })
-    fireEvent.change(screen.getByLabelText('startsAt (RFC3339 offset)'), { target: { value: '2099-08-31T18:00:00+09:00' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Slot 생성' }))
+    fireEvent.change(screen.getByLabelText('테이블', { selector: '#slot-resource' }), { target: { value: 'resource-new' } })
+    fireEvent.change(screen.getByLabelText('시작 날짜와 시간'), { target: { value: '2099-08-31T18:00' } })
+    fireEvent.click(screen.getByRole('button', { name: '예약 시간대 생성' }))
     await waitFor(() => expect(api.createSlot).toHaveBeenCalledWith(ownerVenue.id, {
       resourceId: 'resource-new', startsAt: '2099-08-31T18:00:00+09:00',
     }))
@@ -189,7 +238,7 @@ describe('Management Venue flow', () => {
     await selectVenue(api)
 
     fireEvent.click(screen.getByRole('button', { name: '체크인' }))
-    expect(await screen.findByText('CHECKED_IN', { selector: '.status-badge' })).toBeInTheDocument()
+    expect(await screen.findByText('체크인 완료', { selector: '.status-badge' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '체크인' })).not.toBeInTheDocument()
     expect(api.commandReservation).toHaveBeenCalledWith(ownerVenue.id, reservation.id, 'check-in')
     expect(listReservations).toHaveBeenCalledTimes(2)
@@ -214,10 +263,10 @@ describe('Management Venue flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '체크인' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('RESERVATION_TRANSITION_NOT_ALLOWED')
-    expect(screen.getByText('CONFIRMED', { selector: '.status-badge' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '원래 Reservation 다시 조회' }))
+    expect(screen.getByText('예약 확정', { selector: '.status-badge' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '원래 예약 다시 조회' }))
 
-    expect(await screen.findByText(/Reservation reservation-a 최신 상태/)).toBeInTheDocument()
+    expect(await screen.findByText(/예약 reservation-a 최신 상태/)).toBeInTheDocument()
     expect(api.getReservation).toHaveBeenCalledWith(ownerVenue.id, reservation.id)
     expect(await screen.findByRole('button', { name: '완료' })).toBeInTheDocument()
     expect(listReservations).toHaveBeenCalledTimes(2)
@@ -238,8 +287,8 @@ describe('Management Venue flow', () => {
     })
     render(<ManagementVenueFlow api={api} />)
     await screen.findByRole('option', { name: /Owner Venue/ })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), { target: { value: ownerVenue.id } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), { target: { value: secondVenue.id } })
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), { target: { value: ownerVenue.id } })
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), { target: { value: secondVenue.id } })
 
     expect(await screen.findByDisplayValue('Second Venue')).toBeInTheDocument()
     await act(async () => {
@@ -263,16 +312,16 @@ describe('Management Venue flow', () => {
     })
     render(<ManagementVenueFlow api={api} />)
     await screen.findByRole('option', { name: /Owner Venue/ })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), { target: { value: ownerVenue.id } })
-    const date = await screen.findByLabelText('Venue-local 날짜')
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), { target: { value: ownerVenue.id } })
+    const date = await screen.findByLabelText('매장 기준 날짜')
     fireEvent.change(date, { target: { value: '2099-09-01' } })
-    await screen.findByText('선택한 날짜와 상태의 Reservation이 없습니다.')
+    await screen.findByText('선택한 날짜와 상태의 예약이 없습니다.')
     await act(async () => {
       resolveOld?.([reservation])
       resolveOldSlots?.([{ ...slot, id: 'old-slot' }])
     })
     expect(screen.queryByText('customer-a')).not.toBeInTheDocument()
-    expect(screen.queryByText(/capacity 1/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/예약 가능 수량 1/)).not.toBeInTheDocument()
   })
 
   it('does not let an older Reservation list overwrite a command result', async () => {
@@ -287,13 +336,13 @@ describe('Management Venue flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '목록 새로고침' }))
     fireEvent.click(screen.getByRole('button', { name: '체크인' }))
-    expect(await screen.findByText('CHECKED_IN', { selector: '.status-badge' })).toBeInTheDocument()
+    expect(await screen.findByText('체크인 완료', { selector: '.status-badge' })).toBeInTheDocument()
     await act(async () => { resolveOldRead?.([oldCancelled]) })
-    expect(screen.getByText('CHECKED_IN', { selector: '.status-badge' })).toBeInTheDocument()
-    expect(screen.queryByText('CANCELLED', { selector: '.status-badge' })).not.toBeInTheDocument()
+    expect(screen.getByText('체크인 완료', { selector: '.status-badge' })).toBeInTheDocument()
+    expect(screen.queryByText('취소됨', { selector: '.status-badge' })).not.toBeInTheDocument()
   })
 
-  it('does not let a pending same-Venue configuration read overwrite a later Policy mutation', async () => {
+  it('does not let a pending same-매장 설정 read overwrite a later 운영 정책 mutation', async () => {
     let resolveOldPolicy: ((value: typeof policy) => void) | undefined
     const updatedPolicy = { ...policy, version: 4, slotDurationMinutes: 45 }
     const getPolicy = vi.fn()
@@ -305,16 +354,16 @@ describe('Management Venue flow', () => {
     const api = makeApi({ getPolicy, putPolicy })
     await selectVenue(api)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Policy 전체 저장' }))
+    fireEvent.click(screen.getByRole('button', { name: '운영 정책 전체 저장' }))
     expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
     await waitFor(() => expect(getPolicy).toHaveBeenCalledTimes(2))
 
-    fireEvent.change(screen.getByLabelText('slotDurationMinutes'), { target: { value: '45' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Policy 전체 저장' }))
-    expect(await screen.findByRole('heading', { level: 3, name: 'Policy v4' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('예약 시간 간격'), { target: { value: '45' } })
+    fireEvent.click(screen.getByRole('button', { name: '운영 정책 전체 저장' }))
+    expect(await screen.findByRole('heading', { level: 3, name: '운영 정책 v4' })).toBeInTheDocument()
     await act(async () => { resolveOldPolicy?.(policy) })
-    expect(screen.getByRole('heading', { level: 3, name: 'Policy v4' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: '운영 정책 v4' })).toBeInTheDocument()
   })
 
   it('connects server validation field errors to native controls', async () => {
@@ -324,10 +373,11 @@ describe('Management Venue flow', () => {
       ),
     })
     await selectVenue(api)
-    fireEvent.click(screen.getByRole('button', { name: 'Venue 저장' }))
+    fireEvent.click(screen.getByRole('button', { name: '매장 저장' }))
     const input = await screen.findByLabelText('이름', { selector: '#venue-name' })
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input).toHaveAttribute('aria-describedby', 'venue-name-error')
+    expect(input).toHaveAccessibleDescription('입력값이 서버의 검증 조건에 맞지 않습니다. 값을 확인해 주세요.')
   })
 
   it('connects client blank Venue validation without sending a request', async () => {
@@ -335,10 +385,10 @@ describe('Management Venue flow', () => {
     await selectVenue(api)
     const input = screen.getByLabelText('이름', { selector: '#venue-name' })
     fireEvent.change(input, { target: { value: '   ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Venue 저장' }))
+    fireEvent.click(screen.getByRole('button', { name: '매장 저장' }))
 
     expect(api.patchVenue).not.toHaveBeenCalled()
-    expect(await screen.findByText('Venue 이름을 입력해 주세요.')).toBeInTheDocument()
+    expect(await screen.findByText('매장 이름을 입력해 주세요.')).toBeInTheDocument()
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input).toHaveAttribute('aria-describedby', 'venue-name-error')
   })
@@ -349,11 +399,11 @@ describe('Management Venue flow', () => {
     const api = makeApi({ patchVenue })
     await selectVenue(api)
 
-    const save = screen.getByRole('button', { name: 'Venue 저장' })
+    const save = screen.getByRole('button', { name: '매장 저장' })
     fireEvent.click(save)
     fireEvent.click(save)
-    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
-    expect(screen.getByLabelText('Venue-local 날짜')).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: '매장' })).toBeDisabled()
+    expect(screen.getByLabelText('매장 기준 날짜')).toBeDisabled()
     expect(patchVenue).toHaveBeenCalledOnce()
     resolvePatch?.(ownerVenue)
     await waitFor(() => expect(save).toBeEnabled())
@@ -365,9 +415,9 @@ describe('Management Venue flow', () => {
       ),
     })
     await selectVenue(unknownApi)
-    fireEvent.change(screen.getAllByLabelText('새 TABLE 이름').at(-1)!, { target: { value: 'Unknown' } })
+    fireEvent.change(screen.getAllByLabelText('새 테이블 이름').at(-1)!, { target: { value: 'Unknown' } })
     fireEvent.change(screen.getAllByLabelText('좌석 수', { selector: '#new-resource-seats' }).at(-1)!, { target: { value: '4' } })
-    fireEvent.click(screen.getAllByRole('button', { name: 'TABLE Resource 추가' }).at(-1)!)
+    fireEvent.click(screen.getAllByRole('button', { name: '테이블 추가' }).at(-1)!)
     expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
     expect(unknownApi.createResource).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
@@ -386,9 +436,9 @@ describe('Management Venue flow', () => {
       ),
     })
     await selectVenue(api)
-    fireEvent.change(screen.getByLabelText('새 TABLE 이름'), { target: { value: 'Unknown' } })
+    fireEvent.change(screen.getByLabelText('새 테이블 이름'), { target: { value: 'Unknown' } })
     fireEvent.change(screen.getByLabelText('좌석 수', { selector: '#new-resource-seats' }), { target: { value: '4' } })
-    fireEvent.click(screen.getByRole('button', { name: 'TABLE Resource 추가' }))
+    fireEvent.click(screen.getByRole('button', { name: '테이블 추가' }))
     expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
@@ -408,7 +458,7 @@ describe('Management Venue flow', () => {
     fireEvent.change(screen.getByLabelText('이름', { selector: '#venue-name' }), {
       target: { value: 'Possibly saved' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Venue 저장' }))
+    fireEvent.click(screen.getByRole('button', { name: '매장 저장' }))
     expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
@@ -425,13 +475,13 @@ describe('Management Venue flow', () => {
       ),
     })
     await selectVenue(slotApi)
-    fireEvent.change(screen.getByLabelText('Resource', { selector: '#slot-resource' }), {
+    fireEvent.change(screen.getByLabelText('테이블', { selector: '#slot-resource' }), {
       target: { value: resource.id },
     })
-    fireEvent.change(screen.getByLabelText('startsAt (RFC3339 offset)'), {
-      target: { value: '2099-08-31T18:00:00+09:00' },
+    fireEvent.change(screen.getByLabelText('시작 날짜와 시간'), {
+      target: { value: '2099-08-31T18:00' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Slot 생성' }))
+    fireEvent.click(screen.getByRole('button', { name: '예약 시간대 생성' }))
     expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '관련 데이터 다시 조회' }))
     await waitFor(() => expect(slotApi.listSlots).toHaveBeenCalledTimes(2))
@@ -460,10 +510,10 @@ describe('Management Venue flow', () => {
     })
     render(<ManagementFlowWithNavigation api={api} />)
     await screen.findByRole('option', { name: /Owner Venue/ })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), {
       target: { value: ownerVenue.id },
     })
-    await screen.findByRole('list', { name: 'Reservation 목록' })
+    await screen.findByRole('list', { name: '예약 목록' })
     fireEvent.change(screen.getByLabelText('상태', { selector: '#reservation-status' }), {
       target: { value: 'CONFIRMED' },
     })
@@ -471,8 +521,8 @@ describe('Management Venue flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '취소' }))
     expect(await screen.findByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
-    const venueSelect = screen.getByRole('combobox', { name: 'Venue' })
-    const dateInput = screen.getByLabelText('Venue-local 날짜')
+    const venueSelect = screen.getByRole('combobox', { name: '매장' })
+    const dateInput = screen.getByLabelText('매장 기준 날짜')
     const statusSelect = screen.getByLabelText('상태', { selector: '#reservation-status' })
     const originalDate = (dateInput as HTMLInputElement).value
     expect(venueSelect).toBeDisabled()
@@ -485,14 +535,14 @@ describe('Management Venue flow', () => {
     expect(dateInput).toHaveValue(originalDate)
     expect(statusSelect).toHaveValue('CONFIRMED')
 
-    fireEvent.click(screen.getByRole('button', { name: '원래 Reservation 다시 조회' }))
+    fireEvent.click(screen.getByRole('button', { name: '원래 예약 다시 조회' }))
     await waitFor(() => expect(getReservation).toHaveBeenCalledWith(ownerVenue.id, reservation.id))
     expect(listReservations).toHaveBeenCalledTimes(2)
     expect(screen.getByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
 
     await act(async () => { resolveExact?.(reservationDetails) })
-    expect(await screen.findByText(/Reservation reservation-a 최신 상태/)).toBeInTheDocument()
-    expect(screen.getByText('CANCELLED', { selector: '.notice--state .status-badge' })).toBeInTheDocument()
+    expect(await screen.findByText(/예약 reservation-a 최신 상태/)).toBeInTheDocument()
+    expect(screen.getByText('취소됨', { selector: '.notice--state .status-badge' })).toBeInTheDocument()
     await waitFor(() => expect(listReservations).toHaveBeenCalledTimes(3))
     expect(screen.queryByText('작업 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
     const staleCancel = screen.queryByRole('button', { name: '취소' })
@@ -500,15 +550,15 @@ describe('Management Venue flow', () => {
     expect(venueSelect).toBeDisabled()
     expect(dateInput).toBeDisabled()
     expect(statusSelect).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '고객 예약' })).toBeDisabled()
 
     await act(async () => { resolveList?.([]) })
     expect(listReservations).toHaveBeenLastCalledWith(ownerVenue.id, expect.any(String), 'CONFIRMED')
-    expect(await screen.findByText('선택한 날짜와 상태의 Reservation이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('선택한 날짜와 상태의 예약이 없습니다.')).toBeInTheDocument()
     expect(venueSelect).toBeEnabled()
     expect(dateInput).toBeEnabled()
     expect(statusSelect).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '고객 예약' })).toBeEnabled()
   })
 
   it('does not reactivate stale actions when the post-exact list refresh fails', async () => {
@@ -525,27 +575,27 @@ describe('Management Venue flow', () => {
     })
     render(<ManagementFlowWithNavigation api={api} />)
     await screen.findByRole('option', { name: /Owner Venue/ })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), {
       target: { value: ownerVenue.id },
     })
-    await screen.findByRole('list', { name: 'Reservation 목록' })
+    await screen.findByRole('list', { name: '예약 목록' })
     fireEvent.change(screen.getByLabelText('상태', { selector: '#reservation-status' }), {
       target: { value: 'CONFIRMED' },
     })
     await waitFor(() => expect(listReservations).toHaveBeenCalledTimes(2))
 
     fireEvent.click(screen.getByRole('button', { name: '취소' }))
-    fireEvent.click(await screen.findByRole('button', { name: '원래 Reservation 다시 조회' }))
+    fireEvent.click(await screen.findByRole('button', { name: '원래 예약 다시 조회' }))
 
-    expect(await screen.findByText(/Reservation reservation-a 최신 상태/)).toBeInTheDocument()
-    expect(screen.getByText('CANCELLED', { selector: '.notice--state .status-badge' })).toBeInTheDocument()
+    expect(await screen.findByText(/예약 reservation-a 최신 상태/)).toBeInTheDocument()
+    expect(screen.getByText('취소됨', { selector: '.notice--state .status-badge' })).toBeInTheDocument()
     expect(await screen.findByRole('alert')).toHaveTextContent('INTERNAL_ERROR')
     const staleCancel = screen.queryByRole('button', { name: '취소' })
     if (staleCancel) expect(staleCancel).toBeDisabled()
-    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeEnabled()
-    expect(screen.getByLabelText('Venue-local 날짜')).toBeEnabled()
+    expect(screen.getByRole('combobox', { name: '매장' })).toBeEnabled()
+    expect(screen.getByLabelText('매장 기준 날짜')).toBeEnabled()
     expect(screen.getByLabelText('상태', { selector: '#reservation-status' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '고객 예약' })).toBeEnabled()
   })
 
   it('keeps the original target unknown when its exact GET fails', async () => {
@@ -558,12 +608,12 @@ describe('Management Venue flow', () => {
     })
     await selectVenue(api)
     fireEvent.click(screen.getByRole('button', { name: '취소' }))
-    fireEvent.click(await screen.findByRole('button', { name: '원래 Reservation 다시 조회' }))
+    fireEvent.click(await screen.findByRole('button', { name: '원래 예약 다시 조회' }))
 
-    expect(await screen.findByText('원래 Reservation의 결과는 아직 확정하지 않았습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('원래 예약의 결과는 아직 확정하지 않았습니다.')).toBeInTheDocument()
     expect(screen.getByText('작업 결과를 확인할 수 없습니다')).toBeInTheDocument()
     expect(getReservation).toHaveBeenCalledWith(ownerVenue.id, reservation.id)
-    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: '매장' })).toBeDisabled()
   })
 
   it('re-fetches the selected date after Slot creation instead of appending another date', async () => {
@@ -579,15 +629,15 @@ describe('Management Venue flow', () => {
       createSlot: vi.fn().mockResolvedValue(otherDateSlot),
     })
     await selectVenue(api)
-    fireEvent.change(screen.getByLabelText('Venue-local 날짜'), { target: { value: '2099-08-31' } })
+    fireEvent.change(screen.getByLabelText('매장 기준 날짜'), { target: { value: '2099-08-31' } })
     await waitFor(() => expect(listSlots).toHaveBeenCalledTimes(2))
-    fireEvent.change(screen.getByLabelText('Resource', { selector: '#slot-resource' }), {
+    fireEvent.change(screen.getByLabelText('테이블', { selector: '#slot-resource' }), {
       target: { value: resource.id },
     })
-    fireEvent.change(screen.getByLabelText('startsAt (RFC3339 offset)'), {
-      target: { value: otherDateSlot.startsAt },
+    fireEvent.change(screen.getByLabelText('시작 날짜와 시간'), {
+      target: { value: '2099-09-01T18:00' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Slot 생성' }))
+    fireEvent.click(screen.getByRole('button', { name: '예약 시간대 생성' }))
 
     await waitFor(() => expect(listSlots).toHaveBeenCalledTimes(3))
     expect(listSlots).toHaveBeenLastCalledWith(ownerVenue.id, '2099-08-31')
@@ -602,7 +652,7 @@ describe('Management Venue flow', () => {
     const api = makeApi({ listReservations: vi.fn().mockRejectedValue(error) })
     render(<ManagementVenueFlow api={api} />)
     await screen.findByRole('option', { name: /Owner Venue/ })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), { target: { value: ownerVenue.id } })
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), { target: { value: ownerVenue.id } })
     expect(await screen.findByRole('alert')).toHaveTextContent(error.code)
   })
 })

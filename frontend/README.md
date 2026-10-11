@@ -103,6 +103,16 @@ representation을 사용한다. confirm/cancel에는 key를 보내지 않으며 
 Reservation GET으로만 재조정하고 context/navigation lock을 유지한다. Browser CORS는 HOLD key
 preflight와 Location 읽기를 지원한다.
 
+## 한국어 표시와 매장 시간대
+
+예약·대기 등록·예약 제안은 각 상태의 의미에 맞는 한국어로 표시하며, 상태 색상과
+API enum·필드명은 유지한다. 날짜 범위와 시각 표시는 서버가 제공하는 매장 시간대를
+따른다. 시간대를 아직 확인하지 못한 예약은 브라우저 시간대로 대신 표시하지 않는다.
+
+운영 화면의 시작 날짜·시간은 선택한 매장 시간대의 RFC3339 offset으로 변환한다.
+DST gap과 overlap은 안내 후 거절하며, 영업시간·예약 간격 등 최종 검증은 Backend가
+수행한다. 날짜·시간 컨트롤과 기존 폼 label·오류 연결·포커스는 유지한다.
+
 ## Accessibility baseline
 
 - `header`, `main`, `footer` landmark와 페이지별 하나의 명확한 `h1`을 사용한다.

@@ -85,28 +85,28 @@ export function App({ api, managementApi, waitlistApi }: AppProps) {
     if (surface === 'waitlist') window.history.replaceState(null, '', urlFor('waitlist', next))
   }
   const navigation = (
-    <nav className="surface-navigation" aria-label="Product surface">
+    <nav className="surface-navigation" aria-label="화면 선택">
       <Button
         density="compact"
         variant={surface === 'customer' ? 'primary' : 'secondary'}
         aria-current={surface === 'customer' ? 'page' : undefined}
         disabled={navigationLocked}
         onClick={() => navigate('customer')}
-      >Customer 예약</Button>
+      >고객 예약</Button>
       <Button
         density="compact"
         variant={surface === 'waitlist' ? 'primary' : 'secondary'}
         aria-current={surface === 'waitlist' ? 'page' : undefined}
         disabled={navigationLocked}
         onClick={() => navigate('waitlist')}
-      >Customer 대기</Button>
+      >고객 대기</Button>
       <Button
         density="compact"
         variant={surface === 'management' ? 'primary' : 'secondary'}
         aria-current={surface === 'management' ? 'page' : undefined}
         disabled={navigationLocked}
         onClick={() => navigate('management')}
-      >Venue 운영</Button>
+      >매장 운영</Button>
     </nav>
   )
 

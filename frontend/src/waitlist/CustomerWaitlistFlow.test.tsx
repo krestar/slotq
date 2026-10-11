@@ -31,7 +31,7 @@ function makeApi(overrides: Partial<WaitlistApi> = {}): WaitlistApi {
   }
 }
 const reservationApi = {
-  listVenues: vi.fn().mockResolvedValue([{ id: venue, name: 'Venue', timezone: 'Asia/Seoul' }]),
+  listVenues: vi.fn().mockResolvedValue([{ id: venue, name: '매장', timezone: 'Asia/Seoul' }]),
   getAvailability: vi.fn().mockResolvedValue({ venueId: venue, timezone: 'Asia/Seoul', date: '2099-09-01', items: [{
     slotInventoryId: slot, resourceId: slot, resourceName: 'Table 1', startsAt: instant,
     endsAt: instant, seatingCapacity: 4, capacity: 1, occupied: 1, available: 0,
@@ -53,17 +53,17 @@ describe('Customer Waitlist flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '시간대 조회' }))
     await screen.findByText(/현재 가능 0/)
     fireEvent.click(screen.getByRole('button', { name: '이 시간대 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간대의 적합한 Table 대기' }))
-    await screen.findByRole('button', { name: '같은 key·body로 명시적 재시도' })
+    fireEvent.click(screen.getByRole('button', { name: '이 시간대 대기 등록' }))
+    await screen.findByRole('button', { name: '같은 등록 요청 다시 시도' })
     expect(api.register).toHaveBeenCalledOnce()
-    fireEvent.click(screen.getByRole('button', { name: '등록 키 결과 조회' }))
+    fireEvent.click(screen.getByRole('button', { name: '원래 등록 요청 결과 조회' }))
     await screen.findByText(/아직 commit 결과가 관측되지 않았습니다/)
     expect(api.register).toHaveBeenCalledOnce()
-    fireEvent.click(screen.getByRole('button', { name: '같은 key·body로 명시적 재시도' }))
-    await screen.findByText(/기존 활성 Entry가 반환되었습니다/)
+    fireEvent.click(screen.getByRole('button', { name: '같은 등록 요청 다시 시도' }))
+    await screen.findByText(/기존 활성 대기 등록이 반환되었습니다/)
     expect(api.register).toHaveBeenCalledTimes(2)
     expect(vi.mocked(api.register).mock.calls[1]).toEqual(vi.mocked(api.register).mock.calls[0])
-    expect(await screen.findByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('CANCELLED')
+    expect(await screen.findByRole('article', { name: '대기 등록 현재 상태' })).toHaveTextContent('취소됨')
   })
   it('reconciles an expiry conflict through exact Offer and does not expose stale opposite action', async () => {
     const current = { ...entry, state: 'OFFERED' as const, offerId, allowedActions: [] }
@@ -73,10 +73,10 @@ describe('Customer Waitlist flow', () => {
       offerAction: vi.fn().mockRejectedValue(new WaitlistApiError(409, 'OFFER_EXPIRED')) })
     render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={createWaitlistSession()}
       selection={{ ...selection, entryId }} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Offer 수락' }))
-    await waitFor(() => expect(screen.getByRole('article', { name: 'Offer 현재 상태' })).toHaveTextContent('EXPIRED'))
+    fireEvent.click(await screen.findByRole('button', { name: '예약 제안 수락' }))
+    await waitFor(() => expect(screen.getByRole('article', { name: '예약 제안 현재 상태' })).toHaveTextContent('만료됨'))
     expect(api.offerAction).toHaveBeenCalledWith(venue, offerId, 'accept')
-    expect(screen.queryByRole('button', { name: 'Offer 거절' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '예약 제안 거절' })).not.toBeInTheDocument()
     expect(api.offer).toHaveBeenCalledTimes(3)
   })
   it('finds the original Offer after an unknown response and allows only the same action retry', async () => {
@@ -88,12 +88,12 @@ describe('Customer Waitlist flow', () => {
     })
     render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={createWaitlistSession()}
       selection={{ ...selection, entryId }} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Offer 수락' }))
+    fireEvent.click(await screen.findByRole('button', { name: '예약 제안 수락' }))
     expect(await screen.findByText(/처리 결과 확인 필요/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '원래 대상 exact 조회' }))
-    expect(await screen.findByRole('button', { name: '같은 대상·작업 명시적 재시도' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Offer 거절' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '같은 대상·작업 명시적 재시도' }))
+    fireEvent.click(screen.getByRole('button', { name: '원래 대상 개별 조회' }))
+    expect(await screen.findByRole('button', { name: '같은 대상의 같은 작업 다시 시도' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '예약 제안 거절' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '같은 대상의 같은 작업 다시 시도' }))
     await waitFor(() => expect(api.offerAction).toHaveBeenCalledTimes(2))
     expect(vi.mocked(api.offerAction).mock.calls).toEqual([[venue, offerId, 'accept'], [venue, offerId, 'accept']])
   })
@@ -113,14 +113,14 @@ describe('Customer Waitlist flow', () => {
       selection={{ ...selection, entryId }} />)
     fireEvent.click(await screen.findByRole('button', { name: '대기 취소' }))
     expect(await screen.findByText(/처리 결과 확인 필요/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '원래 대상 exact 조회' }))
-    expect(await screen.findByRole('button', { name: '같은 대상·작업 명시적 재시도' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '원래 대상 개별 조회' }))
+    expect(await screen.findByRole('button', { name: '같은 대상의 같은 작업 다시 시도' })).toBeInTheDocument()
     expect(api.cancel).toHaveBeenCalledOnce()
     terminal = true
-    fireEvent.click(screen.getByRole('button', { name: '원래 대상 exact 조회' }))
+    fireEvent.click(screen.getByRole('button', { name: '원래 대상 개별 조회' }))
     expect(await screen.findByRole('button', { name: '확인된 작업 닫기' })).toBeInTheDocument()
-    expect(screen.getByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('DECLINED')
-    expect(screen.getByRole('article', { name: 'Offer 현재 상태' })).toHaveTextContent('DECLINED')
+    expect(screen.getByRole('article', { name: '대기 등록 현재 상태' })).toHaveTextContent('제안 거절')
+    expect(screen.getByRole('article', { name: '예약 제안 현재 상태' })).toHaveTextContent('제안 거절')
     expect(session.getSnapshot().action?.command.targetId).toBe(entryId)
     expect(api.cancel).toHaveBeenCalledOnce()
   })
@@ -138,15 +138,15 @@ describe('Customer Waitlist flow', () => {
     ]) } as CustomerReservationApi
     render(<CustomerWaitlistFlow api={api} reservationApi={venues} session={createWaitlistSession()}
       selection={{ ...selection, entryId }} />)
-    await screen.findByText(`Entry ${entryId}`)
-    await screen.findByRole('article', { name: 'Entry 현재 상태' })
+    await screen.findByText(`대기 등록 ${entryId}`)
+    await screen.findByRole('article', { name: '대기 등록 현재 상태' })
     fireEvent.click(screen.getByRole('button', { name: '현재 상태 다시 조회' }))
     await waitFor(() => expect(api.entry).toHaveBeenCalledTimes(2))
-    fireEvent.change(screen.getByLabelText('Venue'), { target: { value: otherVenue } })
-    await screen.findByText(`Entry ${slot}`)
+    fireEvent.change(screen.getByLabelText('매장'), { target: { value: otherVenue } })
+    await screen.findByText(`대기 등록 ${slot}`)
     await act(async () => { resolveOld(entry) })
-    expect(screen.getByText(`Entry ${slot}`)).toBeInTheDocument()
-    expect(screen.queryByText(`Entry ${entryId}`)).not.toBeInTheDocument()
+    expect(screen.getByText(`대기 등록 ${slot}`)).toBeInTheDocument()
+    expect(screen.queryByText(`대기 등록 ${entryId}`)).not.toBeInTheDocument()
     expect(vi.mocked(api.entries).mock.calls.map(([id]) => id)).toEqual([venue, otherVenue])
   })
   it('bounds reads when the browser clock passed a server PENDING Offer deadline', async () => {
@@ -169,7 +169,7 @@ describe('Customer Waitlist flow', () => {
       expect(screen.getByText(/표시 시간이 지났습니다. 서버 상태 확인 중/)).toBeInTheDocument()
       await act(async () => { vi.advanceTimersByTime(15_000); await Promise.resolve() })
       expect(api.entry).toHaveBeenCalledTimes(2)
-      expect(screen.getByRole('article', { name: 'Offer 현재 상태' })).toHaveTextContent('PENDING')
+      expect(screen.getByRole('article', { name: '예약 제안 현재 상태' })).toHaveTextContent('수락 대기')
       expect(api.cancel).not.toHaveBeenCalled()
       expect(api.offerAction).not.toHaveBeenCalled()
     } finally {
@@ -185,10 +185,10 @@ describe('Customer Waitlist flow', () => {
     render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={createWaitlistSession()} selection={selection} />)
     const buttons = await screen.findAllByRole('button', { name: '상세 조회' })
     fireEvent.click(buttons[0]); fireEvent.click(buttons[1])
-    await waitFor(() => expect(screen.getByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('CANCELLED'))
-    expect(screen.getByText(`선택한 Entry ${slot}`)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('article', { name: '대기 등록 현재 상태' })).toHaveTextContent('취소됨'))
+    expect(screen.getByText(`선택한 대기 등록 ${slot}`)).toBeInTheDocument()
     await act(async () => { resolveOld(entry) })
-    expect(screen.getByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('CANCELLED')
+    expect(screen.getByRole('article', { name: '대기 등록 현재 상태' })).toHaveTextContent('취소됨')
     expect(screen.queryByRole('button', { name: '대기 취소' })).not.toBeInTheDocument()
   })
   it('labels a retained list as stale when the next server read fails', async () => {
@@ -196,10 +196,10 @@ describe('Customer Waitlist flow', () => {
       .mockRejectedValueOnce(new WaitlistApiError(500, 'INTERNAL_ERROR')) })
     render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={createWaitlistSession()}
       selection={selection} />)
-    await screen.findByText(`Entry ${entryId}`)
+    await screen.findByText(`대기 등록 ${entryId}`)
     fireEvent.click(screen.getByRole('button', { name: '현재 상태 다시 조회' }))
     expect(await screen.findByText('아래 목록은 이전 조회 결과입니다. 최신 상태를 확인할 수 없습니다.')).toBeInTheDocument()
-    expect(screen.getByText(`Entry ${entryId}`)).toBeInTheDocument()
+    expect(screen.getByText(`대기 등록 ${entryId}`)).toBeInTheDocument()
   })
   it('links accepted Offer to the same Reservation without creating a HOLD', async () => {
     const open = vi.fn()
@@ -209,7 +209,7 @@ describe('Customer Waitlist flow', () => {
       offer: vi.fn().mockResolvedValue(accepted) })
     render(<CustomerWaitlistFlow api={api} reservationApi={reservationApi} session={createWaitlistSession()}
       selection={{ ...selection, entryId }} onOpenReservation={open} />)
-    fireEvent.click(await screen.findByRole('button', { name: '같은 Reservation 상세 확인' }))
+    fireEvent.click(await screen.findByRole('button', { name: '같은 예약 상세 확인' }))
     expect(open).toHaveBeenCalledWith(venue, slot)
     expect(api.register).not.toHaveBeenCalled()
   })

@@ -10,4 +10,6 @@ public interface ActorAccess {
     AuthenticatedPrincipal requireOriginalConfigurationAccess(String credential, VenueId venue);
     DelegatedActor authenticateMcp(String credential);
     DelegatedActor revalidate(UUID delegationId);
+    /** Current Venue role gate; does not expand delegation actions or tools. */
+    DelegatedActor revalidateOwnerManager(UUID delegationId);
 }

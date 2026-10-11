@@ -1,5 +1,6 @@
+import { formatVenueTime as format } from '../venueTime'
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { Button, FormField, StatusBadge } from '../components'
+import { Button, FormField, StatusBadge, formatStatus } from '../components'
 import { customerReservationApi, type CustomerReservationApi, type Availability, type VenueSummary } from '../customer/customerReservationApi'
 import { WaitlistApiError, WaitlistMutationUnknown, waitlistApi, type Entry, type EntryPage,
   type Offer, type RegistrationReceipt, type WaitlistApi, type WaitlistCode } from './waitlistApi'
@@ -21,25 +22,25 @@ export interface CustomerWaitlistFlowProps {
 }
 type Load = 'idle' | 'loading' | 'success' | 'error'
 const REFRESH_MS = 15_000
+const requestStatusLabel = {
+  pending: '응답 대기 중', unknown: '결과 확인 필요', known: '응답 확인 · 최신 상태 조회 필요',
+  ready: '상태 확인 완료', rejected: '요청 거절됨',
+}
+const actionLabel = { cancel: '대기 취소', accept: '예약 제안 수락', reject: '예약 제안 거절' }
 const copy: Record<WaitlistCode, string> = {
   VALIDATION_FAILED: '입력값을 확인해 주세요.', AUTHENTICATION_REQUIRED: '인증이 필요합니다. 다시 조회해 주세요.',
   ACCESS_DENIED: '현재 사용자에게 허용되지 않은 작업입니다.', RESOURCE_NOT_FOUND: '대상을 찾을 수 없습니다.',
   IDEMPOTENCY_KEY_REUSED: '등록 키가 다른 요청에 사용되었습니다. 원래 요청 상태를 확인해 주세요.',
-  WAITLIST_DEMAND_NOT_ALLOWED: '현재 수요를 등록할 수 없습니다. 최신 시간대를 확인해 주세요.',
-  WAITLIST_TRANSITION_NOT_ALLOWED: '현재 Entry 상태에서 처리할 수 없습니다.',
-  OFFER_EXPIRED: '서버에서 Offer 기한이 지났습니다. 원래 Offer를 다시 조회합니다.',
-  OFFER_TRANSITION_NOT_ALLOWED: '현재 Offer 상태에서 처리할 수 없습니다.',
-  CAPACITY_UNAVAILABLE: '현재 capacity를 확보할 수 없습니다. 원래 Offer를 다시 조회합니다.',
+  WAITLIST_DEMAND_NOT_ALLOWED: '현재 대기 요청을 등록할 수 없습니다. 최신 시간대를 확인해 주세요.',
+  WAITLIST_TRANSITION_NOT_ALLOWED: '현재 대기 등록 상태에서 처리할 수 없습니다.',
+  OFFER_EXPIRED: '서버에서 예약 제안 기한이 지났습니다. 원래 예약 제안을 다시 조회합니다.',
+  OFFER_TRANSITION_NOT_ALLOWED: '현재 예약 제안 상태에서 처리할 수 없습니다.',
+  CAPACITY_UNAVAILABLE: '현재 예약 가능 수량을 확보할 수 없습니다. 원래 예약 제안을 다시 조회합니다.',
   INTERNAL_ERROR: '서버 결과를 확인할 수 없습니다.', NETWORK_ERROR: '서버에 연결할 수 없습니다.',
   UNEXPECTED_RESPONSE: '서버 응답을 확인할 수 없습니다.',
 }
 const normalize = (error: unknown) => error instanceof WaitlistApiError
   ? error : new WaitlistApiError(0, 'UNEXPECTED_RESPONSE')
-function format(value: string, timezone: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) return value
-  return `${new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone }).format(date)} (${timezone})`
-}
 function Deadline({ value, timezone }: { value: string; timezone: string }) {
   const [now, setNow] = useState(Date.now)
   useEffect(() => {
@@ -236,7 +237,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
       if (!session.registrationCurrent(command) || !mounted.current) return
       session.markRegistration(command, 'known', result)
       setSelectedEntryId(result.entryId)
-      setNotice(result.originalStatus === 200 ? '기존 활성 Entry가 반환되었습니다. 새 순서를 받은 것은 아닙니다.' : '등록 결과를 확인했습니다.')
+      setNotice(result.originalStatus === 200 ? '기존 활성 대기 등록이 반환되었습니다. 새 순서를 받은 것은 아닙니다.' : '등록 결과를 확인했습니다.')
       void loadEntries()
     } catch (cause) {
       if (!session.registrationCurrent(command) || !mounted.current) return
@@ -247,7 +248,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
         const known = normalize(cause)
         setError(known)
         session.markRegistration(command, known.code === 'IDEMPOTENCY_KEY_REUSED' ? 'unknown' : 'rejected')
-        setNotice('서버 응답을 확인했습니다. 현재 Entry 목록은 별도로 조회하세요.')
+        setNotice('서버 응답을 확인했습니다. 현재 대기 등록 목록은 별도로 조회하세요.')
       }
     } finally { operationInFlight.current = false; if (mounted.current) setOperation(false) }
   }
@@ -269,7 +270,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
       session.markRegistration(command, 'known', receipt)
       setSelectedEntryId(receipt.entryId)
       void loadEntries()
-      setNotice('등록 키의 commit 결과를 확인했습니다.')
+      setNotice('원래 등록 요청의 처리 결과를 확인했습니다.')
     } catch (cause) {
       if (!session.registrationCurrent(command) || !mounted.current) return
       const known = normalize(cause)
@@ -291,7 +292,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
       } catch (cause) {
         if (!session.actionCurrent(command) || readEpoch !== session.getSnapshot().epoch || !mounted.current) return
         setExactState('error'); setReadError(normalize(cause))
-        setNotice('원래 Offer의 현재 상태를 확인할 수 없습니다.')
+        setNotice('원래 예약 제안의 현재 상태를 확인할 수 없습니다.')
         return
       }
     }
@@ -317,7 +318,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
       if (!session.actionCurrent(command) || !mounted.current) return
       if (cause instanceof WaitlistMutationUnknown) {
         session.markAction(command, 'unknown')
-        setNotice('처리 결과 확인 필요. 원래 대상을 exact 조회해 주세요.')
+        setNotice('처리 결과 확인 필요. 원래 대상을 개별 조회해 주세요.')
       } else {
         setError(normalize(cause)); session.markAction(command, 'known')
         await reconcileAction(command)
@@ -361,26 +362,26 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
     <header className="site-header"><span className="brand" aria-label="SlotQ">SlotQ</span>{navigation}</header>
     <main id="main-content" className="app-shell" tabIndex={-1}>
       <section className="intro" aria-labelledby="waitlist-title">
-        <p className="eyebrow">Customer waitlist</p><h1 id="waitlist-title">대기와 Offer</h1>
-        <p>이 시간대에 적합한 Table을 기다립니다. 등록은 Offer나 대기시간을 보장하지 않습니다.</p>
-        <p>새로고침하면 미해결 key와 재시도 의도가 사라집니다. 재인증 후 자신의 목록과 알려진 ID를 서버에서 다시 확인하세요.</p>
+        <p className="eyebrow">고객 대기</p><h1 id="waitlist-title">대기와 예약 제안</h1>
+        <p>이 시간대에 적합한 테이블을 기다립니다. 대기 등록은 예약이나 예약 제안, 대기시간을 보장하지 않습니다.</p>
+        <p>새로고침하면 결과를 확인하지 못한 요청을 다시 보낼 수 없습니다. 다시 인증한 뒤 내 대기 목록과 알고 있는 ID로 상태를 확인해 주세요.</p>
       </section>
       {notice ? <p className="notice notice--state" role="status" aria-live="polite">{notice}</p> : null}
       {error ? <p className="notice notice--error" role="alert">{copy[error.code]} <code>{error.code}</code></p> : null}
-      {readError ? <p className="notice notice--error" role="status">현재값 확인 실패: {copy[readError.code]} <code>{readError.code}</code></p> : null}
+      {readError ? <p className="notice notice--error" role="status">현재 상태 확인 실패: {copy[readError.code]} <code>{readError.code}</code></p> : null}
       <section className="management-section" aria-labelledby="waitlist-register-title">
         <h2 id="waitlist-register-title">시간대 선택과 등록</h2>
-        {venueState === 'loading' ? <p role="status">Venue 조회 중…</p> : null}
-        {venueState === 'error' ? <Button onClick={() => void loadVenues()}>Venue 다시 조회</Button> : null}
+        {venueState === 'loading' ? <p role="status">매장 조회 중…</p> : null}
+        {venueState === 'error' ? <Button onClick={() => void loadVenues()}>매장 다시 조회</Button> : null}
         <div className="filter-row">
-          <FormField id="waitlist-venue" label="Venue">
+          <FormField id="waitlist-venue" label="매장">
             <select value={venueId} disabled={locked} onChange={(event) => {
               invalidateReads(); setVenueId(event.target.value); setPage(undefined); setEntry(undefined); setOffer(undefined)
               setSelectedEntryId(''); setAvailability(undefined); setSlotInventoryId('')
-            }}><option value="">Venue 선택</option>{venues.map((item) =>
+            }}><option value="">매장 선택</option>{venues.map((item) =>
               <option key={item.id} value={item.id}>{item.name} · {item.timezone}</option>)}</select>
           </FormField>
-          <FormField id="waitlist-date" label="Venue-local 날짜">
+          <FormField id="waitlist-date" label="매장 기준 날짜" description={venues.find((venue) => venue.id === venueId)?.timezone}>
             <input type="date" value={date} disabled={locked} onChange={(event) => {
               invalidateReads(); setDate(event.target.value); setPage(undefined); setAvailability(undefined); setSlotInventoryId('')
             }} />
@@ -392,7 +393,7 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
           <Button variant="secondary" disabled={!venueId || !date || locked || availabilityState === 'loading'} onClick={() => void loadAvailability()}>시간대 조회</Button>
         </div>
         {availabilityState === 'loading' ? <p role="status">시간대 조회 중…</p> : null}
-        {availability && availability.items.length === 0 ? <p className="notice notice--empty">선택한 날짜의 Slot이 없습니다.</p> : null}
+        {availability && availability.items.length === 0 ? <p className="notice notice--empty">선택한 날짜의 예약 시간대가 없습니다.</p> : null}
         {availability ? <ul className="availability-list" aria-label="대기 등록 시간대">
           {availability.items.map((item) => <li key={item.slotInventoryId} className="availability-card">
             <div><strong>{item.resourceName}</strong><p><time dateTime={item.startsAt}>{format(item.startsAt, availability.timezone)}</time></p>
@@ -401,35 +402,35 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
               disabled={locked} onClick={() => setSlotInventoryId(item.slotInventoryId)}>
               {slotInventoryId === item.slotInventoryId ? '선택됨' : '이 시간대 선택'}</Button>
           </li>)}</ul> : null}
-        <Button disabled={!slotInventoryId || locked || !!attempt || !!action} onClick={register}>이 시간대의 적합한 Table 대기</Button>
+        <Button disabled={!slotInventoryId || locked || !!attempt || !!action} onClick={register}>이 시간대 대기 등록</Button>
         {attempt ? <div className="notice notice--unknown" aria-label="등록 요청 상태">
-          <strong>등록 요청: {attempt.status}</strong><p>Venue {attempt.command.venueId} · Slot {attempt.command.slotInventoryId} · {attempt.command.partySize}명</p>
-          {attempt.receipt ? <p>확인된 Entry {attempt.receipt.entryId} · 최초 HTTP {attempt.receipt.originalStatus}</p> : null}
+          <strong>등록 요청: {requestStatusLabel[attempt.status]}</strong><p>매장 {attempt.command.venueId} · 예약 시간대 {attempt.command.slotInventoryId} · {attempt.command.partySize}명</p>
+          {attempt.receipt ? <p>확인된 대기 등록 {attempt.receipt.entryId} · 최초 HTTP {attempt.receipt.originalStatus}</p> : null}
           {(attempt.status === 'unknown' || attempt.status === 'known') ? <>
-            <Button variant="secondary" disabled={operation} onClick={() => void lookupRegistration()}>등록 키 결과 조회</Button>
+            <Button variant="secondary" disabled={operation} onClick={() => void lookupRegistration()}>원래 등록 요청 결과 조회</Button>
             {attempt.status === 'known' && attempt.receipt ? <Button variant="secondary" disabled={operation}
-              onClick={() => void readExact(attempt.receipt!.entryId)}>확인된 Entry 다시 조회</Button> : null}
+              onClick={() => void readExact(attempt.receipt!.entryId)}>확인된 대기 등록 다시 조회</Button> : null}
             {attempt.status === 'unknown' ? <Button disabled={operation} onClick={() => {
               const command = session.retryRegistration(); if (command) void sendRegistration(command)
-            }}>같은 key·body로 명시적 재시도</Button> : null}
+            }}>같은 등록 요청 다시 시도</Button> : null}
           </> : null}
           {(attempt.status === 'ready' || attempt.status === 'rejected') ? <Button variant="secondary"
-            onClick={() => session.clearRegistration()}>새 등록 intent 시작</Button> : null}
+            onClick={() => session.clearRegistration()}>새 대기 등록 시작</Button> : null}
         </div> : null}
       </section>
       <section className="management-section" aria-labelledby="waitlist-entries-title">
-        <h2 id="waitlist-entries-title">내 Entry</h2>
-        <p>서버의 joinedAt·ID 순서를 그대로 표시합니다. 목록은 현재 상태의 공통 snapshot이 아닙니다.</p>
+        <h2 id="waitlist-entries-title">내 대기 등록</h2>
+        <p>서버가 정한 등록 시각과 ID 순서로 표시합니다. 목록 전체가 같은 시점의 최신 상태를 보장하지는 않습니다. 상세 조회로 개별 상태를 확인해 주세요.</p>
         <Button variant="secondary" disabled={!venueId || !date || pending} onClick={() => void refresh()}>현재 상태 다시 조회</Button>
-        {pageState === 'loading' ? <p role="status">Entry 목록 조회 중…</p> : null}
+        {pageState === 'loading' ? <p role="status">대기 등록 목록 조회 중…</p> : null}
         {pageState === 'error' && page ? <p className="notice notice--error" role="status">
           아래 목록은 이전 조회 결과입니다. 최신 상태를 확인할 수 없습니다.
         </p> : null}
-        {pageState === 'success' && page?.items.length === 0 ? <p className="notice notice--empty" role="status">이 날짜의 Entry가 없습니다.</p> : null}
-        {page ? <><ul className="reservation-list" aria-label="내 Entry 목록">
+        {pageState === 'success' && page?.items.length === 0 ? <p className="notice notice--empty" role="status">이 날짜의 대기 등록이 없습니다.</p> : null}
+        {page ? <><ul className="reservation-list" aria-label="내 대기 등록 목록">
           {page.items.map((item) => <li key={item.id} className="reservation-row">
             <div className="reservation-scan"><time dateTime={item.startsAt}>{format(item.startsAt, item.venueTimezone)}</time>
-              <StatusBadge status={item.state} /><span>{item.partySize}명</span><span>Entry {item.id}</span></div>
+              <StatusBadge status={item.state} /><span>{item.partySize}명</span><span>대기 등록 {item.id}</span></div>
             <Button variant="secondary" disabled={pending} onClick={() => {
               if (selectedEntryId === item.id) void readExact(item.id)
               else setSelectedEntryId(item.id)
@@ -437,44 +438,46 @@ export function CustomerWaitlistFlow({ api = waitlistApi, reservationApi = custo
           </li>)}</ul>
           {page.nextCursor ? <Button variant="secondary" disabled={pageState === 'loading' || pending}
             onClick={() => void loadEntries(page.nextCursor!)}>다음 페이지</Button> : null}</> : null}
-        {selectedEntryId ? <p>선택한 Entry {selectedEntryId}</p> : null}
-        {exactState === 'loading' ? <p role="status">원래 Entry와 Offer 현재 상태 조회 중…</p> : null}
+        {selectedEntryId ? <p>선택한 대기 등록 {selectedEntryId}</p> : null}
+        {exactState === 'loading' ? <p role="status">원래 대기 등록과 예약 제안 현재 상태 조회 중…</p> : null}
         {exactState === 'error' ? <Button variant="secondary" disabled={pending}
-          onClick={() => void readExact(selectedEntryId)}>원래 Entry 다시 조회</Button> : null}
-        {entry && exactState === 'success' ? <article className="reservation-card" aria-label="Entry 현재 상태">
-          <div className="reservation-summary"><div><span className="field-label">Entry</span><StatusBadge status={entry.state} /></div>
-            <div><span className="field-label">가입 시각</span><time dateTime={entry.joinedAt}>{format(entry.joinedAt, entry.venueTimezone)}</time></div></div>
+          onClick={() => void readExact(selectedEntryId)}>원래 대기 등록 다시 조회</Button> : null}
+        {entry && exactState === 'success' ? <article className="reservation-card" aria-label="대기 등록 현재 상태">
+          <div className="reservation-summary"><div><span className="field-label">대기 등록</span><StatusBadge status={entry.state} /></div>
+            <div><span className="field-label">등록 시각</span><time dateTime={entry.joinedAt}>{format(entry.joinedAt, entry.venueTimezone)}</time></div></div>
           <p>{entry.partySize}명 · <time dateTime={entry.startsAt}>{format(entry.startsAt, entry.venueTimezone)}</time></p>
           <p>서버 관측 <time dateTime={entry.observedAt}>{format(entry.observedAt, entry.venueTimezone)}</time></p>
           {entry.allowedActions.includes('CANCEL') && !action ? <Button variant="destructive" disabled={pending || exactState !== 'success'}
             onClick={() => startAction('cancel', entry.id)}>대기 취소</Button> : null}
-          {entry.offerId && !offer ? <p>Offer 현재 상태를 확인하는 중입니다.</p> : null}
+          {entry.offerId && !offer ? <p>예약 제안 현재 상태를 확인하는 중입니다.</p> : null}
         </article> : null}
-        {offer && exactState === 'success' ? <article className="reservation-card" aria-label="Offer 현재 상태">
-          <div className="reservation-summary"><div><span className="field-label">Offer</span><StatusBadge status={offer.state} /></div>
-            <div><span className="field-label">Resource / Slot</span><strong>{offer.resourceId} / {offer.slotInventoryId}</strong></div></div>
-          <p>Offer {offer.id} · Reservation {offer.reservation.id} · 현재 Reservation {offer.reservation.state}</p>
-          {offer.state === 'PENDING' ? <Deadline value={offer.expiresAt} timezone={offer.venueTimezone} /> : null}
+        {offer && exactState === 'success' ? <article className="reservation-card" aria-label="예약 제안 현재 상태">
+          <div className="reservation-summary"><div><span className="field-label">예약 제안</span><StatusBadge status={offer.state} /></div>
+            <div><span className="field-label">테이블 / 예약 시간대</span><strong>{offer.resourceId} / {offer.slotInventoryId}</strong></div></div>
+          <p>예약 제안 {offer.id} · 예약 {offer.reservation.id} · 현재 예약 {formatStatus(offer.reservation.state)}</p>
+          <p>제안 수락 여부와 예약 상태는 따로 확인해 주세요.</p>
+          {offer.state === 'PENDING' ? <Deadline value={offer.expiresAt} timezone={offer.venueTimezone} />
+            : <p>제안 기한 <time dateTime={offer.expiresAt}>{format(offer.expiresAt, offer.venueTimezone)}</time></p>}
           <p>서버 관측 <time dateTime={offer.observedAt}>{format(offer.observedAt, offer.venueTimezone)}</time></p>
           {offer.allowedActions.includes('ACCEPT') && !action ? <Button disabled={pending}
-            onClick={() => startAction('accept', offer.id)}>Offer 수락</Button> : null}
+            onClick={() => startAction('accept', offer.id)}>예약 제안 수락</Button> : null}
           {offer.allowedActions.includes('REJECT') && !action ? <Button variant="destructive" disabled={pending}
-            onClick={() => startAction('reject', offer.id)}>Offer 거절</Button> : null}
+            onClick={() => startAction('reject', offer.id)}>예약 제안 거절</Button> : null}
           {offer.state === 'ACCEPTED' ? <Button variant="secondary" onClick={() => onOpenReservation?.(offer.venueId, offer.reservation.id)}>
-            같은 Reservation 상세 확인</Button> : null}
+            같은 예약 상세 확인</Button> : null}
         </article> : null}
         {action ? <div className="notice notice--unknown" aria-label="원래 작업 상태">
-          <strong>{action.command.kind} · {action.status}</strong><p>원래 대상 {action.command.targetId}</p>
+          <strong>{actionLabel[action.command.kind]} · {requestStatusLabel[action.status]}</strong><p>원래 대상 {action.command.targetId}</p>
           {(action.status === 'unknown' || action.status === 'known') ? <Button variant="secondary" disabled={operation}
-            onClick={() => void reconcileAction(action.command)}>원래 대상 exact 조회</Button> : null}
+            onClick={() => void reconcileAction(action.command)}>원래 대상 개별 조회</Button> : null}
           {action.status === 'unknown' && ((actionTargetOffer && offer?.state === 'PENDING'
             && offer.allowedActions.includes(action.command.kind === 'accept' ? 'ACCEPT' : 'REJECT'))
             || (actionTargetEntry && entry?.allowedActions.includes('CANCEL'))) ?
             <Button disabled={operation} onClick={() => { const command = session.retryAction(); if (command) void sendAction(command) }}>
-              같은 대상·작업 명시적 재시도</Button> : null}
+              같은 대상의 같은 작업 다시 시도</Button> : null}
           {action.status === 'ready' ? <Button variant="secondary" onClick={() => session.clearAction()}>확인된 작업 닫기</Button> : null}
         </div> : null}
       </section>
-    </main><footer className="site-footer">SlotQ Product</footer>
+    </main><footer className="site-footer">SlotQ</footer>
   </>
 }

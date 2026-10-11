@@ -2,251 +2,137 @@
 
 # SlotQ
 
-### 동시 예약과 대기열을 데이터 정합성·장애 복구까지 고려해 처리하는 매장 예약·운영 플랫폼
+### 동시 예약과 대기열을 처리하는 매장 예약·운영 시스템
 
-**동시 예약 · 상태 전이 · 이벤트 기반 대기열 · 멀티테넌시 · 장애 복구**
-
-**현재 상태: M0~M6 완료**
+**M0~M6 완료 · M7 진행 중 · M8 예정**  
+2026-10-11 기준 `main`
 
 </div>
 
----
+## 개요
 
-## 프로젝트 소개
+SlotQ는 매장의 예약, 수용량, 대기열, 운영 정책을 관리하는 시스템입니다. 예약이 동시에 발생하거나 이벤트가 중복 전달되고, 처리 도중 장애가 발생하는 상황에서도 데이터 정합성과 복구 가능성을 유지하는 데 중점을 둡니다.
 
-**SlotQ**는 매장의 예약, 수용량, 대기열, 운영 정책을 일관성 있게 처리하는 예약·운영 플랫폼입니다.
+예약·대기열을 먼저 구현하고 검증한 뒤, 기존 Product API를 권한 범위 안에서 호출하고 매장 안내 문서를 검색하는 AI 구성 요소를 추가했습니다. 각 기능은 테스트와 실험 결과를 기준으로 구현 범위와 한계를 구분합니다.
 
-예약 CRUD를 넘어 실제 서버 개발에서 마주치는 **동시성, 데이터 정합성, 상태 전이, 이벤트 중복, 부분 장애와 복구**를 직접 구현하고 검증하는 것을 목표로 합니다.
+## 주요 기능
 
-현재 Product Backend의 예약·동시성·이벤트 전달·대기열 흐름까지 구현했습니다. 이후에는 이 기반을 유지하면서 여러 AI 기능이 Product API를 안전하게 사용할 수 있도록 MCP Gateway, RAG, Model Router, Evaluation을 포함한 공통 AI Platform으로 확장할 예정입니다.
-
----
-
-## 해결하려는 문제
-
-| 영역 | 핵심 질문 |
+| 영역 | 구현 내용 |
 | --- | --- |
-| **동시 예약** | 마지막 하나의 자원에 요청이 동시에 들어와도 수용량 초과를 막을 수 있는가? |
-| **예약 상태 전이** | 예약의 상태와 비즈니스 규칙을 도메인 수준에서 일관되게 보장할 수 있는가? |
-| **이벤트 기반 대기열** | 취소 이후 대기 고객 승급을 중복·유실에 강하게 처리할 수 있는가? |
-| **멱등성·복구** | 요청이나 이벤트가 재시도되어도 같은 결과를 보장하고 장애 이후 복구할 수 있는가? |
-| **멀티테넌시** | 여러 Venue의 데이터와 권한을 하나의 플랫폼에서 안전하게 격리할 수 있는가? |
-| **AI 도구 실행** | AI Agent가 Product API를 사용할 때 권한, 실행, 감사 기록을 어떻게 통제할 것인가? |
+| 예약 | 예약 가능 시간 조회, HOLD 생성·확정·취소, 체크인·완료·노쇼 처리 |
+| 동시성·멱등성 | 동일 자원 경합 제어, 중복 HOLD 요청 처리, 결과 불명 상황의 재조회 |
+| 대기열 | 대기 등록·취소, 빈자리 발생 시 제안 생성, 수락·거절·만료 후 다음 순서 처리 |
+| 매장 운영 | 매장·자원·운영 정책 관리, 예약과 대기열 조회, 권한 범위에 따른 접근 |
+| 이벤트·복구 | 트랜잭션 이벤트 기록, 중복 처리 방지, 재시도, 장애 복구 및 운영 관측 |
+| AI 접근·검색 | 인증된 MCP 도구 호출, 접근 범위가 제한된 문서 검색, 모델 선택과 제한된 실행 관리 |
 
----
+AI 구성 요소 중 **MCP와 지식 검색은 M6에서 완료**했습니다. **Model Router와 제한된 Agent Runtime은 M7에서 구현**했지만, 실제 모델과 Product 도구를 연결하는 세 업무 흐름의 통합 검증은 아직 진행 대상입니다.
 
-## 핵심 도메인
+## 핵심 설계와 검증
 
-```text
-Tenant
-└── Venue
-    ├── Resource
-    ├── Capacity
-    ├── Slot
-    ├── Reservation
-    ├── Waitlist
-    └── Policy
-```
+### 1. 동시 예약과 데이터 정합성
 
-초기 구현은 Restaurant을 기준으로 하되, 예약 핵심 모델은 특정 업종에 불필요하게 결합하지 않는 방향을 유지합니다.
+같은 `Table × Slot`에 마지막 자원 하나가 남았을 때 여러 HOLD 요청이 동시에 들어와도 중복 배정이 발생하지 않도록 제어합니다.
 
-자세한 도메인 모델은 [Domain Model](docs/architecture/domain-model.md)에서 확인할 수 있습니다.
+초기 실험에서 수용량 초과를 재현한 뒤 낙관적 락과 비관적 락을 비교했습니다. 현재 구현은 경합 대상인 Slot과 Reservation 행에 필요한 범위만 비관적 락을 적용합니다. 예약 상태 전이와 수용량 검증은 MySQL 트랜잭션 안에서 처리합니다.
 
----
+- [락 전략 비교와 측정](docs/experiments/concurrency-strategy-comparison.md)
+- [ADR-0006: 예약 정합성 락 선택](docs/adr/0006-use-targeted-pessimistic-locks-for-reservation-consistency.md)
 
-## 핵심 설계
+### 2. 이벤트 기반 대기열
 
-### 예약 불변식
-
-SlotQ가 가장 먼저 지켜야 할 규칙은 다음과 같습니다.
-
-```text
-confirmed reservations <= capacity
-```
-
-동일한 마지막 자원을 여러 사용자가 동시에 예약하더라도 이 규칙이 깨지지 않아야 합니다.
-
-Restaurant MVP의 최소 경합 단위는 capacity가 1인 배타적 `Table × Slot`입니다. 초기 동시성 검증은 동일 Table의 double booking 방지를 중심으로 하며, 일반화된 Capacity 모델을 사용한다는 이유만으로 pooled capacity나 대규모 처리 능력을 주장하지 않습니다.
-
-동시성 제어 방식은 미리 정답으로 고정하지 않고 실험을 통해 비교합니다.
-
-```text
-Optimistic Lock
-      vs
-Pessimistic Lock
-      vs
-Distributed Lock
-```
-
-비교 지표는 **처리량, P50/P95/P99 지연 시간, 실패율, Lock Wait, DB 부하**입니다.
-
-### 예약 상태 전이
-
-예약은 생성·삭제만으로 표현하지 않고 명확한 상태와 전이 규칙을 가집니다.
-
-```mermaid
-stateDiagram-v2
-    [*] --> HELD
-    HELD --> CONFIRMED
-    HELD --> EXPIRED
-    HELD --> CANCELLED
-    CONFIRMED --> CHECKED_IN
-    CONFIRMED --> CANCELLED
-    CONFIRMED --> NO_SHOW
-    CHECKED_IN --> COMPLETED
-    COMPLETED --> [*]
-    CANCELLED --> [*]
-    NO_SHOW --> [*]
-    EXPIRED --> [*]
-```
-
-허용되지 않은 상태 전이는 애플리케이션 외부가 아니라 **도메인 자체에서 차단**합니다.
-
-MVP에서는 실제 비동기 승인 절차가 없는 `REQUESTED`를 영속 상태로 두지 않습니다. 결제나 수동 승인처럼 독립된 비즈니스 수명이 생기면 명시적인 상태 전이와 함께 다시 검토합니다.
-
-### 이벤트 기반 대기열
-
-예약 취소 등으로 자원이 다시 사용 가능해지면 대기 고객에게 새로운 예약 기회를 제공합니다.
+예약 취소 등으로 자원이 비면 대기 조건에 맞는 후보에게 예약 제안을 생성합니다. 수락하면 기존 예약 흐름으로 연결하고, 거절하거나 기한이 지나면 다음 후보를 처리합니다.
 
 ```mermaid
 flowchart LR
-    A[Reservation Cancelled] --> B[Waitlist Promotion Requested]
-    B --> C[Offer Created]
-    C --> D[Notification Requested]
-    D --> E{Customer Response}
-    E -->|Accept| F[Reservation Confirmed]
-    E -->|Expire / Reject| G[Next Candidate]
-    G --> C
+    A["예약 취소·자원 반환"] --> B["대기열 승급 처리"]
+    B --> C["예약 제안"]
+    C --> D{"응답"}
+    D -->|수락| E["예약 흐름 진행"]
+    D -->|거절·만료| F["다음 후보 검토"]
+    F --> C
 ```
 
-이 흐름에서는 다음 문제를 검증합니다.
+이벤트 중복 전달, 재시도, 수락·만료 경합에서도 기존 수용량과 예약 상태 규칙을 유지하도록 구현했습니다. 대기 순서, 제안 상태, 예약 확정은 각각 별개의 비즈니스 상태로 다룹니다.
 
-- at-least-once delivery에서의 중복 이벤트 처리
-- Idempotent Consumer와 비즈니스 유니크 제약
-- 재시도와 실패 상태 관리
-- DB commit과 event 전달 사이의 불일치
-- 프로세스 재시작과 DB 장애 이후 복구
-- 기존 예약 수용량 불변식과 대기 승급의 결합
+- [이벤트 전달 구조](docs/architecture/event-delivery.md)
+- [대기열 승급 설계](docs/architecture/waitlist-promotion.md)
 
-M3에서 선택한 이벤트 전달 구조와 M4 Waitlist 연결은 [Event Delivery](docs/architecture/event-delivery.md)와 [Waitlist Promotion](docs/architecture/waitlist-promotion.md)에 기록합니다.
+### 3. DB 기반 전달과 Kafka 비교
 
----
+예약 변경과 이벤트 기록은 동일한 MySQL 트랜잭션으로 묶고, **DB 기반 전달을 기본 방식**으로 사용합니다.
 
-## 현재 아키텍처
+M5에서는 DB 기반 전달과 Kafka 전달을 동일한 업무 시나리오로 **5개 구성 × 3회, 총 15회** 비교했습니다. 정합성·복구 검증과 운영 비용을 함께 평가한 결과, 현재 기본 방식은 DB 기반 전달로 유지하기로 했습니다.
 
-SlotQ는 처음부터 Microservices Architecture를 전제로 하지 않습니다.
+Kafka 구현은 실제 브로커, 독립 소비자, 장애 및 수동 전환을 검증하는 **선택적 실험 구성**으로 남겨두었습니다. 자동 전환이나 상시 운영 대체 경로로 채택한 것은 아닙니다.
 
-현재 Product Backend는 **Modular Monolith**로 구성하며, 도메인 경계를 코드와 테스트로 분리합니다. 서비스 분리는 실제 운영상 독립 배포나 장애 격리가 필요한 근거가 생겼을 때 검토합니다.
+- [비교 실험과 한계](docs/experiments/m5-transport/README.md)
+- [ADR-0008: 전달 방식 결정](docs/adr/0008-m5-event-transport-and-runtime-status.md)
+- [이벤트 운영·복구 절차](docs/runbooks/event-operations.md)
+
+### 4. AI 접근 통제와 지식 검색
+
+M6에서는 MCP를 통해 예약 관련 Product API와 지식 검색 기능을 제한된 권한으로 호출할 수 있도록 구성했습니다. 도구 목록 조회, 직접 호출, 인증 주체와 매장 범위, 입력 검증 및 호출 제한을 서버에서 확인합니다.
+
+매장 안내 문서는 원문 출처·버전·공개 범위를 보존하며 검색합니다. 예약 상태나 수용량처럼 수시로 바뀌는 사실은 검색 문서가 아닌 **Product API 응답을 기준**으로 합니다.
+
+검색 방식은 어휘 기반 검색과 로컬 임베딩을 실제 비교했고, 현재 기본값은 어휘 기반 검색입니다. 외부 모델에 실제 고객 데이터를 전송하는 구성을 완료했다고 주장하지 않습니다.
+
+- [M6 통합 검증](docs/experiments/m6-closure/README.md)
+- [M6 접근·지식 구조](docs/architecture/m6-access-knowledge.md)
+
+### 5. 모델 선택과 실행 경계
+
+M7에서는 실제 생성 모델 두 개를 합성 데이터로 비교하고, 보안·데이터 공개 조건·기능·품질 기준을 충족한 후보만 선택하는 Model Router를 구현했습니다. **총 72회의 모델 호출**을 비교했으며, 현재 기준을 충족하지 못하는 업무에는 모델을 배정하지 않습니다.
+
+또한 서버 내부에서 사용하는 **프로세스 로컬 Agent Runtime**을 구현했습니다. 실행 단계·시간·비용·동시 실행 수를 제한하고, 도구 실행 권한과 원래 요청 주체의 승인을 확인합니다. 모델 출력은 실행 권한으로 취급하지 않습니다.
+
+이 구현은 자동 도구 실행 루프나 재시작 이후 작업 복구를 제공하지 않습니다. 실제 Product/MCP를 통한 세 업무 흐름의 모델 통합, 운영 관측 도구 및 지속 실행 필요성 검증은 후속 작업입니다.
+
+- [모델 비교 결과](docs/experiments/m7-model-router.md)
+- [Agent Runtime 결정](docs/adr/0011-m7-process-local-agent-runtime.md)
+- [M7 아키텍처와 후속 범위](docs/architecture/m7-model-router-agent-runtime.md)
+
+## 아키텍처
+
+예약·대기열의 중심은 **Spring Boot와 MySQL을 사용하는 모듈형 모놀리스**입니다. 데이터와 트랜잭션의 소유권을 불필요하게 여러 서비스로 나누지 않습니다.
 
 ```mermaid
 flowchart TB
-    Client[Customer / Venue Client] --> Frontend[React Frontend]
-    Frontend --> Product[SlotQ Product Backend]
-
-    Product --> Reservation[Reservation]
-    Product --> Waitlist[Waitlist]
-    Product --> Venue[Venue & Policy]
-    Product --> Delivery[Event Delivery]
-
-    Reservation --> DB[(MySQL)]
-    Waitlist --> DB
-    Venue --> DB
-    Delivery --> DB
+    UI["React · TypeScript"] --> API["Spring Boot Product API"]
+    API --> BOOK["예약 · 매장 운영"]
+    API --> WAIT["대기열"]
+    BOOK --> DB[("MySQL")]
+    WAIT --> DB
+    BOOK --> EVENTS["트랜잭션 이벤트 기록"]
+    EVENTS --> DB
+    EVENTS --> DELIVERY["DB 기반 이벤트 전달"]
+    DELIVERY --> WAIT
+    MCP["인증된 MCP 도구"] --> API
+    MCP --> KNOW["매장 문서 검색"]
+    KNOW --> DB
 ```
 
-현재 이벤트 전달의 기준선은 **Transactional event record + DB 전달**입니다. Booking transaction과 이벤트 기록의 원자성을 보존하고, 재시도·중복·프로세스 재시작·DB 장애 복구를 검증했습니다.
+Model Router와 Agent Runtime은 서버 내부 구성 요소로 구현되어 있으며, 위 Product 업무와의 실제 모델 통합은 M7의 별도 검증 대상입니다.
 
-M5의 [ADR-0008](docs/adr/0008-m5-event-transport-and-runtime-status.md)은 **DB direct를 permanent
-supported default와 수동 rollback target**으로 유지합니다. Kafka는 실제 두 logical consumer,
-독립 JVM/group, replica assignment, broker/DB 장애와 human recovery를 검증한 opt-in
-experimental/comparison topology로 보존합니다. 상시 운영 alternative 채택과 code 삭제는
-default 선택과 별개의 결정입니다. 자동 fallback은 없으며 transport 전환은 quiesced 수동
-cutover/rollback입니다.
+## 기술 구성
 
-Product DB direct는 API와 local Waitlist executor/maintenance를 공유하고 observer를 별도
-scoped runtime으로 실행할 수 있습니다. Kafka 역할 분리도 shared MySQL/host 장애를 제거하지
-않습니다. 24h broker retention은 실험 설정이며 DB event/receipt/audit 자동 삭제는 없습니다.
-실제 지원 role, retention guard와 recovery horizon의 한계는 ADR을 따릅니다.
-
-[15회 비교 결과 요약](docs/experiments/m5-transport/README.md),
-[통합 drill 관찰과 한계](docs/experiments/m5-transport/README.md#fresh-integrated-operations-drill),
-[운영 runbook](docs/runbooks/event-operations.md),
-[M5 종료 대조](docs/experiments/m5-transport/closure.md)를 함께 제공합니다.
-
-중요한 아키텍처 결정은 [ADR Register](docs/adr/README.md), 세부 구조는 [Architecture 문서](docs/architecture/)에서 관리합니다.
-
----
-
-## 향후 확장: AI Platform
-
-AI Platform은 현재 Product Backend 위에 추가할 후속 범위입니다. 하나의 챗봇을 만드는 것이 아니라 여러 AI 기능이 공통 기반을 재사용하도록 설계할 예정입니다.
-
-예정된 AI 기능:
-
-- **Customer Agent** — 예약 가능 시간 조회, 예약·변경·취소
-- **Owner Copilot** — 예약 현황 요약, 운영 정책 질의
-- **Ops Agent** — 운영 정보 탐색과 제한된 관리 작업
-
-예정된 플랫폼 기능:
-
-| 구성 요소 | 역할 |
+| 영역 | 기술 |
 | --- | --- |
-| **MCP Gateway** | Authentication, Authorization, Tool Registry, Rate Limit, Timeout, Audit Log |
-| **RAG** | 운영 정책, 취소 정책, 메뉴·알레르기 정보, 매장 안내 등 비정형 지식 검색 |
-| **Model Router** | Cost, Latency, Quality, Security 조건에 따른 모델 선택 |
-| **Evaluation** | Tool Selection, Parameter Extraction, Retrieval Quality, Execution Success, Forbidden Action Detection |
+| 백엔드 | Java 25, Spring Boot, Spring MVC, Spring Data JPA |
+| 프론트엔드 | React, TypeScript, Vite |
+| 데이터베이스 | MySQL 8.4, Flyway |
+| 테스트 | JUnit, Testcontainers, Vitest |
+| 이벤트 전달 | MySQL 기반 전달(기본), Kafka(선택적 실험) |
+| 운영 관측 | Micrometer, Prometheus, Grafana, Tempo |
+| AI | MCP, 지식 검색, Gemini 모델 비교, Model Router, Agent Runtime |
+| 로컬 환경 | Gradle Wrapper, npm, Docker |
 
-실시간 예약 가능 여부처럼 계속 변하는 transactional state는 RAG가 아니라 **Product API를 기준 데이터(Source of Truth)** 로 사용합니다.
+Redis·Kubernetes와 같은 추가 인프라는 현재 필수 구성 요소가 아닙니다.
 
-세부 범위와 착수 조건은 [Roadmap](docs/roadmap.md)에서 관리합니다.
+## 로컬 검증
 
----
-
-## 설계 원칙
-
-- **Product 우선** — AI 기능보다 예약·동시성·정합성·이벤트 신뢰성을 먼저 검증합니다.
-- **필요성 검증 후 도입** — 분산 시스템이나 인프라는 해결할 문제가 확인된 뒤 비교합니다.
-- **측정 기반 선택** — 가능한 경우 재현 가능한 실험과 수치를 기술 선택의 근거로 남깁니다.
-- **실패 경로 포함** — 중복 요청, 중복 이벤트, timeout, process/DB failure, partial failure를 설계 대상으로 봅니다.
-- **결정 기록** — 중요한 선택은 코드에만 남기지 않고 ADR, 실험 결과, 복구 기록으로 문서화합니다.
-
----
-
-## 기술 구성과 선택
-
-| 영역 | 현재 기준 | 상태 |
-| --- | --- | --- |
-| 백엔드 | Java 25 LTS, Spring Boot, Spring MVC, Spring Data JPA | **채택** |
-| 프론트엔드 | React, TypeScript, Vite 기반 SPA | **채택** |
-| 빌드 | Gradle Wrapper | **채택** |
-| 데이터베이스 | MySQL 8.4 LTS, Flyway | **채택** |
-| 테스트 | JUnit, Testcontainers MySQL | **채택** |
-| 캐시 | Redis | 필요성과 측정 결과가 생길 때 검토 |
-| 이벤트 전달 | Transactional event record + DB direct 기본, Kafka experimental opt-in | ADR-0008; MySQL source/receipt/fencing 보존, 상시 Kafka adoption 보류 |
-| 관측 | Actuator/Micrometer, Prometheus/Grafana/Tempo | protected scrape, read-only inventory, alert/trace와 actual local/container drill |
-| 인프라 | 로컬 container 환경부터 시작 | Kubernetes는 운영상 필요가 생길 때 검토 |
-| AI Platform | MCP, RAG, Model Router, Agent Runtime, Evaluation | M6 이후 단계적 도입 |
-
-Java, Gradle Wrapper, Modular Monolith, React·TypeScript·Vite 등 주요 선택 근거는 [ADR Register](docs/adr/README.md)에 기록합니다.
-
-모든 후보 기술을 사용하는 것을 목표로 하지 않습니다. 사용하지 않는 편이 적절하다는 결론도 실험과 근거가 있다면 기술적 결정으로 기록합니다.
-
-### 저장소 구조
-
-```text
-slotq/
-├── backend/     Spring Boot Product Backend
-├── frontend/    React·TypeScript·Vite SPA
-├── infra/       로컬·운영 인프라 설정
-├── docs/        Architecture, ADR, Roadmap, 실험 기록
-└── .github/     Issue, PR, CI 정책
-```
-
-세부 경계와 schema migration 소유권은 [Repository Layout](docs/architecture/repository-layout.md)에 기록합니다.
-
-### Backend 검증
-
-로컬 build에는 Gradle이 탐지할 수 있는 JDK 25가 필요합니다. CI는 Temurin JDK 25를 사용합니다.
+**백엔드** — JDK 25 필요
 
 ```bash
 cd backend
@@ -256,53 +142,36 @@ cd backend
 
 Windows PowerShell에서는 `./gradlew` 대신 `.\gradlew.bat`를 사용합니다.
 
----
+**프론트엔드** — Node.js 24 LTS, npm 11 필요
 
-## Roadmap
-
-```mermaid
-flowchart LR
-    M0[M0 Foundation] --> M1[M1 Reservation Core]
-    M1 --> M2[M2 Concurrency & Consistency]
-    M2 --> M3[M3 Reliable Event Foundation]
-    M3 --> M4[M4 Waitlist Promotion]
-    M4 --> M5[M5 Reliability & Observability]
-    M5 --> M6[M6 AI Access & Knowledge]
-    M6 --> M7[M7 Model Router & Agent Runtime]
-    M7 --> M8[M8 Evaluation & Production Hardening]
+```bash
+cd frontend
+npm ci
+npm run typecheck
+npm test
+npm run build
 ```
 
-- **M0~M6:** 완료
-- **M7~M8:** Model Router & Agent Runtime → Evaluation & Production Hardening
+로컬 환경 준비와 실행 명령은 [CONTRIBUTING.md](CONTRIBUTING.md), 프론트엔드 환경 변수와 API 연결 방법은 [frontend/README.md](frontend/README.md)를 참고하세요. 일부 통합 테스트와 실험은 Docker 및 별도 실행 설정을 필요로 합니다.
 
-M0부터 M5까지 Product Backend와 운영 신뢰성을 먼저 완성하고, M6 이후 AI Platform 범위로 이동합니다.
+## 개발 현황
 
-Milestone별 완료 조건, 현재 상태, Issue 의존 관계는 [Roadmap](docs/roadmap.md)에서 관리합니다.
+| 단계 | 상태 | 주요 결과 |
+| --- | --- | --- |
+| M0~M2 | 완료 | 프로젝트 기반, 예약 API, 상태 전이와 동시성 제어 |
+| M3~M4 | 완료 | 이벤트 전달 기반, 대기 등록·승급과 화면 연결 |
+| M5 | 완료 | 운영 관측, 장애 복구, DB/Kafka 비교 |
+| M6 | 완료 | MCP 접근 통제, 지식 관리·검색과 통합 검증 |
+| M7 | 진행 중 | Model Router·제한된 Agent Runtime 구현; 도구·업무 흐름 통합 및 종료 검증 남음 |
+| M8 | 예정 | 평가 체계와 운영 준비 기준 |
 
----
+M7의 Model Router와 Runtime 구현은 각각 [PR #159](https://github.com/krestar/slotq/pull/159), [PR #160](https://github.com/krestar/slotq/pull/160)에 반영되어 있습니다. Milestone별 작업 범위와 선행 관계는 [Roadmap](docs/roadmap.md)에서 관리합니다.
 
-## 설계·실험 기록
+## 설계·실험 문서
 
-중요한 기술적 의사결정과 실험은 README에 모두 복제하지 않고 아래 문서에서 관리합니다.
-
-- [Product Scope](docs/product-scope.md)
-- [Domain Model](docs/architecture/domain-model.md)
-- [Roadmap](docs/roadmap.md)
-- [ADR Register](docs/adr/README.md)
-- [Experiment Plans](docs/experiments/README.md)
-
-현재까지의 주요 기록에는 동시성 제어 비교, HOLD 만료와 복구, 이벤트 전달과 멱등성, 프로세스·DB 장애 복구, Waitlist 승급과 브라우저 복구가 포함됩니다.
-
----
-
-## 현재 상태
-
-> **M6 AI Access & Knowledge — Complete**
-
-M0 Foundation부터 M5 Reliability & Observability까지의 선행 Milestone은 완료 상태를 유지합니다.
-
-M6에서는 original Actor delegation과 공통 MCP foundation에서 Product 세 tool과 `knowledge.search`를 연결했습니다. [#135 통합 종료 검증](docs/experiments/m6-closure/README.md)은 실제 두 profile·네 tool의 security/correctness 경계, 전체 Backend/clean build와 실제 retrieval 재계산을 통과했습니다. 단일 live instance/local quota와 lexical default를 유지하며 embedding 채택은 보류합니다. M7/M8은 미착수입니다.
-
-M5에서는 Product 요청·event 관측, Kafka relay/consumer 실험, multi-instance·fault 검증, tenant 범위 human operator recovery를 구현하고, DB direct와 Kafka를 동일 workload에서 비교했습니다. [ADR-0008](docs/adr/0008-m5-event-transport-and-runtime-status.md)에 따라 DB direct를 기본 transport로 유지하고 Kafka는 experimental/comparison topology로 보존합니다.
-
-[PR #122](https://github.com/krestar/slotq/pull/122)에서 fresh integrated operations drill, 누적 Backend·Frontend 검증, raw evidence 재계산과 종료 gate를 통과했고, 이후 확인된 Kafka intake 관측 결함은 [#126](https://github.com/krestar/slotq/issues/126) / [PR #127](https://github.com/krestar/slotq/pull/127)에서 보정했습니다. 최신 main에서 완료조건을 다시 대조해 M5를 완료로 확정했습니다. Milestone별 완료 상태와 후속 착수 조건은 [Roadmap](docs/roadmap.md)에서 관리합니다.
+- [도메인 모델](docs/architecture/domain-model.md)
+- [아키텍처 결정 기록](docs/adr/README.md)
+- [M5 전달 방식 비교](docs/experiments/m5-transport/README.md)
+- [M6 통합 검증](docs/experiments/m6-closure/README.md)
+- [M7 모델 비교](docs/experiments/m7-model-router.md)
+- [전체 개발 계획](docs/roadmap.md)
