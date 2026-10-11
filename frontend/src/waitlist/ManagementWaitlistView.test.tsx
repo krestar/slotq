@@ -23,24 +23,24 @@ const api = { managementEntries: vi.fn().mockResolvedValue({ items: [first, seco
 
 describe('management Waitlist read', () => {
   it('uses server order, slot eligibility, and management exact Offer without command controls', async () => {
-    render(<ManagementWaitlistView venueId={venue} date="2099-09-01" slots={[{
+    render(<ManagementWaitlistView timezone="Asia/Seoul" venueId={venue} date="2099-09-01" slots={[{
       id: slot, resourceId: slot, startsAt: instant, endsAt: instant, capacity: 1, appliedPolicyVersion: 1,
     }]} api={api} />)
-    await screen.findByText(/선행 수요가 이 Slot에 부적합/)
-    fireEvent.change(screen.getByRole('combobox', { name: 'Slot 필터' }), { target: { value: slot } })
+    await screen.findByText(/먼저 등록한 대기 요청이 이 시간대에 맞지 않으면/)
+    fireEvent.change(screen.getByRole('combobox', { name: '예약 시간대 필터' }), { target: { value: slot } })
     await waitFor(() => expect(api.managementEntries).toHaveBeenLastCalledWith(venue, '2099-09-01', slot, undefined))
     const rows = await screen.findAllByRole('listitem')
     expect(rows[0]).toHaveTextContent('부적합')
     expect(rows[1]).toHaveTextContent('적합')
-    fireEvent.click(screen.getByRole('button', { name: 'Offer 업무 상세 조회' }))
-    expect(await screen.findByRole('article', { name: 'Offer 업무 상세' })).toHaveTextContent(slot)
+    fireEvent.click(screen.getByRole('button', { name: '예약 제안 업무 상세 조회' }))
+    expect(await screen.findByRole('article', { name: '예약 제안 업무 상세' })).toHaveTextContent(slot)
     expect(screen.queryByRole('button', { name: /수락|거절|강제/ })).not.toBeInTheDocument()
   })
   it('does not turn scoped 403 into empty state', async () => {
     const denied = { ...api, managementEntries: vi.fn().mockRejectedValue(new WaitlistApiError(403, 'ACCESS_DENIED')) }
-    render(<ManagementWaitlistView venueId={venue} date="2099-09-01" slots={[]} api={denied} />)
+    render(<ManagementWaitlistView timezone="Asia/Seoul" venueId={venue} date="2099-09-01" slots={[]} api={denied} />)
     expect(await screen.findByText(/ACCESS_DENIED/)).toBeInTheDocument()
-    expect(screen.queryByText('이 날짜의 Waitlist Entry가 없습니다.')).not.toBeInTheDocument()
+    expect(screen.queryByText('이 날짜의 대기 등록이 없습니다.')).not.toBeInTheDocument()
   })
   it('drops the previous scoped response when authentication changes', async () => {
     let resolveFirst!: (value: { items: ManagementEntry[]; nextCursor: null; observedAt: string; venueTimezone: string }) => void
@@ -50,14 +50,14 @@ describe('management Waitlist read', () => {
     const request = vi.fn().mockReturnValueOnce(pending).mockResolvedValue({
       items: [], nextCursor: null, observedAt: instant, venueTimezone: 'Asia/Seoul',
     })
-    render(<ManagementWaitlistView venueId={venue} date="2099-09-01" slots={[]} api={{
+    render(<ManagementWaitlistView timezone="Asia/Seoul" venueId={venue} date="2099-09-01" slots={[]} api={{
       ...api, managementEntries: request,
     }} />)
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
     localAuthSession.invalidate()
     await waitFor(() => expect(request).toHaveBeenCalledTimes(2))
     resolveFirst({ items: [first], nextCursor: null, observedAt: instant, venueTimezone: 'Asia/Seoul' })
-    await screen.findByText('이 날짜의 Waitlist Entry가 없습니다.')
-    expect(screen.queryByText(`Entry ${first.id}`)).not.toBeInTheDocument()
+    await screen.findByText('이 날짜의 대기 등록이 없습니다.')
+    expect(screen.queryByText(`대기 등록 ${first.id}`)).not.toBeInTheDocument()
   })
 })

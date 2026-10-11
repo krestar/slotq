@@ -20,9 +20,9 @@ const offer: Offer = { id: offerId, entryId, venueId: venue, resourceId: slot, s
   venueTimezone: 'Asia/Seoul', allowedActions: ['ACCEPT', 'REJECT'],
   reservation: { id: slot, state: 'HELD', startsAt: instant, endsAt: instant,
     expiresAt: instant, partySize: 2, allocationQuantity: 1, appliedPolicyVersion: 1 } }
-const reservationApi = { listVenues: vi.fn().mockResolvedValue([{ id: venue, name: 'Venue', timezone: 'Asia/Seoul' }]),
+const reservationApi = { listVenues: vi.fn().mockResolvedValue([{ id: venue, name: '매장', timezone: 'Asia/Seoul' }]),
   getAvailability: vi.fn().mockResolvedValue({ venueId: venue, timezone: 'Asia/Seoul', date: '2099-09-01',
-    items: [{ slotInventoryId: slot, resourceId: slot, resourceName: 'Table', startsAt: instant,
+    items: [{ slotInventoryId: slot, resourceId: slot, resourceName: '테이블', startsAt: instant,
       endsAt: instant, seatingCapacity: 4, capacity: 1, occupied: 1, available: 0 }] }) } as unknown as CustomerReservationApi
 const makeWaitlist = (overrides: Partial<WaitlistApi> = {}) => ({
   entries: vi.fn().mockResolvedValue({ items: [], nextCursor: null, observedAt: instant, venueTimezone: 'Asia/Seoul' }),
@@ -44,11 +44,11 @@ describe('Waitlist App navigation and auth', () => {
       offer: vi.fn().mockResolvedValue(offer),
     })
     render(<App api={reservationApi} waitlistApi={waitlistApi} />)
-    await screen.findByRole('article', { name: 'Offer 현재 상태' })
+    await screen.findByRole('article', { name: '예약 제안 현재 상태' })
     const buttons = await screen.findAllByRole('button', { name: '상세 조회' })
     fireEvent.click(buttons[1])
-    await waitFor(() => expect(screen.getByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('WAITING'))
-    expect(screen.getByText(`선택한 Entry ${otherEntryId}`)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('article', { name: '대기 등록 현재 상태' })).toHaveTextContent('대기 중'))
+    expect(screen.getByText(`선택한 대기 등록 ${otherEntryId}`)).toBeInTheDocument()
     expect(window.location.search).toContain(`entryId=${otherEntryId}`)
     expect(window.location.search).not.toContain(`offerId=${offerId}`)
     expect(waitlistApi.entry).toHaveBeenCalledWith(venue, otherEntryId)
@@ -57,20 +57,20 @@ describe('Waitlist App navigation and auth', () => {
   it('restores Management after Customer to Management to Waitlist to Back', async () => {
     const managementApi = { listVenues: vi.fn().mockResolvedValue([]) } as unknown as ManagementApi
     render(<App api={reservationApi} managementApi={managementApi} waitlistApi={makeWaitlist()} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Venue 운영' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Venue 운영' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '매장 운영' }))
+    expect(await screen.findByRole('heading', { level: 1, name: '매장 운영' })).toBeInTheDocument()
     expect(new URLSearchParams(window.location.search).get('view')).toBe('management')
-    fireEvent.click(screen.getByRole('button', { name: 'Customer 대기' }))
-    expect(await screen.findByRole('heading', { level: 1, name: '대기와 Offer' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '고객 대기' }))
+    expect(await screen.findByRole('heading', { level: 1, name: '대기와 예약 제안' })).toBeInTheDocument()
     await act(async () => { window.history.back() })
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Venue 운영' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: '매장 운영' })).toBeInTheDocument())
   })
 
   it('recovers URL selection through exact server read and keeps URL free of key/body', async () => {
     window.history.replaceState(null, '', `/?view=waitlist&venueId=${venue}&date=2099-09-01&entryId=${entryId}`)
     const waitlistApi = makeWaitlist()
     render(<App api={reservationApi} waitlistApi={waitlistApi} />)
-    expect(await screen.findByRole('article', { name: 'Entry 현재 상태' })).toHaveTextContent('WAITING')
+    expect(await screen.findByRole('article', { name: '대기 등록 현재 상태' })).toHaveTextContent('대기 중')
     expect(waitlistApi.entry).toHaveBeenCalledWith(venue, entryId)
     expect(window.location.search).toContain(`entryId=${entryId}`)
     expect(window.location.search).not.toMatch(/key|partySize|slotInventoryId|token/i)
@@ -83,18 +83,18 @@ describe('Waitlist App navigation and auth', () => {
     render(<App api={reservationApi} waitlistApi={waitlistApi} />)
     fireEvent.click(screen.getByRole('button', { name: '시간대 조회' }))
     fireEvent.click(await screen.findByRole('button', { name: '이 시간대 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간대의 적합한 Table 대기' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: '이 시간대 대기 등록' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '고객 예약' })).toBeDisabled())
     reject(new WaitlistMutationUnknown('NETWORK_ERROR'))
-    await screen.findByRole('button', { name: '같은 key·body로 명시적 재시도' })
-    expect(screen.getByRole('button', { name: 'Customer 예약' })).toBeEnabled()
-    fireEvent.click(screen.getByRole('button', { name: 'Customer 예약' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Customer 대기' }))
-    expect(screen.getByRole('button', { name: '같은 key·body로 명시적 재시도' })).toBeInTheDocument()
+    await screen.findByRole('button', { name: '같은 등록 요청 다시 시도' })
+    expect(screen.getByRole('button', { name: '고객 예약' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '고객 예약' }))
+    fireEvent.click(screen.getByRole('button', { name: '고객 대기' }))
+    expect(screen.getByRole('button', { name: '같은 등록 요청 다시 시도' })).toBeInTheDocument()
     expect(register).toHaveBeenCalledOnce()
     expect(window.location.search).not.toMatch(/key|partySize|slotInventoryId|token/i)
     localAuthSession.invalidate()
-    await waitFor(() => expect(screen.queryByRole('button', { name: '같은 key·body로 명시적 재시도' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('button', { name: '같은 등록 요청 다시 시도' })).not.toBeInTheDocument())
     expect(register).toHaveBeenCalledOnce()
   })
 })
