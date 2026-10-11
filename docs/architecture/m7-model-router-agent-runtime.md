@@ -2,17 +2,45 @@
 
 > 상태: [#151](https://github.com/krestar/slotq/issues/151)의 공통 계약과 후속 decision 기준.
 > #152의 bounded Router/provider 비교는 [구현·실험 기록](../experiments/m7-model-router.md)을 따른다.
-> Runtime, 실제 Product/MCP flow와 durable 판정은 각 후속 owner의 구현·검증 대상이다.
+> #153의 controlled process-local Runtime은 [ADR-0011](../adr/0011-m7-process-local-agent-runtime.md)을 따른다.
+> 실제 세 Product/MCP flow와 durable 판정은 #155/#156의 후속 구현·검증 대상이다.
 >
-> 확인일: 2026-10-10. M6 source/Issue 설계 기준 revision은
+> 확인일: 2026-10-11. M6 source/Issue 설계 기준 revision은
 > `047bea6235eae08fca0a1cc02388c4a86c1b60ae`이며, #152 구현 기준은 #151/PR #158을 포함한
-> 최신 main `03a88be6c67140c6cace981fbbdcc8a88806500a`이다.
+> 최신 main `03a88be6c67140c6cace981fbbdcc8a88806500a`이다. #153 구현 기준은 #152를 포함한
+> `7c51b17b029f67ba3dc81660ba733b99e1859537`이다.
 >
 > 이 문서는 M7 Architecture SSOT다. **M6 현재 보장**은 해당 revision의 merged source에서
 > 확인한 동작, **M7 요구**는 후속 owner가 구현·검증할 계약을 뜻한다. #151의 source/test 검토와
 > #152의 실행 검증은 구분하며, 후자는 위 실험 기록을 따른다. 후속 변경 시 실제 merged source와 decision evidence에 맞춰 갱신한다.
 
 ## 1. 기준과 변경 경계
+
+### #153 구현 profile
+
+`ai.runtime.AgentRuntime`은 server-side composition용 process-local component다. Public Run/approval
+endpoint나 MCP approval tool은 없다. 지원 operation은 start/result/cancel, 한 provider step,
+허용 exact read, original Actor review/approve, 최초 HOLD/explicit same-intent retry, known target
+reconciliation과 answer delivery failure observation이다. 모두 current MCP Actor를 검증하고,
+approval/retry는 current original credential도 검증한다. 같은 exact delegation의 live Run re-entry만
+지원하며 renewal/replacement는 거부한다. 누적 예산과 absolute deadline은 Run 안에 유지된다.
+
+Router/provider 결정은 ADR-0010 그대로다. Trusted local context assembly 후 disclosure/remaining
+budget snapshot을 route하고, provider 앞에서 principal/delegation/Tenant/model admission과 bounded
+worker를 적용한다. Plan은 서버가 정한 exact HOLD/read material이며 모델은 approval/key/scope를
+공급하지 못한다. 기본 상한과 supported 최대치는 ADR-0011과 `RuntimeContract.Limits`를 따른다.
+Confirmation wait에는 permit이 없고 unknown usage/cost는 새 provider 실행을 막는다.
+
+MCP의 optional completion hook으로 실제 handler 종료까지 Runtime accounting을 유지한다.
+Outer timeout/response loss는 mutation unknown이며 late validated result는 기존 observation만
+보완한다. Cancellation 뒤 새 dispatch는 없고 이미 admitted된 작업의 rollback을 추론하지 않는다.
+Structured mutation result, 현재 exact GET result와 answer를 분리해 보존한다. Result 반환에도
+current authority를 적용한다. Raw context/credential/Product key를 production trace에 기록하지 않는다.
+
+Deterministic fake-provider regression과 real MySQL/TLS Product fixture를 사용한다. Fresh actual-provider
+세 flow나 non-synthetic disclosure, Ops tool, restart continuation을 완료했다고 주장하지 않는다.
+그 owner는 각각 #155, #154, #156이다. 아래 #151 요구 표는 전체 계약으로 유지하며 #153의
+구체 구현·제한은 이 절과 ADR-0011을 함께 따른다.
 
 [Roadmap M7/M8](../roadmap.md#m7-model-router--agent-runtime),
 [M6 계약](m6-access-knowledge.md), [Accepted ADR-0009](../adr/0009-m6-authenticated-access-and-knowledge.md),
