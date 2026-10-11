@@ -177,7 +177,7 @@ public final class McpServlet extends HttpServlet {
                         throw new McpFailure(McpFailure.Reason.PROTOCOL);
                     Object args=Set.of("name","arguments").containsAll(params.keySet())
                         ?params.getOrDefault("arguments",Map.of()):null;
-                    result(response,rpcId,engine.call(context,name,args));
+                    result(response,rpcId,engine.call(context,name,args),engine.maxResultBytes(name) * 2);
                 }
                 default -> rpcError(response,rpcId,-32601,"Method not found");
             }
@@ -222,15 +222,21 @@ public final class McpServlet extends HttpServlet {
     private void result(HttpServletResponse response,Object id,Object result) throws IOException {
         write(response,Map.of("jsonrpc","2.0","id",id,"result",result));
     }
+    private void result(HttpServletResponse response, Object id, Object result, int maxBytes) throws IOException {
+        write(response, Map.of("jsonrpc", "2.0", "id", id, "result", result), maxBytes);
+    }
     private void rpcError(HttpServletResponse response,Object id,int code,String message) throws IOException {
         Map<String,Object> error=new LinkedHashMap<>();error.put("jsonrpc","2.0");error.put("id",id);
         error.put("error",Map.of("code",code,"message",message));write(response,error);
     }
     private void write(HttpServletResponse response,Object value) throws IOException {
+        write(response, value, 131072);
+    }
+    private void write(HttpServletResponse response, Object value, int maxBytes) throws IOException {
         synchronized(response) {
         if(response.isCommitted())return;
         byte[] bytes=json.writeValueAsBytes(value);
-        if(bytes.length>131072) {response.setStatus(500);return;}
+        if(bytes.length>maxBytes) {response.setStatus(500);return;}
         response.setContentType("application/json");response.getOutputStream().write(bytes);response.flushBuffer();
         }
     }

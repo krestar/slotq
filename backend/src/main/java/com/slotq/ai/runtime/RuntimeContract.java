@@ -38,7 +38,7 @@ public final class RuntimeContract {
                 throw new IllegalArgumentException("Invalid Runtime plan");
             Map<String,Map<String,Object>> frozen=new TreeMap<>();
             reads.forEach((name,args)-> {
-                if(!Set.of("reservation.get","management.reservations.list","knowledge.search").contains(name))
+                if(!Set.of("reservation.get","management.reservations.list","management.event-observations.list","knowledge.search").contains(name))
                     throw new IllegalArgumentException("Unsupported Runtime read");
                 frozen.put(name,RuntimeData.freeze(args));
             });

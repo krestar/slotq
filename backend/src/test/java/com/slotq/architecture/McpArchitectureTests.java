@@ -31,7 +31,10 @@ class McpArchitectureTests {
             for(Path file:files.filter(p->p.toString().endsWith(".class")).toList()) {
                 String content=new String(Files.readAllBytes(file),StandardCharsets.ISO_8859_1);
                 assertThat(content).as(file.toString()).doesNotContain("com/slotq/booking/","com/slotq/management/",
-                    "com/slotq/auth/persistence/","jakarta/persistence/","hold_idempotency_records","capacity_allocations");
+                    "com/slotq/auth/persistence/","com/slotq/events/","com/slotq/integration/operations/",
+                    "jakarta/persistence/","hold_idempotency_records","capacity_allocations",
+                    "event_records","event_deliveries","event_observation_projections","waitlist_promotion_receipts",
+                    "operations_credentials","event_kafka_target_intakes","event_replay_audit");
             }
         }
     }

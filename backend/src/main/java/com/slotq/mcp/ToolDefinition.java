@@ -9,8 +9,14 @@ import java.util.Set;
 
 /** Only an integration composition root registers these; handlers are never scanned. */
 public record ToolDefinition(McpSchema.Tool wire, Map<AccessProfile, AccessAction> permissions,
-        Resource resource, Handler handler, Map<AccessProfile,Set<AccessAction>> alternativePermissions, McpAudit.Outcome failureOutcome) {
+        Resource resource, Handler handler, Map<AccessProfile,Set<AccessAction>> alternativePermissions,
+        McpAudit.Outcome failureOutcome, int maxResultBytes) {
+    public static final int DEFAULT_RESULT_BYTES = 65536;
+    public static final int MAX_RESULT_BYTES = 131072;
     public ToolDefinition {
+        if (maxResultBytes < 1 || maxResultBytes > MAX_RESULT_BYTES) {
+            throw new IllegalArgumentException("Tool result bound required");
+        }
         permissions = Map.copyOf(permissions);
         alternativePermissions = alternativePermissions.entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
                 Map.Entry::getKey, e -> Set.copyOf(e.getValue())));
@@ -19,6 +25,10 @@ public record ToolDefinition(McpSchema.Tool wire, Map<AccessProfile, AccessActio
             throw new IllegalArgumentException("Explicit failure disposition required");
         wire = new McpSchema.Tool(wire.name(), wire.title(), wire.description(), JsonData.freeze(wire.inputSchema()),
             wire.outputSchema() == null ? null : JsonData.freeze(wire.outputSchema()), wire.annotations(), null, null);
+    }
+    public ToolDefinition(McpSchema.Tool wire, Map<AccessProfile, AccessAction> permissions, Resource resource, Handler handler,
+            Map<AccessProfile, Set<AccessAction>> alternatives, McpAudit.Outcome failureOutcome) {
+        this(wire, permissions, resource, handler, alternatives, failureOutcome, DEFAULT_RESULT_BYTES);
     }
     public ToolDefinition(McpSchema.Tool wire, Map<AccessProfile,AccessAction> permissions, Resource resource, Handler handler) {
         this(wire,permissions,resource,handler,Map.of(),McpAudit.Outcome.UNKNOWN);
@@ -30,6 +40,10 @@ public record ToolDefinition(McpSchema.Tool wire, Map<AccessProfile, AccessActio
     public ToolDefinition(McpSchema.Tool wire, AccessProfile profile, AccessAction action,
             Resource resource, Handler handler) {
         this(wire, Map.of(profile, action), resource, handler);
+    }
+    public ToolDefinition(McpSchema.Tool wire, AccessProfile profile, AccessAction action,
+            Resource resource, Handler handler, int maxResultBytes) {
+        this(wire, Map.of(profile, action), resource, handler, Map.of(), McpAudit.Outcome.UNKNOWN, maxResultBytes);
     }
     public boolean permits(DelegatedActor actor) {
         return action(actor) != null && actor.tools().contains(wire.name());

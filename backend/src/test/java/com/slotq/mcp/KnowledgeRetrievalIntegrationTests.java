@@ -213,7 +213,7 @@ class KnowledgeRetrievalIntegrationTests {
         var both=access.approveDelegation(original,venue,AccessProfile.CUSTOMER,
                 Set.of(AccessAction.KNOWLEDGE_PUBLIC,AccessAction.RESERVATION_READ,AccessAction.RESERVATION_WRITE),
                 Set.of("knowledge.search","reservation.get","reservation.hold"),Duration.ofMinutes(10));
-        assertThat(root.tools()).hasSize(4);
+        assertThat(root.tools()).hasSize(5);
         var transport=HttpClientStreamableHttpTransport.builder(ORIGIN).endpoint("/mcp")
                 .clientBuilder(HttpClient.newBuilder().sslContext(McpHttpIntegrationTests.tls()).followRedirects(HttpClient.Redirect.NEVER))
                 .requestBuilder(HttpRequest.newBuilder().header("Authorization","Bearer "+both.value()))
