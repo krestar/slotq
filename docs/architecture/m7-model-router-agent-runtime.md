@@ -3,12 +3,14 @@
 > 상태: [#151](https://github.com/krestar/slotq/issues/151)의 공통 계약과 후속 decision 기준.
 > #152의 bounded Router/provider 비교는 [구현·실험 기록](../experiments/m7-model-router.md)을 따른다.
 > #153의 controlled process-local Runtime은 [ADR-0011](../adr/0011-m7-process-local-agent-runtime.md)을 따른다.
+> #154의 Venue 관측 연결은 아래 구현 profile과 실제 HTTP/MySQL regression을 따른다.
 > 실제 세 Product/MCP flow와 durable 판정은 #155/#156의 후속 구현·검증 대상이다.
 >
 > 확인일: 2026-10-11. M6 source/Issue 설계 기준 revision은
 > `047bea6235eae08fca0a1cc02388c4a86c1b60ae`이며, #152 구현 기준은 #151/PR #158을 포함한
 > 최신 main `03a88be6c67140c6cace981fbbdcc8a88806500a`이다. #153 구현 기준은 #152를 포함한
-> `7c51b17b029f67ba3dc81660ba733b99e1859537`이다.
+> `7c51b17b029f67ba3dc81660ba733b99e1859537`이다. #154 구현 기준은 #151/#153을 포함한 최신 main
+> `36fbf089e59d3ac513b90573aacc7739b25eb6f5`이다.
 >
 > 이 문서는 M7 Architecture SSOT다. **M6 현재 보장**은 해당 revision의 merged source에서
 > 확인한 동작, **M7 요구**는 후속 owner가 구현·검증할 계약을 뜻한다. #151의 source/test 검토와
@@ -42,6 +44,47 @@ Deterministic fake-provider regression과 real MySQL/TLS Product fixture를 사�
 그 owner는 각각 #155, #154, #156이다. 아래 #151 요구 표는 전체 계약으로 유지하며 #153의
 구체 구현·제한은 이 절과 ADR-0011을 함께 따른다.
 
+### #154 Venue observation 구현 profile
+
+단일 production registry의 `management.event-observations.list`는 기존 Product
+`GET /api/v1/management/venues/{venueId}/event-observations`만 호출한다. Management profile의
+전용 `EVENT_OBSERVATION_READ` action과 tool allowlist를 함께 요구한다. Auth는 발급과 매 current
+validation에서 현재 membership/Venue grant를 읽고 `requireVenueConfigurationAccess`로 Owner 또는
+배정된 Manager를 검증한다. `MANAGEMENT_READ`만으로는 observation 위임을 발급할 수 없다.
+`ToolDefinition.permits`는 role lookup을 하지 않으므로, list/direct call의 Auth current validation을
+생략하지 않는다. 기존 Staff reservation read는 별도 `MANAGEMENT_READ` 위임으로 유지한다.
+
+`EVENT_OBSERVATIONS_LIST` Product operation은 trusted Venue의 exact GET route와 null
+target만 허용한다. Fixed Product origin, delegation/요청 deadline 이하의 최대 60초 credential,
+current original/delegation/credential 검증을 재사용한다. Product HTTP 인증 후에도
+`OperationsObservationReadService`가 Auth의 `requireAdmission`으로 operation/scope/target/expiry를
+검증하고 현재 Owner/Manager 인가를 수행한다. 다른 operation credential과 M5 recovery/monitoring
+credential은 대체할 수 없다. 이미 admitted된 읽기를 이후 revocation으로 소급 취소한다고 주장하지 않는다.
+
+입력은 `from`, `to`, optional `limit`뿐이다. 최대 31일, 기본 50개/최대 100개와 DTO의 `items`,
+`truncated`, nullable event/delivery/receipt 필드를 보존한다. 조회는 `projected_at`의 `[from, to)`이며
+`occurredAt`은 event 발생 시각이다. Null/empty/pending/receipt 누락/DONE/DEAD/truncation을
+healthy 또는 전체 처리 완료로 해석하지 않는다. Adapter는 내부 event/recovery/receipt 테이블을
+읽거나 변경하지 않는다. 공통 Runtime의 exact read allowlist에 이 tool을 추가하고 provider 없는 read
+regression을 검증한다. 별도 Ops Runtime은 만들지 않으며 실제 모델 설명/recovery proposal과 세 flow
+통합은 #155가 소유한다.
+
+기존 observation service의 잘못된 window/limit은 400 exception이지만 공통 HTTP 예외 fallback에서
+500으로 변환되는 문제가 실제 요청에서 확인됐다. Observation controller에 해당 validation의
+400 `VALIDATION_FAILED` 응답 처리를 추가한다. 정상 Page/Item DTO와 조회·기본 limit 계약은 유지한다.
+Nullable 필드가 채워진 100개 observation은 기존 64KiB 응답 상한을 넘을 수 있으므로 이 tool의
+Product body/structured result만 128KiB로 제한한다. 기존 tool은 64KiB를 유지하며 상한 초과를
+부분 결과나 완전한 빈 결과로 반환하지 않는다. Text/structured 복제와 envelope를 포함한 observation
+MCP wire 응답은 256KiB, 기존 tool과 lifecycle 응답은 128KiB를 유지한다. Controlled client도 이
+유한한 wire 한도를 설정하며 실제 Java SDK의 100개 조회로 검증한다.
+
+[EventObservationToolsIntegrationTests](../../backend/src/test/java/com/slotq/mcp/EventObservationToolsIntegrationTests.java)는
+production registry/Auth, 실제 HTTPS MCP → Product HTTP → MySQL, 실제 event append/observer delivery를
+사용한다. 인증 후 application 진입 전 operation/target/권한/expiry 변경은 test-only interceptor로
+주입한다. Projection window 경계 시각과 delivery/receipt 상태는 제한된 MySQL fixture로 고정하며
+실제 Kafka 전송이나 생성 모델 실행 근거로 사용하지 않는다. 호출 전후 Product/event 행을 비교하고,
+기존 M6/Auth regression과 module dependency 검증을 함께 실행한다.
+
 [Roadmap M7/M8](../roadmap.md#m7-model-router--agent-runtime),
 [M6 계약](m6-access-knowledge.md), [Accepted ADR-0009](../adr/0009-m6-authenticated-access-and-knowledge.md),
 [Repository Layout](repository-layout.md)을 보존한다. M6 문서의 `현재`/gate는 #130 설계 snapshot이며,
@@ -55,7 +98,7 @@ Deterministic fake-provider regression과 real MySQL/TLS Product fixture를 사�
 | Confirmation | [HoldApprovals][hold-approvals]의 controlled original Actor API와 immutable intent/confirmation | 실제 original Actor handoff, Run/re-entry/fallback safety 강제 (#153/#155) |
 | Knowledge | [KnowledgeSearch][knowledge-search]의 pre-query scope와 source별 final current metadata 재검증, untrusted excerpt | 생성 모델 전송에도 current scope와 provider별 disclosure eligibility 적용 (#152/#153) |
 | 실행 자원 | [McpEngine][mcp-engine], [LocalAdmission][local-admission]의 한 live instance 보호와 실제 work 종료까지 permit 유지 | MCP 호출 전 provider-only work를 포함한 유한 Run admission/budget (#152/#153) |
-| Ops | [기존 observation API][ops-controller]/[read service][ops-read]는 Owner/Manager만 허용. 현재 production registry는 Product 세 tool + `knowledge.search` | 새 `management.event-observations.list`의 Auth/list/call/narrowed Product/final authorization 연결은 #154 |
+| Ops | [기존 observation API][ops-controller]/[read service][ops-read]는 Owner/Manager만 허용. #154에서 Product 네 tool + `knowledge.search` registry와 전용 Auth/Product 인가 연결 | 실제 모델 설명과 recovery proposal 검증은 #155 |
 
 현재 M6 구현과 Accepted ADR, #151~#157 사이에서 이 공통 계약을 막는 충돌은 확인하지 않았다.
 M6의 durable HOLD approval record와 M7의 process-local Run은 서로 다른 ownership이다.
@@ -77,7 +120,7 @@ concurrent replay/confirmation expiry/COMMIT response loss/known Location cases,
 | --- | --- | --- | --- | --- | --- |
 | Customer | 이미 선택한 exact Slot + positive party size, 또는 authoritative known Reservation reference. 필요한 Venue 안내 질문 | Original Customer의 해당 Venue Customer delegation. HOLD는 original Actor의 exact approval, GET은 자신의 Reservation | 현재 `reservation.hold`, `reservation.get`, `knowledge.search` | Structured HOLD 성공/거부/unknown, known target의 현재 GET 결과, source/version이 붙은 Venue 안내. HOLD 성공을 CONFIRMED로 표시하지 않음 | 승인된 profile의 exact 업무 material, 필요한 own Reservation 사실, `VENUE_PUBLIC`의 bounded excerpt/provenance. Raw Product key/credential/approval authority 제외 |
 | Owner·Manager | Granted Venue의 유한 날짜 범위/status, 필요한 운영 안내 질문 | Current Owner 또는 assigned Manager의 management delegation. 조회만 수행 | 현재 `management.reservations.list`, `knowledge.search` | Product의 effective reservation fact와 knowledge guidance를 분리한 제한된 요약 | 허용된 Venue의 최소 reservation facts와 `VENUE_PUBLIC`/`VENUE_OPERATOR` source. 불필요한 customer reference/PII 제거; operator 자료의 외부 공개 승인을 별도로 확인 |
-| Ops | Granted Venue의 `from`, `to`, optional `limit`, 제한된 운영 상태 질문 | Current Owner 또는 assigned Manager. Customer/Staff/unassigned Manager/M5 recovery/monitoring credential 제외 | #154가 연결할 `management.event-observations.list` | Event occurred time, projection/intake time, delivery, receipt, null/missing/delay/truncation을 구분. Recovery 필요 가능성과 사람이 확인할 근거만 설명 | 해당 Venue의 필요한 projected event/delivery/receipt facts. Global log/telemetry, recovery credential, internal ledger dump 제외 |
+| Ops | Granted Venue의 `from`, `to`, optional `limit`, 제한된 운영 상태 질문 | Current Owner 또는 assigned Manager. Customer/Staff/unassigned Manager/M5 recovery/monitoring credential 제외 | #154가 연결한 `management.event-observations.list` | Event occurred time, projection/intake time, delivery, receipt, null/missing/delay/truncation을 구분. Recovery 필요 가능성과 사람이 확인할 근거만 설명 | 해당 Venue의 필요한 projected event/delivery/receipt facts. Global log/telemetry, recovery credential, internal ledger dump 제외 |
 
 **M6 현재 보장:** Management 예약 tool은 Venue-local 단일 `date`와 optional `status`를 받으며
 Staff도 current grant 안에서 읽을 수 있다. #155의 Owner/Manager workload는 이 기존 Staff 권한을

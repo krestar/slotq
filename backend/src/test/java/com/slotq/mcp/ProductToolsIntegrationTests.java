@@ -83,7 +83,7 @@ class ProductToolsIntegrationTests {
     }
     @AfterEach void release(){fault.release.countDown();clock.now=Instant.now();await().atMost(Duration.ofSeconds(10)).untilAsserted(()->assertThat(engine.activeWorkers()).isZero());}
     @Test void productionRegistryOwnReadHoldManagementAndMetadataOnlyAudit(CapturedOutput output) throws Exception {
-        assertThat(registry.all()).extracting(t->t.wire().name()).containsExactly("knowledge.search","management.reservations.list","reservation.get","reservation.hold");
+        assertThat(registry.all()).extracting(t->t.wire().name()).containsExactly("knowledge.search","management.event-observations.list","management.reservations.list","reservation.get","reservation.hold");
         var approved=approved(slot,2);var hold=call("reservation.hold",arguments(approved));
         assertSuccess(hold);UUID id=UUID.fromString(hold.path("structuredContent").path("data").path("id").asString());
         assertThat(hold.path("structuredContent").path("productStatus").asInt()).isEqualTo(201);assertRows(slot,1);

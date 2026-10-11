@@ -22,11 +22,15 @@ public final class ProductHttpBinding {
         if(operation==ProductOperation.RESERVATION_HOLD)throw new McpFailure(McpFailure.Reason.FORBIDDEN);
         DelegatedActor actor=context.revalidate(authority,clock);
         ProductAccessCredential credential=credentials.issueProduct(actor.delegationId(),operation,target,context.deadline());
-        String path=operation==ProductOperation.RESERVATION_GET
-            ?"/api/v1/venues/"+actor.venueId().value()+"/reservations/"+target
-            :"/api/v1/management/venues/"+actor.venueId().value()+"/reservations";
+        String path = switch (operation) {
+            case RESERVATION_GET -> "/api/v1/venues/" + actor.venueId().value() + "/reservations/" + target;
+            case MANAGEMENT_LIST -> "/api/v1/management/venues/" + actor.venueId().value() + "/reservations";
+            case EVENT_OBSERVATIONS_LIST -> "/api/v1/management/venues/" + actor.venueId().value() + "/event-observations";
+            case RESERVATION_HOLD -> throw new McpFailure(McpFailure.Reason.FORBIDDEN);
+        };
         return new Prepared(origin.resolve(path),"GET",credential,context.remaining(clock,CONNECT_MAX),
-            context.remaining(clock,RESPONSE_MAX));
+            context.remaining(clock,RESPONSE_MAX), operation == ProductOperation.EVENT_OBSERVATIONS_LIST
+                ? ToolDefinition.MAX_RESULT_BYTES : ToolDefinition.DEFAULT_RESULT_BYTES);
     }
     public Prepared prepareHold(RequestContext context,UUID slot,int partySize,String key) {
         DelegatedActor actor=context.revalidate(authority,clock);
@@ -34,5 +38,15 @@ public final class ProductHttpBinding {
         return new Prepared(origin.resolve("/api/v1/venues/"+actor.venueId().value()+"/reservations/holds"),"POST",credential,
             context.remaining(clock,CONNECT_MAX),context.remaining(clock,RESPONSE_MAX));
     }
-    public record Prepared(URI uri,String method,ProductAccessCredential credential,Duration connectTimeout,Duration responseTimeout) { }
+    public record Prepared(URI uri,String method,ProductAccessCredential credential,Duration connectTimeout,
+                           Duration responseTimeout, int maxResponseBytes) {
+        public Prepared {
+            if (maxResponseBytes < 1 || maxResponseBytes > ToolDefinition.MAX_RESULT_BYTES) {
+                throw new IllegalArgumentException("Product response bound required");
+            }
+        }
+        public Prepared(URI uri, String method, ProductAccessCredential credential, Duration connectTimeout, Duration responseTimeout) {
+            this(uri, method, credential, connectTimeout, responseTimeout, ToolDefinition.DEFAULT_RESULT_BYTES);
+        }
+    }
 }

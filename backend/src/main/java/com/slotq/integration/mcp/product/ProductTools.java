@@ -5,8 +5,10 @@ import com.slotq.mcp.*;
 import io.modelcontextprotocol.spec.McpSchema;
 import java.time.*;
 import java.util.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
-/** Explicit three-tool mapping; Product HTTP DTOs and errors are returned without new domain interpretation. */
+/** Explicit Product mapping; HTTP DTOs and errors are returned without new domain interpretation. */
 public final class ProductTools implements McpRegistrations {
     private final ProductHttpBinding binding;
     private final ProductHttpClient client;
@@ -21,7 +23,10 @@ public final class ProductTools implements McpRegistrations {
                 List.of("intentId","confirmationId","slotInventoryId","partySize","idempotencyKey")),output(reservation()),this::hold),
         tool("management.reservations.list",AccessProfile.MANAGEMENT,AccessAction.MANAGEMENT_READ,
             object(Map.of("date",Map.of("type","string","minLength",10,"maxLength",10,"format","date"),"status",state()),List.of("date")),
-            output(Map.of("type","array","maxItems",4096,"items",managementReservation())),this::list));}
+            output(Map.of("type","array","maxItems",4096,"items",managementReservation())),this::list),
+        tool("management.event-observations.list", AccessProfile.MANAGEMENT, AccessAction.EVENT_OBSERVATION_READ,
+            object(Map.of("from", timestamp(), "to", timestamp(), "limit", integer(1, 100)), List.of("from", "to")),
+            output(observations()), this::observations));}
     private ToolOutcome get(RequestContext context,Map<String,Object> input) {
         UUID id=id(input,"reservationId");
         return result(client.exchange(binding.prepare(context,ProductOperation.RESERVATION_GET,id),null,null),null,null,id);
@@ -32,6 +37,24 @@ public final class ProductTools implements McpRegistrations {
         catch(DateTimeException failure){return rejected(null,null,McpFailure.Reason.VALIDATION);}
         String query="date="+date+(input.containsKey("status")?"&status="+input.get("status"):"");
         return result(client.exchange(binding.prepare(context,ProductOperation.MANAGEMENT_LIST,null),query,null),null,null,null);
+    }
+    private ToolOutcome observations(RequestContext context, Map<String, Object> input) {
+        Instant from;
+        Instant to;
+        try {
+            from = Instant.parse((String) input.get("from"));
+            to = Instant.parse((String) input.get("to"));
+        } catch (DateTimeException failure) {
+            return rejected(null, null, McpFailure.Reason.VALIDATION);
+        }
+        if (!from.isBefore(to) || Duration.between(from, to).compareTo(Duration.ofDays(31)) > 0) {
+            return rejected(null, null, McpFailure.Reason.VALIDATION);
+        }
+        String query = "from=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8)
+            + "&to=" + URLEncoder.encode(to.toString(), StandardCharsets.UTF_8)
+            + (input.containsKey("limit") ? "&limit=" + ((Number) input.get("limit")).intValue() : "");
+        return result(client.exchange(binding.prepare(context, ProductOperation.EVENT_OBSERVATIONS_LIST, null),
+            query, null), null, null, null);
     }
     private ToolOutcome hold(RequestContext context,Map<String,Object> input) {
         UUID intent=id(input,"intentId"),confirmation=id(input,"confirmationId"),slot=id(input,"slotInventoryId");
@@ -65,7 +88,14 @@ public final class ProductTools implements McpRegistrations {
             unknown?McpAudit.TimeoutLayer.PRODUCT_RESPONSE:McpAudit.TimeoutLayer.NONE);
     }
     private static ToolDefinition tool(String name,AccessProfile profile,AccessAction action,Map<String,Object> input,Map<String,Object> output,ToolDefinition.Handler handler){
-        return new ToolDefinition(new McpSchema.Tool(name,null,"Authenticated Product "+name,input,output,null,null,null),profile,action,ToolDefinition.Resource.PRODUCT,handler);
+        String description = name.equals("management.event-observations.list")
+            ? "매장의 운영 관측을 projected_at 기준 [from, to)로 조회합니다. 최대 31일, 기본 50개, 최대 100개입니다. "
+                + "occurredAt은 발생 시각입니다. null, 빈 결과, 누락된 receipt, pending, 지연된 projection, truncated는 정상 또는 전체 처리 완료의 근거가 아닙니다."
+            : "Authenticated Product " + name;
+        int resultBytes = name.equals("management.event-observations.list")
+            ? ToolDefinition.MAX_RESULT_BYTES : ToolDefinition.DEFAULT_RESULT_BYTES;
+        return new ToolDefinition(new McpSchema.Tool(name,null,description,input,output,null,null,null),profile,action,
+            ToolDefinition.Resource.PRODUCT,handler,resultBytes);
     }
     private static UUID id(Map<String,Object> input,String field){
         try{return UUID.fromString((String)input.get(field));}catch(IllegalArgumentException failure){throw new McpFailure(McpFailure.Reason.VALIDATION);}
@@ -76,6 +106,34 @@ public final class ProductTools implements McpRegistrations {
     static Map<String,Object> integer(long min,long max){return Map.of("type","integer","minimum",min,"maximum",max);}
     static Map<String,Object> state(){return Map.of("type","string","maxLength",16,"enum",List.of("HELD","CONFIRMED","CANCELLED","CHECKED_IN","NO_SHOW","COMPLETED","EXPIRED"));}
     static Map<String,Object> object(Map<String,Object> fields,List<String> required){return Map.of("type","object","additionalProperties",false,"properties",fields,"required",required);}
+    private static Map<String, Object> timestamp() {
+        return Map.of("type", "string", "minLength", 1, "maxLength", 40);
+    }
+    private static Map<String, Object> nullable(Map<String, Object> schema) {
+        return Map.of("anyOf", List.of(schema, Map.of("type", "null")));
+    }
+    private static Map<String, Object> observations() {
+        Map<String, Object> fields = new LinkedHashMap<>();
+        for (String name : List.of("eventId", "observerRegistrationId", "aggregateId", "slotInventoryId")) {
+            fields.put(name, uuid());
+        }
+        fields.put("eventType", string(100));
+        fields.put("schemaVersion", integer(1, Integer.MAX_VALUE));
+        fields.put("aggregateType", string(100));
+        for (String name : List.of("occurredAt", "projectedAt")) {
+            fields.put(name, timestamp());
+        }
+        for (String name : List.of("fromState", "toState", "waitlistDeliveryState", "waitlistReceiptOutcome")) {
+            fields.put(name, nullable(string(64)));
+        }
+        fields.put("durableIntakeObservedAt", nullable(timestamp()));
+        for (String name : List.of("waitlistRegistrationId", "waitlistOfferId")) {
+            fields.put(name, nullable(uuid()));
+        }
+        return object(Map.of("items", Map.of("type", "array", "maxItems", 100,
+            "items", object(fields, List.copyOf(fields.keySet()))), "truncated", Map.of("type", "boolean")),
+            List.of("items", "truncated"));
+    }
     private static Map<String,Object> reservation(){
         Map<String,Object> fields=new LinkedHashMap<>();
         for(String name:List.of("id","venueId","resourceId","slotInventoryId"))fields.put(name,uuid());
@@ -91,7 +149,8 @@ public final class ProductTools implements McpRegistrations {
     }
     private static Map<String,Object> output(Map<String,Object> data){
         Map<String,Object> problem=new LinkedHashMap<>();for(String name:List.of("type","title","detail","instance","code"))problem.put(name,string(512));
-        problem.put("status",integer(100,599));problem.put("fieldErrors",object(Map.of("slotInventoryId",string(512),"partySize",string(512),"Idempotency-Key",string(512),"date",string(512)),List.of()));
+        problem.put("status",integer(100,599));problem.put("fieldErrors",object(Map.of("slotInventoryId",string(512),"partySize",string(512),"Idempotency-Key",string(512),"date",string(512),
+            "from", string(512), "to", string(512), "limit", string(512)),List.of()));
         return object(Map.of("outcome",Map.of("type","string","maxLength",32,"enum",List.of("succeeded","rejected","outcome_unknown","not_dispatched","unknown")),
             "requestId",uuid(),"category",string(32),"productStatus",integer(100,599),"data",data,
             "problem",object(problem,List.of("type","title","status","detail","instance","code"))),List.of("outcome"));

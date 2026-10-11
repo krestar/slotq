@@ -4,7 +4,9 @@ package com.slotq.auth.access;
 public enum ProductOperation {
     RESERVATION_GET("reservation.get", AccessProfile.CUSTOMER, AccessAction.RESERVATION_READ),
     RESERVATION_HOLD("reservation.hold", AccessProfile.CUSTOMER, AccessAction.RESERVATION_WRITE),
-    MANAGEMENT_LIST("management.reservations.list", AccessProfile.MANAGEMENT, AccessAction.MANAGEMENT_READ);
+    MANAGEMENT_LIST("management.reservations.list", AccessProfile.MANAGEMENT, AccessAction.MANAGEMENT_READ),
+    EVENT_OBSERVATIONS_LIST("management.event-observations.list", AccessProfile.MANAGEMENT,
+        AccessAction.EVENT_OBSERVATION_READ);
     public final String tool;
     public final AccessProfile profile;
     public final AccessAction action;
