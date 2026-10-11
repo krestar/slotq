@@ -1,3 +1,4 @@
+import { statusLabel } from './components'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -65,7 +66,7 @@ function makeApi(overrides: Partial<CustomerReservationApi> = {}): CustomerReser
 async function searchAvailability(api: CustomerReservationApi) {
   render(<App api={api} />)
   await screen.findByRole('option', { name: /서울 다이닝/ })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+  fireEvent.change(screen.getByRole('combobox', { name: '매장' }), {
     target: { value: venue.id },
   })
   fireEvent.change(screen.getByLabelText('날짜'), { target: { value: '2099-09-01' } })
@@ -76,11 +77,11 @@ async function searchAvailability(api: CustomerReservationApi) {
 async function createHeldReservation(api: CustomerReservationApi) {
   await searchAvailability(api)
   fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-  fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+  fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
   await screen.findByRole('article', { name: '현재 예약' })
 }
 
-describe('Customer reservation guided flow', () => {
+describe('고객 예약 guided flow', () => {
   afterEach(() => window.history.replaceState(null, '', '/'))
 
   it.each([
@@ -96,8 +97,8 @@ describe('Customer reservation guided flow', () => {
     try {
       await searchAvailability(api)
       fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-      fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
-      const retry = await screen.findByRole('button', { name: '같은 HOLD 요청 다시 시도' })
+      fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
+      const retry = await screen.findByRole('button', { name: '같은 예약 보류 요청 다시 시도' })
       const first = vi.mocked(api.createHold).mock.calls[0]
       // Model sleep without advancing timers: wall time passes while monotonic time barely moves.
       wallClock.mockReturnValue(wallStart + wallElapsed)
@@ -108,7 +109,7 @@ describe('Customer reservation guided flow', () => {
         expect(vi.mocked(api.createHold).mock.calls[1]).toEqual(first)
       } else {
         expect(api.createHold).toHaveBeenCalledOnce()
-        expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: '같은 예약 보류 요청 다시 시도' })).not.toBeInTheDocument()
         expect(screen.getByRole('alert')).toHaveTextContent('이전 예약은 생성되었을 수 있습니다')
       }
     } finally {
@@ -127,10 +128,10 @@ describe('Customer reservation guided flow', () => {
     const api = makeApi({ createHold: realApi.createHold })
     await searchAvailability(api)
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('AUTHENTICATION_REQUIRED'))
-    expect(screen.queryByText('HOLD 생성 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '이 시간 HOLD' })).toBeEnabled()
+    expect(screen.queryByText('예약 보류 생성 결과를 확인할 수 없습니다')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '이 시간 예약 보류' })).toBeEnabled()
     expect(fetchImplementation).toHaveBeenCalledOnce()
   })
   it.each(['HELD', 'EXPIRED'] as const)('retries the immutable intent after navigation and displays server %s', async (state) => {
@@ -139,20 +140,20 @@ describe('Customer reservation guided flow', () => {
       .mockResolvedValueOnce({ ...held, state }) })
     await searchAvailability(api)
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
-    await screen.findByRole('button', { name: '같은 HOLD 요청 다시 시도' })
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
+    await screen.findByRole('button', { name: '같은 예약 보류 요청 다시 시도' })
     const first = vi.mocked(api.createHold).mock.calls[0]
     expect(first[3]).toMatch(/^[0-9a-f-]{36}$/)
     expect(screen.getByLabelText('인원')).toBeDisabled()
     fireEvent.change(screen.getByLabelText('인원'), { target: { value: '4' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Availability 새로고침' }))
+    fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 새로고침' }))
     await waitFor(() => expect(api.getAvailability).toHaveBeenCalledTimes(2))
-    expect(screen.getByRole('button', { name: '같은 HOLD 요청 다시 시도' })).toBeEnabled()
-    fireEvent.click(screen.getByRole('button', { name: 'Venue 운영' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Customer 예약' }))
+    expect(screen.getByRole('button', { name: '같은 예약 보류 요청 다시 시도' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '매장 운영' }))
+    fireEvent.click(screen.getByRole('button', { name: '고객 예약' }))
     expect(api.createHold).toHaveBeenCalledOnce()
-    fireEvent.click(screen.getByRole('button', { name: '같은 HOLD 요청 다시 시도' }))
-    expect(await screen.findByText(state)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '같은 예약 보류 요청 다시 시도' }))
+    expect(await screen.findByText(statusLabel[state])).toBeInTheDocument()
     expect(vi.mocked(api.createHold).mock.calls[1]).toEqual(first)
     expect(screen.getByText(held.id)).toBeInTheDocument()
     if (state === 'EXPIRED') expect(screen.queryByText(/표시용 남은 시간/)).not.toBeInTheDocument()
@@ -167,13 +168,13 @@ describe('Customer reservation guided flow', () => {
         .mockResolvedValueOnce(held) })
       await searchAvailability(api)
       fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-      fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
-      await screen.findByRole('button', { name: '같은 HOLD 요청 다시 시도' })
+      fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
+      await screen.findByRole('button', { name: '같은 예약 보류 요청 다시 시도' })
 
-      fireEvent.click(screen.getByRole('button', { name: 'Venue 운영' }))
-      fireEvent.click(screen.getByRole('button', { name: 'Customer 예약' }))
-      fireEvent.click(screen.getByRole('button', { name: '같은 HOLD 요청 다시 시도' }))
-      await screen.findByText('HELD')
+      fireEvent.click(screen.getByRole('button', { name: '매장 운영' }))
+      fireEvent.click(screen.getByRole('button', { name: '고객 예약' }))
+      fireEvent.click(screen.getByRole('button', { name: '같은 예약 보류 요청 다시 시도' }))
+      await screen.findByText('예약 보류')
 
       const venueFormatter = new Intl.DateTimeFormat('ko-KR', {
         dateStyle: 'medium', timeStyle: 'short', timeZone: venue.timezone,
@@ -198,7 +199,7 @@ describe('Customer reservation guided flow', () => {
       : new CustomerApiError(409, 'IDEMPOTENCY_KEY_REUSED')).mockResolvedValueOnce(held) })
     await searchAvailability(api)
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
     await screen.findByRole('alert')
     if (outcome === 'abandon') {
       fireEvent.click(screen.getByRole('button', { name: '이 요청 포기하고 새 예약 시작' }))
@@ -206,9 +207,9 @@ describe('Customer reservation guided flow', () => {
       fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 조회' }))
       fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
     }
-    expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
-    await screen.findByText('HELD')
+    expect(screen.queryByRole('button', { name: '같은 예약 보류 요청 다시 시도' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
+    await screen.findByText('예약 보류')
     const [first, second] = vi.mocked(api.createHold).mock.calls
     expect(second.slice(0, 3)).toEqual(first.slice(0, 3))
     expect(second[3]).not.toBe(first[3])
@@ -219,16 +220,16 @@ describe('Customer reservation guided flow', () => {
     const api = makeApi({ createHold: vi.fn().mockRejectedValue(new MutationResultUnknownError('NETWORK_ERROR')) })
     const view = render(<App api={api} />)
     await screen.findByRole('option', { name: /서울 다이닝/ })
-    fireEvent.change(screen.getByLabelText('Venue'), { target: { value: venue.id } })
+    fireEvent.change(screen.getByLabelText('매장'), { target: { value: venue.id } })
     fireEvent.change(screen.getByLabelText('날짜'), { target: { value: '2099-09-01' } })
     fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 조회' }))
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
     await screen.findByRole('alert')
     view.unmount()
     render(<App api={api} />)
     await screen.findByRole('option', { name: /서울 다이닝/ })
-    expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '같은 예약 보류 요청 다시 시도' })).not.toBeInTheDocument()
     expect(api.createHold).toHaveBeenCalledOnce()
     expect(storage).not.toHaveBeenCalled()
     storage.mockRestore()
@@ -241,16 +242,16 @@ describe('Customer reservation guided flow', () => {
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
     if (boundary === 'retention') vi.useFakeTimers()
     try {
-      fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+      fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
       act(() => {
         if (boundary === 'session') localAuthSession.invalidate()
         else vi.advanceTimersByTime(HOLD_RETRY_WINDOW_MS)
       })
       await act(async () => { resolve(held) })
       expect(screen.queryByRole('article', { name: '현재 예약' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: '같은 HOLD 요청 다시 시도' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '같은 예약 보류 요청 다시 시도' })).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: '이 요청 포기하고 새 예약 시작' })).toBeEnabled()
-      expect(screen.getByRole('button', { name: 'Venue 운영' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: '매장 운영' })).toBeEnabled()
       expect(api.createHold).toHaveBeenCalledOnce()
     } finally { vi.useRealTimers() }
   })
@@ -264,7 +265,7 @@ describe('Customer reservation guided flow', () => {
     expect(screen.getByRole('heading', { level: 1, name: '예약하기' })).toBeInTheDocument()
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content')
     expect(screen.getByRole('link', { name: '본문으로 바로가기' })).toHaveAttribute('href', '#main-content')
-    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Venue를 불러오는 중')
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('매장을 불러오는 중')
 
     resolveVenues?.([venue])
     expect(await screen.findByRole('option', { name: /서울 다이닝/ })).toBeInTheDocument()
@@ -279,7 +280,7 @@ describe('Customer reservation guided flow', () => {
     fireEvent.change(screen.getByLabelText('인원'), { target: { value: '0' } })
     fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 조회' }))
 
-    expect(screen.getByText('Venue를 선택해 주세요.')).toHaveAttribute('id', 'venue-error')
+    expect(screen.getByText('매장을 선택해 주세요.')).toHaveAttribute('id', 'venue-error')
     expect(screen.getByText('날짜를 선택해 주세요.')).toHaveAttribute('id', 'date-error')
     expect(screen.getByText('인원은 1명 이상의 정수로 입력해 주세요.')).toHaveAttribute('id', 'party-size-error')
     expect(screen.getByLabelText('인원')).toHaveAttribute('aria-invalid', 'true')
@@ -319,8 +320,8 @@ describe('Customer reservation guided flow', () => {
 
   it.each([
     {
-      condition: 'Venue',
-      control: () => screen.getByRole('combobox', { name: 'Venue' }),
+      condition: '매장',
+      control: () => screen.getByRole('combobox', { name: '매장' }),
       value: anotherVenue.id,
     },
     {
@@ -351,23 +352,23 @@ describe('Customer reservation guided flow', () => {
 
     expect(screen.queryByRole('list', { name: '예약 가능한 시간' })).not.toBeInTheDocument()
     expect(screen.getByText('먼저 예약 가능한 시간을 조회해 주세요.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '이 시간 HOLD' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이 시간 예약 보류' })).not.toBeInTheDocument()
   })
 
   it('shows server HELD state and expiresAt, then uses command representations for confirm and cancel', async () => {
     const api = makeApi()
     await createHeldReservation(api)
 
-    expect(screen.getByText('HELD')).toBeInTheDocument()
+    expect(screen.getByText('예약 보류')).toBeInTheDocument()
     expect(screen.getByText(/표시용 남은 시간/)).toBeInTheDocument()
-    expect(screen.getByText('서버 HOLD deadline')).toBeInTheDocument()
+    expect(screen.getByText('서버 예약 보류 처리 기한')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '예약 확정' }))
-    expect(await screen.findByText('CONFIRMED')).toBeInTheDocument()
+    expect(await screen.findByText('예약 확정', { selector: '.status-badge' })).toBeInTheDocument()
     expect(api.confirmReservation).toHaveBeenCalledWith(venue.id, held.id)
 
     fireEvent.click(screen.getByRole('button', { name: '예약 취소' }))
-    expect(await screen.findByText('CANCELLED')).toBeInTheDocument()
+    expect(await screen.findByText('취소됨')).toBeInTheDocument()
     expect(api.cancelReservation).toHaveBeenCalledWith(venue.id, held.id)
   })
 
@@ -377,10 +378,10 @@ describe('Customer reservation guided flow', () => {
     })
     await createHeldReservation(api)
 
-    fireEvent.click(screen.getByRole('button', { name: '최신 Reservation 상태 조회' }))
+    fireEvent.click(screen.getByRole('button', { name: '최신 예약 상태 조회' }))
 
-    expect(await screen.findByText('EXPIRED')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('서버가 이 예약을 EXPIRED 상태로 반환')
+    expect(await screen.findByText('만료됨')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('서버가 이 예약을 만료 상태로 반환')
     expect(screen.queryByRole('button', { name: '예약 확정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '예약 취소' })).not.toBeInTheDocument()
   })
@@ -394,7 +395,7 @@ describe('Customer reservation guided flow', () => {
     })
     await createHeldReservation(api)
 
-    fireEvent.click(screen.getByRole('button', { name: '최신 Reservation 상태 조회' }))
+    fireEvent.click(screen.getByRole('button', { name: '최신 예약 상태 조회' }))
     expect(screen.getByText('최신 예약 상태를 조회하는 중입니다.')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('인원'), { target: { value: '4' } })
@@ -403,7 +404,7 @@ describe('Customer reservation guided flow', () => {
     await act(async () => { resolveReservation?.({ ...held, state: 'CONFIRMED' }) })
 
     expect(screen.queryByRole('article', { name: '현재 예약' })).not.toBeInTheDocument()
-    expect(screen.getByText('HOLD를 생성하면 서버가 반환한 예약 상태가 여기에 표시됩니다.'))
+    expect(screen.getByText('예약 보류를 생성하면 서버가 반환한 예약 상태가 여기에 표시됩니다.'))
       .toBeInTheDocument()
   })
 
@@ -425,7 +426,7 @@ describe('Customer reservation guided flow', () => {
     })
     await searchAvailability(api)
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(code)
   })
@@ -442,8 +443,8 @@ describe('Customer reservation guided flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '예약 확정' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(code)
-    expect(screen.getByText('HELD')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '최신 Reservation 상태 조회' })).toBeInTheDocument()
+    expect(screen.getByText('예약 보류')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '최신 예약 상태 조회' })).toBeInTheDocument()
   })
 
   it('does not replay a HOLD with unknown Reservation ID and offers Availability refresh', async () => {
@@ -452,13 +453,13 @@ describe('Customer reservation guided flow', () => {
     })
     await searchAvailability(api)
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Reservation ID를 받지 못했으므로 같은 요청을 자동 재전송하지 않습니다')
-    expect(screen.getByRole('button', { name: 'Availability 새로고침' })).toBeInTheDocument()
+    expect(alert).toHaveTextContent('예약 ID를 받지 못했으므로 같은 요청을 자동 재전송하지 않습니다')
+    expect(screen.getByRole('button', { name: '예약 가능 시간 새로고침' })).toBeInTheDocument()
     expect(api.createHold).toHaveBeenCalledOnce()
-    fireEvent.click(screen.getByRole('button', { name: 'Availability 새로고침' }))
+    fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 새로고침' }))
     await waitFor(() => expect(api.getAvailability).toHaveBeenCalledTimes(2))
     expect(api.createHold).toHaveBeenCalledOnce()
   })
@@ -472,11 +473,11 @@ describe('Customer reservation guided flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '예약 확정' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('성공이나 실패를 추정하지 않습니다')
-    expect(screen.getByText('HELD')).toBeInTheDocument()
+    expect(screen.getByText('예약 보류')).toBeInTheDocument()
     expect(api.confirmReservation).toHaveBeenCalledOnce()
 
-    fireEvent.click(screen.getByRole('button', { name: '최신 Reservation 상태 조회' }))
-    expect(await screen.findByText('CONFIRMED')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '최신 예약 상태 조회' }))
+    expect(await screen.findByText('예약 확정', { selector: '.status-badge' })).toBeInTheDocument()
     expect(screen.queryByText('성공이나 실패를 추정하지 않습니다')).not.toBeInTheDocument()
     expect(api.getReservation).toHaveBeenCalledOnce()
   })
@@ -494,13 +495,13 @@ describe('Customer reservation guided flow', () => {
     fireEvent.click(confirm)
 
     expect(confirm).toBeDisabled()
-    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: '매장' })).toBeDisabled()
     expect(screen.getByLabelText('날짜')).toBeDisabled()
     expect(screen.getByLabelText('인원')).toBeDisabled()
     fireEvent.change(screen.getByLabelText('인원'), { target: { value: '4' } })
     expect(confirmReservation).toHaveBeenCalledOnce()
     resolveConfirm?.({ ...held, state: 'CONFIRMED' })
-    await waitFor(() => expect(screen.getByText('CONFIRMED')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('예약 확정', { selector: '.status-badge' })).toBeInTheDocument())
     expect(screen.getByLabelText('인원')).toHaveValue(2)
   })
 
@@ -518,7 +519,7 @@ describe('Customer reservation guided flow', () => {
       await createHeldReservation(api)
 
       fireEvent.click(screen.getByRole('button', { name: buttonName }))
-      const managementNavigation = screen.getByRole('button', { name: 'Venue 운영' })
+      const managementNavigation = screen.getByRole('button', { name: '매장 운영' })
       expect(managementNavigation).toBeDisabled()
       fireEvent.click(managementNavigation)
       expect(screen.getByRole('heading', { level: 1, name: '예약하기' })).toBeInTheDocument()
@@ -542,22 +543,22 @@ describe('Customer reservation guided flow', () => {
     } as unknown as ManagementApi
     render(<App api={api} managementApi={managementApi} />)
     await screen.findByRole('option', { name: /서울 다이닝/ })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), {
       target: { value: venue.id },
     })
     fireEvent.change(screen.getByLabelText('날짜'), { target: { value: '2099-09-01' } })
     fireEvent.change(screen.getByLabelText('인원'), { target: { value: '2' } })
     fireEvent.click(screen.getByRole('button', { name: '예약 가능 시간 조회' }))
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
-    fireEvent.click(screen.getByRole('button', { name: '이 시간 HOLD' }))
+    fireEvent.click(screen.getByRole('button', { name: '이 시간 예약 보류' }))
     await screen.findByRole('article', { name: '현재 예약' })
     fireEvent.click(screen.getByRole('button', { name: '예약 확정' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('성공이나 실패를 추정하지 않습니다')
-    const venueSelect = screen.getByRole('combobox', { name: 'Venue' })
+    const venueSelect = screen.getByRole('combobox', { name: '매장' })
     const dateInput = screen.getByLabelText('날짜')
     const partySizeInput = screen.getByLabelText('인원')
-    const managementNavigation = screen.getByRole('button', { name: 'Venue 운영' })
+    const managementNavigation = screen.getByRole('button', { name: '매장 운영' })
     expect(venueSelect).toBeDisabled()
     expect(dateInput).toBeDisabled()
     expect(partySizeInput).toBeDisabled()
@@ -569,12 +570,12 @@ describe('Customer reservation guided flow', () => {
     expect(dateInput).toHaveValue('2099-09-01')
     expect(partySizeInput).toHaveValue(2)
 
-    fireEvent.click(screen.getByRole('button', { name: '최신 Reservation 상태 조회' }))
-    expect(await screen.findByText('CONFIRMED')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '최신 예약 상태 조회' }))
+    expect(await screen.findByText('예약 확정', { selector: '.status-badge' })).toBeInTheDocument()
     expect(api.getReservation).toHaveBeenCalledWith(venue.id, held.id)
     await waitFor(() => expect(managementNavigation).toBeEnabled())
     fireEvent.click(managementNavigation)
-    expect(await screen.findByRole('heading', { level: 1, name: 'Venue 운영' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '매장 운영' })).toBeInTheDocument()
   })
 
   it('keeps the reservation context immutable while cancel is in flight', async () => {
@@ -590,15 +591,15 @@ describe('Customer reservation guided flow', () => {
     fireEvent.click(cancel)
 
     expect(cancel).toBeDisabled()
-    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Venue' }), {
+    expect(screen.getByRole('combobox', { name: '매장' })).toBeDisabled()
+    fireEvent.change(screen.getByRole('combobox', { name: '매장' }), {
       target: { value: anotherVenue.id },
     })
     expect(cancelReservation).toHaveBeenCalledOnce()
 
     resolveCancel?.({ ...held, state: 'CANCELLED' })
-    expect(await screen.findByText('CANCELLED')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Venue' })).toHaveValue(venue.id)
+    expect(await screen.findByText('취소됨')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '매장' })).toHaveValue(venue.id)
   })
 
   it('blocks duplicate HOLD submit while creation is in flight', async () => {
@@ -610,12 +611,12 @@ describe('Customer reservation guided flow', () => {
     await searchAvailability(api)
     fireEvent.click(await screen.findByRole('button', { name: '이 시간 선택' }))
 
-    const holdButton = screen.getByRole('button', { name: '이 시간 HOLD' })
+    const holdButton = screen.getByRole('button', { name: '이 시간 예약 보류' })
     fireEvent.click(holdButton)
     fireEvent.click(holdButton)
 
     expect(holdButton).toBeDisabled()
-    expect(screen.getByRole('combobox', { name: 'Venue' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: '매장' })).toBeDisabled()
     expect(screen.getByLabelText('날짜')).toBeDisabled()
     expect(screen.getByLabelText('인원')).toBeDisabled()
     expect(screen.getByRole('button', { name: '예약 가능 시간 조회' })).toBeDisabled()

@@ -1,3 +1,4 @@
+import { formatVenueTime as formatTime, venueToday, venueLocalTimestamp } from '../venueTime'
 import {
   useEffect,
   useLayoutEffect,
@@ -6,7 +7,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react'
-import { Button, FormField, StatusBadge } from '../components'
+import { Button, FormField, StatusBadge, formatStatus } from '../components'
 import {
   ManagementApiError,
   ManagementMutationResultUnknownError,
@@ -59,15 +60,22 @@ const reservationStates: ReservationState[] = [
   'HELD', 'CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'NO_SHOW', 'EXPIRED',
 ]
 
+const policyLabels = {
+  slotDurationMinutes: '예약 시간 간격',
+  holdDurationMinutes: '예약 보류 유지 시간',
+  cancellationCutoffMinutes: '예약 시작 전 취소 마감 시간',
+  noShowGraceMinutes: '예약 시작 후 미방문 처리 유예 시간',
+}
+
 const errorCopy: Record<ManagementClientErrorCode, string> = {
   VALIDATION_FAILED: '입력값을 확인해 주세요.',
   AUTHENTICATION_REQUIRED: '인증 세션을 확인한 뒤 다시 시도해 주세요.',
   ACCESS_DENIED: '현재 사용자에게 이 작업을 수행할 권한이 없습니다.',
   RESOURCE_NOT_FOUND: '대상을 찾을 수 없습니다. 다른 범위의 데이터는 표시하지 않습니다.',
   INTERNAL_ERROR: '서버 오류가 발생했습니다. 최신 정보를 다시 조회해 주세요.',
-  SLOT_INVENTORY_CONFLICT: '기존 Slot과 겹칩니다. Slot 목록을 다시 확인해 주세요.',
-  SLOT_INVENTORY_NOT_ALLOWED: '선택한 Resource와 시간에는 Slot을 만들 수 없습니다.',
-  HOLD_EXPIRED: 'HOLD가 만료되었습니다. 최신 Reservation 목록을 확인해 주세요.',
+  SLOT_INVENTORY_CONFLICT: '기존 예약 시간대와 겹칩니다. 예약 시간대 목록을 다시 확인해 주세요.',
+  SLOT_INVENTORY_NOT_ALLOWED: '선택한 테이블과 시간에는 예약 시간대를 만들 수 없습니다.',
+  HOLD_EXPIRED: '예약 보류가 만료되었습니다. 최신 예약 목록을 확인해 주세요.',
   CANCELLATION_WINDOW_CLOSED: '서버의 취소 가능 시간이 지났습니다.',
   RESERVATION_TRANSITION_NOT_ALLOWED: '현재 서버 상태에서는 이 작업을 수행할 수 없습니다.',
   NETWORK_ERROR: '서버에 연결할 수 없습니다. 자동 재시도하지 않았습니다.',
@@ -96,25 +104,10 @@ function Loading({ children }: { children: string }) {
   return <p className="notice notice--loading" role="status" aria-live="polite">{children}</p>
 }
 
-function venueToday(timezone: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date())
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? ''
-  return `${value('year')}-${value('month')}-${value('day')}`
-}
 
-function formatTime(value: string, timezone: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('ko-KR', {
-    timeZone: timezone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  }).format(date)
-}
 
 const actionLabel: Record<ReservationAction, string> = {
-  cancel: '취소', 'check-in': '체크인', 'no-show': '노쇼', complete: '완료',
+  cancel: '취소', 'check-in': '체크인', 'no-show': '미방문 처리', complete: '완료',
 }
 
 export function ManagementVenueFlow({
@@ -363,7 +356,7 @@ export function ManagementVenueFlow({
     const name = String(data.get('name') ?? '').trim()
     const nextStatus = String(data.get('status')) as ManagementVenue['status']
     if (!name) {
-      setFieldErrors({ name: 'Venue 이름을 입력해 주세요.' })
+      setFieldErrors({ name: '매장 이름을 입력해 주세요.' })
       setFieldErrorScope('venue')
       return
     }
@@ -422,10 +415,16 @@ export function ManagementVenueFlow({
     if (!detail) return
     const form = event.currentTarget
     const data = new FormData(form)
-    const input = {
-      resourceId: String(data.get('resourceId') ?? ''),
-      startsAt: String(data.get('startsAt') ?? '').trim(),
+    let startsAt: string
+    try {
+      startsAt = venueLocalTimestamp(String(data.get('startsAt') ?? ''), detail.timezone)
+    } catch (error) {
+      setFieldErrors({ startsAt: error instanceof Error ? error.message : '시작 시각을 확인해 주세요.' })
+      setFieldErrorScope('slot-create')
+      form.querySelector<HTMLInputElement>('[name="startsAt"]')?.focus()
+      return
     }
+    const input = { resourceId: String(data.get('resourceId') ?? ''), startsAt }
     const context = { venueId: detail.id, date }
     void (async () => {
       const result = await runMutation(
@@ -469,8 +468,13 @@ export function ManagementVenueFlow({
   const busy = Boolean(mutation)
     || Boolean(reservationTargetPending)
     || reservationReconciliationInFlight
-  const errorFor = (scope: string, field: string) =>
-    fieldErrorScope === scope ? fieldErrors[field] : undefined
+  const errorFor = (scope: string, field: string) => {
+    const message = fieldErrorScope === scope ? fieldErrors[field] : undefined
+    if (!message || /[가-힣]/.test(message)) return message
+    return field === 'startsAt'
+      ? '시작 날짜와 시간이 매장의 영업시간·예약 간격·시간대 규칙에 맞는지 확인해 주세요.'
+      : '입력값이 서버의 검증 조건에 맞지 않습니다. 값을 확인해 주세요.'
+  }
 
   useLayoutEffect(() => {
     onNavigationLockChange?.(busy)
@@ -552,55 +556,55 @@ export function ManagementVenueFlow({
       </header>
       <main id="main-content" className="app-shell management-shell" tabIndex={-1}>
         <section className="intro" aria-labelledby="management-title">
-          <p className="eyebrow">Venue management</p>
-          <h1 id="management-title">Venue 운영</h1>
-          <p className="intro-copy">Venue를 선택하고 당일 Reservation과 서버가 허용한 작업을 먼저 확인하세요.</p>
+          <p className="eyebrow">매장 운영</p>
+          <h1 id="management-title">매장 운영</h1>
+          <p className="intro-copy">매장을 선택하고 당일 예약과 서버가 허용한 작업을 먼저 확인하세요.</p>
         </section>
 
         <section className="management-section venue-selector" aria-labelledby="venue-selector-title">
-          <h2 id="venue-selector-title">1. Venue 선택</h2>
-          {venueListState === 'loading' ? <Loading>접근 가능한 Venue를 불러오는 중입니다.</Loading> : null}
-          {venueListError ? <><ErrorNotice error={venueListError} /><Button density="compact" variant="secondary" onClick={() => void loadVenues()}>Venue 다시 조회</Button></> : null}
-          {venueListState === 'success' && venues.length === 0 ? <p className="notice notice--empty" role="status">할당된 Venue가 없습니다.</p> : null}
-          <FormField id="management-venue" label="Venue" density="compact">
+          <h2 id="venue-selector-title">1. 매장 선택</h2>
+          {venueListState === 'loading' ? <Loading>접근 가능한 매장을 불러오는 중입니다.</Loading> : null}
+          {venueListError ? <><ErrorNotice error={venueListError} /><Button density="compact" variant="secondary" onClick={() => void loadVenues()}>매장 다시 조회</Button></> : null}
+          {venueListState === 'success' && venues.length === 0 ? <p className="notice notice--empty" role="status">할당된 매장이 없습니다.</p> : null}
+          <FormField id="management-venue" label="매장" density="compact">
             <select value={venueId} onChange={(event) => selectVenue(event.target.value)} disabled={busy || venues.length === 0}>
-              <option value="">Venue 선택</option>
+              <option value="">매장 선택</option>
               {venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name} · {venue.timezone}</option>)}
             </select>
           </FormField>
-          {selectedVenue ? <p className="venue-timezone">기준 timezone: <strong>{selectedVenue.timezone}</strong></p> : null}
+          {selectedVenue ? <p className="venue-timezone">기준 시간대: <strong>{selectedVenue.timezone}</strong></p> : null}
         </section>
 
         {selectedVenue ? (
           <>
             <section className="management-section reservation-operations" aria-labelledby="reservation-list-title">
-              <div className="section-heading"><div><h2 id="reservation-list-title">2. Reservation 운영</h2><p>상태와 작업 가능 여부는 서버 응답을 그대로 표시합니다.</p></div></div>
+              <div className="section-heading"><div><h2 id="reservation-list-title">2. 예약 운영</h2><p>상태와 작업 가능 여부는 서버 응답을 그대로 표시합니다.</p></div></div>
               <div className="filter-row">
-                <FormField id="management-date" label="Venue-local 날짜" density="compact">
+                <FormField id="management-date" label="매장 기준 날짜" density="compact">
                   <input type="date" value={date} onChange={(event) => changeDate(event.target.value)} disabled={busy} />
                 </FormField>
                 <FormField id="reservation-status" label="상태" density="compact">
                   <select value={status} onChange={(event) => changeStatus(event.target.value as ReservationState | '')} disabled={busy}>
                     <option value="">전체 상태</option>
-                    {reservationStates.map((value) => <option key={value} value={value}>{value}</option>)}
+                    {reservationStates.map((value) => <option key={value} value={value}>{formatStatus(value)}</option>)}
                   </select>
                 </FormField>
                 <Button density="compact" variant="secondary" disabled={busy || !date || reservationState === 'loading'} onClick={() => void loadReservations(venueId, date, status)}>목록 새로고침</Button>
               </div>
-              {reservationState === 'loading' ? <Loading>Reservation 목록을 불러오는 중입니다.</Loading> : null}
+              {reservationState === 'loading' ? <Loading>예약 목록을 불러오는 중입니다.</Loading> : null}
               {reservationError ? <ErrorNotice error={reservationError} /> : null}
-              {reservationState === 'success' && reservations.length === 0 ? <p className="notice notice--empty" role="status">선택한 날짜와 상태의 Reservation이 없습니다.</p> : null}
+              {reservationState === 'success' && reservations.length === 0 ? <p className="notice notice--empty" role="status">선택한 날짜와 상태의 예약이 없습니다.</p> : null}
               {reservations.length > 0 ? (
-                <ul className="reservation-list" aria-label="Reservation 목록">
+                <ul className="reservation-list" aria-label="예약 목록">
                   {reservations.map((reservation) => (
                     <li key={reservation.id} className="reservation-row">
                       <div className="reservation-scan">
                         <strong><time dateTime={reservation.startsAt}>{formatTime(reservation.startsAt, selectedVenue.timezone)}</time></strong>
                         <StatusBadge status={reservation.state} />
-                        <span>Resource {resourceNames.get(reservation.resourceId) ?? reservation.resourceId}</span>
+                        <span>테이블 {resourceNames.get(reservation.resourceId) ?? reservation.resourceId}</span>
                         <span>{reservation.partySize}명</span>
-                        <span>Customer {reservation.customerReference}</span>
-                        {reservation.state === 'HELD' ? <span>HOLD 만료 <time dateTime={reservation.expiresAt}>{formatTime(reservation.expiresAt, selectedVenue.timezone)}</time></span> : null}
+                        <span>고객 {reservation.customerReference}</span>
+                        {reservation.state === 'HELD' ? <span>예약 보류 만료 <time dateTime={reservation.expiresAt}>{formatTime(reservation.expiresAt, selectedVenue.timezone)}</time></span> : null}
                       </div>
                       <div className="reservation-actions" aria-label={`${reservation.id} 허용 작업`}>
                         {reservation.allowedActions.length === 0 ? <span className="muted">허용된 작업 없음</span> : null}
@@ -615,83 +619,83 @@ export function ManagementVenueFlow({
             </section>
 
             <Button density="compact" variant="secondary" onClick={() => setShowWaitlist((current) => !current)}>
-              {showWaitlist ? 'Waitlist 업무 조회 닫기' : 'Waitlist 업무 조회 열기'}
+              {showWaitlist ? '대기 업무 조회 닫기' : '대기 업무 조회 열기'}
             </Button>
-            {showWaitlist ? <ManagementWaitlistView venueId={venueId} date={date} slots={slots} api={waitlistApi} /> : null}
+            {showWaitlist ? <ManagementWaitlistView venueId={venueId} date={date} timezone={selectedVenue.timezone} slots={slots} api={waitlistApi} /> : null}
 
             <section className="management-section configuration-section" aria-labelledby="configuration-title">
-              <h2 id="configuration-title">3. Venue configuration</h2>
-              {configurationState === 'loading' ? <Loading>Venue 설정을 불러오는 중입니다.</Loading> : null}
+              <h2 id="configuration-title">3. 매장 설정</h2>
+              {configurationState === 'loading' ? <Loading>매장 설정을 불러오는 중입니다.</Loading> : null}
               {configurationError ? <ErrorNotice error={configurationError} /> : null}
-              {!writable ? <p className="notice notice--state" role="status">이 Venue의 설정은 읽기 전용입니다. Reservation 운영만 사용할 수 있습니다.</p> : null}
+              {!writable ? <p className="notice notice--state" role="status">이 매장의 설정은 읽기 전용입니다. 예약 운영만 사용할 수 있습니다.</p> : null}
               {detail && policy ? (
                 <div className="configuration-grid">
                   <article className="configuration-panel">
-                    <h3>Venue</h3>
+                    <h3>매장</h3>
                     {writable ? (
                       <form key={`${detail.id}:${detail.name}:${detail.status}`} className="compact-form" onSubmit={submitVenue} noValidate>
                         <FormField id="venue-name" label="이름" density="compact" error={errorFor('venue', 'name')}><input name="name" defaultValue={detail.name} disabled={busy} /></FormField>
-                        <FormField id="venue-status" label="상태" density="compact" error={errorFor('venue', 'status')}><select name="status" defaultValue={detail.status} disabled={busy}><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></FormField>
-                        <Button density="compact" type="submit" disabled={busy}>{mutation === 'venue' ? '저장 중…' : 'Venue 저장'}</Button>
+                        <FormField id="venue-status" label="상태" density="compact" error={errorFor('venue', 'status')}><select name="status" defaultValue={detail.status} disabled={busy}><option value="ACTIVE">활성</option><option value="INACTIVE">비활성</option></select></FormField>
+                        <Button density="compact" type="submit" disabled={busy}>{mutation === 'venue' ? '저장 중…' : '매장 저장'}</Button>
                       </form>
-                    ) : <dl className="read-only-details"><div><dt>이름</dt><dd>{detail.name}</dd></div><div><dt>상태</dt><dd>{detail.status}</dd></div></dl>}
+                    ) : <dl className="read-only-details"><div><dt>이름</dt><dd>{detail.name}</dd></div><div><dt>상태</dt><dd>{formatStatus(detail.status)}</dd></div></dl>}
                   </article>
                   <article className="configuration-panel">
-                    <h3>Policy v{policy.version}</h3>
+                    <h3>운영 정책 v{policy.version}</h3>
                     {writable ? (
                       <form key={`${detail.id}:${policy.version}:${policy.slotDurationMinutes}:${policy.holdDurationMinutes}:${policy.cancellationCutoffMinutes}:${policy.noShowGraceMinutes}`} className="compact-form policy-form" onSubmit={submitPolicy} noValidate>
-                        {(['slotDurationMinutes', 'holdDurationMinutes', 'cancellationCutoffMinutes', 'noShowGraceMinutes'] as const).map((field) => <FormField key={field} id={`policy-${field}`} label={field} density="compact" error={errorFor('policy', field)}><input name={field} type="number" min={field.includes('Duration') ? 1 : 0} defaultValue={policy[field]} disabled={busy} /></FormField>)}
-                        <Button density="compact" type="submit" disabled={busy}>{mutation === 'policy' ? '저장 중…' : 'Policy 전체 저장'}</Button>
+                        {(['slotDurationMinutes', 'holdDurationMinutes', 'cancellationCutoffMinutes', 'noShowGraceMinutes'] as const).map((field) => <FormField key={field} id={`policy-${field}`} label={policyLabels[field]} description="분 단위" density="compact" error={errorFor('policy', field)}><input name={field} type="number" min={field.includes('Duration') ? 1 : 0} defaultValue={policy[field]} disabled={busy} /></FormField>)}
+                        <Button density="compact" type="submit" disabled={busy}>{mutation === 'policy' ? '저장 중…' : '운영 정책 전체 저장'}</Button>
                       </form>
-                    ) : <dl className="read-only-details"><div><dt>Slot</dt><dd>{policy.slotDurationMinutes}분</dd></div><div><dt>HOLD</dt><dd>{policy.holdDurationMinutes}분</dd></div><div><dt>취소 cutoff</dt><dd>{policy.cancellationCutoffMinutes}분</dd></div><div><dt>No-show grace</dt><dd>{policy.noShowGraceMinutes}분</dd></div></dl>}
+                    ) : <dl className="read-only-details">{(['slotDurationMinutes', 'holdDurationMinutes', 'cancellationCutoffMinutes', 'noShowGraceMinutes'] as const).map((field) => <div key={field}><dt>{policyLabels[field]}</dt><dd>{policy[field]}분</dd></div>)}</dl>}
                   </article>
                 </div>
               ) : null}
 
               {configurationState === 'success' ? (
                 <article className="configuration-panel resource-panel">
-                  <h3>TABLE Resources</h3>
-                  {resources.length === 0 ? <p className="notice notice--empty" role="status">Resource가 없습니다.</p> : null}
+                  <h3>테이블</h3>
+                  {resources.length === 0 ? <p className="notice notice--empty" role="status">테이블이 없습니다.</p> : null}
                   <ul className="resource-list">
                     {resources.map((resource) => <li key={resource.id}>
                       {writable ? <form key={`${resource.id}:${resource.name}:${resource.seatingCapacity}:${resource.status}`} className="resource-form" onSubmit={(event) => submitResourcePatch(event, resource)}>
                         <FormField id={`resource-name-${resource.id}`} label="이름" density="compact" error={errorFor(`resource-patch:${resource.id}`, 'name')}><input name="name" defaultValue={resource.name} disabled={busy} /></FormField>
                         <FormField id={`resource-seats-${resource.id}`} label="좌석 수" density="compact" error={errorFor(`resource-patch:${resource.id}`, 'seatingCapacity')}><input name="seatingCapacity" type="number" min="1" defaultValue={resource.seatingCapacity} disabled={busy} /></FormField>
-                        <FormField id={`resource-status-${resource.id}`} label="상태" density="compact" error={errorFor(`resource-patch:${resource.id}`, 'status')}><select name="status" defaultValue={resource.status} disabled={busy}><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></FormField>
-                        <Button density="compact" variant="secondary" type="submit" disabled={busy}>Resource 저장</Button>
-                      </form> : <span>{resource.name} · {resource.seatingCapacity}석 · {resource.status}</span>}
+                        <FormField id={`resource-status-${resource.id}`} label="상태" density="compact" error={errorFor(`resource-patch:${resource.id}`, 'status')}><select name="status" defaultValue={resource.status} disabled={busy}><option value="ACTIVE">활성</option><option value="INACTIVE">비활성</option></select></FormField>
+                        <Button density="compact" variant="secondary" type="submit" disabled={busy}>테이블 저장</Button>
+                      </form> : <span>{resource.name} · {resource.seatingCapacity}석 · {formatStatus(resource.status)}</span>}
                     </li>)}
                   </ul>
                   {writable ? <form className="resource-form create-form" onSubmit={submitResource}>
-                    <FormField id="new-resource-name" label="새 TABLE 이름" density="compact" error={errorFor('resource-create', 'name')}><input name="name" disabled={busy} /></FormField>
+                    <FormField id="new-resource-name" label="새 테이블 이름" density="compact" error={errorFor('resource-create', 'name')}><input name="name" disabled={busy} /></FormField>
                     <FormField id="new-resource-seats" label="좌석 수" density="compact" error={errorFor('resource-create', 'seatingCapacity')}><input name="seatingCapacity" type="number" min="1" disabled={busy} /></FormField>
-                    <Button density="compact" type="submit" disabled={busy}>TABLE Resource 추가</Button>
+                    <Button density="compact" type="submit" disabled={busy}>테이블 추가</Button>
                   </form> : null}
                 </article>
               ) : null}
 
               <article className="configuration-panel slot-panel">
-                <div className="section-heading"><div><h3>Slot inventory</h3><p>TABLE capacity는 서버 representation 그대로 표시합니다.</p></div><Button density="compact" variant="secondary" onClick={() => void loadSlots(venueId, date)} disabled={busy || !date || slotState === 'loading'}>Slot 목록 다시 조회</Button></div>
-                {slotState === 'loading' ? <Loading>Slot 목록을 불러오는 중입니다.</Loading> : null}
+                <div className="section-heading"><div><h3>예약 시간대</h3><p>예약 가능 수량은 서버 응답을 기준으로 표시합니다.</p></div><Button density="compact" variant="secondary" onClick={() => void loadSlots(venueId, date)} disabled={busy || !date || slotState === 'loading'}>예약 시간대 목록 다시 조회</Button></div>
+                {slotState === 'loading' ? <Loading>예약 시간대 목록을 불러오는 중입니다.</Loading> : null}
                 {slotError ? <ErrorNotice error={slotError} /> : null}
-                {slotState === 'success' && slots.length === 0 ? <p className="notice notice--empty" role="status">선택한 날짜의 Slot이 없습니다.</p> : null}
-                {slots.length > 0 ? <ul className="slot-list">{slots.map((slot) => <li key={slot.id}><time dateTime={slot.startsAt}>{formatTime(slot.startsAt, selectedVenue.timezone)}</time> · {resourceNames.get(slot.resourceId) ?? slot.resourceId} · capacity {slot.capacity} · policy v{slot.appliedPolicyVersion}</li>)}</ul> : null}
+                {slotState === 'success' && slots.length === 0 ? <p className="notice notice--empty" role="status">선택한 날짜의 예약 시간대가 없습니다.</p> : null}
+                {slots.length > 0 ? <ul className="slot-list">{slots.map((slot) => <li key={slot.id}><time dateTime={slot.startsAt}>{formatTime(slot.startsAt, selectedVenue.timezone)}</time> · {resourceNames.get(slot.resourceId) ?? slot.resourceId} · 예약 가능 수량 {slot.capacity} · 정책 버전 {slot.appliedPolicyVersion}</li>)}</ul> : null}
                 {writable ? <form className="slot-create-form" onSubmit={submitSlot}>
-                  <FormField id="slot-resource" label="Resource" density="compact" error={errorFor('slot-create', 'resourceId')}><select name="resourceId" disabled={busy}><option value="">Resource 선택</option>{resources.filter((resource) => resource.status === 'ACTIVE').map((resource) => <option key={resource.id} value={resource.id}>{resource.name}</option>)}</select></FormField>
-                  <FormField id="slot-start" label="startsAt (RFC3339 offset)" density="compact" description={`${selectedVenue.timezone} 예: 2026-08-31T18:00:00+09:00`} error={errorFor('slot-create', 'startsAt')}><input name="startsAt" placeholder="2026-08-31T18:00:00+09:00" disabled={busy} /></FormField>
-                  <Button density="compact" type="submit" disabled={busy}>Slot 생성</Button>
+                  <FormField id="slot-resource" label="테이블" density="compact" error={errorFor('slot-create', 'resourceId')}><select name="resourceId" disabled={busy}><option value="">테이블 선택</option>{resources.filter((resource) => resource.status === 'ACTIVE').map((resource) => <option key={resource.id} value={resource.id}>{resource.name}</option>)}</select></FormField>
+                  <FormField id="slot-start" label="시작 날짜와 시간" density="compact" description={`${selectedVenue.timezone} 기준. 시간대 전환으로 존재하지 않거나 중복되는 시각은 선택할 수 없습니다.`} error={errorFor('slot-create', 'startsAt')}><input name="startsAt" type="datetime-local" step="60" required disabled={busy} /></FormField>
+                  <Button density="compact" type="submit" disabled={busy}>예약 시간대 생성</Button>
                 </form> : null}
               </article>
             </section>
           </>
-        ) : <p className="step-placeholder">서버가 반환한 Venue 중 하나를 선택해 주세요.</p>}
+        ) : <p className="step-placeholder">서버가 반환한 매장 중 하나를 선택해 주세요.</p>}
 
-        {mutationError ? <div className="management-mutation-notice"><ErrorNotice error={mutationError} />{reservationConflict ? <Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileConflict()}>{reconcilingUnknown ? '조회 중…' : '원래 Reservation 다시 조회'}</Button> : venueId && date ? <Button density="compact" variant="secondary" onClick={() => { void loadConfiguration(venueId); void loadSlots(venueId, date); void loadReservations(venueId, date, status) }}>관련 데이터 다시 조회</Button> : null}</div> : null}
-        {resultUnknown ? <div className="notice notice--unknown" role="alert"><strong>작업 결과를 확인할 수 없습니다</strong><span>{reservationUnknown ? '원래 Reservation을 직접 조회하기 전에는 결과를 확정하지 않습니다.' : '성공이나 실패를 추정하지 않고 자동 재전송하지 않았습니다. 관련 목록을 다시 조회해 확인해 주세요.'}</span><code>RESULT_UNKNOWN</code><Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileUnknown()}>{reconcilingUnknown ? '조회 중…' : reservationUnknown ? '원래 Reservation 다시 조회' : '관련 데이터 다시 조회'}</Button></div> : null}
-        {reconciliationError ? <div className="management-mutation-notice"><ErrorNotice error={reconciliationError} /><span>원래 Reservation의 결과는 아직 확정하지 않았습니다.</span></div> : null}
-        {reconciledReservation ? <div className="notice notice--state" role="status"><strong>Reservation {reconciledReservation.id} 최신 상태</strong><StatusBadge status={reconciledReservation.state} /><span>서버의 exact Reservation 응답으로 확인했습니다.</span></div> : null}
+        {mutationError ? <div className="management-mutation-notice"><ErrorNotice error={mutationError} />{reservationConflict ? <Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileConflict()}>{reconcilingUnknown ? '조회 중…' : '원래 예약 다시 조회'}</Button> : venueId && date ? <Button density="compact" variant="secondary" onClick={() => { void loadConfiguration(venueId); void loadSlots(venueId, date); void loadReservations(venueId, date, status) }}>관련 데이터 다시 조회</Button> : null}</div> : null}
+        {resultUnknown ? <div className="notice notice--unknown" role="alert"><strong>작업 결과를 확인할 수 없습니다</strong><span>{reservationUnknown ? '원래 예약을 직접 조회하기 전에는 결과를 확정하지 않습니다.' : '성공이나 실패를 추정하지 않고 자동 재전송하지 않았습니다. 관련 목록을 다시 조회해 확인해 주세요.'}</span><code>RESULT_UNKNOWN</code><Button density="compact" variant="secondary" disabled={reconcilingUnknown} onClick={() => void reconcileUnknown()}>{reconcilingUnknown ? '조회 중…' : reservationUnknown ? '원래 예약 다시 조회' : '관련 데이터 다시 조회'}</Button></div> : null}
+        {reconciliationError ? <div className="management-mutation-notice"><ErrorNotice error={reconciliationError} /><span>원래 예약의 결과는 아직 확정하지 않았습니다.</span></div> : null}
+        {reconciledReservation ? <div className="notice notice--state" role="status"><strong>예약 {reconciledReservation.id} 최신 상태</strong><StatusBadge status={reconciledReservation.state} /><span>서버의 개별 예약 응답으로 확인했습니다.</span></div> : null}
       </main>
-      <footer className="site-footer"><small>Server scope and allowedActions are the source of truth.</small></footer>
+      <footer className="site-footer"><small>조회 범위와 허용 작업은 서버 응답을 따릅니다.</small></footer>
     </>
   )
 }

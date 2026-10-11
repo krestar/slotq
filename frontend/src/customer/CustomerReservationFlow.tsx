@@ -1,6 +1,7 @@
+import { formatVenueTime as formatTimestamp } from '../venueTime'
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
 import type { HoldAttemptMemory, HoldCommand } from './holdAttempt'
-import { Button, FormField, StatusBadge } from '../components'
+import { Button, FormField, StatusBadge, formatStatus } from '../components'
 import {
   CustomerApiError,
   MutationResultUnknownError,
@@ -50,7 +51,7 @@ const errorCopy: Record<ClientErrorCode, { title: string; message: string }> = {
   },
   RESOURCE_NOT_FOUND: {
     title: '대상을 찾을 수 없습니다',
-    message: '요청한 Venue, 시간 또는 예약을 찾을 수 없습니다.',
+    message: '요청한 매장, 시간 또는 예약을 찾을 수 없습니다.',
   },
   CAPACITY_UNAVAILABLE: {
     title: '선택한 시간이 마감되었습니다',
@@ -58,11 +59,11 @@ const errorCopy: Record<ClientErrorCode, { title: string; message: string }> = {
   },
   PARTY_SIZE_NOT_SUPPORTED: {
     title: '인원을 수용할 수 없습니다',
-    message: '선택한 Resource가 요청 인원을 수용하지 못합니다.',
+    message: '선택한 테이블이 요청 인원을 수용하지 못합니다.',
   },
   BOOKING_NOT_ALLOWED: {
     title: '현재 예약할 수 없습니다',
-    message: 'Venue 또는 선택한 시간의 최신 예약 가능 상태를 확인해 주세요.',
+    message: '매장 또는 선택한 시간의 최신 예약 가능 상태를 확인해 주세요.',
   },
   HOLD_EXPIRED: {
     title: '예약 보류가 만료되었습니다',
@@ -111,15 +112,6 @@ function LoadingNotice({ children }: { children: string }) {
   return <p className="notice notice--loading" role="status" aria-live="polite">{children}</p>
 }
 
-function formatTimestamp(value: string, timezone?: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: timezone,
-  }).format(date)
-}
 
 function HoldCountdown({ expiresAt }: { expiresAt: string }) {
   const [now, setNow] = useState(() => Date.now())
@@ -270,9 +262,9 @@ export function CustomerReservationFlow({
       if (normalized.code === 'VALIDATION_FAILED') {
         setFormErrors((current) => ({
           ...current,
-          ...(normalized.fieldErrors.date ? { date: normalized.fieldErrors.date } : {}),
+          ...(normalized.fieldErrors.date ? { date: '조회할 날짜를 확인해 주세요.' } : {}),
           ...(normalized.fieldErrors.partySize
-            ? { partySize: normalized.fieldErrors.partySize }
+            ? { partySize: '예약 인원을 확인해 주세요.' }
             : {}),
         }))
       }
@@ -285,7 +277,7 @@ export function CustomerReservationFlow({
       || holdAttempt.status === 'unknown' || holdAttempt.status === 'unavailable') return
     const nextErrors: Record<string, string> = {}
     const parsedPartySize = Number(partySize)
-    if (!venueId) nextErrors.venue = 'Venue를 선택해 주세요.'
+    if (!venueId) nextErrors.venue = '매장을 선택해 주세요.'
     if (!date) nextErrors.date = '날짜를 선택해 주세요.'
     if (!Number.isInteger(parsedPartySize) || parsedPartySize < 1) {
       nextErrors.partySize = '인원은 1명 이상의 정수로 입력해 주세요.'
@@ -429,6 +421,7 @@ export function CustomerReservationFlow({
     ?? ('command' in holdAttempt ? holdAttempt.command.venueId : undefined)
     ?? venueId
   const selectedVenue = venues.find((venue) => venue.id === reservationVenueId)
+  const searchVenue = venues.find((venue) => venue.id === venueId)
   const selectedItem = availability?.items.find((item) => item.slotInventoryId === selectedSlotId)
   const canConfirm = reservation?.state === 'HELD'
   const canCancel = reservation?.state === 'HELD' || reservation?.state === 'CONFIRMED'
@@ -453,12 +446,12 @@ export function CustomerReservationFlow({
 
       <main id="main-content" className="app-shell" tabIndex={-1}>
         <section className="intro" aria-labelledby="page-title">
-          <p className="eyebrow">Customer reservation</p>
+          <p className="eyebrow">고객 예약</p>
           <h1 id="page-title">예약하기</h1>
           <p className="intro-copy">
-            Venue와 날짜를 선택하고, 서버가 알려 주는 최신 예약 상태를 단계별로 확인하세요.
+            매장과 날짜를 선택하고, 서버가 알려 주는 최신 예약 상태를 단계별로 확인하세요.
           </p>
-          <p>페이지를 새로고침하면 이전 HOLD 요청을 다시 시도할 수 없습니다. 결과를 받지 못한 예약도 생성되었을 수 있으므로 예약 가능 시간을 다시 확인해 주세요.</p>
+          <p>페이지를 새로고침하면 이전 예약 보류 요청을 다시 시도할 수 없습니다. 결과를 받지 못한 예약도 생성되었을 수 있으므로 예약 가능 시간을 다시 확인해 주세요.</p>
         </section>
 
         <ol className="guided-flow">
@@ -466,22 +459,22 @@ export function CustomerReservationFlow({
             <section aria-labelledby="availability-title">
               <div className="step-heading">
                 <span aria-hidden="true">1</span>
-                <div><h2 id="availability-title">예약 가능한 시간 찾기</h2><p>Venue, 날짜와 인원을 선택합니다.</p></div>
+                <div><h2 id="availability-title">예약 가능한 시간 찾기</h2><p>매장, 날짜와 인원을 선택합니다.</p></div>
               </div>
 
-              {venueState === 'loading' ? <LoadingNotice>Venue를 불러오는 중입니다.</LoadingNotice> : null}
+              {venueState === 'loading' ? <LoadingNotice>매장을 불러오는 중입니다.</LoadingNotice> : null}
               {venueError ? (
                 <div className="stack">
                   <ErrorNotice error={venueError} />
-                  <Button variant="secondary" onClick={() => void loadVenues()}>Venue 다시 조회</Button>
+                  <Button variant="secondary" onClick={() => void loadVenues()}>매장 다시 조회</Button>
                 </div>
               ) : null}
               {venueState === 'success' && venues.length === 0 ? (
-                <p className="notice notice--empty" role="status">현재 선택할 수 있는 active Venue가 없습니다.</p>
+                <p className="notice notice--empty" role="status">현재 선택할 수 있는 활성 매장이 없습니다.</p>
               ) : null}
 
               <form className="search-form" onSubmit={submitAvailability} noValidate>
-                <FormField id="venue" label="Venue" error={formErrors.venue}>
+                <FormField id="venue" label="매장" error={formErrors.venue}>
                   <select
                     value={venueId}
                     onChange={(event) => {
@@ -492,13 +485,13 @@ export function CustomerReservationFlow({
                     }}
                     disabled={venueState !== 'success' || venues.length === 0 || contextLocked}
                   >
-                    <option value="">Venue 선택</option>
+                    <option value="">매장 선택</option>
                     {venues.map((venue) => (
                       <option key={venue.id} value={venue.id}>{venue.name} · {venue.timezone}</option>
                     ))}
                   </select>
                 </FormField>
-                <FormField id="date" label="날짜" error={formErrors.date}>
+                <FormField id="date" label="날짜" description={searchVenue ? `${searchVenue.timezone} 기준` : '매장 시간대 기준'} error={formErrors.date}>
                   <input
                     type="date"
                     value={date}
@@ -557,7 +550,7 @@ export function CustomerReservationFlow({
             <section aria-labelledby="slot-title">
               <div className="step-heading">
                 <span aria-hidden="true">2</span>
-                <div><h2 id="slot-title">시간 선택 및 보류</h2><p>조회 결과에서 한 시간을 선택한 뒤 HOLD를 생성합니다.</p></div>
+                <div><h2 id="slot-title">시간 선택 및 보류</h2><p>조회 결과에서 한 시간을 선택한 뒤 예약 보류를 생성합니다.</p></div>
               </div>
 
               {availability && availability.items.length > 0 ? (
@@ -589,7 +582,7 @@ export function CustomerReservationFlow({
                     onClick={() => void createHold()}
                     disabled={contextLocked || reservationReadState === 'loading'}
                   >
-                    {holdState === 'loading' ? 'HOLD 생성 중…' : '이 시간 HOLD'}
+                    {holdState === 'loading' ? '예약 보류 생성 중…' : '이 시간 예약 보류'}
                   </Button>
                 </div>
               ) : null}
@@ -597,13 +590,13 @@ export function CustomerReservationFlow({
               {actionError && !reservation ? <ErrorNotice error={actionError} /> : null}
               {holdUnresolved ? (
                 <div className="notice notice--unknown" role="alert">
-                  <strong>HOLD 생성 결과를 확인할 수 없습니다</strong>
-                  <span>Reservation ID를 받지 못했으므로 같은 요청을 자동 재전송하지 않습니다.</span>
+                  <strong>예약 보류 생성 결과를 확인할 수 없습니다</strong>
+                  <span>예약 ID를 받지 못했으므로 같은 요청을 자동 재전송하지 않습니다.</span>
                   {holdAttempt.status === 'unknown' ? (
                     <>
-                      <span>같은 예약 요청을 다시 시도하거나, 요청을 포기한 뒤 새 조건을 선택할 수 있습니다. Availability 조회만으로 이전 결과가 확정되지는 않습니다.</span>
-                      <p>Venue {holdAttempt.command.venueId} · 시간 {holdAttempt.command.slotInventoryId} · {holdAttempt.command.partySize}명</p>
-                      <Button onClick={() => void retryHold()} disabled={mutationInFlight}>같은 HOLD 요청 다시 시도</Button>
+                      <span>같은 예약 요청을 다시 시도하거나, 요청을 포기한 뒤 새 조건을 선택할 수 있습니다. 예약 가능 시간 조회만으로 이전 결과가 확정되지는 않습니다.</span>
+                      <p>매장 {holdAttempt.command.venueId} · 시간 {holdAttempt.command.slotInventoryId} · {holdAttempt.command.partySize}명</p>
+                      <Button onClick={() => void retryHold()} disabled={mutationInFlight}>같은 예약 보류 요청 다시 시도</Button>
                     </>
                   ) : <span>인증 세션이 바뀌었거나 재시도 보존 시간이 끝나 이전 요청을 재전송할 수 없습니다. 이전 예약은 생성되었을 수 있습니다.</span>}
                   <Button variant="secondary" disabled={mutationInFlight} onClick={() => {
@@ -616,12 +609,12 @@ export function CustomerReservationFlow({
                       onClick={() => void loadAvailability(lastSearch)}
                       disabled={mutationInFlight}
                     >
-                      Availability 새로고침
+                      예약 가능 시간 새로고침
                     </Button>
                   ) : null}
                 </div>
               ) : null}
-              {holdAttempt.status === 'abandoned' ? <p className="notice" role="status">이전 요청의 재시도를 포기했습니다. 서버 예약을 취소한 것은 아니며, 최신 Availability를 조회한 뒤 새 예약을 시작해 주세요.</p> : null}
+              {holdAttempt.status === 'abandoned' ? <p className="notice" role="status">이전 요청의 재시도를 포기했습니다. 서버 예약을 취소한 것은 아니며, 최신 예약 가능 시간을 조회한 뒤 새 예약을 시작해 주세요.</p> : null}
             </section>
           </li>
 
@@ -629,7 +622,7 @@ export function CustomerReservationFlow({
             <section aria-labelledby="reservation-title">
               <div className="step-heading">
                 <span aria-hidden="true">3</span>
-                <div><h2 id="reservation-title">예약 상태 확인</h2><p>서버가 반환한 effective 상태와 deadline을 확인하고 다음 작업을 선택합니다.</p></div>
+                <div><h2 id="reservation-title">예약 상태 확인</h2><p>서버가 알려 주는 최신 상태와 처리 기한을 확인하고 다음 작업을 선택합니다.</p></div>
               </div>
 
               {reservation ? (
@@ -642,10 +635,10 @@ export function CustomerReservationFlow({
                     </div>
                   </div>
                   <dl className="reservation-details">
-                    <div><dt>Reservation ID</dt><dd>{reservation.id}</dd></div>
+                    <div><dt>예약 ID</dt><dd>{reservation.id}</dd></div>
                     <div><dt>인원</dt><dd>{reservation.partySize}명</dd></div>
                     <div>
-                      <dt>서버 HOLD deadline</dt>
+                      <dt>서버 예약 보류 처리 기한</dt>
                       <dd><time dateTime={reservation.expiresAt}>{formatTimestamp(reservation.expiresAt, selectedVenue?.timezone)}</time></dd>
                     </div>
                   </dl>
@@ -670,8 +663,8 @@ export function CustomerReservationFlow({
                   ) : (
                     <p className="notice notice--state" role="status">
                       {reservation.state === 'EXPIRED'
-                        ? '서버가 이 예약을 EXPIRED 상태로 반환했습니다.'
-                        : `서버가 반환한 ${reservation.state} 상태에는 Customer 작업이 없습니다.`}
+                        ? '서버가 이 예약을 만료 상태로 반환했습니다.'
+                        : `서버가 반환한 ${formatStatus(reservation.state)} 상태에는 고객 작업이 없습니다.`}
                     </p>
                   )}
                   {actionState === 'loading' ? <LoadingNotice>예약 작업 결과를 기다리는 중입니다.</LoadingNotice> : null}
@@ -679,7 +672,7 @@ export function CustomerReservationFlow({
                   {resultUnknown === 'transition' ? (
                     <div className="notice notice--unknown" role="alert">
                       <strong>예약 작업 결과를 확인할 수 없습니다</strong>
-                      <span>성공이나 실패를 추정하지 않습니다. 최신 Reservation을 조회해 확인해 주세요.</span>
+                      <span>성공이나 실패를 추정하지 않습니다. 최신 예약을 조회해 확인해 주세요.</span>
                     </div>
                   ) : null}
                   {reservationReadState === 'loading' ? <LoadingNotice>최신 예약 상태를 조회하는 중입니다.</LoadingNotice> : null}
@@ -689,16 +682,16 @@ export function CustomerReservationFlow({
                     onClick={() => void refreshReservation()}
                     disabled={reservationReadState === 'loading' || mutationInFlight}
                   >
-                    최신 Reservation 상태 조회
+                    최신 예약 상태 조회
                   </Button>
                 </article>
-              ) : <p className="step-placeholder">HOLD를 생성하면 서버가 반환한 예약 상태가 여기에 표시됩니다.</p>}
+              ) : <p className="step-placeholder">예약 보류를 생성하면 서버가 반환한 예약 상태가 여기에 표시됩니다.</p>}
             </section>
           </li>
         </ol>
       </main>
 
-      <footer className="site-footer"><small>Server state is the source of truth.</small></footer>
+      <footer className="site-footer"><small>예약 상태는 서버의 최신 응답을 기준으로 확인합니다.</small></footer>
     </>
   )
 }
