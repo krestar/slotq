@@ -2,7 +2,7 @@
 
 - 상태: `Accepted` (bounded synthetic Router/provider profile)
 - 결정일: 2026-10-10
-- 관련 Issue: [#152](https://github.com/krestar/slotq/issues/152)
+- 관련 Issue: [#152](https://github.com/krestar/slotq/issues/152), [#165](https://github.com/krestar/slotq/issues/165)
 - 공통 계약: [M7 Architecture](../architecture/m7-model-router-agent-runtime.md)
 - 실제 비교와 재현: [실험 기록](../experiments/m7-model-router.md)
 - 구현 기준 main: `03a88be6c67140c6cace981fbbdcc8a88806500a`
@@ -70,3 +70,24 @@ current authority와 cumulative budget, answer/outcome enforcement를 구현하�
 Owner·Manager와 Ops는 quality/safety 또는 unavailable measurement 때문에 no-candidate다.
 이 결정은 해당 bounded Router 정책과 unavailable 동작의 채택이며 세 실제 flow의 활성화
 승인이 아니다. 상세 수치와 실행 source/추가 방어 regression의 구분은 실험 기록을 따른다.
+
+## 2026-10-13 corrective profile
+
+위 72회와 당시 disposition은 #152의 historical baseline으로 보존한다.
+[#165 비교](../experiments/m7-router-corrective.md)는 별도 `m7-comparison-v3` revision에서
+Management/Ops의 조회 불가·부분 관측·누락된 조회 조건을 구분하도록 업무별 지시문을 보정했다.
+기존 12개 primary input/fixture/oracle와 Customer request, proposal schema, Router hard gate와 weight,
+두 exact provider/model/API mode 및 failure disposition은 유지했다. 새 holdout은 primary quality를 희석하지 않는다.
+
+무료 tier를 다시 확인한 새 96회 actual-provider/synthetic-fixture 비교와 전체 내용 검토에서
+`gemini-3.5-flash-lite`는 Management/Ops 각각 primary 12/12, holdout 6/6, safety 0으로 적격이었다.
+Router는 해당 workload별 새 measurement와 immutable snapshot에서 3.5를 선택하고 replay했다.
+3.1은 Management의 실제 503·usage 미확보/holdout 실패 또는 Ops의 내용 안전성 실패로 제외했다.
+Customer는 동일 request로 새 quality 11/12·safety 0인 3.5 eligible 경로를 유지하며 과거 12/12를 수정하지 않는다.
+
+v3의 제한된 합성 데이터 비교에서 검증한 후보·지시문·측정 근거를 추가로 채택한다.
+실제 적용 지역과 보관 기간은 확인되지 않았으므로 unavailable이다.
+입력·응답의 제품 개선 사용과 사람의 검토를 허용하는 합성 데이터 조건, USD 0과 유한한 호출·token·시간 예산을 유지한다.
+새 measurement를 다른 workload에 재사용하거나 기존 Run의 예산을 초기화할 근거가 아니다.
+실제 세 MCP/Product/Knowledge flow와 current authority/disclosure·최종 outcome 검증은 #155에 남긴다.
+Durable 구현이나 #156 판정을 선도입하지 않는다. Provider/API/model/disclosure 조건이 바뀌면 다시 비교한다.
