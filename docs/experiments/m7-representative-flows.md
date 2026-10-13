@@ -38,28 +38,50 @@ Product·Knowledge의 atomic snapshot이나 최종 조회 이후 변경의 소�
 
 ## 실제 provider 검증
 
-현재 고정 명세는 `m7-integrated-flow-evidence-v3`, context는 `m7-flow-context-v4`다.
-Customer proposal·HOLD answer·known GET,
-Owner/Manager 각각의 Management·Ops 답변으로 7개 case를 구성한다. 같은 Runtime을 사용하며
+현재 고정 명세는 `m7-integrated-flow-evidence-v5`, context는 `m7-flow-context-v6`다.
+Customer proposal·HOLD answer, Owner의 Management 답변, 배정된 Manager의 Ops 답변으로
+4개 case를 구성한다. 같은 Runtime을 사용하며
 original Actor가 직접 승인한 실제 Product HOLD, 실제 문서 publish/search와 event append/observer projection을 연결한다.
+
+Issue의 실제 provider 완료 계약은 **flow마다 최소 하나의 fresh 실행**이다. 이전 7-case 명세에서
+Management/Ops를 두 역할로 각각 생성하고 한 묶음의 전부 성공을 요구한 것은 추가 제약이었다.
+새 명세는 두 역할을 실제 읽기 경로에 배정하고 Customer의 승인·HOLD·현재 GET 단계는 유지한다.
+Customer의 입력은 exact HOLD **또는** known Reservation이다. 대표 모델 경로는 HOLD로 고정하며,
+성공 후 known GET은 실제 Runtime/MCP/Product 조회와 상태 확인으로 기록한다. 이 조회를 별도의
+actual-provider 생성 성공으로 계산하지 않는다. Known GET 답변과 unknown/reconciliation 경계는
+실제 Product 경로의 deterministic regression으로 검증한다.
+Owner/Manager 양쪽 인가와 Staff 거부는 기존 실제 Auth/Product 경로의 deterministic regression으로 검증한다.
+Read-only Run 실패 뒤에도 다른 독립 flow를 관측하되 실패한 Run을 재시도하지 않는다.
+Customer proposal이 실패하면 승인과 HOLD를 진행하지 않으며 누락된 후속 단계를 성공으로 채우지 않는다.
 
 Runtime 호출은 co-located production `McpEngine` 경로다. 같은 registry/delegation으로 HTTPS
 initialize/initialized/list/call도 별도로 확인한다. 새로운 원격 Runtime transport를 검증한 결과는 아니다.
 Operator 조회를 위한 별도 synthetic 예약은 Product HTTP로 사전 생성하며 Customer flow 자신의 HOLD와 구분한다.
 
-사용자 승인 무료 tier에서 `gemini-3.5-flash-lite`만 사용한다. 실행별 최대 7회·10분·USD 0,
+사용자 승인 무료 tier에서 `gemini-3.5-flash-lite`만 사용한다. 실행별 최대 4회·10분·USD 0,
 출력 1,024 token, 호출 간 최소 7초, attempt 대기 최대 45초다. 실패한 Run은 terminal이며 자동 retry/fallback은 없다.
 [공식 가격](https://ai.google.dev/gemini-api/docs/pricing)과 [이용 약관](https://ai.google.dev/gemini-api/terms)을
-확인했으며 제품 개선·사람의 검토 조건 때문에 민감정보 없는 disposable synthetic 데이터만 전송한다.
+2026-10-14에 다시 확인했으며 제품 개선·사람의 검토 조건 때문에 민감정보 없는 disposable synthetic 데이터만 전송한다.
 Effective region/retention은 unavailable이고 실제 청구서는 측정하지 않는다.
 
 ### 완료 실행과 실패 기록
 
-**상태: 구현·자동 검증 완료, 최신 실제 provider 통합 검증 미완료.** 현재 후보는 적격하지만
-승인된 무료 provider의 timeout·503이 반복돼 최신 명세의 7개 정상 응답을 확보하지 못했다.
-아래 이전 성공·부분 실행은 최신 명세의 완료를 대신하지 않는다. Timeout·예산·품질 gate는 유지한다.
+**상태: 최신 실제 provider 통합 검증 미완료로 PR #168은 Draft 유지.**
+최종 context v6 실행(`representative-flow-final-20261014`)은 Management 답변을 확보했지만
+Ops의 실제 HTTP 503과 Customer proposal timeout으로 종료됐다. Customer 승인·HOLD·answer는
+진행하지 않았다. Timeout·예산·품질 gate는 유지하며 이전 성공·부분 실행을 최신 완료로 재분류하지 않는다.
 
-Context v4의 두 실행은 각각 첫 Management 호출에서 종료됐다. `representative-flow-final`은
+| 최신 실행 | Oracle·내용 검토·Runtime 통과 / 필수 case | Provider latency | Usage·cost |
+| --- | --- | --- | --- |
+| Customer | 0/2: proposal 실패, answer 미관측 | 45,000 ms / TIMEOUT_REMOTE_UNKNOWN | unavailable |
+| Owner Management | 1/1: Product 사실과 operator guidance 구분 | 24,036 ms | 814 token, estimated USD 0 |
+| Manager Ops | 0/1: 실제 HTTP 503 / TEMPORARY_OVERLOAD | 22,284 ms | unavailable |
+
+3개 원본의 source/request/schema/profile/config·전체 실패/답변 검토·Run continuity와 routing replay를
+확인했다. 재계산은 부분 요약을 쓰고 `complete=false`에 따라 실패 exit를 유지한다.
+관측된 사용량 소계와 전체 비용을 구분하며, 두 실패를 포함한 전체 사용량·비용은 unavailable이다.
+
+이전 context v4의 두 실행은 각각 첫 Management 호출에서 종료됐다. `representative-flow-final`은
 HTTP 503 / TEMPORARY_OVERLOAD(2,312 ms), `representative-flow-final-complete`는
 TIMEOUT_REMOTE_UNKNOWN(45,002 ms)이다. 두 원본의 request/schema/profile/config·전체 실패 검토·
 Run continuity와 routing replay를 재계산했다. 각 Management는 0/1, Customer/Ops는 미관측이며
@@ -77,6 +99,9 @@ usage·cost는 unavailable이다. 부분 요약을 생성하되 `complete=false`
 | `representative-flow-v3-complete` | 첫 Management 호출 TIMEOUT_REMOTE_UNKNOWN | Usage·cost unavailable. 전체 완료 아님 |
 | `representative-flow-final` | Context v4의 첫 Management 호출에서 실제 HTTP 503 / TEMPORARY_OVERLOAD | Terminal failure, usage·cost unavailable. 전체 완료 아님 |
 | `representative-flow-final-complete` | Clean build 뒤의 새 실행에서 첫 Management 호출 TIMEOUT_REMOTE_UNKNOWN | 1개 실패 원본 재계산. 미관측 사례를 성공으로 채우지 않음 |
+| `representative-flow-recheck-20261014` | Context v5·5-case. Management·Ops·Customer proposal/승인/HOLD/answer 성공, 추가 known-GET 생성 timeout | 5개 원본 재계산. Customer 2/3, 전체 실행 FAIL·cost unavailable. 새 명세의 성공으로 재분류하지 않음 |
+| `representative-flow-required-20261014` | 새 4-case. Management와 Customer proposal timeout, Ops 성공 | 3개 원본 재계산. Customer answer 미관측, 승인·HOLD 미실행. 전체 FAIL·cost unavailable |
+| `representative-flow-final-20261014` | Context v6의 최종 4-case. Management 성공, Ops HTTP 503, Customer proposal timeout | 3개 원본 재계산. Customer answer 미관측, 승인·HOLD 미실행. 전체 FAIL·cost unavailable |
 
 첫 실패 뒤 Product 인원수와 응답 제어 필드, claim/source 관계를 명확히 했다.
 Ops 설명 누락 뒤에는 필요한 claim과 실제 설명을 함께 요구하도록 output contract를 보강했다.
@@ -84,6 +109,22 @@ Ops 설명 누락 뒤에는 필요한 claim과 실제 설명을 함께 요구하
 요청해 기존 Runtime 길이 상한 안에서 설명하도록 했다. 필수 사실·한계, oracle과 gate는 유지한다.
 이 검사는 전체 자연어 정합성 인증이 아니다.
 Metadata GET의 HTTP 200은 generation 성공이나 timeout 원인의 증거로 사용하지 않는다.
+
+### 답변 왜곡 회귀와 제공자 실패 원인
+
+기존 검사에서 세 결함을 deterministic regression으로 재현했다. HELD를 “예약이 확정된 상태”나
+`CONFIRMED`로 표시하는 답변, 관측 부재를 사건 부재로 단정하는 답변, PENDING/null을 언급하면서
+전달 완료·수신 성공을 주장하는 답변이 허용됐다. Context v6는 해당 계약 용어의 단정만 제한한다.
+Known GET의 최신 실제 상태가 HELD인 경우에도 확정 단정을 거부하며, 실제 CONFIRMED 조회는 허용한다.
+올바른 부정 표현과 실제 DONE/receipt 관측은 유지하고, 답변 거부 뒤에도 structured Product success를 보존한다.
+범용 자연어 의미 검증기는 추가하지 않았으므로 실제 답변의 전체 내용 검토도 계속 필요하다.
+
+이전 503은 실제 HTTP 오류 응답이고 timeout은 HTTP status 없이 최대 45초가 끝난
+`TIMEOUT_REMOTE_UNKNOWN`이다. 후자는 원격 실행·사용량·비용을 확인할 수 없다.
+503의 normalized `TEMPORARY_OVERLOAD`는 adapter 분류이며 상세 내부 원인을 증명하지 않는다.
+동일 endpoint·schema·생성 설정의 이전 정상 응답과 구분하며, 인증·quota 오류나 prompt 크기 초과의
+근거는 해당 기록에 없다. [공식 오류 안내](https://ai.google.dev/gemini-api/docs/troubleshooting)는
+503과 timeout의 재시도를 제안하지만 이번 계약의 no-retry/fallback 정책은 유지한다.
 
 ## Deterministic·장애 주입 검증
 
@@ -109,12 +150,15 @@ test-only filter/latch/spy에서 주입한다. Pending delivery·null receipt fi
 실행 산출물은 Git에서 제외한 root `build/representative-flow-*`에 둔다. Manifest는 실제 source revision·
 source hash·context/schema/profile·HTTP controls와 사전 고정한 case/review policy를 기록한다.
 당시 source copies도 보존하며 이후 calculator 변경은 별도 재계산 hash로 구분한다.
+새 하네스는 실행 전에 13개 관련 source 사본을 자동 보존하고 재계산에서 digest 일치를 확인한다.
+이전 원본에 새 spec/context identity를 붙이거나 서로 다른 실행의 응답을 합산하지 않는다.
 
 | 파일 | 내용 |
 | --- | --- |
 | `provider-starts.jsonl` | Adapter 진입과 request/classification. Remote 실행 완료의 증거는 아님 |
 | `provider-completions.jsonl` | 실제 adapter attempt count·response/usage·local completion |
 | `attempts.jsonl` | Request·raw response·provider result·plan·전후 Runtime snapshot·routing·duration/approval wait |
+| `known-get.json` | HOLD 뒤 실제 Runtime/MCP/Product의 현재 조회. Provider generation과 별도 표시 |
 | `content-review.json` | 전체 답변/실패 검토. Case/model/repeat·request/answer digest·findings를 고정 policy와 연결 |
 | `summary.json`, `oracle-marks.json`, `recalculation.json` | #152 oracle·내용 검토·flow output contract 평가, routing replay, latency/usage/cost/quality와 원본/calculator hash |
 
@@ -142,12 +186,15 @@ XML·로그·raw JSON·model output·source copies는 커밋하지 않는다.
 
 ### 실행한 자동 검증
 
-- Targeted: 138개 중 137개 실행, 실제 provider opt-in skip 1개, 실패·오류 0(1분 27초).
-- Backend 전체 `test`: 109 suite / 940개 중 929개 실행, opt-in skip 11개, 실패·오류 0(25분 25초).
-- `clean build`: 동일하게 929개 실행, skip 11개, 실패·오류 0(25분 33초). 배포 jar의 실험 코드·입력 제외 확인.
-- 이후 오프라인 계산 방어를 보강하고 validator 회귀 2개를 targeted 실행했다. Decimal replay,
-  부분 실패의 unavailable/미완료 처리, request/oracle/deadline/검토 변조 거부를 통과했다.
-  이 마지막 변경은 test 전용 calculator이며 production Runtime/flow/adapter는 clean build 이후 바뀌지 않았다.
+- 최신 코드 Targeted: 16 suite / 145개 중 144개 실행, 실제 provider opt-in skip 1개,
+  실패·오류 0(1분 11초).
+- Backend 전체 `test`: 110 suite / 947개 중 936개 실행, opt-in skip 11개,
+  실패·오류 0(22분 39초).
+- `clean build`: 동일하게 936개 실행, opt-in skip 11개, 실패·오류 0(22분 19초).
+  배포 jar의 production flow/profile 포함과 실험 코드·입력·로컬 인증 파일 제외를 확인했다.
+- 답변 왜곡·정상 부정 표현·실제 CONFIRMED 조회와 structured Product success 보존을 검증했다.
+  Validator는 Decimal replay, 부분 실패의 unavailable/미완료 처리,
+  request/oracle/deadline/source/specification/검토 변조 거부를 검증했다.
 
 ## 남은 제한과 후속 판단 입력
 

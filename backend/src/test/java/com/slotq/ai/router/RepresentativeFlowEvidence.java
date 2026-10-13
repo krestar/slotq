@@ -13,13 +13,13 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.cfg.JsonNodeFeature;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Seven fixed integrated observations; shares #152 oracle and full-content review, never a provider/Runtime bypass. */
+/** Fixed representative paths; shares #152 oracle and full-content review, never a provider/Runtime bypass. */
 public final class RepresentativeFlowEvidence {
     private static final JsonMapper JSON = JsonMapper.builder()
         .enable(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS)
         .disable(JsonNodeFeature.STRIP_TRAILING_BIGDECIMAL_ZEROES)
         .build();
-    private static final String SPECIFICATION = "/representative-flows/evidence-v3.json";
+    private static final String SPECIFICATION = "/representative-flows/evidence-v5.json";
     private static final String REVIEW_POLICY = "/model-router/content-review-policy-v2.json";
     private final Path directory;
     private final Instant deadline;
@@ -37,10 +37,11 @@ public final class RepresentativeFlowEvidence {
         if (Files.exists(directory.resolve("manifest.json"))) throw new IllegalStateException("Integrated evidence already exists; choose a new ignored output directory");
         Files.createDirectories(directory);
         byte[] fixture = resource(SPECIFICATION);
+        Files.write(directory.resolve("recorded-specification.json"), fixture);
         specification = JSON.readTree(fixture);
         deadline = Instant.now().plus(Duration.ofMinutes(specification.path("maximumMinutes").asInt()));
         var manifest = new LinkedHashMap<String,Object>();
-        manifest.put("revision", "m7-integrated-flow-evidence-v3");
+        manifest.put("revision", "m7-integrated-flow-evidence-v5");
         manifest.put("evidenceKind", "actual-provider/production-runtime/real-mcp-product-knowledge/synthetic-demo");
         manifest.put("specification", specification);
         manifest.put("specificationSha256", digest(fixture));
@@ -52,10 +53,10 @@ public final class RepresentativeFlowEvidence {
         var sources = new TreeMap<String,String>();
         for (String file : List.of("ai/flow/RepresentativeContext", "ai/flow/RepresentativeFlows", "ai/flow/RepresentativeRouterProfile",
                 "ai/runtime/AgentRuntime", "ai/runtime/RuntimeContract", "ai/router/GeminiAdapter", "ai/router/ModelRouter", "ai/router/ProviderProtocol", "ai/router/ProviderBudget")) {
-            sources.put(file, digest(Files.readAllBytes(Path.of("src/main/java/com/slotq/" + file + ".java"))));
+            sources.put(file, archiveSource(directory, "src/main/java/com/slotq/" + file + ".java"));
         }
         for (String file : List.of("ai/router/RepresentativeFlowEvidence", "ai/router/ComparisonReview", "ai/router/ModelComparisonRunner", "mcp/RepresentativeFlowIntegrationTests")) {
-            sources.put(file, digest(Files.readAllBytes(Path.of("src/test/java/com/slotq/" + file + ".java"))));
+            sources.put(file, archiveSource(directory, "src/test/java/com/slotq/" + file + ".java"));
         }
         manifest.put("sourceDigests", sources);
         manifest.put("contextRevision", RepresentativeContext.REVISION);
@@ -84,6 +85,11 @@ public final class RepresentativeFlowEvidence {
         if (calls >= specification.path("maximumCalls").asInt() || !Instant.now().isBefore(deadline)) throw new IllegalStateException("Integrated experiment budget ended");
         if (calls > 0) Thread.sleep(specification.path("minimumSpacingMillis").asLong());
         calls++;
+    }
+
+    public void recordKnownGet(Plan plan, Result result) throws Exception {
+        Files.write(directory.resolve("known-get.json"), JSON.writeValueAsBytes(Map.of(
+            "evidenceKind", "actual-mcp-product-read/no-provider-generation", "plan", plan, "runtime", result)));
     }
 
     public synchronized void providerEntered(String model, ModelRouter.Classification classification, ProviderProtocol.Request request) throws Exception {
@@ -134,6 +140,7 @@ public final class RepresentativeFlowEvidence {
 
     public static void recalculate(Path directory) throws Exception {
         var manifest = JSON.readTree(Files.readAllBytes(directory.resolve("manifest.json")));
+        verifySources(directory, manifest.path("sourceDigests"));
         byte[] specificationBytes = resource(SPECIFICATION);
         JsonNode specification = JSON.readTree(specificationBytes);
         if (!digest(specificationBytes).equals(manifest.path("specificationSha256").asString())
@@ -258,7 +265,7 @@ public final class RepresentativeFlowEvidence {
     }
 
     static Path directory() {
-        String name = System.getProperty("slotq.flowEvidence.output","representative-flow-v3");
+        String name = System.getProperty("slotq.flowEvidence.output","representative-flow-v5");
         if (!name.matches("representative-flow-[a-zA-Z0-9._-]{1,80}") || name.contains("..")) throw new IllegalArgumentException("Ignored evidence output name invalid");
         return Path.of("../build",name);
     }
@@ -276,6 +283,31 @@ public final class RepresentativeFlowEvidence {
     static byte[] resource(String path) throws Exception {
         try (var input = RepresentativeFlowEvidence.class.getResourceAsStream(path)) {
             return new String(input.readAllBytes(),StandardCharsets.UTF_8).replace("\r\n","\n").getBytes(StandardCharsets.UTF_8);
+        }
+    }
+    static String archiveSource(Path directory, String file) throws Exception {
+        byte[] source = Files.readAllBytes(Path.of(file));
+        Path copy = directory.resolve("actual-source/backend").resolve(file);
+        Files.createDirectories(copy.getParent());
+        Files.write(copy, source);
+        return digest(source);
+    }
+    private static void verifySources(Path directory, JsonNode digests) throws Exception {
+        var expected = Set.of("ai/flow/RepresentativeContext", "ai/flow/RepresentativeFlows", "ai/flow/RepresentativeRouterProfile",
+            "ai/runtime/AgentRuntime", "ai/runtime/RuntimeContract", "ai/router/GeminiAdapter", "ai/router/ModelRouter", "ai/router/ProviderProtocol",
+            "ai/router/ProviderBudget", "ai/router/RepresentativeFlowEvidence", "ai/router/ComparisonReview", "ai/router/ModelComparisonRunner",
+            "mcp/RepresentativeFlowIntegrationTests");
+        var observed = new HashSet<String>();
+        digests.properties().forEach(entry -> observed.add(entry.getKey()));
+        if (!digests.isObject() || !observed.equals(expected)) throw new IllegalStateException("Integrated source identity unavailable");
+        for (var entry : digests.properties()) {
+            String file = entry.getKey();
+            if (!file.matches("(?:ai/(?:flow|runtime|router)|mcp)/[A-Za-z]+")) throw new IllegalStateException("Integrated source path invalid");
+            String kind = Set.of("ai/router/RepresentativeFlowEvidence", "ai/router/ComparisonReview", "ai/router/ModelComparisonRunner",
+                "mcp/RepresentativeFlowIntegrationTests").contains(file) ? "test" : "main";
+            Path copy = directory.resolve("actual-source/backend/src/" + kind + "/java/com/slotq/" + file + ".java");
+            if (!Files.exists(copy) || !digest(Files.readAllBytes(copy)).equals(entry.getValue().asString()))
+                throw new IllegalStateException("Integrated source digest mismatch");
         }
     }
     static String digest(byte[] bytes) throws Exception { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }

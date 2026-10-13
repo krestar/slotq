@@ -80,7 +80,7 @@ tasks.register('representativeFlowEvidence', Test) {
     systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
     systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
     ['optIn', 'freeTier', 'paidCalls', 'output'].each { key ->
-        systemProperty "slotq.flowEvidence.${key}", project.findProperty("flowEvidence${key.capitalize()}") ?: (key == 'output' ? 'representative-flow-v3' : 'false')
+        systemProperty "slotq.flowEvidence.${key}", project.findProperty("flowEvidence${key.capitalize()}") ?: (key == 'output' ? 'representative-flow-v5' : 'false')
     }
     doFirst {
         if (project.findProperty('flowEvidenceOptIn') != 'true' || project.findProperty('flowEvidenceFreeTier') != 'true'
@@ -97,7 +97,7 @@ tasks.register('representativeFlowRecalculate', JavaExec) {
     mainClass = 'com.slotq.ai.router.RepresentativeFlowEvidence'
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
     systemProperty 'slotq.flowEvidence.recalculate', 'true'
-    systemProperty 'slotq.flowEvidence.output', project.findProperty('flowEvidenceOutput') ?: 'representative-flow-v3'
+    systemProperty 'slotq.flowEvidence.output', project.findProperty('flowEvidenceOutput') ?: 'representative-flow-v5'
 }
 
 tasks.register('modelComparison', JavaExec) {

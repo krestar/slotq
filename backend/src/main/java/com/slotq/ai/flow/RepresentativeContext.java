@@ -11,10 +11,22 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** Allowlisted facts from actual Runtime observations; the supplied policy approves current synthetic scope only. */
 public final class RepresentativeContext implements PlanContextSource {
-    public static final String REVISION = "m7-flow-context-v4";
+    public static final String REVISION = "m7-flow-context-v6";
     private static final JsonMapper JSON = JsonMapper.builder().build();
-    private static final Pattern CONFIRMED_HOLD = Pattern.compile("(?i)예약\\s*(?:이|은|가)?\\s*확정(?:되었습니다|되었|됐|했|합니다)"
-        + "|(?:reservation|booking)\\s+(?:is|was|has been)\\s+confirmed|confirmed\\s+(?:reservation|booking)");
+    private static final Pattern NON_CONFIRMATION = Pattern.compile("(?i)(?:예약(?:이|은|가)?\\s*(?:최종\\s*)?확정|confirmed)"
+        + "\\s*(?:상태가\\s*)?(?:(?:이|가|는|은)?\\s*아닙니다|(?:이|가)?\\s*아닌|되지\\s*않았습니다)"
+        + "|\\bnot\\s+confirmed\\b");
+    private static final Pattern CONFIRMED_HOLD = Pattern.compile("(?i)예약\\s*(?:이|은|가)?\\s*(?:최종\\s*)?확정"
+        + "(?:되었습니다|되었|됐|했|합니다|된\\s*상태|입니다)|\\bconfirmed\\b");
+    private static final Pattern ABSENCE_LIMITATION = Pattern.compile("(?:사건|이벤트)(?:이|가)?\\s*없었다고\\s*단정할\\s*수\\s*없습니다");
+    private static final Pattern EVENT_ABSENCE = Pattern.compile("(?i)(?:사건|이벤트)(?:은|는|이|가)?\\s*"
+        + "(?:없(?:습니다|었습니다|었다|음)|발생하지\\s*않(?:았습니다|았다))|no\\s+(?:events|incidents)\\s+(?:occurred|happened)");
+    private static final Pattern DELIVERY_COMPLETE = Pattern.compile("(?i)(?:전달|delivery)(?:은|는|이|가)?\\s*(?:상태(?:는|가)?\\s*)?"
+        + "(?:완료|성공|done|completed|succeeded)");
+    private static final Pattern RECEIPT_PRESENT = Pattern.compile("(?i)(?:수신(?:\\s*기록)?|receipt)(?:은|는|이|가)?\\s*"
+        + "(?:성공|완료|존재|있(?:습니다|음)|success|completed)");
+    private static final Pattern NON_COMPLETION = Pattern.compile("(?:전달|수신(?:\\s*기록)?)(?:은|는|이|가)?\\s*"
+        + "(?:완료|성공)(?:가|이)?\\s*아닙니다");
     private final Predicate<DelegatedActor> syntheticDisclosure;
 
     public RepresentativeContext(Predicate<DelegatedActor> syntheticDisclosure) {
@@ -84,14 +96,36 @@ public final class RepresentativeContext implements PlanContextSource {
 
     @Override public boolean acceptsAnswer(Plan plan, Result facts, ProviderProtocol.Output output) {
         // A HOLD response is not a confirmation. Structured Product observations remain separately available on rejection.
-        if (plan.hold() != null && CONFIRMED_HOLD.matcher(output.answer()).find()) return false;
+        String answer = output.answer().toLowerCase(Locale.ROOT);
+        boolean heldRead = facts.tools().stream().filter(t -> t.tool().equals("reservation.get"))
+            .reduce((a,b) -> b)
+            .map(t -> "HELD".equals(map(t.structured().get("data")).get("state")))
+            .orElse(false);
+        if ((plan.hold() != null || heldRead)
+                && CONFIRMED_HOLD.matcher(NON_CONFIRMATION.matcher(answer).replaceAll("")).find()) {
+            return false;
+        }
         if (!plan.workload().equals("ops")) return true;
         var observation = facts.tools().stream().filter(t -> t.tool().equals("management.event-observations.list"))
             .reduce((a,b) -> b).orElse(null);
         if (observation == null) return false;
         Set<String> needed = opsClaims(observation.structured());
         if (!output.claimRefs().containsAll(needed)) return false;
-        String answer = output.answer().toLowerCase(Locale.ROOT);
+        if (EVENT_ABSENCE.matcher(ABSENCE_LIMITATION.matcher(answer).replaceAll("")).find()) return false;
+        var page = map(observation.structured().get("data"));
+        var rows = list(page.get("items")).stream().limit(3).map(RepresentativeContext::map).toList();
+        if (!rows.isEmpty()) {
+            // These checks cover the bounded contract terms, not arbitrary natural-language meaning.
+            boolean allPending = rows.stream().allMatch(r -> "PENDING".equals(r.get("waitlistDeliveryState")));
+            boolean noReceipts = rows.stream().allMatch(r -> r.get("waitlistReceiptOutcome") == null);
+            String assertions = NON_COMPLETION.matcher(answer).replaceAll("");
+            if (allPending && (!mentions(answer, "pending", "대기") || DELIVERY_COMPLETE.matcher(assertions).find())) {
+                return false;
+            }
+            if (noReceipts && (!mentions(answer, "null", "누락", "없", "미관측") || RECEIPT_PRESENT.matcher(assertions).find())) {
+                return false;
+            }
+        }
         return (!needed.contains("ops:times") || (mentions(answer,"발생","occurredat") && mentions(answer,"투영","projectedat","projection","프로젝션")))
             && (!needed.contains("ops:delivery") || mentions(answer,"전달","delivery","pending","done","dead"))
             && (!needed.contains("ops:receipt") || mentions(answer,"수신","receipt"))

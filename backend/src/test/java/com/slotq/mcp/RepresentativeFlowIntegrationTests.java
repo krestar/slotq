@@ -96,6 +96,7 @@ class RepresentativeFlowIntegrationTests {
     final JsonMapper json = JsonMapper.builder().build();
     final List<AgentRuntime> runtimes = new ArrayList<>();
     final List<GeminiAdapter.Result> providerResults = new ArrayList<>();
+    final List<Result> evidenceResults = new ArrayList<>();
     final List<ProviderProtocol.Request> requests = new ArrayList<>();
     final AtomicInteger providerCalls = new AtomicInteger();
     final AtomicBoolean disclosure = new AtomicBoolean(true);
@@ -325,12 +326,13 @@ class RepresentativeFlowIntegrationTests {
     }
 
     @Test void productSuccessSurvivesInjectedAnswerFailureAndConfirmedAnswerRejection() {
-        for (boolean malformed : List.of(true, false)) {
+        for (String invalidAnswer : List.of("malformed", "예약이 확정된 상태입니다.", "예약이 최종 확정되었습니다.", "CONFIRMED입니다.")) {
+            boolean malformed = invalidAnswer.equals("malformed");
             var calls = new AtomicInteger();
             Provider provider = (m,c,q,b) -> {
                 if (calls.incrementAndGet()==1) return fakeProvider(m,c,q,b);
                 b.begin(2000); b.end(2000,100L);
-                return response(malformed ? null : new ProviderProtocol.Output("ANSWER","none","",0,"HELD",List.of(),List.of(),"예약 확정되었습니다."),
+                return response(malformed ? null : new ProviderProtocol.Output("ANSWER","none","",0,"HELD",List.of(),List.of(),invalidAnswer),
                     malformed ? GeminiAdapter.Failure.MALFORMED : null,true);
             };
             var runtime = runtime(provider,Duration.ofSeconds(5));
@@ -448,24 +450,24 @@ class RepresentativeFlowIntegrationTests {
         };
         var runtime = runtime(provider,Duration.ofSeconds(45));
         var flows = new RepresentativeFlows(runtime,limits(Duration.ofSeconds(45)));
-        for (Identity operator : List.of(owner,manager)) {
-            String role = operator==owner ? "owner" : "manager";
-            var management = flows.management(operator.delegation().value(),day,"guide");
-            lifecycle(operator,management.plan()); flows.prepareReads(management,operator.delegation().value());
-            actualGenerate(evidence,"management-"+role,runtime,management,operator,System.nanoTime(),0);
-        }
-        for (Identity operator : List.of(owner,manager)) {
-            String role = operator==owner ? "owner" : "manager";
-            var ops = flows.ops(operator.delegation().value(),clock.now.minusSeconds(60),clock.now.plusSeconds(300));
-            lifecycle(operator,ops.plan());
-            var before = eventState(); flows.prepareReads(ops,operator.delegation().value());
-            actualGenerate(evidence,"ops-"+role,runtime,ops,operator,System.nanoTime(),0);
-            assertThat(eventState()).isEqualTo(before);
-        }
+        // One Owner management path and one assigned Manager Ops path cover the two current-authority roles.
+        var management = flows.management(owner.delegation().value(),day,"guide");
+        lifecycle(owner,management.plan());
+        flows.prepareReads(management,owner.delegation().value());
+        actualGenerate(evidence,"management-owner",runtime,management,owner,System.nanoTime(),0);
+        var ops = flows.ops(manager.delegation().value(),clock.now.minusSeconds(60),clock.now.plusSeconds(300));
+        lifecycle(manager,ops.plan());
+        var beforeEvents = eventState();
+        flows.prepareReads(ops,manager.delegation().value());
+        actualGenerate(evidence,"ops-manager",runtime,ops,manager,System.nanoTime(),0);
+        assertThat(eventState()).isEqualTo(beforeEvents);
         var customerFlow = flows.customerHold(customer.delegation().value(),slot,2,"guide");
         lifecycle(customer,customerFlow.plan()); flows.prepareReads(customerFlow,customer.delegation().value());
         long started = System.nanoTime();
         var proposal = actualGenerate(evidence,"customer-hold-proposal",runtime,customerFlow,customer,started,0);
+        if (proposal.failure()!=null) {
+            throw new AssertionError("Customer proposal failed; no approval or HOLD dispatch; integrated evidence incomplete");
+        }
         assertThat(proposal.execution()).isEqualTo(Execution.WAITING_CONFIRMATION);
         long waiting = System.nanoTime();
         var review = runtime.reviewHold(customerFlow.id(),customer.delegation().value(),customer.original().value());
@@ -478,9 +480,17 @@ class RepresentativeFlowIntegrationTests {
         assertThat(held.productEffect()).isEqualTo(Effect.SUCCEEDED); assertDurableHold();
         actualGenerate(evidence,"customer-hold-answer",runtime,customerFlow,customer,started,waitMillis);
         var known = flows.customerRead(customer.delegation().value(),held.knownTarget(),null);
-        lifecycle(customer,known.plan()); flows.prepareReads(known,customer.delegation().value());
-        actualGenerate(evidence,"customer-known-get",runtime,known,customer,System.nanoTime(),0);
-        assertThat(providerResults).hasSize(7);
+        lifecycle(customer,known.plan());
+        var knownResult = flows.prepareReads(known,customer.delegation().value());
+        assertThat(knownResult.tools().getLast().structured().get("outcome")).isEqualTo("succeeded");
+        assertThat(json.valueToTree(knownResult.tools().getLast().structured()).path("data").path("state").asString()).isEqualTo("HELD");
+        evidence.recordKnownGet(known.plan(),knownResult);
+        assertThat(providerResults).hasSize(4);
+        assertThat(providerResults.stream().allMatch(r -> r.failure()==null)).as("Actual-provider evidence incomplete").isTrue();
+        assertThat(evidenceResults).allSatisfy(r -> {
+            assertThat(r.failure()).isNull();
+            assertThat(r.execution()==Execution.WAITING_CONFIRMATION || r.answer()!=null).isTrue();
+        });
     }
 
     Result actualGenerate(RepresentativeFlowEvidence evidence,String caseId,AgentRuntime runtime,RepresentativeFlows.Flow flow,
@@ -494,8 +504,7 @@ class RepresentativeFlowIntegrationTests {
         evidence.record(caseId,flow.plan(),before,requests.getLast(),providerResults.getLast(),
             capturedProviderResponses.isEmpty()?Map.of():capturedProviderResponses.getFirst(),result,
             TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started),waitMillis);
-        assertThat(result.failure()).as("Actual-provider %s",caseId).isNull();
-        if (!caseId.endsWith("proposal")) assertThat(result.answer()).as(caseId).isNotNull();
+        evidenceResults.add(result);
         return result;
     }
 

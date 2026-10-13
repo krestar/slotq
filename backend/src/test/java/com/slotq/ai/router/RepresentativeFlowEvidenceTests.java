@@ -30,7 +30,7 @@ class RepresentativeFlowEvidenceTests {
         assertThat(summary.get(0).path("complete").asBoolean()).isFalse();
         var management = summary.get(1);
         assertThat(management.path("actualAttempts").asInt()).isEqualTo(1);
-        assertThat(management.path("unobservedCases").asInt()).isEqualTo(1);
+        assertThat(management.path("unobservedCases").asInt()).isZero();
         assertThat(management.path("quality").asDouble()).isZero();
         assertThat(management.path("observedTokens").isNull()).isTrue();
         assertThat(management.path("estimatedObservedDollars").isNull()).isTrue();
@@ -39,7 +39,7 @@ class RepresentativeFlowEvidenceTests {
     }
 
     @Test void changedRequestOracleDeadlineOrMissingReviewCannotProduceSummary() throws Exception {
-        for (String change : List.of("request", "oracle", "deadline", "review")) {
+        for (String change : List.of("request", "oracle", "deadline", "review", "source", "specification")) {
             Path area = directory.resolve(change);
             fixture(area);
             var row = (ObjectNode) JSON.readTree(Files.readString(area.resolve("attempts.jsonl")));
@@ -47,6 +47,12 @@ class RepresentativeFlowEvidenceTests {
             if (change.equals("oracle")) ((ObjectNode) row.path("oracle")).put("partySize", 2);
             if (change.equals("deadline")) ((ObjectNode) row.path("runtime").path("budget")).put("deadline", "2026-10-14T00:11:00Z");
             Files.writeString(area.resolve("attempts.jsonl"), JSON.writeValueAsString(row));
+            if (change.equals("source")) Files.writeString(area.resolve("actual-source/backend/src/main/java/com/slotq/ai/flow/RepresentativeContext.java"), "changed source");
+            if (change.equals("specification")) {
+                var manifest = (ObjectNode) JSON.readTree(Files.readAllBytes(area.resolve("manifest.json")));
+                ((ObjectNode) manifest.path("specification")).put("maximumCalls", 7);
+                Files.write(area.resolve("manifest.json"), JSON.writeValueAsBytes(manifest));
+            }
             if (change.equals("review")) {
                 var review = (ObjectNode) JSON.readTree(Files.readAllBytes(area.resolve("content-review.json")));
                 review.set("entries", JSON.createArrayNode());
@@ -60,11 +66,20 @@ class RepresentativeFlowEvidenceTests {
 
     static void fixture(Path area) throws Exception {
         Files.createDirectories(area);
-        byte[] specBytes = RepresentativeFlowEvidence.resource("/representative-flows/evidence-v3.json");
+        byte[] specBytes = RepresentativeFlowEvidence.resource("/representative-flows/evidence-v5.json");
         var spec = JSON.readTree(specBytes);
         String specDigest = RepresentativeFlowEvidence.digest(specBytes);
         String policyDigest = RepresentativeFlowEvidence.digest(RepresentativeFlowEvidence.resource("/model-router/content-review-policy-v2.json"));
+        var sources = new TreeMap<String,String>();
+        for (String file : List.of("ai/flow/RepresentativeContext", "ai/flow/RepresentativeFlows", "ai/flow/RepresentativeRouterProfile",
+                "ai/runtime/AgentRuntime", "ai/runtime/RuntimeContract", "ai/router/GeminiAdapter", "ai/router/ModelRouter", "ai/router/ProviderProtocol", "ai/router/ProviderBudget")) {
+            sources.put(file, RepresentativeFlowEvidence.archiveSource(area, "src/main/java/com/slotq/" + file + ".java"));
+        }
+        for (String file : List.of("ai/router/RepresentativeFlowEvidence", "ai/router/ComparisonReview", "ai/router/ModelComparisonRunner", "mcp/RepresentativeFlowIntegrationTests")) {
+            sources.put(file, RepresentativeFlowEvidence.archiveSource(area, "src/test/java/com/slotq/" + file + ".java"));
+        }
         Files.write(area.resolve("manifest.json"), JSON.writeValueAsBytes(Map.of(
+            "sourceDigests", sources,
             "specification", spec, "specificationSha256", specDigest, "reviewPolicySha256", policyDigest,
             "schemaSha256", RepresentativeFlowEvidence.digest(ProviderProtocol.SCHEMA_JSON.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
             "profileSha256", RepresentativeFlowEvidence.digest(RepresentativeFlowEvidence.resource("/ai/representative-router-v1.json")),

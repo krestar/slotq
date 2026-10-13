@@ -1,7 +1,7 @@
 {
-  "revision": "m7-integrated-flow-evidence-v3",
+  "revision": "m7-integrated-flow-evidence-v5",
   "model": "gemini-3.5-flash-lite",
-  "maximumCalls": 7,
+  "maximumCalls": 4,
   "maximumDollars": 0,
   "maximumMinutes": 10,
   "minimumSpacingMillis": 7000,
@@ -27,17 +27,6 @@
       ]
     },
     {
-      "id": "customer-known-get",
-      "workload": "customer",
-      "disposition": "ANSWER",
-      "requiredSources": [
-        "product:reservation"
-      ],
-      "requiredClaims": [
-        "product:reservation"
-      ]
-    },
-    {
       "id": "management-owner",
       "workload": "management",
       "disposition": "ANSWER",
@@ -48,36 +37,6 @@
       "requiredClaims": [
         "product:reservations",
         "knowledge:guide"
-      ]
-    },
-    {
-      "id": "management-manager",
-      "workload": "management",
-      "disposition": "ANSWER",
-      "requiredSources": [
-        "product:reservations",
-        "knowledge:guide"
-      ],
-      "requiredClaims": [
-        "product:reservations",
-        "knowledge:guide"
-      ]
-    },
-    {
-      "id": "ops-owner",
-      "workload": "ops",
-      "disposition": "ANSWER",
-      "requiredSources": [
-        "ops:observations"
-      ],
-      "requiredClaims": [
-        "ops:window",
-        "ops:times",
-        "ops:delivery",
-        "ops:receipt",
-        "ops:delay",
-        "limitation:partial",
-        "limitation:scope"
       ]
     },
     {

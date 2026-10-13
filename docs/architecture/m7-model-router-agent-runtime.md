@@ -8,7 +8,7 @@
 > #155의 controlled 세 Product/MCP flow는 [통합 실험 기록](../experiments/m7-representative-flows.md)을 따른다.
 > Durable 필요성 판정은 #156의 후속 검증 대상이다.
 >
-> 확인일: 2026-10-13. M6 source/Issue 설계 기준 revision은
+> 확인일: 2026-10-14. M6 source/Issue 설계 기준 revision은
 > `047bea6235eae08fca0a1cc02388c4a86c1b60ae`이며, #152 구현 기준은 #151/PR #158을 포함한
 > 최신 main `03a88be6c67140c6cace981fbbdcc8a88806500a`이다. #153 구현 기준은 #152를 포함한
 > `7c51b17b029f67ba3dc81660ba733b99e1859537`이다. #154 구현 기준은 #151/#153을 포함한 최신 main
@@ -72,7 +72,8 @@ Ops의 최대 31일·3건 관측 조회를 기존 MCP registry/engine과 연결�
 HOLD는 original Actor가 immutable review를 확인하고 명시적으로 승인한 뒤 실행한다.
 Structured Product mutation 결과, 현재 exact GET 결과와 모델 답변을 분리하며, HELD를 예약 확정으로
 표시하는 답변은 거부한다. Ops 답변에는 관측 자료에 해당하는 발생/투영 시각, 간격, 전달 상태,
-수신 기록과 잘림 설명을 요구한다. 이 제한된 output 검사는 전체 자연어 정합성 인증이 아니다.
+수신 기록과 잘림 설명을 요구한다. 관측 부재를 사건 부재로 단정하거나 PENDING/null을
+전달 완료·수신 성공으로 바꾸는 답변도 거부한다. 이 계약 용어에 한정한 검사는 전체 자연어 정합성 인증이 아니다.
 
 `RepresentativeContext`는 실제 Run observation에서 허용된 필드만 조립한다. 예약 목록은 최대 3건의
 sample과 반환 건수·부분 사용 여부, Knowledge는 현재 source/version/visibility와 untrusted excerpt를
