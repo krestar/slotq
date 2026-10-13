@@ -3,6 +3,7 @@
 > 상태: [#151](https://github.com/krestar/slotq/issues/151)의 공통 계약과 후속 decision 기준.
 > #152의 bounded Router/provider 비교는 [구현·실험 기록](../experiments/m7-model-router.md)을 따른다.
 > #153의 controlled process-local Runtime은 [ADR-0011](../adr/0011-m7-process-local-agent-runtime.md)을 따른다.
+> #165의 새 synthetic Router 후보 근거는 [corrective 비교](../experiments/m7-router-corrective.md)를 따른다.
 > #154의 Venue 관측 연결은 아래 구현 profile과 실제 HTTP/MySQL regression을 따른다.
 > 실제 세 Product/MCP flow와 durable 판정은 #155/#156의 후속 구현·검증 대상이다.
 >
@@ -43,6 +44,21 @@ Deterministic fake-provider regression과 real MySQL/TLS Product fixture를 사�
 세 flow나 non-synthetic disclosure, Ops tool, restart continuation을 완료했다고 주장하지 않는다.
 그 owner는 각각 #155, #154, #156이다. 아래 #151 요구 표는 전체 계약으로 유지하며 #153의
 구체 구현·제한은 이 절과 ADR-0011을 함께 따른다.
+
+### #165 Router corrective profile
+
+[#165](https://github.com/krestar/slotq/issues/165)의 [별도 실험](../experiments/m7-router-corrective.md)은
+#152의 72회 baseline과 gate를 보존하면서 Management/Ops의 workload prompt를 보정한
+`m7-comparison-v3` synthetic profile이다. 기존 primary oracle와 Customer request는 같으며,
+새 96회 actual-provider 비교·전체 내용 검토·workload별 Router 계산과 snapshot replay에서
+3.5 Flash-Lite가 Management/Ops 각각 primary 12/12·holdout 6/6·safety 0으로 선택됐다.
+Customer의 3.5 eligible 경로도 유지하고 3.1의 provider/usage 또는 safety 실패는 제외한다.
+
+이 추가 [ADR-0010 근거](../adr/0010-m7-bounded-model-router.md#2026-10-13-corrective-profile)는
+같은 prompt/schema/config identity와 synthetic disclosure·현재 budget을 전제로 한 적격성이다.
+현재 Runtime에 실제 세 flow를 추가하거나 비공개 operator data를 외부 공개한 근거가 아니다.
+#155가 이 선행 근거 위에서 실제 MCP/Product/Knowledge 통합과 fresh integrated provider evidence를
+별도로 검증하며, #156 durable 작업과 #153/#154의 authority·Product outcome ownership은 유지한다.
 
 ### #154 Venue observation 구현 profile
 

@@ -4,6 +4,11 @@ Issue #152의 bounded 구현이다. Java `ai.router`는 snapshot 계산과 provi
 소유한다. Actor/Tenant/Venue 검증, aggregate Run admission, approval, MCP/Product invocation,
 Product effect/known-target reconciliation과 cancellation은 #153/#155의 책임이다.
 
+이 문서의 72회와 당시 선택·제외는 historical baseline으로 유지한다.
+2026-10-13 [#165 corrective 비교](m7-router-corrective.md)의 새 workload prompt·96회 측정과
+Management/Ops 적격성은 별도 revision이며 아래 결과를 소급 변경하지 않는다.
+아래의 `현재`·`이번`과 v2 추가 방어의 actual 미실행 설명도 #152 당시 profile을 가리킨다.
+
 ## 지원 profile과 후보 조사
 
 최신 main `03a88be6c67140c6cace981fbbdcc8a88806500a`의 #151/PR #158 계약을 기준으로 한다.

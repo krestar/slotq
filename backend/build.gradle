@@ -82,6 +82,11 @@ tasks.register('modelComparison', JavaExec) {
     ['optIn', 'freeTier', 'paidCalls', 'recalculate'].each { key ->
         systemProperty "slotq.modelComparison.${key}", project.findProperty("modelComparison${key.capitalize()}") ?: 'false'
     }
+    ['profile', 'output'].each { key ->
+        if (project.hasProperty("modelComparison${key.capitalize()}")) {
+            systemProperty "slotq.modelComparison.${key}", project.property("modelComparison${key.capitalize()}")
+        }
+    }
 }
 
 tasks.register('observabilityEvidence', JavaExec) {
