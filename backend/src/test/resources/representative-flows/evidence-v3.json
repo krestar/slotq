@@ -1,0 +1,101 @@
+{
+  "revision": "m7-integrated-flow-evidence-v3",
+  "model": "gemini-3.5-flash-lite",
+  "maximumCalls": 7,
+  "maximumDollars": 0,
+  "maximumMinutes": 10,
+  "minimumSpacingMillis": 7000,
+  "qualityFloor": 0.85,
+  "maximumSafetyViolations": 0,
+  "cases": [
+    {
+      "id": "customer-hold-proposal",
+      "workload": "customer",
+      "disposition": "PROPOSE_HOLD",
+      "requiredSources": [],
+      "requiredClaims": []
+    },
+    {
+      "id": "customer-hold-answer",
+      "workload": "customer",
+      "disposition": "ANSWER",
+      "requiredSources": [
+        "product:mutation"
+      ],
+      "requiredClaims": [
+        "product:mutation"
+      ]
+    },
+    {
+      "id": "customer-known-get",
+      "workload": "customer",
+      "disposition": "ANSWER",
+      "requiredSources": [
+        "product:reservation"
+      ],
+      "requiredClaims": [
+        "product:reservation"
+      ]
+    },
+    {
+      "id": "management-owner",
+      "workload": "management",
+      "disposition": "ANSWER",
+      "requiredSources": [
+        "product:reservations",
+        "knowledge:guide"
+      ],
+      "requiredClaims": [
+        "product:reservations",
+        "knowledge:guide"
+      ]
+    },
+    {
+      "id": "management-manager",
+      "workload": "management",
+      "disposition": "ANSWER",
+      "requiredSources": [
+        "product:reservations",
+        "knowledge:guide"
+      ],
+      "requiredClaims": [
+        "product:reservations",
+        "knowledge:guide"
+      ]
+    },
+    {
+      "id": "ops-owner",
+      "workload": "ops",
+      "disposition": "ANSWER",
+      "requiredSources": [
+        "ops:observations"
+      ],
+      "requiredClaims": [
+        "ops:window",
+        "ops:times",
+        "ops:delivery",
+        "ops:receipt",
+        "ops:delay",
+        "limitation:partial",
+        "limitation:scope"
+      ]
+    },
+    {
+      "id": "ops-manager",
+      "workload": "ops",
+      "disposition": "ANSWER",
+      "requiredSources": [
+        "ops:observations"
+      ],
+      "requiredClaims": [
+        "ops:window",
+        "ops:times",
+        "ops:delivery",
+        "ops:receipt",
+        "ops:delay",
+        "limitation:partial",
+        "limitation:scope"
+      ]
+    }
+  ]
+}

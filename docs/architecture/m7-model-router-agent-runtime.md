@@ -5,13 +5,15 @@
 > #153의 controlled process-local Runtime은 [ADR-0011](../adr/0011-m7-process-local-agent-runtime.md)을 따른다.
 > #165의 새 synthetic Router 후보 근거는 [corrective 비교](../experiments/m7-router-corrective.md)를 따른다.
 > #154의 Venue 관측 연결은 아래 구현 profile과 실제 HTTP/MySQL regression을 따른다.
-> 실제 세 Product/MCP flow와 durable 판정은 #155/#156의 후속 구현·검증 대상이다.
+> #155의 controlled 세 Product/MCP flow는 [통합 실험 기록](../experiments/m7-representative-flows.md)을 따른다.
+> Durable 필요성 판정은 #156의 후속 검증 대상이다.
 >
-> 확인일: 2026-10-11. M6 source/Issue 설계 기준 revision은
+> 확인일: 2026-10-13. M6 source/Issue 설계 기준 revision은
 > `047bea6235eae08fca0a1cc02388c4a86c1b60ae`이며, #152 구현 기준은 #151/PR #158을 포함한
 > 최신 main `03a88be6c67140c6cace981fbbdcc8a88806500a`이다. #153 구현 기준은 #152를 포함한
 > `7c51b17b029f67ba3dc81660ba733b99e1859537`이다. #154 구현 기준은 #151/#153을 포함한 최신 main
-> `36fbf089e59d3ac513b90573aacc7739b25eb6f5`이다.
+> `36fbf089e59d3ac513b90573aacc7739b25eb6f5`이다. #155 구현 기준은 PR #167을 포함한
+> `8a0bbe886627832659ca68e7b45c84f428d4bf6e`이다.
 >
 > 이 문서는 M7 Architecture SSOT다. **M6 현재 보장**은 해당 revision의 merged source에서
 > 확인한 동작, **M7 요구**는 후속 owner가 구현·검증할 계약을 뜻한다. #151의 source/test 검토와
@@ -40,10 +42,10 @@ Outer timeout/response loss는 mutation unknown이며 late validated result는 �
 Structured mutation result, 현재 exact GET result와 answer를 분리해 보존한다. Result 반환에도
 current authority를 적용한다. Raw context/credential/Product key를 production trace에 기록하지 않는다.
 
-Deterministic fake-provider regression과 real MySQL/TLS Product fixture를 사용한다. Fresh actual-provider
-세 flow나 non-synthetic disclosure, Ops tool, restart continuation을 완료했다고 주장하지 않는다.
-그 owner는 각각 #155, #154, #156이다. 아래 #151 요구 표는 전체 계약으로 유지하며 #153의
-구체 구현·제한은 이 절과 ADR-0011을 함께 따른다.
+#153 자체의 검증은 deterministic provider와 실제 MySQL/TLS Product fixture를 사용했다.
+후속 Ops tool과 실제 모델의 세 flow 통합은 아래 #154/#155 profile을 따른다. Non-synthetic
+disclosure와 restart continuation은 제공하지 않는다. 아래 #151 요구 표는 전체 계약으로 유지하며
+#153의 구체 구현·제한은 이 절과 ADR-0011을 함께 따른다.
 
 ### #165 Router corrective profile
 
@@ -56,9 +58,38 @@ Customer의 3.5 eligible 경로도 유지하고 3.1의 provider/usage 또는 saf
 
 이 추가 [ADR-0010 근거](../adr/0010-m7-bounded-model-router.md#2026-10-13-corrective-profile)는
 같은 prompt/schema/config identity와 synthetic disclosure·현재 budget을 전제로 한 적격성이다.
-현재 Runtime에 실제 세 flow를 추가하거나 비공개 operator data를 외부 공개한 근거가 아니다.
-#155가 이 선행 근거 위에서 실제 MCP/Product/Knowledge 통합과 fresh integrated provider evidence를
-별도로 검증하며, #156 durable 작업과 #153/#154의 authority·Product outcome ownership은 유지한다.
+이 비교 자체는 실제 Runtime 통합이나 비공개 operator data의 외부 전송을 검증하지 않는다.
+#155의 통합 실행에서도 current authority, disclosure, provider admission과 Run budget을
+독립적으로 검증한다. #156 durable 작업과 #153/#154의 authority·Product outcome ownership은 유지한다.
+
+### #155 공통 Runtime 통합 profile
+
+`ai.flow.RepresentativeFlows`는 같은 production `AgentRuntime`을 사용하는 서버 내부 client다.
+Customer의 exact HOLD/known Reservation 조회, Owner·Manager의 매장 현지 단일 날짜 예약 조회,
+Ops의 최대 31일·3건 관측 조회를 기존 MCP registry/engine과 연결한다. Management의 날짜 범위는
+기존 Product operation이 지원하는 하루로 줄인다. 새로운 공개 Run/approval API는 제공하지 않는다.
+
+HOLD는 original Actor가 immutable review를 확인하고 명시적으로 승인한 뒤 실행한다.
+Structured Product mutation 결과, 현재 exact GET 결과와 모델 답변을 분리하며, HELD를 예약 확정으로
+표시하는 답변은 거부한다. Ops 답변에는 관측 자료에 해당하는 발생/투영 시각, 간격, 전달 상태,
+수신 기록과 잘림 설명을 요구한다. 이 제한된 output 검사는 전체 자연어 정합성 인증이 아니다.
+
+`RepresentativeContext`는 실제 Run observation에서 허용된 필드만 조립한다. 예약 목록은 최대 3건의
+sample과 반환 건수·부분 사용 여부, Knowledge는 현재 source/version/visibility와 untrusted excerpt를
+포함한다. Tenant/Venue/Actor/customer reference와 credential/Product key는 provider에게 보내지 않는다.
+Provider 전송 전 immutable plan의 Knowledge 조회를 `readPlanned`로 갱신하며 같은 Run budget을 사용한다.
+Context 조립에는 I/O가 없고 Product와 Knowledge의 atomic snapshot을 보장하지 않는다.
+
+Synthetic disclosure는 trusted server predicate가 현재 매장 범위를 승인해야 한다. 조립 시점과
+실제 dispatch 직전에 확인하며, Owner/Manager 권한이나 모델 입력으로 대신할 수 없다.
+후보 설정은 #165의 workload별 측정과 제외 후보를 그대로 보존한다. 실제 provider observation에는
+해당 Run의 routing snapshot을 연결한다. Real/confidential 데이터의 전송 승인은 이 profile의 범위 밖이다.
+
+실제 모델은 승인된 무료 tier와 disposable synthetic Tenant에서만 실행한다. Runtime은 co-located
+production `McpEngine`을 호출하고, 같은 registry/delegation의 HTTPS lifecycle/list/call도 별도로 검증한다.
+실제 provider 결과, deterministic provider, 주입한 MCP/Product 장애와 fixture 상태를 구분한 결과와
+재현 절차는 [통합 실험 기록](../experiments/m7-representative-flows.md)을 따른다. Duration/wait/cancel/restart
+제약은 #156의 판단 입력이며 여기서 durable 채택이나 #157 종료 감사를 수행하지 않는다.
 
 ### #154 Venue observation 구현 profile
 
@@ -450,8 +481,8 @@ source/evidence 일치만 확인한다.
 
 ## 12. Threat/failure 검토와 #151 완료조건 대조
 
-아래는 문서상 disposition과 후속 executable verification owner다. 이번 documentation-only 변경에서
-Backend/Frontend full test·clean build나 actual provider execution을 수행한 결과표가 아니다.
+아래는 #151 문서 확정 단계의 disposition과 후속 executable verification owner다.
+실제 Backend test·clean build와 provider 실행 결과는 각 구현 profile의 실험 기록을 따른다.
 
 | Threat / failure case | 확정 disposition | 후속 검증 owner |
 | --- | --- | --- |
