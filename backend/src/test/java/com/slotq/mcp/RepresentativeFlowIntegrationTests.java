@@ -450,17 +450,30 @@ class RepresentativeFlowIntegrationTests {
         };
         var runtime = runtime(provider,Duration.ofSeconds(45));
         var flows = new RepresentativeFlows(runtime,limits(Duration.ofSeconds(45)));
-        // One Owner management path and one assigned Manager Ops path cover the two current-authority roles.
-        var management = flows.management(owner.delegation().value(),day,"guide");
-        lifecycle(owner,management.plan());
-        flows.prepareReads(management,owner.delegation().value());
-        actualGenerate(evidence,"management-owner",runtime,management,owner,System.nanoTime(),0);
-        var ops = flows.ops(manager.delegation().value(),clock.now.minusSeconds(60),clock.now.plusSeconds(300));
-        lifecycle(manager,ops.plan());
-        var beforeEvents = eventState();
-        flows.prepareReads(ops,manager.delegation().value());
-        actualGenerate(evidence,"ops-manager",runtime,ops,manager,System.nanoTime(),0);
-        assertThat(eventState()).isEqualTo(beforeEvents);
+        if (evidence.flow().equals("management")) {
+            var management = flows.management(owner.delegation().value(),day,"guide");
+            lifecycle(owner,management.plan());
+            flows.prepareReads(management,owner.delegation().value());
+            actualGenerate(evidence,"management-owner",runtime,management,owner,System.nanoTime(),0);
+        } else if (evidence.flow().equals("ops")) {
+            var ops = flows.ops(manager.delegation().value(),clock.now.minusSeconds(60),clock.now.plusSeconds(300));
+            lifecycle(manager,ops.plan());
+            var beforeEvents = eventState();
+            flows.prepareReads(ops,manager.delegation().value());
+            actualGenerate(evidence,"ops-manager",runtime,ops,manager,System.nanoTime(),0);
+            assertThat(eventState()).isEqualTo(beforeEvents);
+        } else {
+            actualCustomer(evidence,runtime,flows);
+        }
+        assertThat(providerResults).hasSize(evidence.expectedCalls());
+        assertThat(providerResults.stream().allMatch(r -> r.failure()==null)).as("Actual-provider evidence incomplete").isTrue();
+        assertThat(evidenceResults).allSatisfy(r -> {
+            assertThat(r.failure()).isNull();
+            assertThat(r.execution()==Execution.WAITING_CONFIRMATION || r.answer()!=null).isTrue();
+        });
+    }
+
+    void actualCustomer(RepresentativeFlowEvidence evidence,AgentRuntime runtime,RepresentativeFlows flows) throws Exception {
         var customerFlow = flows.customerHold(customer.delegation().value(),slot,2,"guide");
         lifecycle(customer,customerFlow.plan()); flows.prepareReads(customerFlow,customer.delegation().value());
         long started = System.nanoTime();
@@ -485,17 +498,11 @@ class RepresentativeFlowIntegrationTests {
         assertThat(knownResult.tools().getLast().structured().get("outcome")).isEqualTo("succeeded");
         assertThat(json.valueToTree(knownResult.tools().getLast().structured()).path("data").path("state").asString()).isEqualTo("HELD");
         evidence.recordKnownGet(known.plan(),knownResult);
-        assertThat(providerResults).hasSize(4);
-        assertThat(providerResults.stream().allMatch(r -> r.failure()==null)).as("Actual-provider evidence incomplete").isTrue();
-        assertThat(evidenceResults).allSatisfy(r -> {
-            assertThat(r.failure()).isNull();
-            assertThat(r.execution()==Execution.WAITING_CONFIRMATION || r.answer()!=null).isTrue();
-        });
     }
 
     Result actualGenerate(RepresentativeFlowEvidence evidence,String caseId,AgentRuntime runtime,RepresentativeFlows.Flow flow,
                           Identity actor,long started,long waitMillis) throws Exception {
-        evidence.beforeAttempt();
+        evidence.beforeAttempt(caseId);
         var before = runtime.result(flow.id(),actor.delegation().value());
         int previous = providerResults.size();
         var result = new RepresentativeFlows(runtime,flow.plan().limits()).generate(flow,actor.delegation().value());

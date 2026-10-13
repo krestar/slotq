@@ -19,11 +19,13 @@ public final class RepresentativeFlowEvidence {
         .enable(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS)
         .disable(JsonNodeFeature.STRIP_TRAILING_BIGDECIMAL_ZEROES)
         .build();
-    private static final String SPECIFICATION = "/representative-flows/evidence-v5.json";
+    private static final String SPECIFICATION = "/representative-flows/evidence-v6.json";
     private static final String REVIEW_POLICY = "/model-router/content-review-policy-v2.json";
     private final Path directory;
     private final Instant deadline;
     private final JsonNode specification;
+    private final String flow;
+    private String caseId;
     private int calls;
 
     public static GeminiAdapter adapter(HttpClient http, String key, Consumer<Map<String,Object>> capture) {
@@ -33,7 +35,8 @@ public final class RepresentativeFlowEvidence {
     public RepresentativeFlowEvidence() throws Exception {
         if (!Boolean.getBoolean("slotq.flowEvidence.optIn") || !Boolean.getBoolean("slotq.flowEvidence.freeTier")
                 || Boolean.getBoolean("slotq.flowEvidence.paidCalls")) throw new IllegalStateException("Explicit free-only integrated provider opt-in required");
-        directory = directory();
+        flow = requireFlow(System.getProperty("slotq.flowEvidence.flow", ""));
+        directory = directory().resolve(flow);
         if (Files.exists(directory.resolve("manifest.json"))) throw new IllegalStateException("Integrated evidence already exists; choose a new ignored output directory");
         Files.createDirectories(directory);
         byte[] fixture = resource(SPECIFICATION);
@@ -41,7 +44,8 @@ public final class RepresentativeFlowEvidence {
         specification = JSON.readTree(fixture);
         deadline = Instant.now().plus(Duration.ofMinutes(specification.path("maximumMinutes").asInt()));
         var manifest = new LinkedHashMap<String,Object>();
-        manifest.put("revision", "m7-integrated-flow-evidence-v5");
+        manifest.put("revision", specification.path("revision").asString());
+        manifest.put("flow", flow);
         manifest.put("evidenceKind", "actual-provider/production-runtime/real-mcp-product-knowledge/synthetic-demo");
         manifest.put("specification", specification);
         manifest.put("specificationSha256", digest(fixture));
@@ -78,12 +82,18 @@ public final class RepresentativeFlowEvidence {
         manifest.put("syntheticFixture", "Disposable MySQL Tenant and Actors, real HOLD/Knowledge publication/event append and observer projection; pending waitlist deliveries are not processed");
         manifest.put("approvalHandoff", "Controlled synthetic original Actor reads immutable review and explicitly approves; no provider approval and no public endpoint");
         manifest.put("runControlLimit", "process-local exact delegation only; no restart resume or automatic mutation");
+        freezeExperiment(directory.getParent(), JSON.valueToTree(manifest));
         Files.write(directory.resolve("manifest.json"), JSON.writeValueAsBytes(manifest));
     }
 
-    public void beforeAttempt() throws Exception {
-        if (calls >= specification.path("maximumCalls").asInt() || !Instant.now().isBefore(deadline)) throw new IllegalStateException("Integrated experiment budget ended");
+    public String flow() { return flow; }
+    public int expectedCalls() { return cases(specification, flow).size(); }
+
+    public void beforeAttempt(String id) throws Exception {
+        if (calls >= expectedCalls() || !cases(specification, flow).get(calls).path("id").asString().equals(id)
+                || !Instant.now().isBefore(deadline)) throw new IllegalStateException("Integrated experiment budget/order ended");
         if (calls > 0) Thread.sleep(specification.path("minimumSpacingMillis").asLong());
+        caseId = id;
         calls++;
     }
 
@@ -94,12 +104,14 @@ public final class RepresentativeFlowEvidence {
 
     public synchronized void providerEntered(String model, ModelRouter.Classification classification, ProviderProtocol.Request request) throws Exception {
         Files.writeString(directory.resolve("provider-starts.jsonl"),JSON.writeValueAsString(Map.of("evidenceKind","actual-adapter-entered",
+            "caseId",caseId,"requestBodyBytes",requestBodyBytes(request),
             "model",model,"request",request,"classification",classification,"requestSha256",digest(request.prompt().getBytes(StandardCharsets.UTF_8)),
             "observedAt",Instant.now().toString()))+"\n",StandardCharsets.UTF_8,StandardOpenOption.CREATE,StandardOpenOption.APPEND);
     }
 
     public synchronized void providerCompleted(ProviderProtocol.Request request,GeminiAdapter.Result result,Map<String,Object> captured) throws Exception {
         Files.writeString(directory.resolve("provider-completions.jsonl"),JSON.writeValueAsString(Map.of("evidenceKind","actual-adapter-completed",
+            "caseId",caseId,
             "requestSha256",digest(request.prompt().getBytes(StandardCharsets.UTF_8)),"result",result,"rawStructuredResponse",captured,
             "observedAt",Instant.now().toString()))+"\n",StandardCharsets.UTF_8,StandardOpenOption.CREATE,StandardOpenOption.APPEND);
     }
@@ -111,6 +123,7 @@ public final class RepresentativeFlowEvidence {
         row.put("evidenceKind", "actual-provider"); row.put("caseId", caseId); row.put("workload", plan.workload());
         row.put("model", "gemini-3.5-flash-lite"); row.put("repeat", 1);
         row.put("request", request); row.put("requestSha256", digest(request.prompt().getBytes(StandardCharsets.UTF_8)));
+        row.put("requestBodyBytes", requestBodyBytes(request));
         row.put("requestSchemaSha256", digest(JSON.writeValueAsBytes(ProviderProtocol.schema(request))));
         row.put("result", provider); row.put("rawStructuredResponse", rawResponse);
         row.put("plan", plan);
@@ -135,7 +148,13 @@ public final class RepresentativeFlowEvidence {
 
     public static void main(String[] args) throws Exception {
         if (!Boolean.getBoolean("slotq.flowEvidence.recalculate")) throw new IllegalStateException("Only offline recalculation is supported by this entry point");
-        recalculate(directory());
+        String flow = System.getProperty("slotq.flowEvidence.flow", "");
+        if (flow.isBlank()) recalculateExperiment(directory());
+        else {
+            Path selected = directory().resolve(requireFlow(flow));
+            verifyExperiment(directory(), JSON.readTree(Files.readAllBytes(selected.resolve("manifest.json"))));
+            recalculate(selected);
+        }
     }
 
     public static void recalculate(Path directory) throws Exception {
@@ -143,7 +162,9 @@ public final class RepresentativeFlowEvidence {
         verifySources(directory, manifest.path("sourceDigests"));
         byte[] specificationBytes = resource(SPECIFICATION);
         JsonNode specification = JSON.readTree(specificationBytes);
-        if (!digest(specificationBytes).equals(manifest.path("specificationSha256").asString())
+        String flow = requireFlow(manifest.path("flow").asString());
+        if (!specification.path("revision").equals(manifest.path("revision"))
+                || !digest(specificationBytes).equals(manifest.path("specificationSha256").asString())
                 || !specification.equals(manifest.path("specification"))
                 || !digest(resource(REVIEW_POLICY)).equals(manifest.path("reviewPolicySha256").asString())
                 || !digest(ProviderProtocol.SCHEMA_JSON.getBytes(StandardCharsets.UTF_8)).equals(manifest.path("schemaSha256").asString())
@@ -162,8 +183,9 @@ public final class RepresentativeFlowEvidence {
             throw new IllegalStateException("Integrated HTTP controls unavailable");
         }
         var rows = Files.readAllLines(directory.resolve("attempts.jsonl"), StandardCharsets.UTF_8).stream().filter(s -> !s.isBlank()).map(JSON::readTree).toList();
-        if (rows.isEmpty() || rows.size() > specification.path("maximumCalls").asInt())
+        if (rows.isEmpty() || rows.size() > cases(specification, flow).size())
             throw new IllegalStateException("Integrated actual-provider observation count invalid");
+        verifyAttempts(directory, rows);
         var review = ComparisonReview.verify(JSON.readTree(Files.readAllBytes(directory.resolve("content-review.json"))), rows,
             manifest.path("specificationSha256").asString(), manifest.path("reviewPolicySha256").asString());
         var counts = new HashSet<String>();
@@ -171,12 +193,15 @@ public final class RepresentativeFlowEvidence {
         for (var row : rows) {
             String id = row.path("caseId").asString();
             JsonNode testCase = testCase(specification,id);
-            if (!counts.add(id) || !row.path("evidenceKind").asString().equals("actual-provider")
+            if (!testCase.path("workload").asString().equals(flow)
+                    || !cases(specification, flow).get(counts.size()).path("id").asString().equals(id)
+                    || !counts.add(id) || !row.path("evidenceKind").asString().equals("actual-provider")
                     || !row.path("model").asString().equals(specification.path("model").asString())
                     || !row.path("workload").equals(testCase.path("workload")) || row.path("repeat").asInt()!=1
                     || row.path("result").path("attempts").asInt()!=1) throw new IllegalStateException("Integrated observation identity invalid");
             var request = JSON.treeToValue(row.path("request"), ProviderProtocol.Request.class);
-            if (!digest(request.prompt().getBytes(StandardCharsets.UTF_8)).equals(row.path("requestSha256").asString())
+            if (row.path("requestBodyBytes").asInt() != requestBodyBytes(request)
+                    || !digest(request.prompt().getBytes(StandardCharsets.UTF_8)).equals(row.path("requestSha256").asString())
                     || !digest(JSON.writeValueAsBytes(ProviderProtocol.schema(request))).equals(row.path("requestSchemaSha256").asString())) {
                 throw new IllegalStateException("Integrated request identity invalid");
             }
@@ -227,7 +252,8 @@ public final class RepresentativeFlowEvidence {
             grades.put(id,marks);
         }
         var summary = new ArrayList<Map<String,Object>>();
-        for (String workload : List.of("customer","management","ops")) {
+        verifyCustomerContinuity(rows);
+        for (String workload : List.of(flow)) {
             var selected = rows.stream().filter(r -> r.path("workload").asString().equals(workload)).toList();
             long expectedCases = 0;
             for (var testCase : specification.path("cases"))
@@ -265,10 +291,114 @@ public final class RepresentativeFlowEvidence {
     }
 
     static Path directory() {
-        String name = System.getProperty("slotq.flowEvidence.output","representative-flow-v5");
+        String name = System.getProperty("slotq.flowEvidence.output","representative-flow-v6");
         if (!name.matches("representative-flow-[a-zA-Z0-9._-]{1,80}") || name.contains("..")) throw new IllegalArgumentException("Ignored evidence output name invalid");
         return Path.of("../build",name);
     }
+
+    static String requireFlow(String flow) {
+        if (!List.of("customer", "management", "ops").contains(flow))
+            throw new IllegalArgumentException("Select exactly one representative flow");
+        return flow;
+    }
+
+    static List<JsonNode> cases(JsonNode specification, String flow) {
+        var selected = new ArrayList<JsonNode>();
+        for (var testCase : specification.path("cases"))
+            if (testCase.path("workload").asString().equals(requireFlow(flow))) selected.add(testCase);
+        return List.copyOf(selected);
+    }
+
+    static int requestBodyBytes(ProviderProtocol.Request request) {
+        return JSON.writeValueAsBytes(Map.of("contents", List.of(Map.of("role", "user", "parts", List.of(Map.of("text", request.prompt())))),
+            "generationConfig", Map.of("temperature", 1, "candidateCount", 1, "maxOutputTokens", request.maximumOutputTokens(),
+                "responseMimeType", "application/json", "responseJsonSchema", ProviderProtocol.schema(request)))).length;
+    }
+
+    static JsonNode experimentIdentity(JsonNode manifest) {
+        var identity = JSON.createObjectNode();
+        for (String key : List.of("revision", "specification", "specificationSha256", "sourceRevision", "sourceDigests",
+                "reviewPolicySha256", "schemaSha256", "profileSha256", "contextRevision", "generationConfig", "httpControls", "tier")) {
+            if (!manifest.has(key)) throw new IllegalStateException("Integrated experiment identity unavailable");
+            identity.set(key, manifest.get(key));
+        }
+        identity.set("flows", JSON.valueToTree(List.of("customer", "management", "ops")));
+        return identity;
+    }
+
+    static void freezeExperiment(Path root, JsonNode manifest) throws Exception {
+        Path recorded = root.resolve("experiment.json");
+        if (Files.exists(recorded)) verifyExperiment(root, manifest);
+        else Files.write(recorded, JSON.writeValueAsBytes(experimentIdentity(manifest)), StandardOpenOption.CREATE_NEW);
+    }
+
+    static void verifyExperiment(Path root, JsonNode manifest) throws Exception {
+        if (!JSON.readTree(Files.readAllBytes(root.resolve("experiment.json"))).equals(experimentIdentity(manifest)))
+            throw new IllegalStateException("Integrated experiment revision/source identity mismatch");
+    }
+
+    static void recalculateExperiment(Path root) throws Exception {
+        var summary = new ArrayList<JsonNode>();
+        boolean complete = true;
+        // Only these predeclared sibling executions are included; no list of selected successful directories is accepted.
+        for (String flow : List.of("customer", "management", "ops")) {
+            Path selected = root.resolve(flow);
+            if (!Files.exists(selected.resolve("manifest.json"))) {
+                summary.add(JSON.valueToTree(Map.of("workload", flow, "complete", false, "status", "unobserved")));
+                complete = false;
+                continue;
+            }
+            var manifest = JSON.readTree(Files.readAllBytes(selected.resolve("manifest.json")));
+            if (!flow.equals(manifest.path("flow").asString())) throw new IllegalStateException("Integrated experiment flow mismatch");
+            verifyExperiment(root, manifest);
+            try { recalculate(selected); }
+            catch (IllegalStateException failure) {
+                if (!"Integrated flow quality/evidence incomplete".equals(failure.getMessage())) throw failure;
+                complete = false;
+            }
+            summary.add(JSON.readTree(Files.readAllBytes(selected.resolve("summary.json"))).get(0));
+        }
+        Files.write(root.resolve("summary.json"), JSON.writeValueAsBytes(summary));
+        if (!complete) throw new IllegalStateException("Integrated flow quality/evidence incomplete");
+    }
+
+    static void verifyAttempts(Path directory, List<JsonNode> rows) throws Exception {
+        var starts = records(directory.resolve("provider-starts.jsonl"));
+        var completions = records(directory.resolve("provider-completions.jsonl"));
+        if (starts.size() != rows.size() || completions.size() != rows.size())
+            throw new IllegalStateException("Integrated provider ledger incomplete");
+        for (int index = 0; index < rows.size(); index++) {
+            var row = rows.get(index);
+            var start = starts.get(index);
+            var completion = completions.get(index);
+            if (!row.path("caseId").equals(start.path("caseId")) || !row.path("caseId").equals(completion.path("caseId"))
+                    || !row.path("requestSha256").equals(start.path("requestSha256"))
+                    || !row.path("requestSha256").equals(completion.path("requestSha256"))
+                    || !row.path("request").equals(start.path("request")) || !row.path("model").equals(start.path("model"))
+                    || !row.path("requestBodyBytes").equals(start.path("requestBodyBytes"))
+                    || !row.path("result").equals(completion.path("result"))
+                    || !row.path("rawStructuredResponse").equals(completion.path("rawStructuredResponse")))
+                throw new IllegalStateException("Integrated provider ledger identity mismatch");
+        }
+    }
+
+    private static List<JsonNode> records(Path file) throws Exception {
+        return Files.readAllLines(file, StandardCharsets.UTF_8).stream().filter(s -> !s.isBlank()).map(JSON::readTree).toList();
+    }
+
+    static void verifyCustomerContinuity(List<JsonNode> rows) throws Exception {
+        if (rows.size() != 2 || !rows.getFirst().path("workload").asString().equals("customer")) return;
+        var proposal = JSON.treeToValue(rows.getFirst().path("runtime"), Result.class);
+        var beforeAnswer = JSON.treeToValue(rows.getLast().path("before"), Result.class);
+        if (proposal.failure() != null || proposal.execution() != Execution.WAITING_CONFIRMATION
+                || beforeAnswer.productEffect() != Effect.SUCCEEDED || beforeAnswer.knownTarget() == null
+                || !proposal.runId().equals(beforeAnswer.runId()) || !proposal.budget().admittedAt().equals(beforeAnswer.budget().admittedAt())
+                || !proposal.budget().deadline().equals(beforeAnswer.budget().deadline())
+                || proposal.budget().providerAttempts() != beforeAnswer.budget().providerAttempts()
+                || !rows.getFirst().path("plan").equals(rows.getLast().path("plan")))
+            throw new IllegalStateException("Integrated Customer proposal/HOLD/answer continuity invalid");
+    }
+
     static JsonNode testCase(JsonNode specification,String id) {
         for (var testCase : specification.path("cases")) if (testCase.path("id").asString().equals(id)) return testCase;
         throw new IllegalStateException("Unknown integrated evidence case");

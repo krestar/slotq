@@ -79,15 +79,19 @@ tasks.register('representativeFlowEvidence', Test) {
     systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
     systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
     systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
-    ['optIn', 'freeTier', 'paidCalls', 'output'].each { key ->
-        systemProperty "slotq.flowEvidence.${key}", project.findProperty("flowEvidence${key.capitalize()}") ?: (key == 'output' ? 'representative-flow-v5' : 'false')
+    ['optIn', 'freeTier', 'paidCalls', 'output', 'flow'].each { key ->
+        systemProperty "slotq.flowEvidence.${key}", project.findProperty("flowEvidence${key.capitalize()}") ?: (key == 'output' ? 'representative-flow-v6' : 'false')
     }
     doFirst {
         if (project.findProperty('flowEvidenceOptIn') != 'true' || project.findProperty('flowEvidenceFreeTier') != 'true'
                 || project.findProperty('flowEvidencePaidCalls') != 'false') {
             throw new GradleException('Explicit free-only integrated provider opt-in required')
         }
+        if (!(project.findProperty('flowEvidenceFlow') in ['customer', 'management', 'ops'])) {
+            throw new GradleException('Select exactly one representative flow: customer, management or ops')
+        }
     }
+    outputs.upToDateWhen { false }
 }
 
 tasks.register('representativeFlowRecalculate', JavaExec) {
@@ -97,7 +101,8 @@ tasks.register('representativeFlowRecalculate', JavaExec) {
     mainClass = 'com.slotq.ai.router.RepresentativeFlowEvidence'
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
     systemProperty 'slotq.flowEvidence.recalculate', 'true'
-    systemProperty 'slotq.flowEvidence.output', project.findProperty('flowEvidenceOutput') ?: 'representative-flow-v5'
+    systemProperty 'slotq.flowEvidence.output', project.findProperty('flowEvidenceOutput') ?: 'representative-flow-v6'
+    systemProperty 'slotq.flowEvidence.flow', project.findProperty('flowEvidenceFlow') ?: ''
 }
 
 tasks.register('modelComparison', JavaExec) {
