@@ -6,7 +6,8 @@
 > #165의 새 synthetic Router 후보 근거는 [corrective 비교](../experiments/m7-router-corrective.md)를 따른다.
 > #154의 Venue 관측 연결은 아래 구현 profile과 실제 HTTP/MySQL regression을 따른다.
 > #155의 controlled 세 Product/MCP flow는 [통합 실험 기록](../experiments/m7-representative-flows.md)을 따른다.
-> Durable 필요성 판정은 #156의 후속 검증 대상이다.
+> #156의 [실행 수명·복구 검증](../experiments/m7-execution-lifetime.md)은 현재 controlled profile에
+> durable workflow가 필요하지 않다고 판정했다. Bounded process-local 지원과 restart limitation을 유지한다.
 >
 > 확인일: 2026-10-14. M6 source/Issue 설계 기준 revision은
 > `047bea6235eae08fca0a1cc02388c4a86c1b60ae`이며, #152 구현 기준은 #151/PR #158을 포함한
@@ -401,22 +402,33 @@ failure는 Product effect를 바꾸거나 mutation retry를 유발할 수 없다
 
 ## 10. HTTP / process-local / restart-durable requirement와 gate
 
-#156 판정 전 M7 기본 지원은 **bounded process-local Run**이다. HTTP response lifetime과 live process의
+#156 판정 결과 M7 기본 지원은 **bounded process-local Run**을 유지한다. HTTP response lifetime과 live process의
 work lifetime, restart continuation을 구분한다. M6의 MCP 최대 30초/Product connect 최대 2초/response 최대
 15초/retrieval 최대 10초와 최대 60초 Product command admission gate는 개별 기존 boundary다.
 이를 M7 전체 Run duration이나 새 생성 provider timeout으로 복사하지 않는다. 유한 Run 한도는 #152/#153이
-정하고 실제 flow duration/confirmation evidence로 #156에서 재검토한다.
+정한다. #156의 [실행 수명·복구 실험](../experiments/m7-execution-lifetime.md)은 기존 실제 모델 기록과
+승인·포화·취소·co-located JVM 강제 종료를 검증했다. 현재 세 flow는 bounded unavailable/unknown 종료와
+명시적 재진입을 허용하며 restart resume·durable cancel·자동 dispatch·persistent backlog를 요구하지 않는다.
+추가 persistence/workflow framework는 도입하지 않는다. 상세 수치·기각 대안·재현 절차는 실험 기록을 따른다.
+
+지원·복구 한계는 다음과 같다. HTTP 응답이나 취소 뒤에도 시작한 작업은 실제 종료까지 local permit을
+유지한다. Confirmation은 worker 없이 기다리며 same-process exact delegation으로만 재진입한다.
+5분 confirmation, 최초 dispatch 기준 15분 same-intent retry와 원래 Run budget/deadline은 유지한다.
+재시작하면 old Run·예산·결과·취소 요청을 복원하지 않으며 남은 M6 approval도 재개 권한이 아니다.
+Known target은 재인증 후 새 read Run의 명시적 exact GET으로 현재 상태를 확인한다. 원 mutation
+observation을 덮어쓰지 않는다. Unknown target은 unknown으로 두고 기존 Product 운영 절차로 확인하며
+자동 HOLD·새 key retry를 만들지 않는다. Provider remote stop/종료·비용 확정과 Product rollback은 보장하지 않는다.
 
 | Requirement | HTTP-bounded | Process-local continuation | Restart-durable / 판정 owner |
 | --- | --- | --- | --- |
-| Provider → tool → answer | 유한 deadline 안 success/reject/unavailable/unknown 반환 | HTTP 이후 남은 local work 종료/late observation도 accounting. 무제한 agent loop 없음 | Restart 후 resume/자동 dispatch는 현재 보장 없음. 실제 필요는 #156 |
-| Confirmation wait / re-entry | HTTP를 끝내고 wait state/expiry를 안전하게 표시 가능 | Permit 없이 bounded wait, 지원되는 explicit re-entry에서 current authority와 기존 budget/expiry 검증 (#153/#155) | M6 approval record가 남아도 Run continuation/budget 복구가 아님. Restart 후 confirmation continuation 요구는 #156 |
-| Cancellation | 새 dispatch 중단과 요청 결과를 effect와 구분 | Actual worker exit/late result까지 accounting | Durable cancellation/remote stop acknowledgement 요구는 #156; 현재 지원 주장 없음 |
-| Saturation | Finite admission rejection | Bounded in-flight/metadata, 숨은 backlog 금지 | Persistent queue/backlog/independent executor/delayed retry 필요성은 #156; synthetic overload만으로 채택하지 않음 |
+| Provider → tool → answer | 유한 deadline 안 success/reject/unavailable/unknown 반환 | HTTP 이후 남은 local work 종료/late observation도 accounting. 무제한 agent loop 없음 | Restart 후 resume/자동 dispatch 미지원. 실제 필요가 생기면 #156 gate 재검토 |
+| Confirmation wait / re-entry | HTTP를 끝내고 wait state/expiry를 안전하게 표시 가능 | Permit 없이 bounded wait, 지원되는 explicit re-entry에서 current authority와 기존 budget/expiry 검증 (#153/#155) | M6 approval record가 남아도 Run continuation/budget 복구가 아님. Restart 후 confirmation continuation 미지원 |
+| Cancellation | 새 dispatch 중단과 요청 결과를 effect와 구분 | Actual worker exit/late result까지 accounting | Durable cancellation/remote stop acknowledgement 미지원. 현재 flow 계약에 요구 없음 |
+| Saturation | Finite admission rejection | Bounded in-flight/metadata, 숨은 backlog 금지 | Persistent queue/backlog/independent executor/delayed retry 미도입. 실제 수요는 미관측이며 synthetic overload만으로 채택하지 않음 |
 | Process termination 전/후 dispatch | Pre-dispatch가 입증되면 no effect; dispatch 가능성이 있으면 unknown | Process 종료 시 local Run/permit/observation 유실 가능 | Product COMMIT/idempotency와 M6 approval durability는 각 owner에 남음. Restart 후 Run resume/budget continuity/자동 mutation 보장 없음 |
 | Restart 뒤 사용자 복구 | Current credential/delegation로 새로 인증; known target의 explicit exact GET | 이전 Run을 임의 재구성하거나 누적 budget을 복구했다고 주장하지 않음 | Unknown target은 unknown 유지. 새 intent는 §8; durable continuity requirement면 별도 gate |
 
-**#156 decision gate의 질문과 evidence:** 실제 두 모델/세 flow의 duration 분포와 deadline 초과 비율,
+**#156 decision gate의 검토 항목:** 실제 두 모델/세 flow의 duration 분포와 deadline 초과 비율,
 confirmation wait/re-entry와 resource 점유, provider-only/tool saturation, cancellation 전후와 continuing
 worker, process termination before/after dispatch, COMMIT+response loss, restart 뒤 자동 mutation 부재 및
 explicit re-entry/reconciliation을 #152/#153/#155 evidence로 검토한다. 사용자가 restart 뒤 같은 Run을
