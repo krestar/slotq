@@ -30,6 +30,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.*;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -424,6 +427,39 @@ class RepresentativeFlowIntegrationTests {
         flows.generate(flow,customer.delegation().value());
         assertThat(requests.getLast().prompt()).contains("\"category\":\"no_answer\"")
             .doesNotContain(withdrawn.versionId().toString(),"obsolete source");
+    }
+
+    @ParameterizedTest
+    @EnumSource(AgentLifetimeExperiments.KillPoint.class)
+    void lifetimeForcedProcessTerminationKeepsProductAuthorityAndRequiresExplicitRecovery(
+            AgentLifetimeExperiments.KillPoint point) throws Exception {
+        new AgentLifetimeExperiments(this).terminateAndRestart(point);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {240, 301, 601})
+    void lifetimeConfirmationReentryUsesNoWorkerAndPreservesExpiry(int waitSeconds) {
+        new AgentLifetimeExperiments(this).confirmationWait(waitSeconds);
+    }
+
+    @Test void lifetimeProviderOnlySaturationRejectsWithoutBacklogAndAccountsLateCompletion() throws Exception {
+        new AgentLifetimeExperiments(this).saturation(false);
+    }
+
+    @Test void lifetimeToolSaturationRejectsWithoutBacklogAndAccountsLateCompletion() throws Exception {
+        new AgentLifetimeExperiments(this).saturation(true);
+    }
+
+    @Test void lifetimeCancellationBeforeDispatchPreventsMutation() {
+        var runtime = runtime(this::fakeProvider, Duration.ofSeconds(5));
+        var flow = new RepresentativeFlows(runtime, limits(Duration.ofSeconds(5)))
+            .customerHold(customer.delegation().value(), slot, 2, null);
+        runtime.generate(flow.id(), customer.delegation().value());
+        approve(runtime, flow, customer);
+        runtime.cancel(flow.id(), customer.delegation().value());
+        assertThatThrownBy(() -> runtime.dispatchHold(flow.id(), customer.delegation().value())).hasMessage("STATE");
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM reservations WHERE slot_inventory_id=?",
+            Integer.class, bytes(slot))).isZero();
     }
 
     @Test

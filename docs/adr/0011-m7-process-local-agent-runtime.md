@@ -100,6 +100,12 @@ durable 최종 판단은 #156, generic evaluation/load/release/backup qualificat
 
 ## 재검토 조건
 
+2026-10-14 #156의 [실행 수명·복구 검증](../experiments/m7-execution-lifetime.md)은 현재 controlled
+세 flow에 durable workflow가 필요하지 않다고 판정했다. 기존 실제 모델의 반복 attempt timeout과
+미관측을 보존하면서 승인·포화·취소·co-located JVM 종료·명시적 조회 복구를 검증했다.
+Restart continuation 요구는 현재 계약에 없으며 이 ADR의 지원·제한을 유지한다. Replacement ADR은 필요하지 않다.
+향후 positive gate에서는 별도 설계와 M7-D 완료가 #157 closure의 선행이다.
+
 Renewed delegation read re-entry, 새 remotely reachable approval surface, provider retry/fallback,
 current non-synthetic disclosure, shared quota 또는 restart continuation이 필요해지면 해당 owner가
 security/evidence/decision을 먼저 확정한다. Long latency나 durable approval record의 존재만으로

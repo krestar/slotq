@@ -47,6 +47,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    systemProperty 'slotq.test.runtime-classpath', sourceSets.test.runtimeClasspath.asPath
     systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
     systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
     systemProperty 'jdk.httpclient.redirects.retrylimit', '1'

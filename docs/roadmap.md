@@ -805,8 +805,10 @@ Architecture SSOT로 사용한다. Router eligibility/selection과 Runtime execu
 #152는 실제 모델 비교·provider adapter·Router, #153은 process-local Runtime·Run control·approval/outcome,
 #154는 Owner/Manager-only Ops observation tool, #155는 동일 Runtime의 세 representative flow를 소유한다.
 #156은 실제 duration/wait/restart/cancel/saturation evidence로 durable 필요성을 판정한다.
-필요 없음이면 #157 통합 closure로 진행하고, 필요 있음이면 별도 Issue 설계와 conditional M7-D의
-구현·검증·merge가 #157의 추가 선행이다. #151만으로 Router/Runtime의 Deferred ADR 상태를 승격하지 않는다.
+현재 controlled profile의 [#156 검증 결과](experiments/m7-execution-lifetime.md)는 durable 불필요다.
+Bounded process-local Run과 명시적 재진입·현재 상태 조회를 유지하며 restart continuity는 제공하지 않는다.
+이 판정을 입력으로 #157 통합 closure를 별도로 수행한다. 향후 durable 필요로 재판정하면 별도 Issue
+설계와 conditional M7-D의 구현·검증·merge가 #157의 추가 선행이다.
 
 M7의 bounded fixture/oracle/comparison evidence와 M8의 generic evaluation/release gate/production
 hardening ownership은 구분한다. 상세 dependency, decision owner와 limitation은 Architecture SSOT를 따른다.
