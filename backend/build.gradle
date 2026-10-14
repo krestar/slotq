@@ -69,6 +69,42 @@ tasks.named('test') {
     }
 }
 
+tasks.register('representativeFlowEvidence', Test) {
+    group = 'verification'
+    description = 'Opt-in fresh free-tier provider through the production Runtime, MCP/Product/Knowledge and disposable MySQL.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.actualProviderFlows' }
+    systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
+    systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
+    ['optIn', 'freeTier', 'paidCalls', 'output', 'flow'].each { key ->
+        systemProperty "slotq.flowEvidence.${key}", project.findProperty("flowEvidence${key.capitalize()}") ?: (key == 'output' ? 'representative-flow-v6' : 'false')
+    }
+    doFirst {
+        if (project.findProperty('flowEvidenceOptIn') != 'true' || project.findProperty('flowEvidenceFreeTier') != 'true'
+                || project.findProperty('flowEvidencePaidCalls') != 'false') {
+            throw new GradleException('Explicit free-only integrated provider opt-in required')
+        }
+        if (!(project.findProperty('flowEvidenceFlow') in ['customer', 'management', 'ops'])) {
+            throw new GradleException('Select exactly one representative flow: customer, management or ops')
+        }
+    }
+    outputs.upToDateWhen { false }
+}
+
+tasks.register('representativeFlowRecalculate', JavaExec) {
+    group = 'verification'
+    description = 'Recalculate the bounded integrated flow records, content review and actual Run routing without provider access.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.ai.router.RepresentativeFlowEvidence'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.flowEvidence.recalculate', 'true'
+    systemProperty 'slotq.flowEvidence.output', project.findProperty('flowEvidenceOutput') ?: 'representative-flow-v6'
+    systemProperty 'slotq.flowEvidence.flow', project.findProperty('flowEvidenceFlow') ?: ''
+}
+
 tasks.register('modelComparison', JavaExec) {
     group = 'verification'
     description = 'Opt-in free-tier actual Gemini comparison with synthetic fixtures, or offline evidence recalculation.'

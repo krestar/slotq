@@ -26,7 +26,7 @@ public final class AgentRuntime implements AutoCloseable {
     private final JsonMapper json=JsonMapper.builder().build();
     private final Provider provider;
     private final List<ModelRouter.Candidate> candidates;
-    private final ContextSource contexts;
+    private final PlanContextSource contexts;
     private final LocalAdmission admission;
     private final Clock clock;
     private final int capacity,workerLimit;
@@ -40,9 +40,20 @@ public final class AgentRuntime implements AutoCloseable {
             LocalAdmission admission,Clock clock,int capacity,int concurrency) {
         this(authority,registry,engine::call,approvals,provider,candidates,contexts,admission,clock,capacity,concurrency);
     }
+    public AgentRuntime(ActorAccess authority, ToolRegistry registry, McpEngine engine, HoldApprovals approvals,
+            Provider provider, List<ModelRouter.Candidate> candidates, PlanContextSource contexts,
+            LocalAdmission admission, Clock clock, int capacity, int concurrency) {
+        this(authority, registry, engine::call, approvals, provider, candidates, contexts, admission, clock, capacity, concurrency);
+    }
     AgentRuntime(ActorAccess authority,ToolRegistry registry,ToolClient tools,HoldApprovals approvals,
             Provider provider,List<ModelRouter.Candidate> candidates,ContextSource contexts,
             LocalAdmission admission,Clock clock,int capacity,int concurrency) {
+        this(authority, registry, tools, approvals, provider, candidates,
+            (actor, stage, facts, plan) -> contexts.prepare(actor, stage, facts), admission, clock, capacity, concurrency);
+    }
+    AgentRuntime(ActorAccess authority, ToolRegistry registry, ToolClient tools, HoldApprovals approvals,
+            Provider provider, List<ModelRouter.Candidate> candidates, PlanContextSource contexts,
+            LocalAdmission admission, Clock clock, int capacity, int concurrency) {
         if(capacity<1 || capacity>4096 || concurrency<1 || concurrency>32 || candidates.size()>16)
             throw new IllegalArgumentException("Invalid Runtime capacity");
         this.authority=Objects.requireNonNull(authority);this.registry=Objects.requireNonNull(registry);this.tools=Objects.requireNonNull(tools);
@@ -79,7 +90,7 @@ public final class AgentRuntime implements AutoCloseable {
             var actor=current(r,credential);active(r);step(r);
             if(r.providerAttempts>=r.plan.limits().providerAttempts() || r.providerBudget.usageUnknown() || r.usageUnknown) endBudget(r);
             Context context;
-            try { context=contexts.prepare(actor,r.holdAttempted?Stage.ANSWER:Stage.PROPOSAL,snapshot(r)); }
+            try { context=contexts.prepare(actor,r.holdAttempted?Stage.ANSWER:Stage.PROPOSAL,snapshot(r),r.plan); }
             catch(RuntimeException failure) {r.execution=Execution.TERMINAL;r.failure="context_unavailable";return snapshot(r);}
             // Revalidation happens after context preparation and again at the dispatch boundary.
             current(r,credential);active(r);
@@ -93,15 +104,16 @@ public final class AgentRuntime implements AutoCloseable {
             Work work=admit(r,actor,"provider."+selected.model(),false);
             r.providerAttempts++;r.remainingOutput-=context.request().maximumOutputTokens();
             UUID attempt=UUID.randomUUID();int providerIndex=r.providers.size();int step=r.steps;
-            r.providers.add(new ProviderObservation(attempt,step,selected.model(),false,true,true));
+            r.providers.add(new ProviderObservation(attempt,step,selected.model(),false,true,true,decision));
             wait=waitNanos(r);
             try {
                 future=workers.submit(()-> {
                     try {
                         synchronized(r) {
-                            if(!canDispatch(r,actor)) {
+                            if(!canDispatch(r,actor) || !contexts.permitsDispatch(actor,r.plan,context)) {
                                 r.failure="provider_not_dispatched";
-                                r.providers.set(providerIndex,new ProviderObservation(attempt,step,selected.model(),true,false,false));return;
+                                terminal(r);
+                                r.providers.set(providerIndex,new ProviderObservation(attempt,step,selected.model(),true,false,false,decision));return;
                             }
                         }
                         var response=provider.generate(selected.model(),context.classification(),context.request(),r.providerBudget);
@@ -109,11 +121,11 @@ public final class AgentRuntime implements AutoCloseable {
                             observeProvider(r,response,context,selected);
                             boolean remoteUnknown=response==null || response.failure()==GeminiAdapter.Failure.TIMEOUT_REMOTE_UNKNOWN
                                 || response.failure()==GeminiAdapter.Failure.TRANSPORT_REMOTE_UNKNOWN;
-                            r.providers.set(providerIndex,new ProviderObservation(attempt,step,selected.model(),true,remoteUnknown,r.usageUnknown || r.providerBudget.usageUnknown()));
+                            r.providers.set(providerIndex,new ProviderObservation(attempt,step,selected.model(),true,remoteUnknown,r.usageUnknown || r.providerBudget.usageUnknown(),decision));
                         }
                     } catch(RuntimeException failure) {
                         synchronized(r){r.usageUnknown=true;r.failure="provider_unavailable";terminal(r);
-                            r.providers.set(providerIndex,new ProviderObservation(attempt,step,selected.model(),true,true,true));}
+                            r.providers.set(providerIndex,new ProviderObservation(attempt,step,selected.model(),true,true,true,decision));}
                     } finally {work.outerFinished();}
                 });
             } catch(RuntimeException failure) {work.outerFinished();throw fail(UNAVAILABLE);}
@@ -163,6 +175,17 @@ public final class AgentRuntime implements AutoCloseable {
     public Result read(UUID id,String credential,String name,Map<String,Object> proposal) {
         Run r=run(id);
         return invoke(r,credential,name,proposal,false,false,false);
+    }
+    /** Uses the admitted immutable plan; client re-entry cannot replace read arguments or budget. */
+    public Result readPlanned(UUID id, String credential, String name) {
+        Run r=run(id);
+        Map<String,Object> args;
+        synchronized(r) {
+            current(r,credential);active(r);
+            args=r.plan.reads().get(name);
+            if(args==null)return snapshot(r);
+        }
+        return invoke(r,credential,name,args,false,false,false);
     }
     public Result reconcile(UUID id,String credential) {
         Run r=run(id);Map<String,Object> args;
@@ -261,7 +284,8 @@ public final class AgentRuntime implements AutoCloseable {
         String expected=r.effect==Effect.SUCCEEDED?"HELD":r.effect==Effect.REJECTED?"REJECTED":r.effect==Effect.UNKNOWN?"UNKNOWN":"NOT_APPLICABLE";
         if(!valid || !Set.of("ANSWER","CLARIFY","INSUFFICIENT","REJECT").contains(output.disposition()) || !"none".equals(output.tool())
             || !output.target().isEmpty() || output.partySize()!=0 || !expected.equals(output.outcome())
-            || output.answer()==null || output.answer().isBlank() || output.answer().length()>700)r.failure="answer_rejected";
+            || output.answer()==null || output.answer().isBlank() || output.answer().length()>700
+            || !contexts.acceptsAnswer(r.plan,snapshot(r),output))r.failure="answer_rejected";
         else r.answer=output.answer();
         terminal(r);
     }

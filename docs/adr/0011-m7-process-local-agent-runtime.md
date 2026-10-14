@@ -19,8 +19,9 @@ Product 결과로 잘못 해석하지 않는 공통 실행 경계가 필요하�
 component로 둔다. HTTP/controller/MCP approval tool, 자동 활성화, executor queue, persistence를
 추가하지 않는다. Production 구성은 기존 `ActorAccess`, `ToolRegistry`, `McpEngine`,
 `HoldApprovals`와 서버가 고정한 Router candidates/context/provider를 주입한다.
-실제 adapter는 `GeminiAdapter::generate`로 연결할 수 있다. 현재 actual candidate의
-synthetic disclosure와 Management/Ops no-candidate 결정을 유지한다.
+실제 adapter는 `GeminiAdapter::generate`로 연결할 수 있다. #153 당시의 Management/Ops
+no-candidate는 #152 historical baseline이다. 현재 후보는 [#165 corrective 근거](../experiments/m7-router-corrective.md)를
+따르며 synthetic disclosure와 current Runtime authority/admission/budget은 독립적으로 유지한다.
 
 Run의 origin은 immutable delegated Actor, trusted scope/workload, server UUID, admittedAt와
 absolute deadline이다. 모든 제공 operation은 opaque MCP credential을 현재 Auth 경계에서
@@ -93,8 +94,9 @@ answer failure를 검증한다. 기존 M6/Router regression을 함께 유지한�
 
 Process restart 후 Run/budget/result continuity, remote provider stop acknowledgement, 자동
 mutation replay는 보장하지 않는다. M6 durable approval이 남아도 Run을 재구성하지 않는다.
-Fresh actual-provider 세 representative flow는 #155, Ops Product tool은 #154, durable 최종 판단은
-#156, generic evaluation/load/release/backup qualification은 M8이 소유한다.
+후속 #155의 세 representative flow와 실제 provider 검증은
+[통합 실험 기록](../experiments/m7-representative-flows.md)을 따른다. Ops Product tool은 #154,
+durable 최종 판단은 #156, generic evaluation/load/release/backup qualification은 M8이 소유한다.
 
 ## 재검토 조건
 

@@ -171,6 +171,25 @@ class AgentRuntimeTests {
         context=new Context(new ModelRouter.Classification(ModelRouter.DataClass.CONFIDENTIAL,false,false,"EU",0,30000,1024),context.request());
         assertThat(r.generate(start(r,l),"mcp-secret").failure()).isEqualTo("no_candidate");assertThat(providerCalls).hasValue(0);
     }
+    @Test void disclosureRevocationAfterRoutingPreventsActualDispatchAndKeepsAttemptAccounting() {
+        var l=limits(Duration.ofSeconds(2));
+        var engine=new McpEngine(access,registry,quota(100),audit,clock,Duration.ofMillis(100),2);engines.add(engine);
+        PlanContextSource changingDisclosure=new PlanContextSource() {
+            public Context prepare(DelegatedActor actor,Stage stage,Result facts,Plan plan){return context;}
+            public boolean permitsDispatch(DelegatedActor actor,Plan plan,Context context){return false;}
+        };
+        var runtime=new AgentRuntime(access,registry,engine,approvals,provider,List.of(candidate(clock)),changingDisclosure,quota(100),clock,8,1);
+        runtimes.add(runtime);
+        var result=runtime.generate(start(runtime,l),"mcp-secret");
+        assertThat(result.execution()).isEqualTo(Execution.TERMINAL);
+        assertThat(result.failure()).isEqualTo("provider_not_dispatched");
+        assertThat(result.providers().getFirst().routing().selected()).isEqualTo("fake-eligible");
+        assertThat(result.providers().getFirst().remoteUnknown()).isFalse();
+        assertThat(result.budget().providerAttempts()).isEqualTo(1);
+        assertThat(result.budget().usageUnknown()).isFalse();
+        assertThat(runtime.activeWorkers()).isZero();
+        assertThat(providerCalls).hasValue(0);
+    }
     @Test void preDispatchAndHandlerExceptionHaveDifferentMutationEffects() {
         var l=limits(Duration.ofSeconds(2));var r=runtime(l);var first=start(r,l);r.generate(first,"mcp-secret");approve(r,first);
         handler.set((c,args)->new ToolOutcome(Map.of("outcome","not_dispatched"),false,null,null,null,null,null,null,McpFailure.Reason.FORBIDDEN,McpAudit.TimeoutLayer.NONE));
