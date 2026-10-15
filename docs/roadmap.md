@@ -809,6 +809,7 @@ Architecture SSOT로 사용한다. Router eligibility/selection과 Runtime execu
 Bounded process-local Run과 명시적 재진입·현재 상태 조회를 유지하며 restart continuity는 제공하지 않는다.
 이 판정을 입력으로 #157 통합 closure를 별도로 수행한다. 향후 durable 필요로 재판정하면 별도 Issue
 설계와 conditional M7-D의 구현·검증·merge가 #157의 추가 선행이다.
+최신 통합 revision의 네 완료 기준과 실제 모델·Product·연결 경합 검증은 [#157 검증 기록](experiments/m7-closure.md)에 연결한다.
 
 M7의 bounded fixture/oracle/comparison evidence와 M8의 generic evaluation/release gate/production
 hardening ownership은 구분한다. 상세 dependency, decision owner와 limitation은 Architecture SSOT를 따른다.
