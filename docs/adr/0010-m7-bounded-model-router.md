@@ -60,7 +60,8 @@ evidence는 gitignored 경로에 두고 실행 요약과 fixture/policy/계산 �
 Router/provider는 Actor/Tenant/Venue authorization, Run lifecycle/admission, approval,
 MCP/Product execution, idempotency와 effect reconciliation을 소유하지 않는다. #153이
 current authority와 cumulative budget, answer/outcome enforcement를 구현하고 #155가 실제
-세 flow를 검증한다. Agent Runtime은 Deferred이며 #156의 durable gate를 선도입하지 않는다.
+세 flow를 검증한다. 이 ADR 채택 당시 Deferred였던 Agent Runtime은 이후 [ADR-0011](0011-m7-process-local-agent-runtime.md)의
+controlled process-local profile로 채택됐고, #156은 현재 profile에서 durable 불필요로 판정했다.
 
 실제 data class/region/retention 요구, billing tier, exact model capability, account quota,
 실제 flow quality 또는 fallback 필요성이 달라지면 새 evidence로 candidate와 policy를
