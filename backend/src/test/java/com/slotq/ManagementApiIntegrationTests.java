@@ -12,8 +12,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import jakarta.persistence.EntityManager;
 
 import com.jayway.jsonpath.JsonPath;
 import com.slotq.auth.application.AccessControlProvisioning;
@@ -25,17 +31,24 @@ import com.slotq.tenancy.application.TenantUseCase;
 import com.slotq.tenancy.domain.Tenant;
 import com.slotq.venue.application.ResourceUseCase;
 import com.slotq.venue.application.VenueConfigurationUseCase;
+import com.slotq.venue.application.VenueRepository;
+import com.slotq.venue.domain.BookingPolicy;
 import com.slotq.venue.domain.BookingPolicyTerms;
 import com.slotq.venue.domain.DailyOperatingHours;
 import com.slotq.venue.domain.Resource;
 import com.slotq.venue.domain.Venue;
 import com.slotq.venue.domain.WeeklyOperatingHours;
+import org.hibernate.Session;
+import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -43,12 +56,17 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -81,6 +99,9 @@ class ManagementApiIntegrationTests {
     @Autowired AccessControlProvisioning accessControlProvisioning;
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired MutableClock clock;
+    @Autowired EntityManager entityManager;
+    @Autowired PolicySqlCapture policySql;
+    @MockitoSpyBean VenueRepository venueRepository;
 
     private String customerToken;
     private String operatorToken;
@@ -311,6 +332,157 @@ class ManagementApiIntegrationTests {
             .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void concurrentManagementPolicyPutsUseLatestCommittedVersionAfterAuthorization(boolean cacheOldPolicy)
+        throws Exception {
+        Fixture fixture = fixture("Policy race", "UTC", "2026-08-30T11:00:00Z");
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.OWNER);
+        UUID reservationId = createHold(fixture);
+        Map<String, Object> reservationBefore = reservationSnapshot(reservationId);
+        Map<String, Object> slotBefore = slotSnapshot(fixture);
+        List<Map<String, Object>> policiesBefore = policyRows(fixture.venue());
+        BookingPolicyTerms firstTerms = new BookingPolicyTerms(60, 10, 30, 15);
+        BookingPolicyTerms secondTerms = new BookingPolicyTerms(45, 7, 25, 12);
+        CountDownLatch authorized = new CountDownLatch(1);
+        CountDownLatch committed = new CountDownLatch(1);
+        AtomicReference<Thread> firstRequest = new AtomicReference<>();
+        AtomicReference<BookingPolicy> selectedPolicy = new AtomicReference<>();
+        AtomicReference<Long> firstConnection = new AtomicReference<>();
+
+        doAnswer(invocation -> {
+            if (Thread.currentThread() != firstRequest.get()) {
+                assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
+                assertThat(jdbcTemplate.queryForObject("SELECT CONNECTION_ID()", Long.class))
+                    .isNotEqualTo(firstConnection.get());
+                return invocation.callRealMethod();
+            }
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
+            assertThat(jdbcTemplate.queryForObject("SELECT @@transaction_isolation", String.class))
+                .isEqualTo("REPEATABLE-READ");
+            long connection = jdbcTemplate.queryForObject("SELECT CONNECTION_ID()", Long.class);
+            firstConnection.set(connection);
+            assertThat(entityManager.isJoinedToTransaction()).isTrue();
+            assertThat(entityManager.unwrap(Session.class).getStatistics().getEntityCount())
+                .as("authorization uses JDBC and has not loaded any JPA entities").isZero();
+            Object cachedPolicy = cacheOldPolicy ? entityManager.createQuery(
+                "select policy from BookingPolicyJpaEntity policy "
+                    + "where policy.id.tenantId = :tenant and policy.id.venueId = :venue "
+                    + "order by policy.id.policyVersion desc"
+            ).setParameter("tenant", fixture.tenant().id().value())
+                .setParameter("venue", fixture.venue().id().value()).setMaxResults(1).getSingleResult() : null;
+            authorized.countDown();
+            assertThat(committed.await(30, TimeUnit.SECONDS)).as("B committed before A locks Venue").isTrue();
+            assertThat(jdbcTemplate.queryForObject("SELECT CONNECTION_ID()", Long.class)).isEqualTo(connection);
+            // This is A's first policy read in the uncached case: authorization alone established the old snapshot.
+            assertThat(jdbcTemplate.queryForObject(
+                "SELECT MAX(policy_version) FROM booking_policies WHERE tenant_id = ? AND venue_id = ?",
+                Long.class, bytes(fixture.tenant().id().value()), bytes(fixture.venue().id().value())
+            )).as("A's consistent read still sees v1 after B committed v2").isEqualTo(1);
+            if (cachedPolicy != null) {
+                assertThat(entityManager.contains(cachedPolicy)).isTrue();
+            }
+            Optional<?> result = (Optional<?>) invocation.callRealMethod();
+            Venue locked = (Venue) result.orElseThrow();
+            selectedPolicy.set(locked.currentPolicy());
+            if (cachedPolicy != null) {
+                assertThat(entityManager.contains(cachedPolicy)).as("old entity remains managed").isTrue();
+            }
+            return result;
+        }).when(venueRepository).findForUpdate(any(), any());
+
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var first = executor.submit(() -> {
+                firstRequest.set(Thread.currentThread());
+                policySql.start();
+                try {
+                    return new PolicyPut(policyPut(fixture.venue(), firstTerms), policySql.statements());
+                } finally {
+                    policySql.stop();
+                }
+            });
+            assertThat(authorized.await(30, TimeUnit.SECONDS)).as("A reached Venue lock after authorization")
+                .isTrue();
+            MvcResult second = policyPut(fixture.venue(), secondTerms);
+            assertPolicyResponse(second, 2, secondTerms);
+            assertThat(policyRows(fixture.venue())).hasSize(2);
+            committed.countDown();
+            PolicyPut firstResult = first.get(30, TimeUnit.SECONDS);
+            assertPolicyResponse(firstResult.result(), 3, firstTerms);
+            assertThat(selectedPolicy.get().version()).as("current read after Venue lock").isEqualTo(2);
+            assertThat(selectedPolicy.get().terms()).isEqualTo(secondTerms);
+
+            List<String> lockingSql = firstResult.sql().stream().filter(sql -> sql.contains("for update")).toList();
+            assertThat(lockingSql).hasSize(2);
+            assertThat(lockingSql.get(0)).contains("from venues");
+            assertThat(lockingSql.get(1)).contains("from booking_policies", "order by", "policy_version desc");
+            assertThat(firstResult.sql()).anySatisfy(sql -> assertThat(sql).startsWith("insert into booking_policies"));
+            assertThat(firstResult.sql()).noneSatisfy(sql -> assertThat(sql).startsWith("update booking_policies"));
+            System.out.println("Policy race cacheOldPolicy=" + cacheOldPolicy + ": " + firstResult.sql());
+        } finally {
+            committed.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        }
+
+        List<Map<String, Object>> rows = policyRows(fixture.venue());
+        assertThat(rows).hasSize(3);
+        assertThat(rows.getFirst()).isEqualTo(policiesBefore.getFirst());
+        assertPolicyRow(rows.get(1), 2, secondTerms);
+        assertPolicyRow(rows.get(2), 3, firstTerms);
+        assertThat(reservationSnapshot(reservationId)).isEqualTo(reservationBefore);
+        assertThat(slotSnapshot(fixture)).isEqualTo(slotBefore);
+        assertThat(venueUseCase.getVenue(fixture.tenant().id(), fixture.venue().id()).currentPolicy().version())
+            .isEqualTo(3);
+    }
+
+    @Test
+    void policyPutPreservesOwnerManagerAuthorityFullReplacementAndProblemResponses() throws Exception {
+        Fixture fixture = fixture("Policy access", "UTC", "2026-08-30T11:00:00Z");
+        Venue venue = fixture.venue();
+        Venue unassigned = venue(fixture.tenant(), "Unassigned", "UTC", DayOfWeek.SUNDAY, "09:00", "13:00");
+        Venue otherTenant = venue(tenantUseCase.createTenant(), "Other tenant", "UTC",
+            DayOfWeek.SUNDAY, "09:00", "13:00");
+        BookingPolicyTerms terms = new BookingPolicyTerms(60, 10, 30, 15);
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.OWNER);
+        assertPolicyResponse(policyPut(venue, terms), 2, terms);
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.MANAGER);
+        accessControlProvisioning.grantVenue(OPERATOR, fixture.tenant().id(), TenantRole.MANAGER, venue.id());
+        BookingPolicyTerms replacement = new BookingPolicyTerms(45, 7, 0, 0);
+        assertPolicyResponse(policyPut(venue, replacement), 3, replacement);
+        assertPolicyRow(policyRows(venue).get(2), 3, replacement);
+
+        accessControlProvisioning.assignMembership(STAFF, fixture.tenant().id(), TenantRole.STAFF);
+        accessControlProvisioning.grantVenue(STAFF, fixture.tenant().id(), TenantRole.STAFF, venue.id());
+        assertPolicyProblem(policyPut(venue, terms, staffToken), 403, "ACCESS_DENIED");
+        assertPolicyProblem(policyPut(unassigned, terms), 404, "RESOURCE_NOT_FOUND");
+        assertPolicyProblem(policyPut(otherTenant, terms), 404, "RESOURCE_NOT_FOUND");
+        for (String invalid : List.of(
+            "{\"slotDurationMinutes\":60,\"holdDurationMinutes\":10,\"cancellationCutoffMinutes\":0}",
+            "{\"slotDurationMinutes\":0,\"holdDurationMinutes\":10,\"cancellationCutoffMinutes\":0,\"noShowGraceMinutes\":0}",
+            "{\"slotDurationMinutes\":60,\"holdDurationMinutes\":0,\"cancellationCutoffMinutes\":0,\"noShowGraceMinutes\":0}",
+            "{\"slotDurationMinutes\":60,\"holdDurationMinutes\":10,\"cancellationCutoffMinutes\":-1,\"noShowGraceMinutes\":0}",
+            "{\"slotDurationMinutes\":60,\"holdDurationMinutes\":10,\"cancellationCutoffMinutes\":0,\"noShowGraceMinutes\":-1}"
+        )) {
+            assertPolicyProblem(mockMvc.perform(put("/api/v1/management/venues/{venueId}/policy", venue.id().value())
+                    .header("Authorization", bearer(operatorToken))
+                    .contentType(MediaType.APPLICATION_JSON).content(invalid)).andReturn(),
+                400, "VALIDATION_FAILED");
+        }
+        assertThat(policyRows(venue)).hasSize(3);
+        assertThat(policyRows(unassigned)).hasSize(1);
+        assertThat(policyRows(otherTenant)).hasSize(1);
+
+        policySql.start();
+        try {
+            assertThat(venueUseCase.getVenue(fixture.tenant().id(), venue.id()).currentPolicy().version()).isEqualTo(3);
+            assertThat(policySql.statements()).noneMatch(sql -> sql.contains("for update") || sql.contains("for share"));
+        } finally {
+            policySql.stop();
+        }
+    }
+
     @Test
     void usesVenueLocalDstDateWindowAndStableCollectionOrdering() throws Exception {
         Tenant tenant = tenantUseCase.createTenant();
@@ -429,6 +601,66 @@ class ManagementApiIntegrationTests {
             .andExpect(jsonPath("$[0].allowedActions").isEmpty());
     }
 
+    private MvcResult policyPut(Venue venue, BookingPolicyTerms terms) throws Exception {
+        return policyPut(venue, terms, operatorToken);
+    }
+
+    private MvcResult policyPut(Venue venue, BookingPolicyTerms terms, String token) throws Exception {
+        return mockMvc.perform(put("/api/v1/management/venues/{venueId}/policy", venue.id().value())
+                .header("Authorization", bearer(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"slotDurationMinutes":%d,"holdDurationMinutes":%d,
+                     "cancellationCutoffMinutes":%d,"noShowGraceMinutes":%d}
+                    """.formatted(terms.slotDurationMinutes(), terms.holdDurationMinutes(),
+                        terms.cancellationCutoffMinutes(), terms.noShowGraceMinutes())))
+            .andReturn();
+    }
+
+    private void assertPolicyResponse(MvcResult result, long version, BookingPolicyTerms terms) throws Exception {
+        assertThat(result.getResponse().getStatus()).as("Policy PUT exception: %s", result.getResolvedException())
+            .isEqualTo(200);
+        String body = result.getResponse().getContentAsString();
+        assertThat(JsonPath.<Number>read(body, "$.version").longValue()).isEqualTo(version);
+        assertThat(JsonPath.<Integer>read(body, "$.slotDurationMinutes")).isEqualTo(terms.slotDurationMinutes());
+        assertThat(JsonPath.<Integer>read(body, "$.holdDurationMinutes")).isEqualTo(terms.holdDurationMinutes());
+        assertThat(JsonPath.<Integer>read(body, "$.cancellationCutoffMinutes"))
+            .isEqualTo(terms.cancellationCutoffMinutes());
+        assertThat(JsonPath.<Integer>read(body, "$.noShowGraceMinutes")).isEqualTo(terms.noShowGraceMinutes());
+    }
+
+    private List<Map<String, Object>> policyRows(Venue venue) {
+        return jdbcTemplate.queryForList("""
+            SELECT policy_version, slot_duration_minutes, hold_duration_minutes,
+                   cancellation_cutoff_minutes, no_show_grace_minutes, created_at
+            FROM booking_policies WHERE tenant_id = ? AND venue_id = ? ORDER BY policy_version
+            """, bytes(venue.tenantId().value()), bytes(venue.id().value()));
+    }
+
+    private void assertPolicyRow(Map<String, Object> row, long version, BookingPolicyTerms terms) {
+        assertThat(((Number) row.get("policy_version")).longValue()).isEqualTo(version);
+        assertThat(((Number) row.get("slot_duration_minutes")).intValue()).isEqualTo(terms.slotDurationMinutes());
+        assertThat(((Number) row.get("hold_duration_minutes")).intValue()).isEqualTo(terms.holdDurationMinutes());
+        assertThat(((Number) row.get("cancellation_cutoff_minutes")).intValue())
+            .isEqualTo(terms.cancellationCutoffMinutes());
+        assertThat(((Number) row.get("no_show_grace_minutes")).intValue()).isEqualTo(terms.noShowGraceMinutes());
+    }
+
+    private Map<String, Object> slotSnapshot(Fixture fixture) {
+        return jdbcTemplate.queryForMap("""
+            SELECT starts_at, ends_at, capacity, applied_policy_version
+            FROM slot_inventories WHERE id = ?
+            """, bytes(fixture.slot().id().value()));
+    }
+
+    record PolicyPut(MvcResult result, List<String> sql) { }
+
+    private void assertPolicyProblem(MvcResult result, int statusCode, String code) throws Exception {
+        assertThat(result.getResponse().getStatus()).isEqualTo(statusCode);
+        assertThat(result.getResponse().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        assertThat(JsonPath.<String>read(result.getResponse().getContentAsString(), "$.code")).isEqualTo(code);
+    }
+
     private Fixture fixture(String name, String timezone, String startsAt) {
         Tenant tenant = tenantUseCase.createTenant();
         Venue venue = venue(tenant, name, timezone, DayOfWeek.SUNDAY, "09:00", "13:00");
@@ -525,9 +757,35 @@ class ManagementApiIntegrationTests {
     @TestConfiguration
     static class ClockConfiguration {
         @Bean
+        PolicySqlCapture policySqlCapture() {
+            return new PolicySqlCapture();
+        }
+
+        @Bean
+        HibernatePropertiesCustomizer policySqlInspector(PolicySqlCapture capture) {
+            return properties -> properties.put("hibernate.session_factory.statement_inspector", capture);
+        }
+
+        @Bean
         @Primary
         MutableClock mutableClock() {
             return new MutableClock(BASE_NOW);
+        }
+    }
+
+    static final class PolicySqlCapture implements StatementInspector {
+        private final ThreadLocal<List<String>> statements = new ThreadLocal<>();
+
+        void start() { statements.set(new ArrayList<>()); }
+        List<String> statements() { return List.copyOf(statements.get()); }
+        void stop() { statements.remove(); }
+
+        @Override
+        public String inspect(String sql) {
+            if (statements.get() != null) {
+                statements.get().add(sql.toLowerCase(java.util.Locale.ROOT));
+            }
+            return sql;
         }
     }
 
