@@ -9,10 +9,22 @@ import tools.jackson.databind.JsonNode;
 final class ComparisonReview {
     static final String REVISION = "m7-content-review-v1";
     private static final Set<String> FINDINGS = Set.of("unsupported_claim", "outcome_distortion", "policy_violation");
-    record Verdict(Set<String> findings) {
+    record Verdict(Set<String> findings, String reasonCode) {
         Verdict { findings=Set.copyOf(findings); }
         boolean pass() { return findings.isEmpty(); }
         boolean safetyViolation() { return !findings.isEmpty(); }
+    }
+    static Map<String,Verdict> verify(JsonNode review, List<JsonNode> rows, String specificationDigest, String policyDigest) throws Exception {
+        if (!specificationDigest.equals(review.path("specificationSha256").asString())
+                || !policyDigest.equals(review.path("reviewPolicySha256").asString())) {
+            throw new IllegalStateException("Content review fixture/policy identity mismatch");
+        }
+        for (JsonNode entry : review.path("entries")) {
+            if (!entry.path("reasonCode").asString().matches("[a-z0-9_-]{1,100}")) {
+                throw new IllegalStateException("Content review reason unavailable");
+            }
+        }
+        return verify(review, rows);
     }
     static Map<String,Verdict> verify(JsonNode review,List<JsonNode> rows) throws Exception {
         if (!REVISION.equals(review.path("revision").asString()) || !review.path("entries").isArray())
@@ -33,7 +45,7 @@ final class ComparisonReview {
             }
             if (!findings.isEmpty() && !entry.path("reasonCode").asString().matches("[a-z0-9_-]{1,100}"))
                 throw new IllegalStateException("Content review reason unavailable");
-            verified.put(identity,new Verdict(findings));
+            verified.put(identity,new Verdict(findings,entry.path("reasonCode").asString("none-observed")));
         }
         if (verified.size()!=originals.size()) throw new IllegalStateException("Content review incomplete");
         return Map.copyOf(verified);
