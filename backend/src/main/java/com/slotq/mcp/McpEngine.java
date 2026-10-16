@@ -55,6 +55,11 @@ public final class McpEngine implements AutoCloseable {
         }
         catch(McpFailure failure) { sample(context,null,failure.reason(),McpAudit.Outcome.DENIED,false,false,null,start); throw failure; }
     }
+    public int maxResultBytes(String name) {
+        // Wire sizing must preserve admission failures, including quota denial for unknown names.
+        return registry.all().stream().filter(tool -> tool.wire().name().equals(name))
+            .mapToInt(ToolDefinition::maxResultBytes).findFirst().orElse(ToolDefinition.DEFAULT_RESULT_BYTES);
+    }
     public McpSchema.CallToolResult call(RequestContext context, String name, Object arguments) {
         return call(context,name,arguments,Completion.NONE);
     }
@@ -94,7 +99,7 @@ public final class McpEngine implements AutoCloseable {
                             handlerContext.revalidate(authority,clock);
                             ToolOutcome outcome=selected.handler().execute(handlerContext,frozen);
                             registry.validateOutput(selected,outcome.content());
-                            if(json.writeValueAsBytes(outcome.content()).length>65536) throw new McpFailure(McpFailure.Reason.UNKNOWN);
+                            if(json.writeValueAsBytes(outcome.content()).length>selected.maxResultBytes()) throw new McpFailure(McpFailure.Reason.UNKNOWN);
                             try { completion.observed(outcome); } catch(RuntimeException ignored) { }
                             return outcome;
                         }

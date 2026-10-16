@@ -9,10 +9,10 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
-import com.slotq.auth.application.AccessDeniedException;
+import com.slotq.auth.access.ProductCredentialAccess;
+import com.slotq.auth.access.ProductOperation;
 import com.slotq.auth.application.AuthorizationUseCase;
 import com.slotq.auth.domain.AuthenticatedPrincipal;
-import com.slotq.auth.domain.TenantRole;
 import com.slotq.venue.domain.VenueId;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,10 +28,13 @@ public class OperationsObservationReadService {
     private static final Duration MAX_WINDOW = Duration.ofDays(31);
     private final AuthorizationUseCase authorization;
     private final JdbcTemplate jdbc;
+    private final ProductCredentialAccess productAccess;
 
-    OperationsObservationReadService(AuthorizationUseCase authorization, JdbcTemplate jdbc) {
+    OperationsObservationReadService(AuthorizationUseCase authorization, JdbcTemplate jdbc,
+                                    ProductCredentialAccess productAccess) {
         this.authorization = authorization;
         this.jdbc = jdbc;
+        this.productAccess = productAccess;
     }
 
     @Transactional(readOnly = true)
@@ -43,9 +46,8 @@ public class OperationsObservationReadService {
         int limit = requestedLimit == null ? DEFAULT_LIMIT : requestedLimit;
         if (limit < 1 || limit > MAX_LIMIT)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Observation limit is invalid");
-        var actor = authorization.requireVenueAccess(principal, venueId);
-        if (actor.role() != TenantRole.OWNER && actor.role() != TenantRole.MANAGER)
-            throw new AccessDeniedException();
+        productAccess.requireAdmission(principal, ProductOperation.EVENT_OBSERVATIONS_LIST, venueId, null);
+        var actor = authorization.requireVenueConfigurationAccess(principal, venueId);
         List<Item> fetched = jdbc.query("""
             SELECT p.*, w.registration_id AS waitlist_registration_id,
                    w.state AS waitlist_delivery_state,

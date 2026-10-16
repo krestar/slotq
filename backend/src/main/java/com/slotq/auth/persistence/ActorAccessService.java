@@ -60,9 +60,9 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
             Credential original = lookup(originalCredential, "ORIGINAL");
             if (validity.isNegative() || validity.isZero() || validity.compareTo(Duration.ofMinutes(15)) > 0
                     || actions.isEmpty() || tools.isEmpty() || tools.size() > 16
-                    || tools.stream().anyMatch(tool -> !tool.matches("[a-z][a-z0-9_.]{0,79}"))) throw denied();
+                    || tools.stream().anyMatch(tool -> !tool.matches("[a-z][a-z0-9_.-]{0,79}"))) throw denied();
             UUID tenant = verifiedVenue(venue, profile == AccessProfile.CUSTOMER);
-            validateProfile(original.principal(), venue, profile, actions);
+            validateProfile(original.principal(), venue, profile, actions, tools);
             UUID id = UUID.randomUUID();
             Instant now = clock.instant();
             Instant expiry = earlier(now.plus(validity), original.expiry());
@@ -123,7 +123,7 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
             if (actor.profile() != operation.profile || !actor.actions().contains(operation.action) || !actor.tools().contains(operation.tool)
                     || !deadline.isAfter(clock.instant())
                     || (operation == ProductOperation.RESERVATION_GET && target == null)
-                    || (operation == ProductOperation.MANAGEMENT_LIST && target != null)) throw denied();
+                    || (operation != ProductOperation.RESERVATION_GET && target != null)) throw denied();
             Instant expires = earlier(earlier(clock.instant().plusSeconds(60), deadline), actor.expiresAt());
             ProvisionedCredential issued = credential("PRODUCT", actor.original().principalId(), delegation,
                     expires, operation.name(), target);
@@ -198,6 +198,7 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
                 case RESERVATION_GET -> "/api/v1/venues/" + actor.venueId().value() + "/reservations/" + credential.target();
                 case RESERVATION_HOLD -> "/api/v1/venues/" + actor.venueId().value() + "/reservations/holds";
                 case MANAGEMENT_LIST -> "/api/v1/management/venues/" + actor.venueId().value() + "/reservations";
+                case EVENT_OBSERVATIONS_LIST -> "/api/v1/management/venues/" + actor.venueId().value() + "/event-observations";
             };
             if (!path.equals(expected)) throw denied();
             return Optional.of(new AuthenticatedPrincipal(actor.original().principalId(), new ConsumerRestriction(
@@ -303,7 +304,7 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
         if (rows.size() != 1) throw unauthenticated();
         var actor = rows.getFirst();
         if (!actor.tenantId().value().equals(verifiedVenue(actor.venueId(), actor.profile() == AccessProfile.CUSTOMER))) throw denied();
-        validateProfile(actor.original().principalId(), actor.venueId(), actor.profile(), actor.actions());
+        validateProfile(actor.original().principalId(), actor.venueId(), actor.profile(), actor.actions(), actor.tools());
         return actor;
     }
 
@@ -315,12 +316,20 @@ public class ActorAccessService implements ActorAccess, ProductCredentialAccess 
         if (rows.size() != 1) throw denied();
         return rows.getFirst();
     }
-    private void validateProfile(PrincipalId principal, VenueId venue, AccessProfile profile, Set<AccessAction> actions) {
+    private void validateProfile(PrincipalId principal, VenueId venue, AccessProfile profile,
+            Set<AccessAction> actions, Set<String> tools) {
         Set<AccessAction> ceiling = profile == AccessProfile.CUSTOMER
                 ? EnumSet.of(AccessAction.RESERVATION_READ, AccessAction.RESERVATION_WRITE, AccessAction.KNOWLEDGE_PUBLIC)
-                : EnumSet.of(AccessAction.MANAGEMENT_READ, AccessAction.KNOWLEDGE_PUBLIC, AccessAction.KNOWLEDGE_OPERATOR);
+                : EnumSet.of(AccessAction.MANAGEMENT_READ, AccessAction.EVENT_OBSERVATION_READ,
+                    AccessAction.KNOWLEDGE_PUBLIC, AccessAction.KNOWLEDGE_OPERATOR);
         if (!ceiling.containsAll(actions)) throw denied();
         if (profile == AccessProfile.MANAGEMENT) authorization.requireVenueAccess(new AuthenticatedPrincipal(principal), venue);
+        // MANAGEMENT_READ also admits Staff. Observation authority must come from current membership/grant.
+        if (tools.contains(ProductOperation.EVENT_OBSERVATIONS_LIST.tool)
+                && !actions.contains(AccessAction.EVENT_OBSERVATION_READ)) throw denied();
+        if (actions.contains(AccessAction.EVENT_OBSERVATION_READ)) {
+            authorization.requireVenueConfigurationAccess(new AuthenticatedPrincipal(principal), venue);
+        }
     }
     private Credential lookup(String token, String audience) {
         var rows = jdbc.query("SELECT * FROM auth_access_credentials WHERE token_digest=? AND audience=?",

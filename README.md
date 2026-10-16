@@ -26,7 +26,7 @@ SlotQ는 매장의 예약, 수용량, 대기열, 운영 정책을 관리하는 �
 | 이벤트·복구 | 트랜잭션 이벤트 기록, 중복 처리 방지, 재시도, 장애 복구 및 운영 관측 |
 | AI 접근·검색 | 인증된 MCP 도구 호출, 접근 범위가 제한된 문서 검색, 모델 선택과 제한된 실행 관리 |
 
-AI 구성 요소 중 **MCP와 지식 검색은 M6에서 완료**했습니다. **Model Router와 제한된 Agent Runtime은 M7에서 구현**했지만, 실제 모델과 Product 도구를 연결하는 세 업무 흐름의 통합 검증은 아직 진행 대상입니다.
+AI 구성 요소 중 **MCP와 지식 검색은 M6에서 완료**했습니다. M7에서는 **Model Router와 제한된 Agent Runtime**, Customer·Owner/Manager·Ops의 공통 실행 경로와 합성 데이터의 실제 모델 통합 검증을 완료했습니다. 현재 지원 범위에는 durable workflow가 불필요하다고 판정했으며, [M7 최종 통합 검증](docs/experiments/m7-closure.md)에 종료 근거와 제한사항을 기록했습니다.
 
 ## 핵심 설계와 검증
 
@@ -83,13 +83,18 @@ M6에서는 MCP를 통해 예약 관련 Product API와 지식 검색 기능을 �
 
 ### 5. 모델 선택과 실행 경계
 
-M7에서는 실제 생성 모델 두 개를 합성 데이터로 비교하고, 보안·데이터 공개 조건·기능·품질 기준을 충족한 후보만 선택하는 Model Router를 구현했습니다. **총 72회의 모델 호출**을 비교했으며, 현재 기준을 충족하지 못하는 업무에는 모델을 배정하지 않습니다.
+M7에서는 실제 생성 모델 두 개를 합성 데이터로 비교하고, 보안·데이터 공개 조건·기능·품질 기준을 충족한 후보만 선택하는 Model Router를 구현했습니다. 초기 72회 비교에 이어 별도 96회 보정 실험에서 세 업무의 합성 데이터 조건에 적격한 후보를 확보했습니다. 실제 실행에서도 현재 권한·데이터 공개 조건·예산을 다시 확인합니다.
 
 또한 서버 내부에서 사용하는 **프로세스 로컬 Agent Runtime**을 구현했습니다. 실행 단계·시간·비용·동시 실행 수를 제한하고, 도구 실행 권한과 원래 요청 주체의 승인을 확인합니다. 모델 출력은 실행 권한으로 취급하지 않습니다.
 
-이 구현은 자동 도구 실행 루프나 재시작 이후 작업 복구를 제공하지 않습니다. 실제 Product/MCP를 통한 세 업무 흐름의 모델 통합, 운영 관측 도구 및 지속 실행 필요성 검증은 후속 작업입니다.
+Owner·Manager의 매장 운영 관측 조회도 기존 Product API를 호출하는 읽기 전용 MCP 도구로 연결했습니다. 예약 조회와 별도의 위임 권한을 사용하며, 조회 결과의 지연·누락·잘림 의미를 유지합니다.
+
+세 업무 흐름은 같은 Runtime과 실제 MCP/Product/Knowledge 연결을 사용합니다. HOLD에는 원래 요청 주체의 명시적 승인이 필요하며, 예약 사실과 문서 안내, 운영 관측의 누락·지연·잘림을 구분합니다. #155에서 민감정보 없는 합성 데이터의 실제 모델 응답을 검토·재계산했고, #156은 현재 bounded process-local profile에서 durable workflow가 불필요하다고 판정했습니다. 자동 도구 실행 루프나 재시작 이후 Run·예산 복구는 제공하지 않습니다.
 
 - [모델 비교 결과](docs/experiments/m7-model-router.md)
+- [Router 보정 실험](docs/experiments/m7-router-corrective.md)
+- [세 업무 흐름 통합 검증](docs/experiments/m7-representative-flows.md)
+- [M7 최종 통합 검증과 제한사항](docs/experiments/m7-closure.md)
 - [Agent Runtime 결정](docs/adr/0011-m7-process-local-agent-runtime.md)
 - [M7 아키텍처와 후속 범위](docs/architecture/m7-model-router-agent-runtime.md)
 
@@ -113,7 +118,7 @@ flowchart TB
     KNOW --> DB
 ```
 
-Model Router와 Agent Runtime은 서버 내부 구성 요소로 구현되어 있으며, 위 Product 업무와의 실제 모델 통합은 M7의 별도 검증 대상입니다.
+Model Router와 Agent Runtime은 서버 내부 구성 요소이며, 제한된 세 업무 흐름을 위 Product API와 MCP 경계에 연결합니다. 외부 모델의 실제 호출 검증에는 합성 데이터만 사용합니다.
 
 ## 기술 구성
 
@@ -162,7 +167,7 @@ npm run build
 | M3~M4 | 완료 | 이벤트 전달 기반, 대기 등록·승급과 화면 연결 |
 | M5 | 완료 | 운영 관측, 장애 복구, DB/Kafka 비교 |
 | M6 | 완료 | MCP 접근 통제, 지식 관리·검색과 통합 검증 |
-| M7 | 진행 중 | Model Router·제한된 Agent Runtime 구현; 도구·업무 흐름 통합 및 종료 검증 남음 |
+| M7 | 검증 완료 | Model Router·제한된 Agent Runtime·세 업무 흐름, fresh 실제 모델 비교·통합 검증과 durable 불필요 판정 |
 | M8 | 예정 | 평가 체계와 운영 준비 기준 |
 
 M7의 Model Router와 Runtime 구현은 각각 [PR #159](https://github.com/krestar/slotq/pull/159), [PR #160](https://github.com/krestar/slotq/pull/160)에 반영되어 있습니다. Milestone별 작업 범위와 선행 관계는 [Roadmap](docs/roadmap.md)에서 관리합니다.

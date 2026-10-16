@@ -1,5 +1,6 @@
 .gradle/
 build/
+/backend/bin/
 
 ### Local environment ###
 /.env

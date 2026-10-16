@@ -1,0 +1,266 @@
+[
+  {
+    "id": "gemini-3.1-flash-lite",
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "apiMode": "generateContent-standard-free",
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/",
+    "resolvedVersion": "gemini-3.1-flash-lite",
+    "structuredOutput": true,
+    "contextLimit": 1048576,
+    "outputLimit": 65536,
+    "controls": {
+      "fixedEndpoint": true,
+      "redirectsDisabled": true,
+      "observableAttempts": true,
+      "hostedExecutionDisabled": true,
+      "allowedData": [
+        "SYNTHETIC"
+      ],
+      "training": true,
+      "region": null,
+      "retentionDays": null
+    },
+    "price": {
+      "revision": "gemini-free-standard-2026-10-13",
+      "tier": "free-attested",
+      "inputPerMillion": 0,
+      "outputPerMillion": 0,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "observedAt": "2026-10-12T18:50:37.890693400Z"
+    },
+    "measurement": {
+      "revision": "m7-comparison-v3/manifest-3f1bfbc0c127d440955f4dc3277b5a92bdfe85ac7e7c9feaa180153b4a5c1d77/review-3125ea9221dd4317ad579b6428cf41b8f69b033bcac3f390ac5d7cc6a69da71e",
+      "workload": "customer",
+      "cases": 4,
+      "repeats": 3,
+      "attempts": 12,
+      "quality": 0.916667,
+      "safetyViolations": 1,
+      "p95Millis": 23301,
+      "meanDollars": null,
+      "costStatus": "unavailable",
+      "measuredAt": "2026-10-12T19:14:45.769136Z"
+    }
+  },
+  {
+    "id": "gemini-3.5-flash-lite",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "apiMode": "generateContent-standard-free",
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/",
+    "resolvedVersion": "gemini-3.5-flash-lite",
+    "structuredOutput": true,
+    "contextLimit": 1048576,
+    "outputLimit": 65536,
+    "controls": {
+      "fixedEndpoint": true,
+      "redirectsDisabled": true,
+      "observableAttempts": true,
+      "hostedExecutionDisabled": true,
+      "allowedData": [
+        "SYNTHETIC"
+      ],
+      "training": true,
+      "region": null,
+      "retentionDays": null
+    },
+    "price": {
+      "revision": "gemini-free-standard-2026-10-13",
+      "tier": "free-attested",
+      "inputPerMillion": 0,
+      "outputPerMillion": 0,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "observedAt": "2026-10-12T18:50:37.890693400Z"
+    },
+    "measurement": {
+      "revision": "m7-comparison-v3/manifest-3f1bfbc0c127d440955f4dc3277b5a92bdfe85ac7e7c9feaa180153b4a5c1d77/review-3125ea9221dd4317ad579b6428cf41b8f69b033bcac3f390ac5d7cc6a69da71e",
+      "workload": "customer",
+      "cases": 4,
+      "repeats": 3,
+      "attempts": 12,
+      "quality": 0.916667,
+      "safetyViolations": 0,
+      "p95Millis": 1189,
+      "meanDollars": 0,
+      "costStatus": "estimated",
+      "measuredAt": "2026-10-12T19:14:45.769136Z"
+    }
+  },
+  {
+    "id": "gemini-3.1-flash-lite",
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "apiMode": "generateContent-standard-free",
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/",
+    "resolvedVersion": "gemini-3.1-flash-lite",
+    "structuredOutput": true,
+    "contextLimit": 1048576,
+    "outputLimit": 65536,
+    "controls": {
+      "fixedEndpoint": true,
+      "redirectsDisabled": true,
+      "observableAttempts": true,
+      "hostedExecutionDisabled": true,
+      "allowedData": [
+        "SYNTHETIC"
+      ],
+      "training": true,
+      "region": null,
+      "retentionDays": null
+    },
+    "price": {
+      "revision": "gemini-free-standard-2026-10-13",
+      "tier": "free-attested",
+      "inputPerMillion": 0,
+      "outputPerMillion": 0,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "observedAt": "2026-10-12T18:50:37.890693400Z"
+    },
+    "measurement": {
+      "revision": "m7-comparison-v3/manifest-3f1bfbc0c127d440955f4dc3277b5a92bdfe85ac7e7c9feaa180153b4a5c1d77/review-3125ea9221dd4317ad579b6428cf41b8f69b033bcac3f390ac5d7cc6a69da71e",
+      "workload": "management",
+      "cases": 6,
+      "repeats": 3,
+      "attempts": 18,
+      "quality": null,
+      "safetyViolations": 1,
+      "p95Millis": 27331,
+      "meanDollars": null,
+      "costStatus": "unavailable",
+      "measuredAt": "2026-10-12T19:14:45.769136Z"
+    }
+  },
+  {
+    "id": "gemini-3.5-flash-lite",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "apiMode": "generateContent-standard-free",
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/",
+    "resolvedVersion": "gemini-3.5-flash-lite",
+    "structuredOutput": true,
+    "contextLimit": 1048576,
+    "outputLimit": 65536,
+    "controls": {
+      "fixedEndpoint": true,
+      "redirectsDisabled": true,
+      "observableAttempts": true,
+      "hostedExecutionDisabled": true,
+      "allowedData": [
+        "SYNTHETIC"
+      ],
+      "training": true,
+      "region": null,
+      "retentionDays": null
+    },
+    "price": {
+      "revision": "gemini-free-standard-2026-10-13",
+      "tier": "free-attested",
+      "inputPerMillion": 0,
+      "outputPerMillion": 0,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "observedAt": "2026-10-12T18:50:37.890693400Z"
+    },
+    "measurement": {
+      "revision": "m7-comparison-v3/manifest-3f1bfbc0c127d440955f4dc3277b5a92bdfe85ac7e7c9feaa180153b4a5c1d77/review-3125ea9221dd4317ad579b6428cf41b8f69b033bcac3f390ac5d7cc6a69da71e",
+      "workload": "management",
+      "cases": 6,
+      "repeats": 3,
+      "attempts": 18,
+      "quality": 1.0,
+      "safetyViolations": 0,
+      "p95Millis": 2023,
+      "meanDollars": 0,
+      "costStatus": "estimated",
+      "measuredAt": "2026-10-12T19:14:45.769136Z"
+    }
+  },
+  {
+    "id": "gemini-3.1-flash-lite",
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "apiMode": "generateContent-standard-free",
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/",
+    "resolvedVersion": "gemini-3.1-flash-lite",
+    "structuredOutput": true,
+    "contextLimit": 1048576,
+    "outputLimit": 65536,
+    "controls": {
+      "fixedEndpoint": true,
+      "redirectsDisabled": true,
+      "observableAttempts": true,
+      "hostedExecutionDisabled": true,
+      "allowedData": [
+        "SYNTHETIC"
+      ],
+      "training": true,
+      "region": null,
+      "retentionDays": null
+    },
+    "price": {
+      "revision": "gemini-free-standard-2026-10-13",
+      "tier": "free-attested",
+      "inputPerMillion": 0,
+      "outputPerMillion": 0,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "observedAt": "2026-10-12T18:50:37.890693400Z"
+    },
+    "measurement": {
+      "revision": "m7-comparison-v3/manifest-3f1bfbc0c127d440955f4dc3277b5a92bdfe85ac7e7c9feaa180153b4a5c1d77/review-3125ea9221dd4317ad579b6428cf41b8f69b033bcac3f390ac5d7cc6a69da71e",
+      "workload": "ops",
+      "cases": 6,
+      "repeats": 3,
+      "attempts": 18,
+      "quality": 1.0,
+      "safetyViolations": 1,
+      "p95Millis": 27589,
+      "meanDollars": 0,
+      "costStatus": "estimated",
+      "measuredAt": "2026-10-12T19:14:45.769136Z"
+    }
+  },
+  {
+    "id": "gemini-3.5-flash-lite",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "apiMode": "generateContent-standard-free",
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/",
+    "resolvedVersion": "gemini-3.5-flash-lite",
+    "structuredOutput": true,
+    "contextLimit": 1048576,
+    "outputLimit": 65536,
+    "controls": {
+      "fixedEndpoint": true,
+      "redirectsDisabled": true,
+      "observableAttempts": true,
+      "hostedExecutionDisabled": true,
+      "allowedData": [
+        "SYNTHETIC"
+      ],
+      "training": true,
+      "region": null,
+      "retentionDays": null
+    },
+    "price": {
+      "revision": "gemini-free-standard-2026-10-13",
+      "tier": "free-attested",
+      "inputPerMillion": 0,
+      "outputPerMillion": 0,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "observedAt": "2026-10-12T18:50:37.890693400Z"
+    },
+    "measurement": {
+      "revision": "m7-comparison-v3/manifest-3f1bfbc0c127d440955f4dc3277b5a92bdfe85ac7e7c9feaa180153b4a5c1d77/review-3125ea9221dd4317ad579b6428cf41b8f69b033bcac3f390ac5d7cc6a69da71e",
+      "workload": "ops",
+      "cases": 6,
+      "repeats": 3,
+      "attempts": 18,
+      "quality": 1.0,
+      "safetyViolations": 0,
+      "p95Millis": 1530,
+      "meanDollars": 0,
+      "costStatus": "estimated",
+      "measuredAt": "2026-10-12T19:14:45.769136Z"
+    }
+  }
+]

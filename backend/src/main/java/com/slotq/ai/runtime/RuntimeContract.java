@@ -38,7 +38,7 @@ public final class RuntimeContract {
                 throw new IllegalArgumentException("Invalid Runtime plan");
             Map<String,Map<String,Object>> frozen=new TreeMap<>();
             reads.forEach((name,args)-> {
-                if(!Set.of("reservation.get","management.reservations.list","knowledge.search").contains(name))
+                if(!Set.of("reservation.get","management.reservations.list","management.event-observations.list","knowledge.search").contains(name))
                     throw new IllegalArgumentException("Unsupported Runtime read");
                 frozen.put(name,RuntimeData.freeze(args));
             });
@@ -59,6 +59,12 @@ public final class RuntimeContract {
     @FunctionalInterface public interface ContextSource {
         Context prepare(DelegatedActor current, Stage stage, Result facts);
     }
+    /** The immutable server plan is available to bounded flow context assembly, never to the model as authority. */
+    @FunctionalInterface public interface PlanContextSource {
+        Context prepare(DelegatedActor current, Stage stage, Result facts, Plan plan);
+        default boolean permitsDispatch(DelegatedActor current, Plan plan, Context context) { return true; }
+        default boolean acceptsAnswer(Plan plan, Result facts, ProviderProtocol.Output output) { return true; }
+    }
     @FunctionalInterface public interface Provider {
         GeminiAdapter.Result generate(String model, ModelRouter.Classification classification,
                                       ProviderProtocol.Request request, ProviderBudget budget);
@@ -66,7 +72,7 @@ public final class RuntimeContract {
     public record ApprovalReview(UUID runId, UUID proposalId, UUID intentId, UUID tenant, UUID venue,
                                  UUID slot, int partySize, Instant expiresAt) { }
     public record ProviderObservation(UUID attemptId, int step, String model, boolean localCompleted,
-                                      boolean remoteUnknown, boolean usageUnknown) { }
+                                      boolean remoteUnknown, boolean usageUnknown, ModelRouter.Decision routing) { }
     public record ToolObservation(UUID invocationId, UUID proposalId, int step, String tool, Invocation invocation,
                                   Effect effect, UUID knownTarget, Map<String,Object> structured) {
         public ToolObservation { structured=RuntimeData.freeze(structured); }

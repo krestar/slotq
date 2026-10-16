@@ -11,7 +11,7 @@ public final class ToolRegistry {
         Map<String, Registered> map = new TreeMap<>();
         for (ToolDefinition tool : registrations) {
             Objects.requireNonNull(tool.resource()); Objects.requireNonNull(tool.handler());
-            if (!tool.wire().name().matches("[a-z][a-z0-9_.]{0,79}")) throw new IllegalArgumentException("Invalid tool name");
+            if (!tool.wire().name().matches("[a-z][a-z0-9_.-]{0,79}")) throw new IllegalArgumentException("Invalid tool name");
             requireBounded(tool.wire().inputSchema()); requireBounded(tool.wire().outputSchema());
             // Separate validator instances avoid the SDK's hash-key collision across distinct schemas.
             var input = new DefaultJsonSchemaValidator(); var output = new DefaultJsonSchemaValidator();

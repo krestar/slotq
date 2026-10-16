@@ -13,7 +13,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** One fixed-origin request per explicit invocation. Neither exceptions nor timeouts trigger POST retries. */
 public final class ProductHttpClient {
-    private static final int MAX_BODY=65536;
     private final HttpClient http;
     private final ProductCredentialAccess credentials;
     private final JsonMapper json=JsonMapper.builder().build();
@@ -31,7 +30,7 @@ public final class ProductHttpClient {
             .POST(HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(Map.of("slotInventoryId",body.get("slotInventoryId"),"partySize",body.get("partySize")))));
         Capture capture=new Capture(prepared.uri());
         try {
-            var response=http.send(builder.build(),info->{capture.headers(info);return new BoundedBody();});
+            var response=http.send(builder.build(),info->{capture.headers(info);return new BoundedBody(prepared.maxResponseBytes());});
             Object data=response.body().length==0?null:json.readValue(response.body(),Object.class);
             if(response.statusCode()==201 && data instanceof Map<?,?> dto) {
                 UUID id=UUID.fromString(String.valueOf(dto.get("id")));
@@ -68,13 +67,15 @@ public final class ProductHttpClient {
         }
     }
     private static final class BoundedBody implements HttpResponse.BodySubscriber<byte[]> {
+        final int maxBytes;
         final CompletableFuture<byte[]> result=new CompletableFuture<>();final ByteArrayOutputStream bytes=new ByteArrayOutputStream();
         Flow.Subscription subscription;
+        BoundedBody(int maxBytes) { this.maxBytes = maxBytes; }
         @Override public CompletionStage<byte[]> getBody(){return result;}
         @Override public void onSubscribe(Flow.Subscription subscription){this.subscription=subscription;subscription.request(1);}
         @Override public void onNext(List<ByteBuffer> items){
             for(ByteBuffer item:items) {
-                if(bytes.size()+item.remaining()>MAX_BODY){subscription.cancel();result.completeExceptionally(new IOException("Product response bound"));return;}
+                if(bytes.size()+item.remaining()>maxBytes){subscription.cancel();result.completeExceptionally(new IOException("Product response bound"));return;}
                 byte[] chunk=new byte[item.remaining()];item.get(chunk);bytes.writeBytes(chunk);
             }
             subscription.request(1);

@@ -15,11 +15,17 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.test.context.*;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.junit.jupiter.*;
@@ -36,6 +42,7 @@ import static org.mockito.ArgumentMatchers.*;
     "slotq.mcp.enabled=true","server.ssl.enabled=true","slotq.auth.dev-bootstrap-enabled=true",
     "spring.datasource.hikari.connection-timeout=2000","spring.datasource.hikari.maximum-pool-size=12",
     "spring.datasource.hikari.data-source-properties.socketTimeout=2000",
+    "spring.datasource.hikari.data-source-properties.connectTimeout=2000",
     "spring.datasource.hikari.connection-init-sql=SET SESSION innodb_lock_wait_timeout=2, lock_wait_timeout=2, wait_timeout=5, max_execution_time=2000",
     "spring.transaction.default-timeout=10s","spring.jpa.properties.jakarta.persistence.query.timeout=2000"})
 @ActiveProfiles("test")
@@ -54,7 +61,9 @@ class ProductDatabaseBoundsIntegrationTests {
     }
     @Autowired HikariDataSource pool;
     @Autowired JdbcTemplate db;
-    @Autowired ActorAccessService access;
+    @MockitoSpyBean ActorAccessService access;
+    @MockitoSpyBean SlotInventoryRepository slotRepository;
+    @Autowired PlatformTransactionManager transactions;
     @Autowired TenantUseCase tenants;
     @Autowired VenueConfigurationUseCase venues;
     @Autowired ResourceUseCase resources;
@@ -91,6 +100,147 @@ class ProductDatabaseBoundsIntegrationTests {
         } finally {for(Connection connection:held)connection.close();}
         assertNoEffects();
         assertThat(hold().statusCode()).isEqualTo(201);assertEffects(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {3, 4})
+    void nestedCurrentAdmissionKeepsOuterConnectionsAndFailsClosedWithoutASpare(int poolSize) throws Exception {
+        assertThat(transactions).isInstanceOf(JpaTransactionManager.class);
+        var original = access.provisionOriginal(
+            new PrincipalId(UUID.fromString("10000000-0000-0000-0000-000000000001")), Instant.now().plusSeconds(600));
+        var delegation = access.approveDelegation(original.value(), venue, AccessProfile.CUSTOMER,
+            Set.of(AccessAction.RESERVATION_WRITE), Set.of("reservation.hold"), Duration.ofMinutes(5));
+        var targets = new ArrayList<UUID>();
+        targets.add(slot);
+        LocalDate day = LocalDate.now(ZoneOffset.UTC).plusDays(1);
+        var tenantBytes = db.queryForObject("SELECT tenant_id FROM venues WHERE id=?", byte[].class,
+            McpHttpIntegrationTests.bytes(venue.value()));
+        var tenant = new com.slotq.tenancy.domain.TenantId(uuid(tenantBytes));
+        for (int i = 1; i < 3; i++) {
+            var resource = resources.createResource(new ResourceUseCase.CreateResource(
+                tenant, venue, "Nested fixture " + i, 4));
+            targets.add(slots.createSlot(new SlotInventoryUseCase.CreateSlot(tenant, venue,
+                resource.id(), day + "T12:00:00Z")).id().value());
+        }
+        var requests = new ArrayList<HttpRequest>();
+        for (UUID target : targets) {
+            String holdKey = UUID.randomUUID().toString();
+            var credential = access.issueHold(delegation.delegationId(), target, 2, holdKey, Instant.now().plusSeconds(60));
+            requests.add(HttpRequest.newBuilder(URI.create(ORIGIN + "/api/v1/venues/" + venue.value() + "/reservations/holds"))
+                .timeout(Duration.ofSeconds(15)).header("Authorization", "Bearer " + credential.value())
+                .header("Content-Type", "application/json").header("Idempotency-Key", holdKey)
+                .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("slotInventoryId", target, "partySize", 2))))
+                .build());
+        }
+        var ready = List.of(new CountDownLatch(1), new CountDownLatch(1), new CountDownLatch(1));
+        var release = new CountDownLatch(1);
+        var failures = new CountDownLatch(3);
+        var stage = new ConcurrentHashMap<UUID, AtomicInteger>();
+        var connections = new ConcurrentHashMap<UUID, Long>();
+        var waits = new ConcurrentHashMap<UUID, Long>();
+        for (UUID target : targets) stage.put(target, new AtomicInteger());
+        doAnswer(call -> {
+            var found = call.callRealMethod();
+            UUID target = ((com.slotq.booking.domain.SlotInventoryId) call.getArgument(1)).value();
+            int index = targets.indexOf(target);
+            if (index >= 0 && index < 2) {
+                ready.get(index).countDown();
+                assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+            }
+            return found;
+        }).when(slotRepository).findForUpdate(eq(venue), any());
+        doAnswer(call -> {
+            UUID target = call.getArgument(2);
+            int index = targets.indexOf(target);
+            if (index < 0) return call.callRealMethod();
+            int ordinal = stage.get(target).incrementAndGet();
+            assertThat(TransactionSynchronizationManager.hasResource(pool)).isTrue();
+            if (index == 2 && ordinal == 1) {
+                // Observe the pool first: the diagnostic SELECT must not cause a lazy outer acquisition.
+                assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(3);
+            }
+            long connection = db.queryForObject("SELECT CONNECTION_ID()", Long.class);
+            Long previous = connections.putIfAbsent(target, connection);
+            if (previous != null) assertThat(connection).isEqualTo(previous);
+            // Two requests have locked distinct Slots; the third holds its outer connection before first admission.
+            if (index == 2 && ordinal == 1) {
+                ready.get(index).countDown();
+                assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+            }
+            long started = System.nanoTime();
+            try {
+                return call.callRealMethod();
+            } catch (AccessFailure failure) {
+                waits.put(target, Duration.ofNanos(System.nanoTime() - started).toMillis());
+                assertThat(failure.reason()).isEqualTo(AccessFailure.Reason.UNAVAILABLE);
+                failures.countDown();
+                // Keep the failed outer transactions alive until every competing acquisition has terminated.
+                assertThat(failures.await(6, TimeUnit.SECONDS)).isTrue();
+                throw failure;
+            }
+        }).when(access).requireHoldAdmission(any(), eq(venue), any(), eq(2), any());
+        int oldMaximum = pool.getMaximumPoolSize();
+        int oldMinimum = pool.getMinimumIdle();
+        var pending = new ArrayList<CompletableFuture<HttpResponse<String>>>();
+        try {
+            pool.setMinimumIdle(poolSize);
+            pool.setMaximumPoolSize(poolSize);
+            pool.getHikariPoolMXBean().softEvictConnections();
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() ->
+                assertThat(pool.getHikariPoolMXBean().getTotalConnections()).isLessThanOrEqualTo(poolSize));
+            long started = System.nanoTime();
+            for (int i = 0; i < 3; i++) {
+                pending.add(http.sendAsync(requests.get(i), HttpResponse.BodyHandlers.ofString()));
+                assertThat(ready.get(i).await(5, TimeUnit.SECONDS)).isTrue();
+            }
+            assertThat(connections.values()).doesNotHaveDuplicates().hasSize(3);
+            assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(3);
+            assertThat(stage.get(targets.get(0))).hasValue(1);
+            assertThat(stage.get(targets.get(1))).hasValue(1);
+            release.countDown();
+            if (poolSize == 3) {
+                await().atMost(Duration.ofSeconds(1)).untilAsserted(() -> {
+                    assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isEqualTo(3);
+                    assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(3);
+                });
+            }
+            for (var response : pending) {
+                var observed = response.get(8, TimeUnit.SECONDS);
+                assertThat(observed.statusCode()).isEqualTo(poolSize == 3 ? 503 : 201);
+                if (poolSize == 3) assertThat(observed.body()).doesNotContain("CAPACITY_UNAVAILABLE");
+            }
+            assertElapsed(started, 10);
+            assertThat(stage.get(targets.get(0))).hasValue(2);
+            assertThat(stage.get(targets.get(1))).hasValue(2);
+            assertThat(waits).hasSize(poolSize == 3 ? 3 : 0);
+            if (poolSize == 3) assertThat(waits.values()).allSatisfy(ms -> assertThat(ms).isBetween(1500L, 4000L));
+            System.out.println("nested-admission pool=" + poolSize + " outerConnections=" + connections.size()
+                + " acquisitionWaitMillis=" + waits.values().stream().sorted().toList()
+                + " elapsedMillis=" + Duration.ofNanos(System.nanoTime() - started).toMillis());
+            await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+                assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+                assertThat(pool.getHikariPoolMXBean().getThreadsAwaitingConnection()).isZero();
+            });
+            for (UUID target : targets) for (String table : List.of("reservations", "capacity_allocations", "hold_idempotency_records")) {
+                assertThat(db.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE slot_inventory_id=?", Integer.class,
+                    McpHttpIntegrationTests.bytes(target))).isEqualTo(poolSize == 3 ? 0 : 1);
+            }
+        } finally {
+            release.countDown();
+            for (var response : pending) response.get(10, TimeUnit.SECONDS);
+            reset(access, slotRepository);
+            pool.setMaximumPoolSize(oldMaximum);
+            pool.setMinimumIdle(oldMinimum);
+        }
+        if (poolSize == 3) {
+            assertThat(hold().statusCode()).isEqualTo(201);
+            assertEffects(1);
+        }
+    }
+
+    private static UUID uuid(byte[] bytes) {
+        var buffer = java.nio.ByteBuffer.wrap(bytes);
+        return new UUID(buffer.getLong(), buffer.getLong());
     }
     @Test void actualSlotLockWaitTerminatesOnServerAndRollsBackBeforeLockOwnerRelease() throws Exception {
         try(Connection locker=DriverManager.getConnection(MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword())) {
