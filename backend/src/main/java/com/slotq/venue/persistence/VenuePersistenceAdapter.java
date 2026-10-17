@@ -48,7 +48,11 @@ class VenuePersistenceAdapter implements VenueRepository {
     @Override
     public Optional<Venue> findForUpdate(TenantId tenantId, VenueId venueId) {
         return venueRepository.findForUpdate(tenantId.value(), venueId.value())
-            .map(this::toDomain);
+            // Authorization may have established an older RR snapshot before the Venue lock.
+            .map(entity -> toDomain(entity, policyRepository
+                .findFirstForUpdateByIdTenantIdAndIdVenueIdOrderByIdPolicyVersionDesc(
+                    entity.tenantId(), entity.id()
+                )));
     }
 
     @Override
@@ -96,11 +100,15 @@ class VenuePersistenceAdapter implements VenueRepository {
     }
 
     private Venue toDomain(VenueJpaEntity entity) {
+        return toDomain(entity, policyRepository
+            .findFirstByIdTenantIdAndIdVenueIdOrderByIdPolicyVersionDesc(entity.tenantId(), entity.id()));
+    }
+
+    private Venue toDomain(VenueJpaEntity entity, Optional<BookingPolicyJpaEntity> policy) {
         EnumMap<java.time.DayOfWeek, DailyOperatingHours> openDays = new EnumMap<>(java.time.DayOfWeek.class);
         hoursRepository.findForVenue(entity.tenantId(), entity.id())
             .forEach(hours -> openDays.put(hours.dayOfWeek(), hours.toDomain()));
-        BookingPolicy currentPolicy = policyRepository
-            .findFirstByIdTenantIdAndIdVenueIdOrderByIdPolicyVersionDesc(entity.tenantId(), entity.id())
+        BookingPolicy currentPolicy = policy
             .orElseThrow(() -> new IllegalStateException("Venue has no booking policy: " + entity.id()))
             .toDomain();
         return new Venue(
