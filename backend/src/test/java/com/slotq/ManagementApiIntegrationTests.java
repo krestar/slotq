@@ -18,17 +18,21 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 import com.jayway.jsonpath.JsonPath;
 import com.slotq.auth.application.AccessControlProvisioning;
+import com.slotq.auth.application.AuthorizationUseCase;
 import com.slotq.auth.domain.PrincipalId;
 import com.slotq.auth.domain.TenantRole;
 import com.slotq.booking.application.SlotInventoryUseCase;
 import com.slotq.booking.domain.SlotInventory;
 import com.slotq.tenancy.application.TenantUseCase;
 import com.slotq.tenancy.domain.Tenant;
+import com.slotq.venue.application.ResourceRepository;
 import com.slotq.venue.application.ResourceUseCase;
 import com.slotq.venue.application.VenueConfigurationUseCase;
 import com.slotq.venue.application.VenueRepository;
@@ -38,11 +42,13 @@ import com.slotq.venue.domain.DailyOperatingHours;
 import com.slotq.venue.domain.Resource;
 import com.slotq.venue.domain.Venue;
 import com.slotq.venue.domain.WeeklyOperatingHours;
+import org.hibernate.LockMode;
 import org.hibernate.Session;
 import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,6 +63,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -102,6 +109,8 @@ class ManagementApiIntegrationTests {
     @Autowired EntityManager entityManager;
     @Autowired PolicySqlCapture policySql;
     @MockitoSpyBean VenueRepository venueRepository;
+    @MockitoSpyBean ResourceRepository resourceRepository;
+    @MockitoSpyBean AuthorizationUseCase authorization;
 
     private String customerToken;
     private String operatorToken;
@@ -330,6 +339,444 @@ class ManagementApiIntegrationTests {
                     + "\",\"startsAt\":\"2026-08-30T12:30:00Z\",\"capacity\":2}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "VENUE, false", "VENUE, true",
+        "RESOURCE_STATUS, false", "RESOURCE_STATUS, true",
+        "RESOURCE_CAPACITY, false", "RESOURCE_CAPACITY, true",
+        "RESOURCE_BOTH, false", "RESOURCE_BOTH, true"
+    })
+    void concurrentManagementPatchesPreserveDifferentFieldsAfterAuthorization(String target, boolean cacheOldEntity)
+        throws Exception {
+        Fixture fixture = fixture("Patch race", "UTC", "2026-08-30T11:00:00Z");
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.OWNER);
+        UUID reservationId = createHold(fixture);
+        Map<String, Object> reservationBefore = reservationSnapshot(reservationId);
+        Map<String, Object> slotBefore = slotSnapshot(fixture);
+        List<Map<String, Object>> policiesBefore = policyRows(fixture.venue());
+        boolean venue = target.equals("VENUE");
+        String secondPatch = switch (target) {
+            case "VENUE", "RESOURCE_STATUS" -> "{\"status\":\"INACTIVE\"}";
+            case "RESOURCE_CAPACITY" -> "{\"seatingCapacity\":2}";
+            case "RESOURCE_BOTH" -> "{\"status\":\"INACTIVE\",\"seatingCapacity\":2}";
+            default -> throw new IllegalArgumentException(target);
+        };
+        PatchRace race = patchAfterCompetingCommit(fixture, venue, cacheOldEntity,
+            "{\"name\":\"Renamed\"}", secondPatch);
+        assertThat(race.secondState())
+            .containsEntry("status", target.equals("RESOURCE_CAPACITY") ? "ACTIVE" : "INACTIVE");
+        if (!venue) {
+            assertThat(((Number) race.secondState().get("seating_capacity")).intValue())
+                .isEqualTo(target.equals("RESOURCE_STATUS") ? 4 : 2);
+        }
+        assertPatchResponse(race.first().result(), 200);
+        assertThat(race.finalState()).containsEntry("name", "Renamed");
+        assertThat(race.finalState().get("status")).isEqualTo(race.secondState().get("status"));
+        if (!venue) {
+            assertThat(race.finalState().get("seating_capacity"))
+                .isEqualTo(race.secondState().get("seating_capacity"));
+        }
+        assertPatchMatchesRow(race.first().result(), race.finalState(), venue);
+        assertPatchSql(race.first().sql(), venue, true);
+        assertThat(reservationSnapshot(reservationId)).isEqualTo(reservationBefore);
+        assertThat(slotSnapshot(fixture)).isEqualTo(slotBefore);
+        assertThat(allocationActive(reservationId)).isTrue();
+        assertThat(policyRows(fixture.venue())).isEqualTo(policiesBefore);
+        Venue actual = venueUseCase.getVenue(fixture.tenant().id(), fixture.venue().id());
+        assertThat(actual.timezone()).isEqualTo(fixture.venue().timezone());
+        assertThat(actual.operatingHours()).isEqualTo(fixture.venue().operatingHours());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, false", "false, false", "true, true", "false, true"})
+    void sameFieldPatchUsesSerialOrderAndValidatesNoChangeAgainstLatestState(boolean venue, boolean sameName)
+        throws Exception {
+        Fixture fixture = fixture("Patch race", "UTC", "2026-08-30T11:00:00Z");
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.OWNER);
+        PatchRace race = patchAfterCompetingCommit(fixture, venue, true,
+            "{\"name\":\"Renamed\"}", sameName ? "{\"name\":\"Renamed\"}" : "{\"name\":\"Winner\"}");
+        assertPatchResponse(race.first().result(), sameName ? 400 : 200);
+        assertThat(race.finalState()).containsEntry("name", "Renamed");
+        assertPatchSql(race.first().sql(), venue, !sameName);
+        assertPatchResponse(configurationPatch(fixture, venue, "{\"name\":\"Renamed\"}"), 400);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void patchCanRestoreOriginalNameAfterCompetingRename(boolean venue) throws Exception {
+        Fixture fixture = fixture("Patch race", "UTC", "2026-08-30T11:00:00Z");
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.OWNER);
+        String original = venue ? fixture.venue().name() : fixture.resource().name();
+        PatchRace race = patchAfterCompetingCommit(fixture, venue, true,
+            "{\"name\":\"" + original + "\"}", "{\"name\":\"Winner\"}");
+        assertPatchResponse(race.first().result(), 200);
+        assertThat(race.finalState()).containsEntry("name", original);
+        assertPatchSql(race.first().sql(), venue, true);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"VENUE_STATUS", "RESOURCE_STATUS", "RESOURCE_CAPACITY"})
+    void sameStatusOrCapacityPatchIsNoChangeAfterCompetingCommit(String target) throws Exception {
+        Fixture fixture = fixture("Patch race", "UTC", "2026-08-30T11:00:00Z");
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.OWNER);
+        boolean venue = target.startsWith("VENUE");
+        String patch = target.equals("RESOURCE_CAPACITY")
+            ? "{\"seatingCapacity\":2}" : "{\"status\":\"INACTIVE\"}";
+        PatchRace race = patchAfterCompetingCommit(fixture, venue, true, patch, patch);
+        assertPatchResponse(race.first().result(), 400);
+        assertThat(race.finalState()).isEqualTo(race.secondState());
+        assertPatchSql(race.first().sql(), venue, false);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void patchLocksTargetUntilCommitAndWaitingPatchMergesWinner(boolean venue) throws Exception {
+        Fixture fixture = fixture("Patch race", "UTC", "2026-08-30T11:00:00Z");
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.OWNER);
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicReference<Thread> winner = new AtomicReference<>();
+        org.mockito.stubbing.Answer<Object> holdLock = invocation -> {
+            Object found = invocation.callRealMethod();
+            if (Thread.currentThread() == winner.get()) {
+                locked.countDown();
+                assertThat(release.await(30, TimeUnit.SECONDS)).isTrue();
+            }
+            return found;
+        };
+        if (venue) {
+            doAnswer(holdLock).when(venueRepository).findForUpdate(any(), any());
+        } else {
+            doAnswer(holdLock).when(resourceRepository).findForUpdate(any(), any(), any());
+        }
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> {
+                winner.set(Thread.currentThread());
+                return configurationPatch(fixture, venue, "{\"name\":\"Winner\"}");
+            });
+            assertThat(locked.await(30, TimeUnit.SECONDS)).isTrue();
+            long waits = rowLockWaits();
+            var second = executor.submit(() -> configurationPatch(fixture, venue, venue
+                ? "{\"status\":\"INACTIVE\"}" : "{\"status\":\"INACTIVE\",\"seatingCapacity\":2}"));
+            awaitRowLockWait(waits);
+            assertThat(first.isDone()).isFalse();
+            assertThat(second.isDone()).isFalse();
+            assertThat(configurationRow(fixture, venue)).containsEntry("status", "ACTIVE");
+            release.countDown();
+            assertPatchResponse(first.get(30, TimeUnit.SECONDS), 200);
+            MvcResult secondResult = second.get(30, TimeUnit.SECONDS);
+            assertPatchResponse(secondResult, 200);
+            Map<String, Object> finalState = configurationRow(fixture, venue);
+            assertThat(finalState).containsEntry("name", "Winner").containsEntry("status", "INACTIVE");
+            if (!venue) {
+                assertThat(((Number) finalState.get("seating_capacity")).intValue()).isEqualTo(2);
+            }
+            assertPatchMatchesRow(secondResult, finalState, venue);
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    private long rowLockWaits() {
+        return Long.parseLong(jdbcTemplate.queryForMap(
+            "SHOW GLOBAL STATUS LIKE 'Innodb_row_lock_waits'"
+        ).get("Value").toString());
+    }
+
+    private void awaitRowLockWait(long before) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (System.nanoTime() < deadline) {
+            if (rowLockWaits() > before) {
+                return;
+            }
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
+        }
+        throw new AssertionError("PATCH did not reach the MySQL row lock");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void configurationPatchesPreserveManagerScopeValidationAndSequentialPartialUpdates(boolean venue)
+        throws Exception {
+        Fixture fixture = fixture("Validation", "UTC", "2026-08-30T11:00:00Z");
+        UUID reservationId = createHold(fixture);
+        Map<String, Object> reservationBefore = reservationSnapshot(reservationId);
+        Map<String, Object> slotBefore = slotSnapshot(fixture);
+        accessControlProvisioning.assignMembership(OPERATOR, fixture.tenant().id(), TenantRole.MANAGER);
+        accessControlProvisioning.grantVenue(OPERATOR, fixture.tenant().id(), TenantRole.MANAGER, fixture.venue().id());
+        accessControlProvisioning.assignMembership(STAFF, fixture.tenant().id(), TenantRole.STAFF);
+        accessControlProvisioning.grantVenue(STAFF, fixture.tenant().id(), TenantRole.STAFF, fixture.venue().id());
+        String path = configurationPath(fixture, venue);
+        assertPolicyProblem(mockMvc.perform(patch(path).header("Authorization", bearer(staffToken))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Denied\"}")).andReturn(),
+            403, "ACCESS_DENIED");
+        Venue unassigned = venue(fixture.tenant(), "Unassigned", "UTC", DayOfWeek.SUNDAY, "09:00", "13:00");
+        Fixture other = fixture("Other tenant", "UTC", "2026-08-30T11:00:00Z");
+        for (String hiddenPath : List.of(path.replace(fixture.venue().id().value().toString(),
+                unassigned.id().value().toString()), configurationPath(other, venue))) {
+            assertPolicyProblem(mockMvc.perform(patch(hiddenPath).header("Authorization", bearer(operatorToken))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Hidden\"}")).andReturn(),
+                404, "RESOURCE_NOT_FOUND");
+        }
+        if (!venue) {
+            Resource outside = resourceUseCase.createResource(new ResourceUseCase.CreateResource(
+                fixture.tenant().id(), unassigned.id(), "Outside", 4
+            ));
+            for (UUID id : List.of(outside.id().value(), other.resource().id().value(), UUID.randomUUID())) {
+                assertPolicyProblem(mockMvc.perform(patch(path.replace(fixture.resource().id().value().toString(),
+                        id.toString())).header("Authorization", bearer(operatorToken))
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Hidden\"}")).andReturn(),
+                    404, "RESOURCE_NOT_FOUND");
+            }
+        }
+        Map<String, Object> before = configurationRow(fixture, venue);
+        List<String> invalid = new ArrayList<>(List.of("{}", "{\"name\":null}", "{\"name\":\"  \"}",
+            "{\"name\":\"" + "x".repeat(101) + "\"}", "{\"status\":null}", "{\"status\":\"UNKNOWN\"}",
+            "{\"timezone\":\"Asia/Seoul\"}", "{\"status\":\"ACTIVE\"}"));
+        if (!venue) {
+            invalid.addAll(List.of("{\"seatingCapacity\":null}", "{\"seatingCapacity\":0}",
+                "{\"seatingCapacity\":4}"));
+        }
+        for (String body : invalid) {
+            assertPatchResponse(configurationPatch(fixture, venue, body), 400);
+            assertThat(configurationRow(fixture, venue)).isEqualTo(before);
+        }
+        assertPatchResponse(configurationPatch(fixture, venue, "{\"name\":\"  Trimmed  \"}"), 200);
+        assertPatchResponse(configurationPatch(fixture, venue, "{\"status\":\"INACTIVE\"}"), 200);
+        if (!venue) {
+            assertPatchResponse(configurationPatch(fixture, false, "{\"seatingCapacity\":2}"), 200);
+        }
+        Map<String, Object> finalState = configurationRow(fixture, venue);
+        assertThat(finalState).containsEntry("name", "Trimmed").containsEntry("status", "INACTIVE");
+        if (!venue) {
+            assertThat(((Number) finalState.get("seating_capacity")).intValue()).isEqualTo(2);
+        }
+        assertThat(reservationSnapshot(reservationId)).isEqualTo(reservationBefore);
+        assertThat(slotSnapshot(fixture)).isEqualTo(slotBefore);
+        assertThat(allocationActive(reservationId)).isTrue();
+    }
+
+    private PatchRace patchAfterCompetingCommit(Fixture fixture, boolean venue, boolean cacheOldEntity,
+                                               String firstPatch, String secondPatch) throws Exception {
+        CountDownLatch authorized = new CountDownLatch(1);
+        CountDownLatch committed = new CountDownLatch(1);
+        AtomicReference<Thread> firstRequest = new AtomicReference<>();
+        AtomicReference<Long> firstConnection = new AtomicReference<>();
+        AtomicReference<Object> firstPersistenceContext = new AtomicReference<>();
+        AtomicReference<Object> cachedEntity = new AtomicReference<>();
+        AtomicReference<Map<String, Object>> committedState = new AtomicReference<>();
+        String entityName = venue ? "VenueJpaEntity" : "ResourceJpaEntity";
+        UUID targetId = venue ? fixture.venue().id().value() : fixture.resource().id().value();
+
+        doAnswer(invocation -> {
+            Object actor = invocation.callRealMethod();
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue();
+            long connection = jdbcTemplate.queryForObject("SELECT CONNECTION_ID()", Long.class);
+            if (Thread.currentThread() != firstRequest.get()) {
+                if (committed.getCount() > 0) {
+                    assertThat(connection).isNotEqualTo(firstConnection.get());
+                    assertThat(entityManager.getDelegate()).isNotSameAs(firstPersistenceContext.get());
+                }
+                return actor;
+            }
+            firstConnection.set(connection);
+            firstPersistenceContext.set(entityManager.getDelegate());
+            assertThat(entityManager.isJoinedToTransaction()).isTrue();
+            assertThat(jdbcTemplate.queryForObject("SELECT @@transaction_isolation", String.class))
+                .isEqualTo("REPEATABLE-READ");
+            assertThat(entityManager.unwrap(Session.class).getStatistics().getEntityCount()).isZero();
+            Object cached = cacheOldEntity ? entityManager.createQuery(
+                "select target from " + entityName + " target where target.id = :id"
+            ).setParameter("id", targetId).getSingleResult() : null;
+            cachedEntity.set(cached);
+            authorized.countDown();
+            assertThat(committed.await(30, TimeUnit.SECONDS)).as("B commits before A reads PATCH state").isTrue();
+            assertThat(jdbcTemplate.queryForObject("SELECT CONNECTION_ID()", Long.class)).isEqualTo(connection);
+            assertThat(jdbcTemplate.queryForObject(
+                "SELECT name FROM " + (venue ? "venues" : "resources") + " WHERE id = ?",
+                String.class, bytes(targetId)
+            )).isEqualTo(venue ? "Patch race" : "Table");
+            assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM " + (venue ? "venues" : "resources") + " WHERE id = ?",
+                String.class, bytes(targetId)
+            )).as("authorization's RR snapshot stays ACTIVE after B's commit").isEqualTo("ACTIVE");
+            if (!venue) {
+                assertThat(jdbcTemplate.queryForObject(
+                    "SELECT seating_capacity FROM resources WHERE id = ?", Integer.class, bytes(targetId)
+                )).isEqualTo(4);
+            }
+            if (cached != null) {
+                assertThat(entityManager.contains(cached)).isTrue();
+                Object lockedButCached = entityManager.createQuery(
+                    "select target from " + entityName + " target where target.id = :id"
+                ).setParameter("id", targetId).setLockMode(LockModeType.PESSIMISTIC_WRITE).getSingleResult();
+                assertThat(lockedButCached).as("a locking query alone reuses the old managed state").isSameAs(cached);
+                assertThat(ReflectionTestUtils.getField(cached, "name"))
+                    .isEqualTo(venue ? "Patch race" : "Table");
+                assertThat(ReflectionTestUtils.getField(cached, "status").toString()).isEqualTo("ACTIVE");
+                if (!venue) {
+                    assertThat(ReflectionTestUtils.getField(cached, "seatingCapacity")).isEqualTo(4);
+                }
+            }
+            return actor;
+        }).when(authorization).requireVenueConfigurationAccess(any(), any());
+
+        org.mockito.stubbing.Answer<Object> lockedRead = invocation -> {
+            Object found = invocation.callRealMethod();
+            if (Thread.currentThread() == firstRequest.get()) {
+                Object managed = managedConfiguration(fixture, venue);
+                assertThat(entityManager.contains(managed)).isTrue();
+                assertThat(entityManager.unwrap(Session.class).getCurrentLockMode(managed))
+                    .isEqualTo(LockMode.PESSIMISTIC_WRITE);
+                if (cachedEntity.get() != null) {
+                    assertThat(entityManager.contains(cachedEntity.get())).as("only the old target is detached")
+                        .isFalse();
+                    assertThat(managed).isNotSameAs(cachedEntity.get());
+                }
+                assertManagedConfiguration(managed, committedState.get(), venue);
+            }
+            return found;
+        };
+        if (venue) {
+            doAnswer(lockedRead).when(venueRepository).findForUpdate(any(), any());
+        } else {
+            doAnswer(lockedRead).when(resourceRepository).findForUpdate(any(), any(), any());
+        }
+        org.mockito.stubbing.Answer<Object> save = invocation -> {
+            if (Thread.currentThread() != firstRequest.get()) {
+                return invocation.callRealMethod();
+            }
+            Object managed = managedConfiguration(fixture, venue);
+            Object result = invocation.callRealMethod();
+            assertThat(entityManager.contains(managed)).as("saving does not detach the locked entity").isTrue();
+            assertThat(managedConfiguration(fixture, venue)).isSameAs(managed);
+            Resource updated = venue ? null : invocation.getArgument(0);
+            assertThat(ReflectionTestUtils.getField(managed, "name"))
+                .isEqualTo(venue ? invocation.getArgument(2) : updated.name());
+            assertThat(ReflectionTestUtils.getField(managed, "status"))
+                .isEqualTo(venue ? invocation.getArgument(3) : updated.status());
+            if (!venue) {
+                assertThat(ReflectionTestUtils.getField(managed, "seatingCapacity"))
+                    .isEqualTo(updated.seatingCapacity());
+            }
+            return result;
+        };
+        if (venue) {
+            doAnswer(save).when(venueRepository).updateNameAndStatus(any(), any(), any(), any());
+        } else {
+            doAnswer(save).when(resourceRepository).save(any());
+        }
+
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var first = executor.submit(() -> {
+                firstRequest.set(Thread.currentThread());
+                policySql.start();
+                try {
+                    return new PatchResponse(configurationPatch(fixture, venue, firstPatch),
+                        policySql.statements());
+                } finally {
+                    policySql.stop();
+                }
+            });
+            assertThat(authorized.await(30, TimeUnit.SECONDS)).isTrue();
+            MvcResult secondResult = configurationPatch(fixture, venue, secondPatch);
+            assertPatchResponse(secondResult, 200);
+            Map<String, Object> secondState = configurationRow(fixture, venue);
+            assertPatchMatchesRow(secondResult, secondState, venue);
+            committedState.set(secondState);
+            committed.countDown();
+            PatchResponse firstResult = first.get(30, TimeUnit.SECONDS);
+            Map<String, Object> finalState = configurationRow(fixture, venue);
+            System.out.println("PATCH race venue=" + venue + " cacheOldEntity=" + cacheOldEntity
+                + ": final=" + finalState + ", SQL=" + firstResult.sql());
+            return new PatchRace(firstResult, secondState, finalState);
+        } finally {
+            committed.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    private Object managedConfiguration(Fixture fixture, boolean venue) {
+        return entityManager.createQuery("select target from " + (venue ? "VenueJpaEntity" : "ResourceJpaEntity")
+                + " target where target.id = :id")
+            .setParameter("id", venue ? fixture.venue().id().value() : fixture.resource().id().value())
+            .getSingleResult();
+    }
+
+    private void assertManagedConfiguration(Object managed, Map<String, Object> state, boolean venue) {
+        assertThat(ReflectionTestUtils.getField(managed, "name")).isEqualTo(state.get("name"));
+        assertThat(ReflectionTestUtils.getField(managed, "status").toString()).isEqualTo(state.get("status"));
+        if (!venue) {
+            assertThat(ReflectionTestUtils.getField(managed, "seatingCapacity"))
+                .isEqualTo(((Number) state.get("seating_capacity")).intValue());
+        }
+    }
+
+    private void assertPatchMatchesRow(MvcResult result, Map<String, Object> row, boolean venue) throws Exception {
+        String body = result.getResponse().getContentAsString();
+        assertThat(JsonPath.<String>read(body, "$.name")).isEqualTo(row.get("name"));
+        assertThat(JsonPath.<String>read(body, "$.status")).isEqualTo(row.get("status"));
+        if (!venue) {
+            assertThat(JsonPath.<Integer>read(body, "$.seatingCapacity"))
+                .isEqualTo(((Number) row.get("seating_capacity")).intValue());
+        }
+    }
+
+    private void assertPatchSql(List<String> sql, boolean venue, boolean changed) {
+        String table = venue ? "venues" : "resources";
+        int lock = java.util.stream.IntStream.range(0, sql.size())
+            .filter(index -> sql.get(index).contains("from " + table) && sql.get(index).contains("for update"))
+            .findFirst().orElseThrow();
+        List<String> writes = sql.stream().filter(value -> value.startsWith("update ")
+            || value.startsWith("insert ") || value.startsWith("delete ")).toList();
+        if (changed) {
+            assertThat(writes).singleElement().satisfies(update -> {
+                assertThat(update).startsWith("update " + table + " set ").contains("name=?", "status=?");
+                if (!venue) {
+                    assertThat(update).contains("seating_capacity=?");
+                }
+                assertThat(sql.indexOf(update)).isGreaterThan(lock);
+            });
+        } else {
+            assertThat(writes).isEmpty();
+        }
+    }
+
+    record PatchResponse(MvcResult result, List<String> sql) { }
+    record PatchRace(PatchResponse first, Map<String, Object> secondState, Map<String, Object> finalState) { }
+
+    private MvcResult configurationPatch(Fixture fixture, boolean venue, String body) throws Exception {
+        return mockMvc.perform(patch(configurationPath(fixture, venue)).header("Authorization", bearer(operatorToken))
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andReturn();
+    }
+
+    private String configurationPath(Fixture fixture, boolean venue) {
+        return "/api/v1/management/venues/" + fixture.venue().id().value()
+            + (venue ? "" : "/resources/" + fixture.resource().id().value());
+    }
+
+    private void assertPatchResponse(MvcResult result, int expectedStatus) throws Exception {
+        assertThat(result.getResponse().getStatus()).as("PATCH exception: %s", result.getResolvedException())
+            .isEqualTo(expectedStatus);
+        if (expectedStatus != 200) {
+            assertThat(result.getResponse().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            assertThat(JsonPath.<String>read(result.getResponse().getContentAsString(), "$.code"))
+                .isEqualTo("VALIDATION_FAILED");
+        }
+    }
+
+    private Map<String, Object> configurationRow(Fixture fixture, boolean venue) {
+        return jdbcTemplate.queryForMap(venue
+            ? "SELECT name, status, timezone FROM venues WHERE id = ?"
+            : "SELECT name, status, seating_capacity FROM resources WHERE id = ?",
+            bytes(venue ? fixture.venue().id().value() : fixture.resource().id().value()));
     }
 
     @ParameterizedTest
