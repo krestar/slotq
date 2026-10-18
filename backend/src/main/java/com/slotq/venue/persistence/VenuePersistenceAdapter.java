@@ -6,12 +6,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.EntityManager;
+
 import com.slotq.tenancy.domain.TenantId;
 import com.slotq.venue.application.VenueRepository;
 import com.slotq.venue.domain.BookingPolicy;
 import com.slotq.venue.domain.DailyOperatingHours;
 import com.slotq.venue.domain.Venue;
 import com.slotq.venue.domain.VenueId;
+import com.slotq.venue.domain.VenueStatus;
 import com.slotq.venue.domain.WeeklyOperatingHours;
 import org.springframework.stereotype.Component;
 
@@ -21,15 +24,18 @@ class VenuePersistenceAdapter implements VenueRepository {
     private final VenueSpringDataRepository venueRepository;
     private final OperatingHoursSpringDataRepository hoursRepository;
     private final BookingPolicySpringDataRepository policyRepository;
+    private final EntityManager entityManager;
 
     VenuePersistenceAdapter(
         VenueSpringDataRepository venueRepository,
         OperatingHoursSpringDataRepository hoursRepository,
-        BookingPolicySpringDataRepository policyRepository
+        BookingPolicySpringDataRepository policyRepository,
+        EntityManager entityManager
     ) {
         this.venueRepository = venueRepository;
         this.hoursRepository = hoursRepository;
         this.policyRepository = policyRepository;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -47,12 +53,21 @@ class VenuePersistenceAdapter implements VenueRepository {
 
     @Override
     public Optional<Venue> findForUpdate(TenantId tenantId, VenueId venueId) {
+        // Detach only the target: a locking query may otherwise reuse old managed state, and
+        // refreshing an already locked entity may issue a consistent read against the old RR snapshot.
+        venueRepository.findByTenantIdAndId(tenantId.value(), venueId.value()).ifPresent(entityManager::detach);
         return venueRepository.findForUpdate(tenantId.value(), venueId.value())
-            // Authorization may have established an older RR snapshot before the Venue lock.
             .map(entity -> toDomain(entity, policyRepository
                 .findFirstForUpdateByIdTenantIdAndIdVenueIdOrderByIdPolicyVersionDesc(
                     entity.tenantId(), entity.id()
                 )));
+    }
+
+    @Override
+    public void updateNameAndStatus(TenantId tenantId, VenueId venueId, String name, VenueStatus status) {
+        VenueJpaEntity entity = venueRepository.findByTenantIdAndId(tenantId.value(), venueId.value())
+            .orElseThrow();
+        entity.update(name, status, entity.timezone());
     }
 
     @Override

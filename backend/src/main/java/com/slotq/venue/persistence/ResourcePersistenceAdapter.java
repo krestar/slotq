@@ -3,6 +3,8 @@ package com.slotq.venue.persistence;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.EntityManager;
+
 import com.slotq.tenancy.domain.TenantId;
 import com.slotq.venue.application.ResourceRepository;
 import com.slotq.venue.domain.Resource;
@@ -14,9 +16,11 @@ import org.springframework.stereotype.Component;
 class ResourcePersistenceAdapter implements ResourceRepository {
 
     private final ResourceSpringDataRepository repository;
+    private final EntityManager entityManager;
 
-    ResourcePersistenceAdapter(ResourceSpringDataRepository repository) {
+    ResourcePersistenceAdapter(ResourceSpringDataRepository repository, EntityManager entityManager) {
         this.repository = repository;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -40,6 +44,9 @@ class ResourcePersistenceAdapter implements ResourceRepository {
 
     @Override
     public Optional<Resource> findForUpdate(TenantId tenantId, VenueId venueId, ResourceId resourceId) {
+        // Reload just this target through a locking current read; never merge PATCH fields from its old cache entry.
+        repository.findByTenantIdAndVenueIdAndId(tenantId.value(), venueId.value(), resourceId.value())
+            .ifPresent(entityManager::detach);
         return repository.findForUpdate(tenantId.value(), venueId.value(), resourceId.value())
             .map(this::toDomain);
     }

@@ -30,6 +30,7 @@ import com.slotq.booking.domain.SlotInventory;
 import com.slotq.venue.application.ResourceRepository;
 import com.slotq.venue.application.ResourceUseCase;
 import com.slotq.venue.application.VenueConfigurationUseCase;
+import com.slotq.venue.application.VenueRepository;
 import com.slotq.venue.domain.BookingPolicy;
 import com.slotq.venue.domain.BookingPolicyTerms;
 import com.slotq.venue.domain.Resource;
@@ -53,6 +54,7 @@ class ManagementService implements ManagementUseCase {
 
     private final AuthorizationUseCase authorization;
     private final VenueConfigurationUseCase venueUseCase;
+    private final VenueRepository venueRepository;
     private final ResourceUseCase resourceUseCase;
     private final SlotInventoryUseCase slotUseCase;
     private final ResourceRepository resourceRepository;
@@ -65,6 +67,7 @@ class ManagementService implements ManagementUseCase {
     ManagementService(
         AuthorizationUseCase authorization,
         VenueConfigurationUseCase venueUseCase,
+        VenueRepository venueRepository,
         ResourceUseCase resourceUseCase,
         SlotInventoryUseCase slotUseCase,
         ResourceRepository resourceRepository,
@@ -75,6 +78,7 @@ class ManagementService implements ManagementUseCase {
     ) {
         this.authorization = authorization;
         this.venueUseCase = venueUseCase;
+        this.venueRepository = venueRepository;
         this.resourceUseCase = resourceUseCase;
         this.slotUseCase = slotUseCase;
         this.resourceRepository = resourceRepository;
@@ -113,13 +117,13 @@ class ManagementService implements ManagementUseCase {
     @Transactional
     public VenueItem patchVenue(AuthenticatedPrincipal principal, VenueId venueId, PatchVenue patch) {
         ActorContext actor = authorization.requireVenueConfigurationAccess(principal, venueId);
-        Venue current = venueUseCase.getVenue(actor.tenantId(), venueId);
+        Venue current = venueRepository.findForUpdate(actor.tenantId(), venueId)
+            .orElseThrow(ResourceNotFoundException::new);
         validateVenuePatch(patch, current);
         String name = patch.name().supplied() ? patch.name().value().strip() : current.name();
         VenueStatus status = patch.status().supplied() ? patch.status().value() : current.status();
-        Venue updated = venueUseCase.updateVenue(new VenueConfigurationUseCase.UpdateVenue(
-            actor.tenantId(), venueId, name, status, current.timezone().getId(), current.operatingHours()
-        ));
+        Venue updated = current.withConfiguration(name, status, current.timezone(), current.operatingHours());
+        venueRepository.updateNameAndStatus(actor.tenantId(), venueId, updated.name(), updated.status());
         return new VenueItem(updated, actor.canManageConfiguration());
     }
 
@@ -173,15 +177,16 @@ class ManagementService implements ManagementUseCase {
         PatchResource patch
     ) {
         ActorContext actor = authorization.requireVenueConfigurationAccess(principal, venueId);
-        Resource current = resourceUseCase.getResource(actor.tenantId(), venueId, resourceId);
+        Resource current = resourceRepository.findForUpdate(actor.tenantId(), venueId, resourceId)
+            .orElseThrow(ResourceNotFoundException::new);
         validateResourcePatch(patch, current);
         String name = patch.name().supplied() ? patch.name().value().strip() : current.name();
         int capacity = patch.seatingCapacity().supplied()
             ? patch.seatingCapacity().value() : current.seatingCapacity();
         ResourceStatus status = patch.status().supplied() ? patch.status().value() : current.status();
-        return resourceUseCase.updateResource(new ResourceUseCase.UpdateResource(
-            actor.tenantId(), venueId, resourceId, name, capacity, status
-        ));
+        Resource updated = current.withDetails(name, capacity, status);
+        resourceRepository.save(updated);
+        return updated;
     }
 
     @Override
