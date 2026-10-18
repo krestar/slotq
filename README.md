@@ -4,9 +4,6 @@
 
 ### 동시 예약과 대기열을 처리하는 매장 예약·운영 시스템
 
-**M0~M6 완료 · M7 진행 중 · M8 예정**  
-2026-10-11 기준 `main`
-
 </div>
 
 ## 개요
@@ -167,7 +164,7 @@ npm run build
 | M3~M4 | 완료 | 이벤트 전달 기반, 대기 등록·승급과 화면 연결 |
 | M5 | 완료 | 운영 관측, 장애 복구, DB/Kafka 비교 |
 | M6 | 완료 | MCP 접근 통제, 지식 관리·검색과 통합 검증 |
-| M7 | 검증 완료 | Model Router·제한된 Agent Runtime·세 업무 흐름, fresh 실제 모델 비교·통합 검증과 durable 불필요 판정 |
+| M7 | 완료 | Model Router·제한된 Agent Runtime·세 업무 흐름, fresh 실제 모델 비교·통합 검증과 durable 불필요 판정 |
 | M8 | 예정 | 평가 체계와 운영 준비 기준 |
 
 M7의 Model Router와 Runtime 구현은 각각 [PR #159](https://github.com/krestar/slotq/pull/159), [PR #160](https://github.com/krestar/slotq/pull/160)에 반영되어 있습니다. Milestone별 작업 범위와 선행 관계는 [Roadmap](docs/roadmap.md)에서 관리합니다.
