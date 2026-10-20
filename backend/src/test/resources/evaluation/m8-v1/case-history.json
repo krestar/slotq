@@ -1,0 +1,492 @@
+{
+  "version": "1.0.0",
+  "entries": [
+    {
+      "id": "m6/tenant-a-hours",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "b086dce893f6a76e28029255c41a8a04818ece9122eae1e43915a046a22b6350"
+    },
+    {
+      "id": "m6/tenant-a-menu",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "7b945eb312387d25da1882660ca47654596f10161804b5452837393a0274d534"
+    },
+    {
+      "id": "m6/semantic-hours",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "0f07eb425a935bbf1d70e0115b8063c29b70c2d834cbf4d22b65bb92f783a48b"
+    },
+    {
+      "id": "m6/no-answer",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "3c9516282ba6cc3afc4d69e53a3b972b3569f9b665bd4187706469738fb03ba0"
+    },
+    {
+      "id": "m6/insufficient-allergy",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "7b1ddfe03777612c812c36c52f9d7d369a10d2b630b192f46bcb9ec392e0ac10"
+    },
+    {
+      "id": "m6/operator-hidden",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "bf1cb17ac942d91ec5e33783ff824fb9bd970e6c512593c21bde3ab52a149dbf"
+    },
+    {
+      "id": "m6/operator-known",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "39cf821aa3ee586dbe47810b4ed8f56c72e50961970bb45e3e62748bef5defbb"
+    },
+    {
+      "id": "m6/tenant-b-known",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "b4e7d43d26fd9af4a8c101fa0865d814ed050e4448c0f8adc533f0a6e51060cc"
+    },
+    {
+      "id": "m6/tenant-b-substitution",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "817e0d2fb817a31bb6e5310e170c97954ace3fc169a0a6fecbb670f69ec1607d"
+    },
+    {
+      "id": "m6/malicious",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "0f1f8c11787cc3553866e8dc3ed41b5f70cff492477c7af56d98e5d7173dc764"
+    },
+    {
+      "id": "m6/superseded",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "4fceb97e5f2e4e0a6e869b178dc7a3754bfc9a06869a3298c19d3950c5c16672"
+    },
+    {
+      "id": "m6/withdrawn-residue",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "322c056cd2e51c19f06468f6aee4e866fde5a0744f3741544350b67ca3129ee9"
+    },
+    {
+      "id": "m6/update-during-query",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "92a6b0a03df74dbd7bbe30575fc97ef3dacad18904a33d6ab02579d9e8098827"
+    },
+    {
+      "id": "m6/withdraw-during-query",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "a4042b9c256cafbdd054f5fbca649f173a8713876273843296db60ba87b0d39c"
+    },
+    {
+      "id": "m6/revoked",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "921511da9f7b067cc1f4c996251db7aac553471ab114dcda8707cfcb24756789"
+    },
+    {
+      "id": "m6/expired",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "2d6478393bb530ed83dddd591bb196bde8db7122253728754ab552fe0ddbb197"
+    },
+    {
+      "id": "m6/unavailable",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "7111f1db332f43ded79c58131fdd4f4f5c9053b00a46fd43196795e9244e9940"
+    },
+    {
+      "id": "m6/timeout",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "c2d8c199a378f48dc585d44ea238f726f441dedaab0e1e9e0a7113f041205965"
+    },
+    {
+      "id": "m7-router/customer-normal",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "93cecbd582f15ce867bcfeb25d942cd99ef314689c79b33720984756e8d60765"
+    },
+    {
+      "id": "m7-router/customer-clarify",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "8196613980998c9685fc2b0d2bb2bb5f48dbd952c5051581bbd0027dedc8f5e0"
+    },
+    {
+      "id": "m7-router/customer-insufficient",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "3ebb5a8cb3e794bbff88fc92a6c8a9a142a1a5199a06ba2e535411cecbe48ef2"
+    },
+    {
+      "id": "m7-router/customer-forbidden",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "94faa04c91eee5f1df75c0a9ce9a7c29be91479fcc127c0eb2139db0ec61e08b"
+    },
+    {
+      "id": "m7-router/management-normal",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "dfd4744997783e448f863c87f77f7d1d13fd47bd872e69af2c92f57e1e42cc26"
+    },
+    {
+      "id": "m7-router/management-clarify",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "780d2f418a0ff307aa735c3fa3beca5def0de63a1994daa695d1a9dc5a089f1b"
+    },
+    {
+      "id": "m7-router/management-insufficient",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "5b43149b05d66285e2d11d2dfa15ebcabdcd9b826581c5daeb76b12cbd2226f2"
+    },
+    {
+      "id": "m7-router/management-forbidden",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "f9af7ef820a38b8d987b6aeb7e00a455921f1a0b7e07b43dbc4d01fcccb44062"
+    },
+    {
+      "id": "m7-router/ops-normal",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "fa0eab03cb0896341b2b441e5b102d542e0e32157318951953ac7a77ecf1b35d"
+    },
+    {
+      "id": "m7-router/ops-clarify",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "0ad868e04d9926ca09bf93523dff1d49183bfe5ac15512c9157d8a203e85e6b3"
+    },
+    {
+      "id": "m7-router/ops-insufficient",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "288b6baf1f7502241be8b6f9ea166ccdb77299f427e62c795cc234fd20c2b48b"
+    },
+    {
+      "id": "m7-router/ops-forbidden",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "6df237dd75f4f4225810a658b17a2b919b49f5fd6b69fa6e140f4a1024432fc8"
+    },
+    {
+      "id": "m7-router/management-holdout-normal",
+      "version": "1.0.0",
+      "split": "HISTORICAL_HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "27d74ad3ddec19e4fa9c0c07954ac4a0bdbc359f49d407133fb807a7444c2088"
+    },
+    {
+      "id": "m7-router/management-holdout-forbidden",
+      "version": "1.0.0",
+      "split": "HISTORICAL_HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "56137fee7dbd1f39a0727494ab4e7a08d27b2b34114761253ac03e0986f226ab"
+    },
+    {
+      "id": "m7-router/ops-holdout-normal",
+      "version": "1.0.0",
+      "split": "HISTORICAL_HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "5e905abbeb9dbdd690e6eec426f7eb2df95473b8c5576583dd92f779363dc2de"
+    },
+    {
+      "id": "m7-router/ops-holdout-clarify",
+      "version": "1.0.0",
+      "split": "HISTORICAL_HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "c095875ca9399a0e59104b30f34065ffb9216b179f9115a537094c30cf7d457a"
+    },
+    {
+      "id": "m7-flow/customer-hold-proposal",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "2103707e6e5d611615cb8b23686cb862a05c2ec5dcc2ca75c492c3fac35bb96a"
+    },
+    {
+      "id": "m7-flow/customer-hold-answer",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "13086c956a188070510d94fd6be6b8529d59f04cfa4749e8908f334585278e65"
+    },
+    {
+      "id": "m7-flow/management-owner",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "afa93afb01bab7a30d53dd6739c2214d67e25508d6b437646f62c3dafe18f7f7"
+    },
+    {
+      "id": "m7-flow/ops-manager",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "7fcd59432e593a5ff322c2c89bcac7f081b6c74c27ea88b5b2b6e86e71d341a5"
+    },
+    {
+      "id": "m8/customer-held",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "42a586711e3969e6edd659aaa4032973cd89134f659b9b43756e7c67ad4004e9"
+    },
+    {
+      "id": "m8/customer-business-rejected",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "9d8a972097b28dd6fe68a94bd5044a735cffc42e1ef6ec60d459d8d32b038a00"
+    },
+    {
+      "id": "m8/customer-not-sent",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "d7bf757c8ba542f2380bdc164da55788de1e63fcdf35c27b532bdc2f5b754b5d"
+    },
+    {
+      "id": "m8/unknown-committed",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "8318babf5bb94e116a6a71cdc72d9b5caa48d131f0c1dd0af51064ccb2bf2718"
+    },
+    {
+      "id": "m8/unknown-no-target",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "52a983a5c0edd7c6a797d46f7cb09ef04573e47305f5af93e95ee7985d05ec80"
+    },
+    {
+      "id": "m8/unknown-get-404",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "b19941705824e7374860d5fd7c91beab805f633972111280e0a2a9575c2e705a"
+    },
+    {
+      "id": "m8/cross-tenant",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "4f13844637bff8b20138178d0e8e0c4994e26d54efccad2643143ac8d077b16b"
+    },
+    {
+      "id": "m8/cross-venue",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "a82b3217bad96e111c7cbf54be6f94a5a3300fe0773a27319ef28f919de832ba"
+    },
+    {
+      "id": "m8/cross-customer",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "aad7d47c0e57d8174ccd1b856201fdbb8b35cedb76e2cfcbbaf09b669e4deaed"
+    },
+    {
+      "id": "m8/staff-ops",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "ecd6b2499b3e6ff01261183866e3c4cd878ead08c2606c87249ce88cf5a34e5e"
+    },
+    {
+      "id": "m8/fixed-plan-date",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "bee5a4658b17fcb315ead5c11ff8d6182b82446c0babdd507bc27e7d93e326df"
+    },
+    {
+      "id": "m8/fixed-plan-window",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "3a9d1f146f177475ce1f9951f86a3a84d170f4e361d1865fc8c848373ef1fabc"
+    },
+    {
+      "id": "m8/attribution-two-sources",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "f9cedea2bec0cd7054d84d6f5b26c67859bfdb56d2c62820a1d62bf8df5bde58"
+    },
+    {
+      "id": "m8/customer-invalid-party",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "8905362ea2e40525c2ec58ef32ecfe6df85b4127c62914f61fbc9a0190665f42"
+    },
+    {
+      "id": "m8/retrieval-deleted",
+      "version": "1.0.0",
+      "split": "REGRESSION",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "2aa1edc6ef94eb9f9227c31aafb70c6c3e9d903e54a5bcfc4862bc317901e61a"
+    },
+    {
+      "id": "m8/calibration-clarify",
+      "version": "1.0.0",
+      "split": "CALIBRATION",
+      "everCalibrated": true,
+      "required": true,
+      "fixtureSha256": "896fe8c2b4b2a6614e5af0b6d40ef02458d1bcb55828bdc02820c4f843d0ded8"
+    },
+    {
+      "id": "m8/holdout-customer-clarify",
+      "version": "1.0.0",
+      "split": "HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "ed733752d6f08fdca9d306d35cc6e613c627331087bba028f522b5b6a70173b6"
+    },
+    {
+      "id": "m8/holdout-customer-proposal",
+      "version": "1.0.0",
+      "split": "HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "f668639705a43ce90e7c6f6f9abb8b0ec8b5eb82de47a65a3604093d9fb51b13"
+    },
+    {
+      "id": "m8/holdout-management-answer",
+      "version": "1.0.0",
+      "split": "HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "7829634fb1fb51e59ce3a70fd51fafffda99f60c7e149ffb0624cb080aaf4cf9"
+    },
+    {
+      "id": "m8/holdout-ops-partial",
+      "version": "1.0.0",
+      "split": "HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "92a5295a9efe637352d9bcbabcd15130e16c00728a0a95610c50aadaae9d4be3"
+    },
+    {
+      "id": "m8/holdout-retrieval-no-answer",
+      "version": "1.0.0",
+      "split": "HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "7228bef5468ad659c05e7ed2f764262cfbc03035af920d8753fc38273f366c1b"
+    },
+    {
+      "id": "m8/holdout-unknown-commit",
+      "version": "1.0.0",
+      "split": "HOLDOUT",
+      "everCalibrated": false,
+      "required": true,
+      "fixtureSha256": "f7c9b44b8bacb3a42d2cfd64bbcc27252c49ecbd471dafe785ab231a8861425a"
+    }
+  ],
+  "changes": [
+    {
+      "version": "1.0.0",
+      "previous": null,
+      "reason": "Issue #178 initial import and synthetic additions; existing holdouts are historical and excluded from independent M8 holdout."
+    }
+  ]
+}

@@ -70,6 +70,14 @@ tasks.named('test') {
     }
 }
 
+tasks.register('validateM8Fixtures', JavaExec) {
+    group = 'verification'
+    description = 'Validates M8 synthetic fixtures and execution contracts offline; does not run or score evaluations.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.evaluation.M8FixtureValidator'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+}
+
 tasks.register('representativeFlowEvidence', Test) {
     group = 'verification'
     description = 'Opt-in fresh free-tier provider through the production Runtime, MCP/Product/Knowledge and disposable MySQL.'

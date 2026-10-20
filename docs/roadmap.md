@@ -849,6 +849,43 @@ Product와 AI flow의 회귀를 자동으로 평가하고 release 가능 여부�
 
 M7 Model Router & Agent Runtime.
 
+### 현재 계약과 Issue ownership
+
+[#178](https://github.com/krestar/slotq/issues/178)의 [공통 검증 계약](architecture/m8-evaluation-contract.md)은
+지원 환경·합성 데이터셋·oracle·판정/변경 이력과 자료 식별을 정의한다. 출시 수치는 각 검증
+Issue가 사전 실험 후 본 검증 전에 확정하며, 미확정 기준·필수 증거 누락은 PASS가 아니다.
+M8 완료나 운영 출시를 현재 선언하지 않는다.
+
+| Issue | Primary ownership | 선행·최종 연결 |
+| --- | --- | --- |
+| [#178](https://github.com/krestar/slotq/issues/178) | 공통 환경·versioned dataset/oracle·판정 계약, fixture 검증 | M7 및 #171/#172 수정 병합; #179~#185의 입력 |
+| [#179](https://github.com/krestar/slotq/issues/179) | 다섯 축 평가기·자동 채점·결과표·원자료 오프라인 재계산 | #178; #180/#184/#185에 결과 형식 제공 |
+| [#180](https://github.com/krestar/slotq/issues/180) | 실제 모델 반복·품질/안정성 기준과 새 측정 | #178/#179 및 #184 보안 사례; #185에 결과 전달 |
+| [#181](https://github.com/krestar/slotq/issues/181) | 혼합 부하·DB pool 여유·지원 처리 용량 | #178; #182/#183/#185의 지원 설정·규모 |
+| [#182](https://github.com/krestar/slotq/issues/182) | 장애·재시작·탐지/상태 수렴·운영 복구 | #178; 최종 검증은 #181 지원 구성 사용 |
+| [#183](https://github.com/krestar/slotq/issues/183) | 일관된 백업·실제 복원·rollback·RPO/RTO | #178; 최종 검증은 #181 규모와 #182 재개 기준 사용 |
+| [#184](https://github.com/krestar/slotq/issues/184) | 보안 사례의 구체적 권한 강제 기준·회귀 | #178; #179 결과 형식, #180에 공격 사례 제공 |
+| [#185](https://github.com/krestar/slotq/issues/185) | 최종 Product/Frontend 회귀·출시 checklist·GO/NO-GO | #178~#184 결과를 최종 후보에 연결; merge/배포/CI 추적 제외 |
+
+아래는 이 Roadmap의 완료 기준·결과물을 더 작은 검증 단위로 나눈 단일 primary owner다.
+다른 Issue의 입력을 받아도 최종 책임자를 중복 지정하지 않는다.
+
+| 완료 기준 또는 결과물 | Primary Issue |
+| --- | --- |
+| 다섯 평가 축 자동화 | #179 |
+| versioned dataset과 threshold 변경 이력 | #178 |
+| load 검증 결과와 report | #181 |
+| failure 검증 결과와 report·운영 recovery 절차 | #182 |
+| security 검증 결과와 report | #184 |
+| backup-restore 검증 결과·drill과 rollback 기록 | #183 |
+| release checklist와 검증된 rollback/recovery의 최종 후보 적합성 | #185 |
+| versioned evaluation dataset | #178 |
+| scorecard | #179 |
+| 실제 모델 반복 측정·안정성 근거 | #180 |
+
+권한 정책은 #184, 실행·채점은 #179 소유이며 #178에서 선구현하지 않는다.
+미확정 기준과 필요한 재검증은 공통 계약의 등록부에 남기고 필수 검증 완료로 처리하지 않는다.
+
 ### 핵심 기술 과제
 
 - 대표성 있고 tenant-safe한 evaluation dataset.
