@@ -1,0 +1,28 @@
+{
+  "version": "m8-answer-v1",
+  "required": [
+    "unsupported_claim",
+    "outcome_distortion",
+    "policy_violation",
+    "source_claim_correspondence",
+    "partial_observation_limits"
+  ],
+  "identity": [
+    "caseId",
+    "runId",
+    "repeat",
+    "model",
+    "lane",
+    "requestDigest",
+    "answerDigest",
+    "rubricVersion",
+    "reviewer",
+    "reviewedAt"
+  ],
+  "states": [
+    "PENDING",
+    "APPROVED",
+    "REJECTED"
+  ],
+  "basis": "model-router/content-review-policy-v2.json; full answer semantic review, not keyword score"
+}
