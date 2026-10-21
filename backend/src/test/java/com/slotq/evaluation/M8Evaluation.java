@@ -486,7 +486,7 @@ public final class M8Evaluation {
         checks.put("human_review", new M8Scorer.Mark(state.equals("REJECTED") ? "FAIL" : !bound ? "INCOMPLETE" : approved ? "PASS" : "FAIL", !bound ? "검토 identity/digest/rubric 불일치" : approved ? "의미 검토 승인" : "의미 검토 거부"));
     }
 
-    private static JsonNode aggregate(JsonNode rows) {
+    static JsonNode aggregate(JsonNode rows) {
         var groups = new TreeMap<String, ObjectNode>();
         for (var row : rows) {
             var metrics = union(row.path("checks").propertyNames(), Set.of("all"));
@@ -543,7 +543,7 @@ public final class M8Evaluation {
         var process = new ProcessBuilder(args).redirectErrorStream(true).start(); String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).strip();
         require(process.waitFor() == 0, "source identity unavailable"); return output;
     }
-    private static void writeReport(Path destination, JsonNode results) throws IOException {
+    static void writeReport(Path destination, JsonNode results) throws IOException {
         Files.createDirectories(destination);
         writeNew(destination.resolve("results.json"), JSON.writerWithDefaultPrettyPrinter().writeValueAsBytes(results));
         StringBuilder summary = new StringBuilder("M8 공통 평가 결과: " + results.path("status").asString() + "\n\n계획 cell: " + results.path("plannedCells").asInt()

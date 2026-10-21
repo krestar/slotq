@@ -1,0 +1,297 @@
+{
+  "version": "1.0.0",
+  "profile": "MySQL-8.4/DB_DIRECT/single-process/synthetic-only",
+  "cases": [
+    {
+      "id": "security/product-auth",
+      "actor": "미인증 요청자와 합성 Customer",
+      "credential": "없음, 잘못된 bearer, 개발 fixture bearer",
+      "scope": "Tenant A의 Venue A; 서버가 발급한 principal",
+      "entry": "Product HTTP와 브라우저 CORS",
+      "expected": "공개 조회 허용; 보호 API 401; 명시 origin만 허용",
+      "observations": "HTTP 상태, no-store, CORS header, bootstrap 응답과 로그의 credential 비노출",
+      "tests": [
+        "com.slotq.AuthWebIntegrationTests.publicAnonymousProtectedUnauthorizedAndCorsAllowDenyAreSeparated",
+        "com.slotq.AuthWebIntegrationTests.bootstrapReturnsNoStoreOpaqueBearerAndCredentialAuthenticatesProtectedCalls"
+      ]
+    },
+    {
+      "id": "security/reservation-roles",
+      "actor": "Customer 본인/타인, Owner, 할당 Manager, Staff",
+      "credential": "합성 Product 역할 fixture; 별도 own-only PRODUCT",
+      "scope": "본인 예약, 같은 Venue 타인 예약, 다른 Tenant/Venue",
+      "entry": "Product 예약 조회와 현장 명령",
+      "expected": "본인 조회와 허용된 현장 명령만 허용; 같은 범위 금지 403, 숨겨야 할 대상 404",
+      "observations": "역할별 명령 행렬, 실제 HTTP 상태, 저장된 HELD와 Allocation 유지; 좁은 PRODUCT는 Owner membership으로 확대되지 않음",
+      "tests": [
+        "com.slotq.ReservationTransitionIntegrationTests.enforcesTheCompleteActorCommandMatrix",
+        "com.slotq.ReservationTransitionIntegrationTests.supportsOwnerCancelAndStaffNoShowWithAllocationRelease",
+        "com.slotq.ReservationTransitionIntegrationTests.exposesOnlySameScopeForbiddenAs403AndHidesOtherVenue",
+        "com.slotq.mcp.McpHttpIntegrationTests.ownOnlyRestrictionUsesPersistedReservationOwnerAtRealProductHttpBoundary"
+      ]
+    },
+    {
+      "id": "security/waitlist-roles",
+      "actor": "Customer 본인/타인, Owner, 할당/미할당 Manager, Staff",
+      "credential": "합성 Product 역할 fixture",
+      "scope": "본인 Waitlist와 소속 Tenant/할당 Venue",
+      "entry": "Product Waitlist 등록·조회·offer 명령, Management 조회",
+      "expected": "본인 명령과 Owner/할당 Manager 조회 허용; 타인·다른 범위 404, Staff 관리 조회 403, 무인증 401",
+      "observations": "HTTP/no-store, Waitlist·offer·Reservation·Allocation의 독립 DB 상태",
+      "tests": [
+        "com.slotq.WaitlistRegistrationIntegrationTests.normalizesDemandPreservesReceiptsAndAllowsExplicitRejoinAfterCancel",
+        "com.slotq.WaitlistRegistrationIntegrationTests.validatesDemandKeyBodyTimeAndCustomerScopeWithNoStoreErrors",
+        "com.slotq.WaitlistRegistrationIntegrationTests.managementReadUsesOwnerManagerScopeSlotEligibilityAndStableKeysetPagination",
+        "com.slotq.WaitlistRegistrationIntegrationTests.offerActionsRejectExtraHeadersBodiesAndWrongActorsWithoutMutation"
+      ]
+    },
+    {
+      "id": "security/management-scope",
+      "actor": "Owner, 할당/미할당 Manager, Staff",
+      "credential": "합성 Product 역할 fixture",
+      "scope": "소속 Tenant와 할당 Venue; 타 Tenant/Venue",
+      "entry": "Management HTTP 조회·설정 PATCH",
+      "expected": "서버가 조회한 scope만 허용; Staff 설정 변경 403, 타 범위 404",
+      "observations": "역할별 Venue 목록, HTTP 상태와 실제 설정 row 보존",
+      "tests": [
+        "com.slotq.ManagementApiIntegrationTests.discoversMultiTenantMultiRoleVenueScopeWithoutClientScopeClaims",
+        "com.slotq.ManagementApiIntegrationTests.hidesCrossScopeDeniesStaffWriteAndPreservesVenueConfigurationOnPatch"
+      ]
+    },
+    {
+      "id": "security/credential-audience",
+      "actor": "Customer와 운영 identity",
+      "credential": "ORIGINAL/MCP/PRODUCT/운영자 복구/스크래핑",
+      "scope": "서버 발급 credential의 audience와 정확한 Venue",
+      "entry": "MCP HTTPS, Product HTTPS, corpus authoring, metrics",
+      "expected": "각 credential의 정해진 용도만 허용; 서로 대체하는 요청 거부",
+      "observations": "실제 HTTP 401, 미전송, corpus 불변, audit·로그의 원문 비노출",
+      "tests": [
+        "com.slotq.mcp.M6IntegrationTests.validRecoveryScrapeOriginalAndProductCredentialsCannotBecomeMcpAuthority",
+        "com.slotq.mcp.EventObservationToolsIntegrationTests.originalMcpRecoveryAndMonitoringCredentialsCannotReplaceProductOrDelegation",
+        "com.slotq.knowledge.CorpusIntegrationTests.allCommandsRejectDelegatedProductRecoveryScrapeAndUnknownCredentials",
+        "com.slotq.AuthWebIntegrationTests.machineScrapeCredentialIsSeparateFromProductCredentialsAndDiagnosticsStayDenied"
+      ]
+    },
+    {
+      "id": "security/product-material",
+      "actor": "Customer original Actor",
+      "credential": "정확한 HOLD/GET 작업에 한정된 PRODUCT",
+      "scope": "delegation의 Tenant/Venue/target, Slot·partySize·key",
+      "entry": "실제 Product HTTP 인증과 application admission",
+      "expected": "허용 method·path·작업·대상·HOLD material만 수용; 바꿔치기 401/403",
+      "observations": "HTTP 수용·거부와 독립 업무 row digest; 요청 수용 이후 만료·철회·다른 target도 재검사",
+      "tests": [
+        "com.slotq.mcp.ProductToolsIntegrationTests.actualNarrowedProductMaterialOperationAndTargetCannotBeSubstituted",
+        "com.slotq.mcp.McpHttpIntegrationTests.productCredentialHasDistinctAudienceExactRouteShortExpiryAndOwnOnlyDespiteOwnerMembership",
+        "com.slotq.mcp.McpHttpIntegrationTests.applicationAdmissionRechecksCredentialDelegationOperationTargetAndExactExpiry"
+      ]
+    },
+    {
+      "id": "security/current-authority",
+      "actor": "Owner/Manager의 역할 축소·Venue 할당 해제, 철회된 Customer",
+      "credential": "인증 후 변경·만료·철회된 ORIGINAL/MCP/PRODUCT",
+      "scope": "원래 Tenant/Venue와 현재 membership/grant의 교집합",
+      "entry": "MCP list/call, Product 인증 뒤 application admission, Runtime 결과 공개",
+      "expected": "각 현재 권한 경계에서 fail closed; REQUIRES_NEW의 current read 유지",
+      "observations": "실제 admission 뒤 변경, HTTP 거부·도구 미전송, 외부 RR snapshot과 다른 current read, 늦은 provider 결과 비공개",
+      "tests": [
+        "com.slotq.mcp.McpHttpIntegrationTests.exactExpiryAndNewCurrentReadIgnorePriorRepeatableReadSnapshot",
+        "com.slotq.mcp.EventObservationToolsIntegrationTests.finalApplicationAdmissionRechecksAfterSuccessfulHttpAuthentication",
+        "com.slotq.mcp.M6IntegrationTests.currentGrantReductionExpiryAndRevocationApplyAcrossToolsAndAfterRetrievalAdmission",
+        "com.slotq.ai.runtime.AgentRuntimeTests.revokedAuthorityDuringWorkCannotDiscloseLateProviderData"
+      ]
+    },
+    {
+      "id": "security/run-identity-budget",
+      "actor": "원래 Actor, 타 Actor/Tenant/Venue, 같은 Actor의 새 delegation",
+      "credential": "기존/새 MCP delegation",
+      "scope": "Run과 intent·approval의 immutable original Actor 및 정확한 delegation",
+      "entry": "Runtime start/read/generate/review/approve/dispatch/retry/reconcile/result/cancel",
+      "expected": "타 identity의 승계 거부; 재진입으로 예산·절대 deadline 초기화 불가",
+      "observations": "모든 control 거부, 원래 Run의 누적 budget/deadline, provider·tool 호출 수",
+      "tests": [
+        "com.slotq.ai.runtime.AgentRuntimeTests.everyControlRejectsCrossActorTenantVenueAndReplacementDelegation",
+        "com.slotq.ai.runtime.AgentRuntimeTests.reentryAndNewRequestsCannotResetLiveRunBudgetsOrDeadline",
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.everyFlowControlRejectsOtherActorTenantVenueReplacementAndDeadDelegationWithoutBudgetReset"
+      ]
+    },
+    {
+      "id": "security/exact-approval",
+      "actor": "원래 Customer, 다른 승인자, 새 delegation",
+      "credential": "ORIGINAL 승인; MCP만으로 승인 불가",
+      "scope": "정확한 intent·confirmation·Slot·partySize·key·Tenant/Venue",
+      "entry": "controlled review/approval와 MCP HOLD",
+      "expected": "정확한 original Actor 승인만 허용; confirmed=true·바꿔치기·만료 승인 거부",
+      "observations": "잘못된 schema/승인 미전송, 실제 Product 전송 횟수, 전체 업무 row digest 불변, 허용 HOLD의 승인 DB 연결",
+      "tests": [
+        "com.slotq.mcp.ProductToolsIntegrationTests.schemasRejectMalformedExtraWrongTypeBoundsAndCallerAuthority",
+        "com.slotq.mcp.ProductToolsIntegrationTests.exactApprovalRejectsMaterialKeyIntentConfirmationDelegationActorVenueAndTenantSubstitution",
+        "com.slotq.mcp.ProductToolsIntegrationTests.runtimeReplacementDelegationCannotInheritApprovalAndExpiredConfirmationFailsBeforeProductDispatch",
+        "com.slotq.ai.runtime.AgentRuntimeTests.approvalRequiresDisplayedExactMaterialAndOriginalActor"
+      ]
+    },
+    {
+      "id": "security/untrusted-instructions",
+      "actor": "Customer",
+      "credential": "정상 MCP; 악성 자연어는 권한 없음",
+      "scope": "공개된 합성 RAG 문서와 정확한 서버 HOLD Plan",
+      "entry": "Knowledge→Runtime 모델 입력·답변·도구 결과",
+      "expected": "숨은 recovery 도구·승인 위조·target 변경 제안 거부; Product 상태 우선",
+      "observations": "untrusted 문서, 실제 provider 입력, 금지 도구 미호출, POST 0, Reservation/Allocation/멱등성/Waitlist/이벤트 digest 불변",
+      "tests": [
+        "com.slotq.mcp.M6IntegrationTests.maliciousContentCannotGrantHiddenToolsConfirmationOrCallerAuthority",
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.maliciousKnowledgeAndForbiddenOrWrongTargetProposalCannotReachMutation",
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.productSuccessSurvivesInjectedAnswerFailureAndConfirmedAnswerRejection"
+      ]
+    },
+    {
+      "id": "security/retrieval-prescope",
+      "actor": "Customer와 관리 조회 Actor",
+      "credential": "KNOWLEDGE_PUBLIC/KNOWLEDGE_OPERATOR의 정확한 MCP 상한",
+      "scope": "다른 Tenant·같은 Tenant의 다른 Venue·operator-only sentinel",
+      "entry": "corpus publications→후보 검색→provider 입력→응답",
+      "expected": "범위 밖 문서는 후보를 읽거나 모델로 전달하기 전에 제외",
+      "observations": "SQL scope, 실제 CandidateSearch eligible 집합, sentinel·문서 identity의 입력/응답 비노출",
+      "tests": [
+        "com.slotq.mcp.KnowledgeRetrievalIntegrationTests.knownAnswerAndSqlScopeAreEnforcedBeforeCandidateAndModelInputs",
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.m8SecurityScopeSentinelsAreAbsentFromCandidatesProviderInputAndReleasedResult",
+        "com.slotq.mcp.KnowledgeRetrievalIntegrationTests.operatorOnlyAndPublicOnlyDelegationsHaveExactVisibility",
+        "com.slotq.mcp.KnowledgeRetrievalIntegrationTests.metadataFailureAndCandidateIdentityInjectionFailClosedBeforeMaterialization"
+      ]
+    },
+    {
+      "id": "security/publication-revalidation",
+      "actor": "검색 중인 Customer와 문서를 수정/철회하는 Owner",
+      "credential": "MCP 검색과 ORIGINAL corpus 관리",
+      "scope": "동일 문서의 현재 publication과 정확한 version",
+      "entry": "검색 후보 획득 후, 최종 disclosure 직전",
+      "expected": "철회·교체된 이전 문서 제외; 마지막 검증 이후 변경의 소급 취소 없음",
+      "observations": "bounded latch로 검색 중단, 실제 publication 변경, 이전 본문·version 부재, RR current read",
+      "tests": [
+        "com.slotq.mcp.KnowledgeRetrievalIntegrationTests.actualPublicationChangeBeforeFinalObservationExcludesOldPayloadWithoutRelabeling",
+        "com.slotq.mcp.KnowledgeRetrievalIntegrationTests.changeAfterFinalMetadataObservationIsNotRetroactivelyCancelled",
+        "com.slotq.knowledge.CorpusIntegrationTests.exactCatalogReadEscapesAnOuterRepeatableReadSnapshot"
+      ]
+    },
+    {
+      "id": "security/provider-predispatch",
+      "actor": "Customer, 권한 축소된 Manager",
+      "credential": "정상/철회 MCP; 외부 모델 credential 미사용",
+      "scope": "합성 자료 전용 candidate의 데이터 종류·전송 조건",
+      "entry": "Router 선택 후 실제 provider dispatch 직전",
+      "expected": "후보 없음·전송 부적합·권한 거부는 provider 호출 전 종료; 현재 terminal failure 규칙 유지",
+      "observations": "실제 provider callback 수 0, 시도 budget 유지, 실패 뒤 fallback/도구 추가 호출 없음",
+      "tests": [
+        "com.slotq.ai.runtime.AgentRuntimeTests.freshDisclosureCheckAndNoCandidatePreventProviderCall",
+        "com.slotq.ai.router.ModelRouterTests.securityAndDisclosureCannotBeOffsetByScore",
+        "com.slotq.ai.router.ModelRouterTests.unavailableTrainingRegionAndRetentionFailRequiredDisclosure",
+        "com.slotq.ai.router.ModelRouterTests.zeroAndOneCandidateAreExplicitAndReplayWorksAfterJsonRoundTrip",
+        "com.slotq.ai.runtime.AgentRuntimeTests.disclosureRevocationAfterRoutingPreventsActualDispatchAndKeepsAttemptAccounting",
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.staffRoleDowngradeAndRevokedDisclosureCannotUseCorrectiveEligibility",
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.injectedProviderFailuresAreTerminalAndNeverStartFallbackOrTools"
+      ]
+    },
+    {
+      "id": "security/staff-and-ops-authority",
+      "actor": "Owner, 할당 Manager, Staff, Customer",
+      "credential": "M6/M7 관리 MCP와 EVENT_OBSERVATIONS_LIST PRODUCT",
+      "scope": "소속 Tenant와 현재 할당 Venue",
+      "entry": "M6 management.reservations.list, M7 management/ops Run, 이벤트 관측",
+      "expected": "Staff의 M6 예약 조회 유지; M7 Run과 이벤트 관측은 Owner/할당 Manager만 허용; 직접 복구 권한 부여 없음",
+      "observations": "registry list/call, Runtime admission, 실제 HTTP 거부와 읽기 전후 DB 상태",
+      "tests": [
+        "com.slotq.mcp.ProductToolsIntegrationTests.runtimeStaffDelegationKeepsM6ReadButCannotStartOperatorWorkloads",
+        "com.slotq.mcp.ProductToolsIntegrationTests.runtimeOperatorControlsRejectRoleDowngradeEvenWhenM6DelegationRemainsLive",
+        "com.slotq.mcp.EventObservationToolsIntegrationTests.ownerAndAssignedManagerListAndCallReturnExactProductPageWithoutStateChanges",
+        "com.slotq.mcp.EventObservationToolsIntegrationTests.originalMcpRecoveryAndMonitoringCredentialsCannotReplaceProductOrDelegation"
+      ]
+    },
+    {
+      "id": "security/ops-observation",
+      "actor": "Owner와 할당 Manager",
+      "credential": "조회 전용 MCP/PRODUCT; 복구 credential 없음",
+      "scope": "projected-at 조회 구간 내 지연·누락·잘림 자료",
+      "entry": "Ops Product HTTP→Runtime 구조화 자료→provider 입력",
+      "expected": "null/누락/지연/truncated 의미와 read-only 유지; 조회 성공을 전체 업무 완료로 바꾸지 않음",
+      "observations": "실제 projection·receipt 자료, provider 입력 제한, 전후 이벤트 상태 동일",
+      "tests": [
+        "com.slotq.mcp.EventObservationToolsIntegrationTests.projectedWindowPreservesPendingDoneDeadMissingReceiptAndEmptyPage",
+        "com.slotq.mcp.EventObservationToolsIntegrationTests.windowLimitsTruncationAndStrictInputPreserveProductBounds",
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.allThreeFlowsUseSameRuntimeWithRealToolsKnowledgeAndBoundedFacts"
+      ]
+    },
+    {
+      "id": "security/redaction",
+      "actor": "Customer와 운영자",
+      "credential": "합성 ORIGINAL/MCP/PRODUCT와 원문 key",
+      "scope": "일반 오류·audit·trace·metric·요약의 allowlist",
+      "entry": "Product/MCP/Runtime 관측과 오류",
+      "expected": "credential·key·prompt/response 원문·비공개 sentinel 비노출; 허용 원자료는 보호 ignored 경로만 사용",
+      "observations": "CapturedOutput, audit event, tracing/metrics와 provider 실패·금지 도구명 정규화",
+      "tests": [
+        "com.slotq.mcp.M6IntegrationTests.sdkProfilesUseAllFourProductionToolsConcurrentlyWithExactAuditAndDurableState",
+        "com.slotq.mcp.M6IntegrationTests.metadataUnavailableIsSafeAndDistinctFromNoAnswerAndInsufficient",
+        "com.slotq.ai.runtime.AgentRuntimeTests.arbitraryForbiddenToolNameIsNotReflectedIntoSafeMetadata",
+        "com.slotq.mcp.McpFoundationTests.auditQueueFullAndUnavailableSinkNeverChangeSuccessAndExceptionsRemainRedacted",
+        "com.slotq.ProductObservabilityIntegrationTests.httpRequestAppendAndRealOfferCommitHaveLinkedTracesWithNoSensitiveData",
+        "com.slotq.ProductObservabilityIntegrationTests.appendFailureRollsBackBusinessAndRetainsFailureRequestCorrelation"
+      ]
+    },
+    {
+      "id": "security/runtime-configuration",
+      "actor": "배포 설정과 외부 요청자",
+      "credential": "비활성 기능에는 credential로 권한 생성 불가",
+      "scope": "production bootstrap-off, 명시 CORS, co-located 고정 origin/TLS, explicit registry",
+      "entry": "선택한 Runtime 시작과 HTTP 노출",
+      "expected": "불안전한 설정은 시작 실패; 기본 MCP/복구 비노출; 임의 component 자동 tool 등록 없음",
+      "observations": "실제 Spring context 실패, production 404, servlet 부재와 registry 목록, TLS/origin 거부",
+      "tests": [
+        "com.slotq.config.SecurityPropertyConfigurationTests.productionStartupFailsWhenDevBootstrapIsEnabled",
+        "com.slotq.config.SecurityPropertyConfigurationTests.productionStartupRejectsWildcardCors",
+        "com.slotq.ProductionAuthIntegrationTests.operationsRecoveryIsDisabledByDefaultEvenForSecureRequests",
+        "com.slotq.ProductionAuthIntegrationTests.productionHasNoBootstrapOrDevResolverAndRejectsDevCredentials",
+        "com.slotq.ProductionAuthIntegrationTests.disabledMcpAndPublicRunApprovalSurfacesRemainUnavailable",
+        "com.slotq.mcp.McpActivationTests.defaultRuntimeAndAllIsolatedRolesHaveNoServletEngineOrExposure",
+        "com.slotq.mcp.McpActivationTests.arbitraryComponentBeanDoesNotRegisterAToolInProductionComposition",
+        "com.slotq.mcp.McpActivationTests.unsafeTlsAuthorityOrBudgetConfigurationCannotActivate",
+        "com.slotq.mcp.McpAccountingTests.productOriginCannotBeCallerSelectedRemoteRedirectOrContainCredentials",
+        "com.slotq.mcp.McpHttpIntegrationTests.originMalformedDuplicateAndCorrelationInputsCannotBecomeAuthority"
+      ]
+    },
+    {
+      "id": "security/architecture",
+      "actor": "Product/Auth/MCP/Runtime/Knowledge의 owner",
+      "credential": "AI용 broad service identity 추가 없음",
+      "scope": "既存 module trust boundary",
+      "entry": "production dependencyと公開 surface",
+      "expected": "Product/AuthからAIへの逆依存、MCPからProduct DB/JPA直結、公開Run/approval APIなし",
+      "observations": "既存 source architecture assertion",
+      "tests": [
+        "com.slotq.architecture.McpArchitectureTests.productAuthAndSharedFoundationDoNotDependOnConcreteAiProductOrRetrievalImplementations",
+        "com.slotq.architecture.McpArchitectureTests.productToolIntegrationCannotBypassProductHttpOrReadReliabilityTables",
+        "com.slotq.architecture.AgentRuntimeArchitectureTests.runtimeUsesAuthMcpAndControlledApprovalWithoutProductPersistenceOrPublicSurface"
+      ]
+    },
+    {
+      "id": "security/evaluator-observations",
+      "actor": "Customer original Actor, Owner, 할당 Manager",
+      "credential": "실제 합성 ORIGINAL→MCP→좁은 PRODUCT",
+      "scope": "정확한 Run·승인과 disposable MySQL",
+      "entry": "#179 Runtime→MCP→Product HTTPS; provider만 결정적 주입",
+      "expected": "허용 HOLD만 atomic effect; 승인 누락은 미전송; unknown은 원래 의미 유지; 권한·승인 누락을 PASS로 추정하지 않음",
+      "observations": "실제 application admission, 저장된 intent/confirmation 원래 승인자, 전송·응답, 독립 DB digest·effect와 #179 결과 재계산",
+      "tests": [
+        "com.slotq.mcp.RepresentativeFlowIntegrationTests.m8EvaluationConnectsRuntimeProductAndIndependentMySqlObservations",
+        "com.slotq.evaluation.M8BoundaryScoringTests.aModelRefusalAloneDoesNotProveRuntimeDefense",
+        "com.slotq.evaluation.M8BoundaryScoringTests.runtimeRefusalHasNoModelSampleAndKeepsIndependentDefenseEvidence",
+        "com.slotq.evaluation.M8BoundaryScoringTests.atomicHoldCannotHideChangesToOtherObservedBusinessTables",
+        "com.slotq.evaluation.M8SecurityRegressionTests.catalogCoversEveryRequiredBoundaryAndReferencesExistingTests",
+        "com.slotq.evaluation.M8SecurityRegressionTests.successfulAssertionsUseM8RowsAndCohortsWithoutGrantingReleasePass",
+        "com.slotq.evaluation.M8SecurityRegressionTests.missingSkippedFalseOrDuplicateObservationsCannotBeAveragedAway",
+        "com.slotq.evaluation.M8SecurityRegressionTests.junitImporterKeepsOnlyExecutedStatusesAndRejectsDuplicateResults",
+        "com.slotq.evaluation.M8SecurityRegressionTests.junitSkipFailureAndUnexecutedMethodRemainDistinct"
+      ]
+    }
+  ]
+}

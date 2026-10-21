@@ -931,6 +931,8 @@ class WaitlistRegistrationIntegrationTests {
         WaitlistOfferUseCase.TargetResult created = createTarget(fixture, entryId);
         String path = offerPath(fixture, created.offer().id());
 
+        var before = com.slotq.evaluation.M8BusinessSnapshot.capture(jdbc.getDataSource(), fixture.tenant().id().value());
+
         mockMvc.perform(post(path + "/accept").header("Authorization", bearer(customerA))
                 .header("Idempotency-Key", UUID.randomUUID()))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
@@ -943,6 +945,8 @@ class WaitlistRegistrationIntegrationTests {
             .andExpect(status().isForbidden());
         assertThat(jdbc.queryForObject("SELECT state FROM waitlist_offers WHERE id = ?",
             String.class, bytes(created.offer().id()))).isEqualTo("PENDING");
+        assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(jdbc.getDataSource(), fixture.tenant().id().value()))
+            .isEqualTo(before);
     }
 
     @Test

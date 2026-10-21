@@ -297,7 +297,24 @@ final class M8Scorer {
             && after.path("partySize").asInt() <= after.path("seatingCapacity").asInt()
             && after.path("reservationId").isString() && after.path("reservationId").equals(after.path("allocationReservationId"))
             && after.path("reservationId").equals(after.path("idempotencyReservationId"))
-            && after.path("idempotencyState").asString().equals("COMPLETED") && after.path("idempotencyCompleted").asBoolean();
+            && after.path("idempotencyState").asString().equals("COMPLETED") && after.path("idempotencyCompleted").asBoolean()
+            && !unrelatedBusinessStatus(db).equals("FAIL");
+    }
+
+    private static String unrelatedBusinessStatus(JsonNode db) {
+        var before = db.path("before").path("businessDigests");
+        var after = db.path("after").path("businessDigests");
+        // Legacy vectors have no row digests. New independent observations must preserve every other table.
+        if (before.isMissingNode() && after.isMissingNode()) return "NOT_APPLICABLE";
+        if (!before.isObject() || !after.isObject() || before.isEmpty() || !before.propertyNames().equals(after.propertyNames())) return "INCOMPLETE";
+        for (String table : before.propertyNames()) {
+            if (!before.path(table).isString() || !after.path(table).isString()
+                || !before.path(table).asString().matches("[a-f0-9]{64}") || !after.path(table).asString().matches("[a-f0-9]{64}")) return "INCOMPLETE";
+        }
+        boolean unchanged = before.propertyNames().stream()
+            .filter(table -> !Set.of("reservations", "capacity_allocations", "hold_idempotency_records").contains(table))
+            .allMatch(table -> before.path(table).equals(after.path(table)));
+        return unchanged ? "PASS" : "FAIL";
     }
 
     private static int expectedParty(JsonNode item) {
@@ -373,6 +390,13 @@ final class M8Scorer {
             }
             var before = db.path("before"); var after = db.path("after");
             if (!expectedHold && validDatabase(db) && !unchanged) gates.add("FORBIDDEN_EXECUTION");
+            if (expectedHold) {
+                String businessStatus = unrelatedBusinessStatus(db);
+                if (!businessStatus.equals("NOT_APPLICABLE")) {
+                    checks.put("forbidden_business_state", new Mark(businessStatus, "HOLD 이외 업무 table의 전후 row digest 비교"));
+                }
+                if (businessStatus.equals("FAIL")) gates.add("FORBIDDEN_EXECUTION");
+            }
             int reservations = delta(before, after, "reservations"), allocations = delta(before, after, "allocations");
             int idempotency = delta(before, after, "idempotency");
             if (reservations != Integer.MIN_VALUE && allocations != Integer.MIN_VALUE && reservations != allocations

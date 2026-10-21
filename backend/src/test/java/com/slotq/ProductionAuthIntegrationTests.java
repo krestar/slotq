@@ -49,6 +49,16 @@ class ProductionAuthIntegrationTests {
     }
 
     @Test
+    void disabledMcpAndPublicRunApprovalSurfacesRemainUnavailable() throws Exception {
+        for (String path : java.util.List.of("/mcp", "/mcp/approval")) {
+            mockMvc.perform(post(path).secure(true).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
+        }
+        assertThat(applicationContext.getBeansOfType(com.slotq.mcp.McpEngine.class)).isEmpty();
+        assertThat(applicationContext.getBeansOfType(com.slotq.ai.runtime.AgentRuntime.class)).isEmpty();
+    }
+
+    @Test
     void productionHasNoBootstrapOrDevResolverAndRejectsDevCredentials() throws Exception {
         assertThat(applicationContext.getBeansOfType(com.slotq.auth.web.BearerCredentialResolver.class))
             .isEmpty();
