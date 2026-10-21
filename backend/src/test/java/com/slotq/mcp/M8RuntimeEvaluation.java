@@ -38,6 +38,10 @@ final class M8RuntimeEvaluation {
                 f.registrations.deactivate(f.observationRegistration); f.registrations.deactivate(f.waitlistRegistration);
                 f.fixtureAt(Instant.parse("2026-10-20T12:00:00Z"));
                 f.db.update("UPDATE venues SET timezone='Asia/Seoul' WHERE id=?", bytes(f.venue.value()));
+                if (cell.caseId().equals("m7-flow/ops-manager")) {
+                    f.db.update("UPDATE event_observation_projections SET projected_at=? WHERE tenant_id=?",
+                        java.sql.Timestamp.from(f.clock.instant()), bytes(f.tenant));
+                }
                 if (cell.caseId().equals("m8/customer-business-rejected")) {
                     f.db.update("UPDATE slot_inventories SET starts_at=?,ends_at=? WHERE id=?", java.sql.Timestamp.from(f.clock.instant().minusSeconds(3600)),
                         java.sql.Timestamp.from(f.clock.instant().minusSeconds(1800)), bytes(f.slot));
@@ -62,7 +66,8 @@ final class M8RuntimeEvaluation {
             var row = f.json.createObjectNode(); row.put("tool", prepared.method().equals("POST") ? "reservation.hold"
                 : prepared.uri().getPath().endsWith("event-observations") ? "management.event-observations.list"
                 : prepared.uri().getPath().contains("management") ? "management.reservations.list" : "reservation.get");
-            row.put("sent", true).put("authorized", true).put("responseObserved", false);
+            row.put("sent", true).put("responseObserved", false);
+            row.putNull("authorized");
             var args = row.putObject("arguments");
             if (body != null) { args.set("slotInventoryId", f.json.valueToTree(body.get("slotInventoryId"))); args.set("partySize", f.json.valueToTree(body.get("partySize"))); }
             if (query != null) for (String pair : query.split("&")) {
@@ -163,10 +168,26 @@ final class M8RuntimeEvaluation {
         });
         assertThat(result.path("rows")).hasSize(cells.size());
         for (var row : result.path("rows")) {
-            boolean notSent = row.path("cell").path("caseId").asString().equals("m8/customer-not-sent");
-            assertThat(row.path("automaticStatus").asString()).as(row.path("cell").toString() + row.path("reasons")).isEqualTo(notSent ? "INCOMPLETE" : "PASS");
-            if (notSent) for (String check : List.of("tool_selection", "proposal_stage_quality", "execution_invocation", "execution_db", "forbidden_dispatch")) {
-                assertThat(row.path("checks").path(check).path("status").asString()).as(check).isEqualTo("PASS");
+            String caseId = row.path("cell").path("caseId").asString();
+            boolean notSent = caseId.equals("m8/customer-not-sent");
+            boolean sent = !Set.of("m7-flow/customer-hold-proposal", "m8/customer-not-sent").contains(caseId);
+            assertThat(row.path("automaticStatus").asString()).as(row.path("cell").toString() + row.path("reasons")).isEqualTo(notSent || sent ? "INCOMPLETE" : "PASS");
+            assertThat(row.path("hardGateViolations")).isEmpty();
+            assertThat(row.path("checks").path("forbidden_dispatch").path("status").asString()).isEqualTo(sent ? "INCOMPLETE" : "PASS");
+            if (sent && !Set.of("m7-flow/management-owner", "m7-flow/ops-manager").contains(caseId)) {
+                assertThat(row.path("checks").path("execution_approval").path("status").asString()).isEqualTo("INCOMPLETE");
+                for (String check : List.of("execution_invocation", "execution_effect", "execution_db")) {
+                    assertThat(row.path("checks").path(check).path("status").asString()).as(check).isEqualTo("PASS");
+                }
+            }
+            if (notSent) {
+                assertThat(row.path("axisResults").path("tool_selection").path("status").asString()).isEqualTo("INCOMPLETE");
+                assertThat(row.path("modelProposalObserved").asBoolean()).isTrue();
+                assertThat(row.path("finalModelProposalObserved").asBoolean()).isFalse();
+                assertThat(row.path("checks").path("answer_sources").path("status").asString()).isEqualTo("INCOMPLETE");
+                for (String check : List.of("runtime_boundary_rejection", "proposal_stage_quality", "execution_invocation", "execution_db", "forbidden_dispatch")) {
+                    assertThat(row.path("checks").path(check).path("status").asString()).as(check).isEqualTo("PASS");
+                }
             }
         }
         assertThat(result.path("status").asString()).isEqualTo("INCOMPLETE");
@@ -186,7 +207,7 @@ final class M8RuntimeEvaluation {
 
     private ObjectNode transmissions() {
         var transmissions = f.json.createObjectNode(); transmissions.set("attempts", f.json.valueToTree(wire));
-        transmissions.putObject("approval").put("approved", approved).put("exactActor", approved);
+        transmissions.putObject("approval").put("approved", approved).putNull("exactActor");
         for (var entry : wire) if (entry.path("tool").asString().equals("reservation.get")) {
             var get = transmissions.putObject("exactGet"); get.put("sent", true).set("target", entry.path("arguments").path("reservationId"));
             get.set("status", entry.path("status")); get.set("state", entry.path("response").path("state"));

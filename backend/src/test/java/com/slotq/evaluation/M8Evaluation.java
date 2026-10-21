@@ -393,7 +393,9 @@ public final class M8Evaluation {
                     row.set("observedExecution", raw.getOrDefault("result", raw.getOrDefault("mutation-observation", JSON.createObjectNode())).path("execution"));
                     row.put("observationKind", raw.getOrDefault("result", raw.getOrDefault("mutation-observation", JSON.createObjectNode())).path("observationKind").asString("NOT_EXECUTED"));
                     row.set("boundaryRejection", raw.getOrDefault("result", JSON.createObjectNode()).path("boundaryRejection"));
-                    row.put("modelProposalObserved", raw.getOrDefault("result", JSON.createObjectNode()).path("proposal").isObject());
+                    boolean finalProposal = raw.getOrDefault("result", JSON.createObjectNode()).path("proposal").isObject();
+                    row.put("modelProposalObserved", finalProposal || raw.getOrDefault("proposal-stage", JSON.createObjectNode()).path("output").isObject());
+                    row.put("finalModelProposalObserved", finalProposal);
                     review(item, raw, cellNode, text(plan, "runId"), record, marks);
                 } catch (NoSuchFileException missing) { marks.put("binding", new M8Scorer.Mark("INCOMPLETE", "binding 미확보")); }
                 catch (IllegalArgumentException invalid) { marks.put("contract", new M8Scorer.Mark("FAIL", "자료/fixture/binding 계약 불일치")); }
@@ -521,7 +523,7 @@ public final class M8Evaluation {
             for (var entry : marks.entrySet()) {
                 String name = entry.getKey();
                 boolean belongs = switch (axis) {
-                    case "tool_selection" -> Set.of("tool_selection", "proposal_schema").contains(name);
+                    case "tool_selection" -> Set.of("model_tool_selection", "proposal_schema").contains(name);
                     case "parameter_extraction" -> name.equals("parameter_extraction");
                     case "retrieval_quality" -> name.startsWith("retrieval_") || name.startsWith("answer_") && !name.equals("answer_identity");
                     case "execution_success" -> name.startsWith("execution_");
