@@ -410,11 +410,13 @@ public final class M8FixtureValidator {
         } else if (node.isArray()) node.forEach(M8FixtureValidator::rejectSensitive);
         else if (node.isString()) {
             String value = node.asString();
+            // Decimal runs in UUIDs and digests are identities, not contact numbers.
+            if (value.matches("[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|[a-f0-9]{40}|[a-f0-9]{64}")) return;
             require(!value.matches("(?s).*(?:Bearer\\s+[A-Za-z0-9._-]+|AIza[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9_-]{16,}|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|010[- ]?[0-9]{4}[- ]?[0-9]{4}|://[^/\\s]+:[^/\\s]+@|-----BEGIN [A-Z ]*PRIVATE KEY-----).*"), "sensitive value");
         }
     }
 
-    private static Object canonical(JsonNode node) {
+    static Object canonical(JsonNode node) {
         if (node.isObject()) {
             var sorted = new TreeMap<String, Object>();
             node.properties().forEach(e -> sorted.put(e.getKey(), canonical(e.getValue())));

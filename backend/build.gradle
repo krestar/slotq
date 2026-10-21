@@ -78,6 +78,44 @@ tasks.register('validateM8Fixtures', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
 }
 
+tasks.register('m8Evaluate', Test) {
+    group = 'verification'
+    description = 'Runs offline M8 scorer test vectors and emits a protected 60-cell report; no model or Product qualification.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'com.slotq.evaluation.M8EvaluationTests.deterministicDatasetReportAndOfflineRecalculationPreserveAllSixtyCells' }
+    outputs.upToDateWhen { false }
+}
+
+tasks.register('m8Recalculate', JavaExec) {
+    group = 'verification'
+    description = 'Recalculates sealed M8 evidence offline, preserving the original report and evidence lane.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.evaluation.M8Evaluation'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.m8.runId', project.findProperty('m8RunId') ?: ''
+    systemProperty 'slotq.m8.digest', project.findProperty('m8Digest') ?: ''
+    systemProperty 'slotq.m8.reviews', project.findProperty('m8Reviews') ?: ''
+    systemProperty 'slotq.m8.reviewDigest', project.findProperty('m8ReviewDigest') ?: ''
+}
+
+tasks.register('m8RuntimeEvaluation', Test) {
+    group = 'verification'
+    description = 'Connects deterministic M8 evaluation to the existing Runtime/MCP/Product HTTPS/MySQL and lexical retrieval fixtures.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.m8EvaluationConnectsRuntimeProductAndIndependentMySqlObservations'
+        includeTestsMatching 'com.slotq.mcp.KnowledgeRetrievalIntegrationTests.m8EvaluationConnectsCanonicalLexicalRetrievalAndPublicationEvidence'
+    }
+    systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
+    systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
+    outputs.upToDateWhen { false }
+}
+
 tasks.register('representativeFlowEvidence', Test) {
     group = 'verification'
     description = 'Opt-in fresh free-tier provider through the production Runtime, MCP/Product/Knowledge and disposable MySQL.'

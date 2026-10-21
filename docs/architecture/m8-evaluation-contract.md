@@ -260,8 +260,10 @@ credential, 원문 idempotency key, 실제 고객 정보는 보호 원자료에�
 
 검증기는 정상 manifest·fixture, 중복 ID/필수 필드/버전/참조/범위, 원본 및 사례 digest,
 필수·허용 출처/주장·대응, 모델/Plan 분모 혼동, holdout 재분류, 미확정 기준·자료·검토 누락의
-거짓 PASS, 금지된 환경·민감정보 구성을 검사한다. 새 평가 서비스나 평가기 본체는 없다.
-#179는 자동 채점·실행 결과표·실제 원자료 재계산을, #184는 세부 권한 강제 회귀를 구현한다.
+거짓 PASS, 금지된 환경·민감정보 구성을 검사한다.
+#179의 테스트 전용 자동 채점·실행 결과표·실제 원자료 재계산은
+[M8 평가기 실행 안내](../experiments/m8-evaluator.md)를 따른다. 범용 평가 서비스는 추가하지 않는다.
+#184는 세부 권한 강제 회귀를 구현한다.
 최종 Product/Frontend 회귀와 GO/NO-GO는 #185 소유다. 이 변경에서 Accepted ADR·production
 Product/AI 코드·인증·transaction·idempotency 경계를 바꾸지 않는다.
 
