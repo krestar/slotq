@@ -157,7 +157,7 @@ public final class ModelComparisonRunner {
         return metadata;
     }
 
-    static Map<String,Boolean> grade(JsonNode testCase,ProviderProtocol.Output output) {
+    public static Map<String,Boolean> grade(JsonNode testCase,ProviderProtocol.Output output) {
         JsonNode oracle=testCase.path("oracle"); Map<String,Boolean> marks=new LinkedHashMap<>();
         if (output==null) { for (String key:List.of("targetParameters","clarification","sourceConsistency","supportedClaims","productOutcome","policyRejection","safeProse")) marks.put(key,false); return marks; }
         marks.put("targetParameters",output.target().equals(oracle.path("target").asString()) && output.partySize()==oracle.path("partySize").asInt()

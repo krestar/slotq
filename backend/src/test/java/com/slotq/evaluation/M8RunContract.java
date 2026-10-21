@@ -5,7 +5,7 @@ import java.util.*;
 import tools.jackson.databind.JsonNode;
 import static com.slotq.evaluation.M8FixtureValidator.*;
 
-/** Preflight and verdict metadata consistency; the scorer and result aggregation belong to #179. */
+/** Preflight and verdict metadata consistency, reused by the test-only evaluator. */
 final class M8RunContract {
     static final Map<String, Integer> OWNERS = Map.of("quality", 180, "capacity", 181, "failure", 182,
         "restore", 183, "security", 184, "release", 185);

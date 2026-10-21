@@ -111,7 +111,11 @@ class RepresentativeFlowIntegrationTests {
     HttpClient http;
 
     @BeforeEach void fixture() throws Exception {
-        clock.now = Instant.now(); fault.reset(); disclosure.set(true);
+        fixtureAt(Instant.now());
+    }
+
+    void fixtureAt(Instant baseTime) throws Exception {
+        clock.now = baseTime; fault.reset(); disclosure.set(true);
         http = HttpClient.newBuilder().sslContext(McpHttpIntegrationTests.tls()).followRedirects(HttpClient.Redirect.NEVER)
             .connectTimeout(Duration.ofSeconds(2)).build();
         tenant = tenants.createTenant().id().value(); day = LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC).plusDays(2);
@@ -171,6 +175,10 @@ class RepresentativeFlowIntegrationTests {
         assertThat(eventState()).isEqualTo(before);
         for (var request : requests) requireNoDisclosure(request.prompt(),customer.original().value(),owner.original().value(),tenant.toString(),customer.principal().toString(),"idempotencyKey");
         assertThat(observed.providers()).allSatisfy(p -> assertThat(new ModelRouter().replay(p.routing())).isTrue());
+    }
+
+    @Test void m8EvaluationConnectsRuntimeProductAndIndependentMySqlObservations() throws Exception {
+        new M8RuntimeEvaluation(this).run();
     }
 
     @Test void everyFlowControlRejectsOtherActorTenantVenueReplacementAndDeadDelegationWithoutBudgetReset() {

@@ -57,6 +57,7 @@ class KnowledgeRetrievalIntegrationTests {
     @MockitoSpyBean CorpusCatalog catalog; @MockitoSpyBean CorpusStore store;
     @Autowired JdbcTemplate db; @Autowired ToolRegistry registry; @Autowired McpRegistrations root;
     @Autowired CorpusIngestion ingestion;
+    @Autowired org.springframework.context.ApplicationContext application;
     final Clock clock=Clock.systemUTC(); final JsonMapper json=JsonMapper.builder().build();
     TenantId tenant; VenueId venue; String original;
     ActorAccessService.ProvisionedCredential delegated; VersionMetadata publicVersion,operatorVersion;
@@ -83,6 +84,10 @@ class KnowledgeRetrievalIntegrationTests {
         verify(store).publications(eq(tenant),eq(venue),eq(Set.of(Visibility.VENUE_PUBLIC)),eq(65));
         assertThatThrownBy(()->catalog.publications(delegated.delegationId(),otherVenue)).isInstanceOf(AccessFailure.class);
         assertThatThrownBy(()->catalog.publications(delegated.delegationId(),sameTenant)).isInstanceOf(AccessFailure.class);
+    }
+
+    @Test void m8EvaluationConnectsCanonicalLexicalRetrievalAndPublicationEvidence() throws Exception {
+        new M8RetrievalEvaluation(this).run();
     }
     @Test void operatorOnlyAndPublicOnlyDelegationsHaveExactVisibility() {
         for(var actions:List.of(Set.of(AccessAction.KNOWLEDGE_OPERATOR),Set.of(AccessAction.KNOWLEDGE_PUBLIC),
