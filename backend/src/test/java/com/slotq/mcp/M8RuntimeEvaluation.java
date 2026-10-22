@@ -5,6 +5,9 @@ import com.slotq.ai.router.*;
 import com.slotq.ai.runtime.*;
 import com.slotq.ai.runtime.RuntimeContract.*;
 import com.slotq.evaluation.*;
+import com.slotq.auth.access.ProductOperation;
+import com.slotq.auth.domain.AuthenticatedPrincipal;
+import com.slotq.venue.domain.VenueId;
 import com.slotq.integration.mcp.product.ProductHttpClient;
 import java.nio.file.*;
 import java.time.*;
@@ -20,7 +23,9 @@ import static org.mockito.ArgumentMatchers.*;
 final class M8RuntimeEvaluation {
     private final RepresentativeFlowIntegrationTests f;
     private final List<ObjectNode> wire = new ArrayList<>();
-    private boolean approved;
+    private ObjectNode approval;
+    private RepresentativeFlowIntegrationTests.Identity activeActor;
+    private final Map<UUID, ObjectNode> pendingAdmissions = new java.util.concurrent.ConcurrentHashMap<>();
     private record Fixture(UUID tenant, com.slotq.venue.domain.VenueId venue, UUID slot,
                            RepresentativeFlowIntegrationTests.Identity customer, RepresentativeFlowIntegrationTests.Identity owner,
                            RepresentativeFlowIntegrationTests.Identity manager, LocalDate day, Instant base) { }
@@ -61,6 +66,7 @@ final class M8RuntimeEvaluation {
         var manifest = target.manifest(fixtures.get("customer").base(), true, f.db);
         var session = new M8Evaluation(runId, cells, manifest, new M8Evaluation.Budget(cells.size(), 20, 100000, Instant.now().plusSeconds(180), true),
             c -> bindings.get(c.caseId().startsWith("m7-flow/customer-hold-") ? "customer" : c.caseId()), target);
+        observeApplicationAdmissions();
         doAnswer(invocation -> {
             ProductHttpBinding.Prepared prepared = invocation.getArgument(0); String query = invocation.getArgument(1); Map<String, Object> body = invocation.getArgument(2);
             var row = f.json.createObjectNode(); row.put("tool", prepared.method().equals("POST") ? "reservation.hold"
@@ -68,8 +74,18 @@ final class M8RuntimeEvaluation {
                 : prepared.uri().getPath().contains("management") ? "management.reservations.list" : "reservation.get");
             row.put("sent", true).put("responseObserved", false);
             row.putNull("authorized");
+            pendingAdmissions.put(prepared.credential().id(), row);
             var args = row.putObject("arguments");
-            if (body != null) { args.set("slotInventoryId", f.json.valueToTree(body.get("slotInventoryId"))); args.set("partySize", f.json.valueToTree(body.get("partySize"))); }
+            if (body != null) {
+                args.set("slotInventoryId", f.json.valueToTree(body.get("slotInventoryId")));
+                args.set("partySize", f.json.valueToTree(body.get("partySize")));
+                int exactMaterial = f.db.queryForObject("SELECT COUNT(*) FROM mcp_hold_intents i JOIN mcp_hold_confirmations c ON c.intent_id=i.id "
+                    + "WHERE i.id=? AND c.id=? AND i.slot_id=? AND i.party_size=? AND i.product_key=?",
+                    Integer.class, bytes(UUID.fromString(approval.path("intent").asString())), bytes(UUID.fromString(approval.path("confirmation").asString())),
+                    bytes((UUID) body.get("slotInventoryId")), body.get("partySize"), body.get("idempotencyKey"));
+                approval.put("exactActor", approval.path("exactActor").asBoolean() && exactMaterial == 1);
+                row.put("approvalMaterialMatched", exactMaterial == 1);
+            }
             if (query != null) for (String pair : query.split("&")) {
                 String[] parts = pair.split("=", 2); String value = java.net.URLDecoder.decode(parts[1], java.nio.charset.StandardCharsets.UTF_8);
                 if (parts[0].equals("limit")) args.put(parts[0], Integer.parseInt(value)); else args.put(parts[0], value);
@@ -87,7 +103,8 @@ final class M8RuntimeEvaluation {
         var result = session.execute((cell, input, recorder) -> {
             String group = cell.caseId().startsWith("m7-flow/customer-hold-") ? "customer" : cell.caseId(); Fixture fixture = fixtures.get(group);
             f.tenant = fixture.tenant(); f.venue = fixture.venue(); f.slot = fixture.slot(); f.customer = fixture.customer(); f.owner = fixture.owner(); f.manager = fixture.manager();
-            f.day = fixture.day(); f.clock.now = fixture.base(); f.fault.reset(); wire.clear(); approved = false;
+            f.day = fixture.day(); f.clock.now = fixture.base(); f.fault.reset(); wire.clear(); pendingAdmissions.clear();
+            approval = f.json.createObjectNode().put("approved", false).put("exactActor", false);
             var runtime = live.computeIfAbsent(group, g -> f.runtime((m, c, q, b) -> {
                 var response = f.fakeProvider(m, c, q, b);
                 if (response.output().outcome().equals("UNKNOWN") || g.startsWith("m8/")) {
@@ -99,6 +116,7 @@ final class M8RuntimeEvaluation {
                 return response;
             }, Duration.ofSeconds(5)));
             var actor = cell.caseId().contains("management") ? f.owner : cell.caseId().contains("ops-manager") ? f.manager : f.customer;
+            activeActor = actor;
             var composition = new RepresentativeFlows(runtime, f.limits(Duration.ofSeconds(5)));
             var expectedPlan = M8Evaluation.item(cell.caseId()).path("serverPlan");
             var flow = flows.computeIfAbsent(group, g -> cell.caseId().contains("management") ? composition.management(actor.delegation().value(), LocalDate.parse(expectedPlan.path("management.reservations.list").path("date").asString()), expectedPlan.path("knowledge.search").path("query").asString())
@@ -124,7 +142,9 @@ final class M8RuntimeEvaluation {
             if (notSent) assertThatThrownBy(() -> runtime.dispatchHold(flow.id(), actor.delegation().value())).hasMessage("APPROVAL");
             boolean mutationStage = answerStage || cell.caseId().startsWith("m8/") && !notSent;
             if (mutationStage) {
-                f.approve(runtime, flow, actor); approved = true;
+                var reviewed = runtime.reviewHold(flow.id(), actor.delegation().value(), actor.original().value());
+                UUID confirmation = runtime.approveHold(flow.id(), actor.delegation().value(), actor.original().value(), reviewed);
+                observeApproval(reviewed, confirmation, actor);
                 if (cell.caseId().equals("m8/unknown-committed")) f.fault.arm(f.venue, true, false);
                 var mutationResult = runtime.dispatchHold(flow.id(), actor.delegation().value());
                 if (mutationResult.knownTarget() != null) recorder.bindCreatedReservation("reservation-a", mutationResult.knownTarget());
@@ -171,11 +191,11 @@ final class M8RuntimeEvaluation {
             String caseId = row.path("cell").path("caseId").asString();
             boolean notSent = caseId.equals("m8/customer-not-sent");
             boolean sent = !Set.of("m7-flow/customer-hold-proposal", "m8/customer-not-sent").contains(caseId);
-            assertThat(row.path("automaticStatus").asString()).as(row.path("cell").toString() + row.path("reasons")).isEqualTo(notSent || sent ? "INCOMPLETE" : "PASS");
+            assertThat(row.path("automaticStatus").asString()).as(row.path("cell").toString() + row.path("reasons")).isEqualTo(notSent ? "INCOMPLETE" : "PASS");
             assertThat(row.path("hardGateViolations")).isEmpty();
-            assertThat(row.path("checks").path("forbidden_dispatch").path("status").asString()).isEqualTo(sent ? "INCOMPLETE" : "PASS");
+            assertThat(row.path("checks").path("forbidden_dispatch").path("status").asString()).isEqualTo("PASS");
             if (sent && !Set.of("m7-flow/management-owner", "m7-flow/ops-manager").contains(caseId)) {
-                assertThat(row.path("checks").path("execution_approval").path("status").asString()).isEqualTo("INCOMPLETE");
+                assertThat(row.path("checks").path("execution_approval").path("status").asString()).isEqualTo("PASS");
                 for (String check : List.of("execution_invocation", "execution_effect", "execution_db")) {
                     assertThat(row.path("checks").path(check).path("status").asString()).as(check).isEqualTo("PASS");
                 }
@@ -207,7 +227,7 @@ final class M8RuntimeEvaluation {
 
     private ObjectNode transmissions() {
         var transmissions = f.json.createObjectNode(); transmissions.set("attempts", f.json.valueToTree(wire));
-        transmissions.putObject("approval").put("approved", approved).putNull("exactActor");
+        transmissions.set("approval", approval.deepCopy());
         for (var entry : wire) if (entry.path("tool").asString().equals("reservation.get")) {
             var get = transmissions.putObject("exactGet"); get.put("sent", true).set("target", entry.path("arguments").path("reservationId"));
             get.set("status", entry.path("status")); get.set("state", entry.path("response").path("state"));
@@ -222,6 +242,7 @@ final class M8RuntimeEvaluation {
 
     private ObjectNode database() {
         var state = f.json.createObjectNode();
+        state.set("businessDigests", f.json.valueToTree(M8BusinessSnapshot.capture(f.db.getDataSource(), f.tenant)));
         for (var entry : Map.of("reservations", "reservations", "allocations", "capacity_allocations", "idempotency", "hold_idempotency_records").entrySet()) {
             state.put(entry.getKey(), f.db.queryForObject("SELECT COUNT(*) FROM " + entry.getValue() + " WHERE slot_inventory_id=?", Integer.class, bytes(f.slot)));
         }
@@ -239,5 +260,47 @@ final class M8RuntimeEvaluation {
             if (!keys.isEmpty()) state.put("idempotencyState", keys.getFirst().get("state").toString()).put("idempotencyCompleted", ((Number) keys.getFirst().get("completed")).intValue() == 1);
         }
         return state;
+    }
+
+    private void observeApplicationAdmissions() {
+        doAnswer(invocation -> {
+            Object result = invocation.callRealMethod();
+            admission(invocation.getArgument(0), invocation.getArgument(1), invocation.getArgument(2), invocation.getArgument(3));
+            return result;
+        }).when(f.access).requireAdmission(any(), any(), any(), nullable(UUID.class));
+        doAnswer(invocation -> {
+            Object result = invocation.callRealMethod();
+            admission(invocation.getArgument(0), ProductOperation.RESERVATION_HOLD, invocation.getArgument(1), invocation.getArgument(2));
+            return result;
+        }).when(f.access).requireHoldAdmission(any(), any(), any(), anyInt(), anyString());
+    }
+
+    private void admission(AuthenticatedPrincipal principal, ProductOperation operation, VenueId venue, UUID target) {
+        if (principal.restriction() == null) return;
+        var attempt = pendingAdmissions.get(principal.restriction().productCredentialId());
+        if (attempt == null) return;
+        boolean exact = principal.principalId().value().equals(activeActor.principal())
+            && principal.restriction().tenantId().value().equals(f.tenant) && venue.equals(f.venue)
+            && attempt.path("tool").asString().equals(operation.tool);
+        if (operation == ProductOperation.RESERVATION_HOLD) {
+            exact &= target != null && target.toString().equals(attempt.path("arguments").path("slotInventoryId").asString());
+        } else if (operation == ProductOperation.RESERVATION_GET) {
+            exact &= target != null && target.toString().equals(attempt.path("arguments").path("reservationId").asString());
+        }
+        attempt.put("authorized", exact);
+        attempt.putObject("applicationAdmission").put("observed", true).put("principal", principal.principalId().value().toString())
+            .put("tenant", f.tenant.toString()).put("venue", venue.value().toString()).put("operation", operation.name())
+            .put("target", target == null ? "" : target.toString());
+    }
+
+    private void observeApproval(ApprovalReview review, UUID confirmation, RepresentativeFlowIntegrationTests.Identity actor) {
+        int matches = f.db.queryForObject("SELECT COUNT(*) FROM mcp_hold_intents i JOIN mcp_hold_confirmations c ON c.intent_id=i.id "
+            + "WHERE i.id=? AND c.id=? AND i.approver_id=? AND i.delegation_id=? AND i.tenant_id=? AND i.venue_id=? "
+            + "AND i.slot_id=? AND i.party_size=? AND i.tool='reservation.hold' AND i.action='RESERVATION_WRITE' AND c.expires_at>?",
+            Integer.class, bytes(review.intentId()), bytes(confirmation), bytes(actor.principal()), bytes(actor.delegation().delegationId()),
+            bytes(f.tenant), bytes(f.venue.value()), bytes(f.slot), 2, java.sql.Timestamp.from(f.clock.instant()));
+        approval.put("approved", matches == 1).put("exactActor", matches == 1)
+            .put("intent", review.intentId().toString()).put("confirmation", confirmation.toString())
+            .put("principal", actor.principal().toString()).put("delegation", actor.delegation().delegationId().toString());
     }
 }

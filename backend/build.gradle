@@ -116,6 +116,37 @@ tasks.register('m8RuntimeEvaluation', Test) {
     outputs.upToDateWhen { false }
 }
 
+// A fresh result directory prevents an earlier successful JUnit file from filling a missing case.
+def securityExecutionId = UUID.randomUUID().toString()
+def securityJUnit = layout.buildDirectory.dir("m8-security-junit/${securityExecutionId}")
+tasks.register('m8SecurityRegression', Test) {
+    group = 'verification'
+    description = 'Runs the required synthetic security cases with real Auth/MCP/Product/Knowledge and disposable MySQL; no external model calls.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    def catalog = new groovy.json.JsonSlurper().parse(file('src/test/resources/evaluation/security-v1/cases.json'))
+    filter {
+        catalog.cases.collectMany { it.tests }.unique().each { includeTestsMatching it }
+    }
+    reports.junitXml.outputLocation = securityJUnit
+    systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
+    systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
+    outputs.upToDateWhen { false }
+    finalizedBy 'm8SecurityReport'
+}
+
+tasks.register('m8SecurityReport', JavaExec) {
+    group = 'verification'
+    description = 'Generates the required security coverage report in the M8 result format; missing/skipped observations are INCOMPLETE.'
+    mustRunAfter 'm8SecurityRegression'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.evaluation.M8SecurityRegression'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.security.junit', securityJUnit.get().asFile.absolutePath
+}
+
 tasks.register('representativeFlowEvidence', Test) {
     group = 'verification'
     description = 'Opt-in fresh free-tier provider through the production Runtime, MCP/Product/Knowledge and disposable MySQL.'

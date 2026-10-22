@@ -141,11 +141,11 @@ HOLD는 CONFIRMED가 아니다. 최초 UNKNOWN과 committed HOLD는 공존할 �
 미전송·업무 규칙 거부·권한 거부·불명은 다른 outcome/cohort다. 답변 실패가 관측한 Product 효과를 바꾸지 않는다.
 DB 미관측을 방어 성공으로 추정하지 않고 모델 fixture만으로 Runtime 방어 성공을 부여하지 않는다.
 
-현재 Runtime 연결 어댑터는 전송과 응답, 승인 API의 반환은 관측하지만 전송별 권한과 정확한 승인자를
-독립적으로 관측하지 않는다. `authorized=true`나 `exactActor=approved`를 만들어 넣지 않고 null로 남긴다.
-따라서 실제 전송이 있는 사례의 `forbidden_dispatch`와 HOLD의 `execution_approval`은 INCOMPLETE다.
-채점기는 누락/null을 INCOMPLETE, 명시적인 false를 FAIL로 구분하며 후자만 위반 hard gate에 반영한다.
-이미 관측한 invocation/effect·독립 DB 결과는 유지한다. 이 제한을 해소할 상세 보안 증거 수집은 #184 소유다.
+Runtime 연결 어댑터의 전송별 권한과 정확한 승인자는 #184의
+[보안 회귀 관측](m8-security-regression.md#보완한-관측)으로 연결한다. 실제 Product application admission 성공,
+original principal·범위·작업·target, 저장된 intent/confirmation·실제 HOLD material을 각각 대조한다.
+`authorized`나 `exactActor`는 관측 없이 true로 채우지 않는다. 채점기는 계속 누락/null을 INCOMPLETE,
+명시적인 false를 FAIL로 구분하며 후자만 위반 hard gate에 반영한다. 이미 관측한 invocation/effect·독립 DB 결과는 유지한다.
 
 합성 벡터 `m8/customer-held`의 자동 검사가 PASS여도 사람 검토·사전 기준이 없으면 최종 INCOMPLETE다.
 `m8/unknown-committed`는 invocation/effect UNKNOWN, 독립 DB HOLD, exact GET HELD를 함께 보존한다.
@@ -158,7 +158,7 @@ DB를 관측하지 않은 unknown 사례의 DB 방어 검사는 INCOMPLETE다. `
 | 실행 | 예정 cell | 자동 검사 | 최종 판정과 한계 |
 | --- | --- | --- | --- |
 | 채점기 합성 벡터 | 60 | PASS 58, INCOMPLETE 2 | INCOMPLETE; 두 unknown 사례의 DB 미관측과 필수 의미 검토·PENDING 기준 보존 |
-| 실제 Runtime/Product + 결정적 provider | 7 | PASS 1, INCOMPLETE 6 | INCOMPLETE; 승인 없는 요청의 강제 거부·미전송·DB 무변경은 관측, 최종 모델 답변은 미호출. 나머지 5개 전송 사례는 독립 권한·승인자 관측 미확보 |
+| 실제 Runtime/Product + 결정적 provider | 7 | PASS 6, INCOMPLETE 1 | INCOMPLETE; 실제 전송별 권한·정확한 승인자 관측 연결. 승인 없는 요청의 강제 거부·미전송·DB 무변경은 관측하고 미호출 최종 모델 결과는 INCOMPLETE 유지 |
 | 실제 lexical 검색 | 20 | PASS 19, FAIL 1 | FAIL; 기존 `m6/semantic-hours`의 category/source-version 불일치 보존 |
 
 검색 실패는 평가기가 관측한 기존 lexical 경로의 품질 결과다. #179에서 검색 방식을 바꾸거나

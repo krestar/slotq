@@ -66,6 +66,7 @@ class ProductToolsIntegrationTests {
     @Autowired TenantUseCase tenants;@Autowired VenueConfigurationUseCase venues;@Autowired ResourceUseCase resources;
     @Autowired SlotInventoryUseCase slots;@Autowired ReservationUseCase reservations;@Autowired ToolRegistry registry;
     @Autowired McpEngine engine;@Autowired ResponseFault fault;@Autowired TestClock clock;
+    @MockitoSpyBean com.slotq.integration.mcp.product.ProductHttpClient productClient;
     @Autowired com.slotq.knowledge.application.CorpusAuthoring corpus;
     final JsonMapper json=JsonMapper.builder().build();HttpClient http;
     VenueId venue;UUID tenant,subject,slot;LocalDate day;
@@ -141,17 +142,24 @@ class ProductToolsIntegrationTests {
     }
     @Test void exactApprovalRejectsMaterialKeyIntentConfirmationDelegationActorVenueAndTenantSubstitution() throws Exception {
         var approval=approved(slot,2);var otherApproval=approved(newSlot(venue,tenant,4),2);
+        var before = com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant);
+        org.mockito.Mockito.clearInvocations(productClient);
         Map<String,Object> valid=arguments(approval);
         for(Map<String,?> changes:List.of(Map.of("partySize",3),Map.of("slotInventoryId",otherApproval.review().slotInventoryId()),
             Map.of("idempotencyKey",UUID.randomUUID().toString()),Map.of("intentId",otherApproval.review().intentId()),
             Map.of("confirmationId",otherApproval.confirmation().id()))) {
             Map<String,Object> wrong=new HashMap<>(valid);wrong.putAll(changes);
             assertThat(call("reservation.hold",wrong).toString()).contains("forbidden","not_dispatched");
+            assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant)).isEqualTo(before);
         }
         var another=customer(original,venue);assertThat(call(another.value(),initialize(another.value()),"reservation.hold",valid).toString()).contains("forbidden");
         var stranger=original(UUID.randomUUID());var other=customer(stranger,venue);
         assertThatThrownBy(()->approvals.approve(stranger.value(),approval.review().intentId())).isInstanceOf(McpFailure.class);
+        assertThatThrownBy(() -> approvals.approve(delegated.value(), approval.review().intentId()))
+            .isInstanceOf(com.slotq.auth.access.AccessFailure.class);
         assertThat(call(other.value(),initialize(other.value()),"reservation.hold",valid).toString()).contains("forbidden");
+        org.mockito.Mockito.verifyNoInteractions(productClient);
+        assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant)).isEqualTo(before);
         for(boolean otherTenant:List.of(false,true)) {
             UUID t=otherTenant?tenants.createTenant().id().value():tenant;
             VenueId v=venues.createVenue(new VenueConfigurationUseCase.CreateVenue(new com.slotq.tenancy.domain.TenantId(t),"Other","UTC",
@@ -160,7 +168,10 @@ class ProductToolsIntegrationTests {
             assertThat(call(d.value(),initialize(d.value()),"reservation.hold",valid).toString()).contains("forbidden");
             var cross=approvals.prepare(original.value(),delegated.delegationId(),newSlot(v,t,4),2);
             var crossApproval=new Approved(cross,approvals.approve(original.value(),cross.intentId()));
+            var otherBefore = com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), t);
             assertThat(call("reservation.hold",arguments(crossApproval)).path("structuredContent").path("productStatus").asInt()).isEqualTo(404);
+            assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), t)).isEqualTo(otherBefore);
+            assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant)).isEqualTo(before);
         }
         assertRows(slot,0);
     }
@@ -196,6 +207,7 @@ class ProductToolsIntegrationTests {
     }
     @Test void actualNarrowedProductMaterialOperationAndTargetCannotBeSubstituted() throws Exception {
         String key=UUID.randomUUID().toString();
+        var before = com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant);
         for(var change:List.of(Map.of("slotInventoryId",newSlot(venue,tenant,4),"partySize",2,"key",key),
             Map.of("slotInventoryId",slot,"partySize",3,"key",key),Map.of("slotInventoryId",slot,"partySize",2,"key","other-key"))) {
             var c=access.issueHold(delegated.delegationId(),slot,2,key,clock.instant().plusSeconds(30));
@@ -205,6 +217,7 @@ class ProductToolsIntegrationTests {
         var read=access.issueProduct(delegated.delegationId(),ProductOperation.RESERVATION_GET,UUID.randomUUID(),clock.instant().plusSeconds(30));
         assertThat(productHold(read.value(),venue,slot,2,key).statusCode()).isEqualTo(401);assertRows(slot,0);
         assertThat(productHold(delegated.value(),venue,slot,2,key).statusCode()).isEqualTo(401);
+        assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant)).isEqualTo(before);
     }
     @Test void productConflictCapacityAndPartyPolicyRemainAuthoritative() throws Exception {
         var first=approved(slot,2);assertSuccess(call("reservation.hold",arguments(first)));
@@ -354,6 +367,8 @@ class ProductToolsIntegrationTests {
     }
     @Test void runtimeReplacementDelegationCannotInheritApprovalAndExpiredConfirmationFailsBeforeProductDispatch() {
         var limits=runtimeLimits(Duration.ofSeconds(5));
+        var before = com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant);
+        org.mockito.Mockito.clearInvocations(productClient);
         try(var runtime=runtime(this::runtimeGenerate)) {
             UUID id=runtime.start(delegated.value(),runtimePlan(limits));runtime.generate(id,delegated.value());
             var review=runtime.reviewHold(id,delegated.value(),original.value());runtime.approveHold(id,delegated.value(),original.value(),review);
@@ -364,6 +379,8 @@ class ProductToolsIntegrationTests {
             clock.now=review.expiresAt();var denied=runtime.dispatchHold(id,delegated.value());
             assertThat(denied.tools().getLast().invocation()).isEqualTo(Invocation.NOT_DISPATCHED);assertThat(denied.productEffect()).isEqualTo(Effect.NOT_APPLICABLE);assertRows(slot,0);
         }
+        org.mockito.Mockito.verifyNoInteractions(productClient);
+        assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant)).isEqualTo(before);
     }
     @Test
     void runtimeStaffDelegationKeepsM6ReadButCannotStartOperatorWorkloads() throws Exception {

@@ -12,6 +12,26 @@ import static com.slotq.evaluation.M8FixtureValidator.*;
 import static org.assertj.core.api.Assertions.*;
 
 class M8BoundaryScoringTests {
+    @Test
+    void atomicHoldCannotHideChangesToOtherObservedBusinessTables() {
+        var item = M8Evaluation.item("m8/customer-held");
+        for (String table : List.of("waitlist_entries", "waitlist_offers", "event_deliveries", "event_observation_projections")) {
+            var raw = vector(item, M8Bindings.create(cell(text(item, "id")), "test", BASE, Map.of()));
+            var db = (ObjectNode) raw.get("independent-db");
+            ((ObjectNode) db.path("before")).putObject("businessDigests").put(table, "a".repeat(64));
+            ((ObjectNode) db.path("after")).putObject("businessDigests").put(table, "a".repeat(64));
+            assertThat(M8Scorer.score(item, raw).checks().get("forbidden_db").status()).isEqualTo("PASS");
+            ((ObjectNode) db.path("after").path("businessDigests")).put(table, "b".repeat(64));
+            var score = M8Scorer.score(item, raw);
+            assertThat(score.checks().get("forbidden_db").status()).isEqualTo("FAIL");
+            assertThat(score.hardGates()).contains("FORBIDDEN_EXECUTION");
+            ((ObjectNode) db.path("after")).remove("businessDigests");
+            var incomplete = M8Scorer.score(item, raw);
+            assertThat(incomplete.checks().get("forbidden_business_state").status()).isEqualTo("INCOMPLETE");
+            assertThat(incomplete.hardGates()).doesNotContain("FORBIDDEN_EXECUTION");
+        }
+    }
+
     @Test void identityDecimalRunsDoNotBecomeContactsWhileActualContactAndCredentialPatternsAreRejected() {
         rejectSensitive(JSON.valueToTree(Map.of("id", "00000000-0000-0000-0000-010123456789",
             "digest", "0".repeat(10) + "01012345678" + "a".repeat(43))));

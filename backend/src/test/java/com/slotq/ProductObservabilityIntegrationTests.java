@@ -58,6 +58,7 @@ class ProductObservabilityIntegrationTests {
     @Autowired SdkTracerProvider provider;
     @Autowired SwitchableExporter exporter;
     @Autowired Credentials credentials;
+    @Autowired io.micrometer.core.instrument.MeterRegistry meters;
     @LocalServerPort int port;
     final JsonMapper json = new JsonMapper();
     final HttpClient http = HttpClient.newHttpClient();
@@ -100,6 +101,9 @@ class ProductObservabilityIntegrationTests {
         assertThat(attr(effect,"slotq.outcome")).isEqualTo("committed");
         assertThat(attr(effect,"slotq.promotion.outcome")).isEqualTo("PROMOTED");
         assertThat(spans.toString()).doesNotContain(owner, waiter, MARKER, "db.statement", "url.full");
+        String metricIdentities = meters.getMeters().stream().map(meter -> meter.getId().toString())
+            .collect(java.util.stream.Collectors.joining("\n"));
+        assertThat(metricIdentities).doesNotContain(owner, waiter, MARKER, reservation);
     }
 
     @Test void appendFailureRollsBackBusinessAndRetainsFailureRequestCorrelation(org.springframework.boot.test.system.CapturedOutput logs) throws Exception {

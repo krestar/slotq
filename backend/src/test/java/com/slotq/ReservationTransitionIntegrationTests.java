@@ -283,6 +283,7 @@ class ReservationTransitionIntegrationTests {
         grantOperators(fixture);
         UUID reservationId = createHold(fixture, customerToken);
         clock.set(BASE_NOW.plus(Duration.ofMinutes(5)));
+        var before = com.slotq.evaluation.M8BusinessSnapshot.capture(jdbcTemplate.getDataSource(), fixture.tenant().id().value());
 
         command(fixture, reservationId, "check-in", customerToken)
             .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
@@ -294,6 +295,8 @@ class ReservationTransitionIntegrationTests {
         assertThat(allocationActive(reservationId)).isTrue();
         command(other, reservationId, "cancel", ownerToken)
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+        assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(jdbcTemplate.getDataSource(), fixture.tenant().id().value()))
+            .isEqualTo(before);
     }
 
     @Test
