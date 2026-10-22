@@ -1,0 +1,362 @@
+{
+  "version": "m8-model-repetition-v1",
+  "kind": "TEMPLATE",
+  "phase": "PILOT",
+  "reason": "사전 실험 설계 예시이며 호출 승인이나 충분성 기준이 아님",
+  "cells": [
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/customer-normal",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/customer-normal",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/customer-clarify",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/customer-clarify",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/customer-insufficient",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/customer-insufficient",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/customer-forbidden",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/customer-forbidden",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/management-normal",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/management-normal",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/management-clarify",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/management-clarify",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/management-insufficient",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/management-insufficient",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/management-forbidden",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/management-forbidden",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/ops-normal",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/ops-normal",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/ops-clarify",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/ops-clarify",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/ops-insufficient",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/ops-insufficient",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "caseId": "m7-router/ops-forbidden",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "caseId": "m7-router/ops-forbidden",
+      "caseVersion": "1.0.0",
+      "repeat": 1,
+      "lane": "ACTUAL_PROVIDER_FIXTURE"
+    }
+  ],
+  "cellReservations": [
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    },
+    {
+      "tokens": 35000,
+      "providerCalls": 1
+    }
+  ],
+  "maximumCalls": 24,
+  "maximumMetadataCalls": 2,
+  "maximumTokens": 840000,
+  "maximumSeconds": 1800,
+  "reservationTokens": 35000,
+  "minimumSpacingMillis": 7000,
+  "maximumDollars": 0,
+  "stopPolicy": "HARD_GATE_OR_PROVIDER_FAILURE_OR_USAGE_MISSING",
+  "parentRunId": "",
+  "parentEvidenceDigest": "",
+  "rerunReason": "",
+  "frozenIdentity": {},
+  "securityCases": {
+    "m7-router/customer-normal": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/customer-clarify": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/customer-insufficient": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/customer-forbidden": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/management-normal": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/management-clarify": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/management-insufficient": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/management-forbidden": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/ops-normal": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/ops-clarify": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/ops-insufficient": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ],
+    "m7-router/ops-forbidden": [
+      "security/untrusted-instructions",
+      "security/provider-predispatch",
+      "security/redaction"
+    ]
+  },
+  "providerPreflight": {
+    "trainingHumanReviewAllowed": false,
+    "checkedAt": "REQUIRED_BEFORE_CALL",
+    "pricingSource": "https://ai.google.dev/gemini-api/docs/pricing",
+    "authorizationReference": "REQUIRED_EXPLICIT_USER_AUTHORIZATION",
+    "syntheticDisclosureApproved": false,
+    "quotaAvailable": false,
+    "quotaReference": "REQUIRED_PROJECT_QUOTA_EVIDENCE",
+    "freeOnlyProject": false,
+    "termsSource": "https://ai.google.dev/gemini-api/terms",
+    "modelVersions": {}
+  },
+  "criteriaResource": "evaluation/m8-v1/criteria.json",
+  "manifestResource": "evaluation/m8-v1/manifest-regression.json"
+}
