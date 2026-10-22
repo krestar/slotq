@@ -114,6 +114,7 @@ public final class M8ModelQualification {
                 text(plan.path(key), "runId"); M8RunContract.sha(plan.path(key), "digest");
                 require(!plan.path(key).path("runId").asString().equals(plan.path("parentRunId").asString()), "failed rerun is not a replacement baseline");
             }
+            distinctReferences(plan);
             equal(plan, "stabilityMethod", "PLANNED_RATE_REPEAT_RANGE_WILSON95_DESCRIPTIVE");
             for (var cell : cells) require(plan.path("providerPreflight").path("modelVersions").path(cell.model()).asString()
                 .matches("[a-zA-Z0-9._-]{1,100}"), "qualification model version must be frozen");
@@ -164,7 +165,21 @@ public final class M8ModelQualification {
     static ObjectNode comparisonIdentity(JsonNode source, JsonNode snapshots) {
         var value = identity(source, snapshots);
         value.remove(List.of("sourceRevision", "sourceDirty", "buildDigest", "configDigest", "criteria.json"));
+        value.set("executionConfigDigest", source.path("executionConfigDigest"));
         return value;
+    }
+
+    static String executionConfigDigest(JsonNode manifest) {
+        var execution = (ObjectNode) manifest.deepCopy();
+        ((ObjectNode) execution.path("versions")).remove("criteria");
+        // Approval/version metadata changes between the pilot and qualification; execution settings do not.
+        ((ObjectNode) execution.path("provider")).remove("termsCheckedAt");
+        return digest(JSON.writeValueAsBytes(canonical(execution)));
+    }
+
+    private static void distinctReferences(JsonNode plan) {
+        require(!plan.path("pilot").path("runId").equals(plan.path("baseline").path("runId"))
+            && !plan.path("pilot").path("digest").equals(plan.path("baseline").path("digest")), "distinct pilot and baseline executions required");
     }
 
     static JsonNode reference(JsonNode reference) throws Exception {
@@ -178,6 +193,7 @@ public final class M8ModelQualification {
 
     static void verifyReferences(JsonNode plan, JsonNode source, JsonNode snapshots, JsonNode pilot, JsonNode baseline) {
         require(pilot != null && baseline != null, "pilot/baseline evidence required");
+        distinctReferences(plan);
         for (var entry : Map.of("pilot", pilot, "baseline", baseline).entrySet()) {
             var results = entry.getValue().path("results");
             require(results.path("runId").equals(plan.path(entry.getKey()).path("runId"))

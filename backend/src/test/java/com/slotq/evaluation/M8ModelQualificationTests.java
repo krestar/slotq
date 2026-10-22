@@ -186,10 +186,18 @@ class M8ModelQualificationTests {
     }
 
     @Test void positiveFrozenPreflightIsOnlyAMetadataTestAndStillRequiresRealPilotAtExecution() {
-        var plan = plan(List.of(CELL)); var manifest = manifest(plan); plan.put("phase", "QUALIFICATION");
+        var plan = qualificationPlan(); var manifest = manifest(plan);
+        ((ObjectNode) manifest.path("versions")).put("criteria", "1.1.0");
+        M8ModelQualification.preflight(plan, manifest, List.of(CELL), Instant.now());
+        assertThatThrownBy(() -> M8ModelQualification.reference(plan.path("pilot"))).isInstanceOf(Exception.class);
+        ((ObjectNode) plan.path("criteria").path("thresholds").get(0).path("after")).put("regression_margin", "not-a-number");
+        assertThatThrownBy(() -> M8ModelQualification.preflight(plan, manifest, List.of(CELL), Instant.now())).hasMessageContaining("numeric unit threshold");
+    }
+
+    static ObjectNode qualificationPlan() {
+        var plan = plan(List.of(CELL)); plan.put("phase", "QUALIFICATION");
         var criteria = M8FixtureValidatorTests.frozenCriteria(); criteria.put("version", "1.1.0");
         criteria.withArray("history").addObject().put("version", "1.1.0").put("reason", "synthetic test only").put("previous", "1.0.0");
-        ((ObjectNode) manifest.path("versions")).put("criteria", "1.1.0");
         for (var threshold : criteria.path("thresholds")) {
             if (!Set.of("quality", "security").contains(threshold.path("id").asString())) continue;
             ((ObjectNode) threshold).put("version", "1.1.0");
@@ -207,10 +215,7 @@ class M8ModelQualificationTests {
         plan.putObject("pilot").put("runId", "synthetic-pilot").put("digest", "a".repeat(64));
         plan.putObject("baseline").put("runId", "synthetic-baseline").put("digest", "b".repeat(64));
         plan.withObject("providerPreflight").putObject("modelVersions").put(CELL.model(), "synthetic-version");
-        M8ModelQualification.preflight(plan, manifest, List.of(CELL), Instant.now());
-        assertThatThrownBy(() -> M8ModelQualification.reference(plan.path("pilot"))).isInstanceOf(Exception.class);
-        ((ObjectNode) criteria.path("thresholds").get(0).path("after")).put("regression_margin", "not-a-number");
-        assertThatThrownBy(() -> M8ModelQualification.preflight(plan, manifest, List.of(CELL), Instant.now())).hasMessageContaining("numeric unit threshold");
+        return plan;
     }
 
     @Test void injectedAttemptCountsCannotQualifyAsActualPilotOrBaseline() {
@@ -219,9 +224,10 @@ class M8ModelQualificationTests {
         var references = new HashMap<String, JsonNode>();
         for (String name : List.of("pilot", "baseline")) {
             String runId = "injected-reference-test-" + name;
-            plan.putObject(name).put("runId", runId).put("digest", "a".repeat(64));
+            String evidenceDigest = (name.equals("pilot") ? "a" : "b").repeat(64);
+            plan.putObject(name).put("runId", runId).put("digest", evidenceDigest);
             var reference = JSON.createObjectNode(); var results = reference.putObject("results");
-            results.put("runId", runId).put("evidenceDigest", "a".repeat(64)); results.putObject("integrity");
+            results.put("runId", runId).put("evidenceDigest", evidenceDigest); results.putObject("integrity");
             var quality = results.putObject("modelQualification").put("phase", "PILOT");
             quality.set("comparisonIdentity", M8ModelQualification.comparisonIdentity(source, snapshots));
             var row = results.putArray("rows").addObject(); row.set("cell", JSON.valueToTree(CELL));

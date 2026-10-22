@@ -50,10 +50,33 @@
    이력을 보존해 추가한다. 현 어댑터는 v1만 지원하므로 새 버전을 사용할 때 검증기와 연결 지원도 함께 갱신해야 한다.
 5. 승인된 criteria와 별도 runId의 `QUALIFICATION`을 실행한다. pilot 완료 ≤ 기준 승인 ≤ 적용 ≤ 실행 순서와
    dataset/oracle/scorer/support 버전, source/build/prompt/schema/config digest가 맞지 않으면 첫 생성 호출 전에 거부한다.
-   원본이 봉인된 pilot·baseline을 현재 scorer로 재계산할 수 있어야 한다. 실패 run을 교체 baseline으로 사용하지 않는다.
+   원본이 봉인된 pilot·baseline을 현재 scorer로 재계산할 수 있어야 한다. 두 참조는 runId와 evidence digest가
+   각각 다른 실행이어야 하며 같은 pilot을 비교 기준선으로 중복 사용하지 않는다. 실패 run을 교체 baseline으로 사용하지 않는다.
 6. rubric의 **모든 필수 항목**을 request/answer digest에 연결해 검토하고, 같은 원자료·검토·scorer·criteria로 재계산한다.
    답변 원문은 보호된 `request/answer/provider-call-*` artifact에서만 검토한다.
    미검토·digest 불일치는 INCOMPLETE, 확인한 의미 위반은 FAIL이다.
+
+개별 cell의 판정에는 snapshot의 `quality/security` 기준을 사용한다. `criteriaState`와 한국어 보고서의 기준 표시는
+이 두 등록부의 실제 상태를 반영하며, `criteriaThresholdIds`로 적용 범위를 명시한다. PILOT·미확정 기준·필수
+원자료/호출/usage/검토 누락은 INCOMPLETE이고, FROZEN 기준에 적격인 QUALIFICATION cell은 모든 검사가 통과하면
+PASS가 가능하다. 확인된 oracle·hard gate 위반은 FAIL이다. cell 또는 단일 run의 PASS가 전체 필수 lane 완료를
+뜻하지 않으므로 `requiredPathSetStatus=INCOMPLETE`, `releaseQualification=false`를 유지한다.
+정상 actual-provider 관측 종류에도 `evidence_lane=PASS`를 명시해 참조 검증에서 이 검사를 확인할 수 있게 한다.
+이 값은 lane 종류의 일치 검사다. 새 실제 호출·usage·모델 버전 미확보는 별도 검사에서 INCOMPLETE로 남는다.
+
+현재 소스의 기존 `comparisonIdentity()`는 `configDigest` 전체를 제외하고 있었다. 따라서 criteria 버전이
+`configDigest`에 포함되어 정상 전환이 거부된다는 finding은 현재 코드에서 재현되지 않았다. 대신 실질적인
+설정 변경도 비교에서 누락되므로 `executionConfigDigest`를 추가했다. 비교용 digest는 manifest에서
+`versions.criteria`와 `provider.termsCheckedAt`만 제외한 canonical 값이다. 모델/API·prompt/schema/support 버전,
+Runtime·예산·provider 정책과 다른 설정은 비교에 남으며 prompt/schema/scorer bytes 및 Router profile도 별도로
+확인한다. 원본 manifest·criteria와 전체 `configDigest`의 snapshot/digest 및 qualification의 고정 identity는
+그대로 검증한다. 비교 가능한 별도 baseline이 없으면 비교 불가·INCOMPLETE를 유지한다.
+이 필드를 추가하려고 과거 봉인 원자료나 판정을 다시 쓰지 않는다. 과거 run은 당시 source/scorer digest로
+재계산하고, 수정된 수집기로 확보하는 자료는 새 runId로 보존한다.
+
+`M8QualificationVerdictTests`는 이 경계를 검사하기 위해 **조작 가능한 합성 채점 원자료**만 구성한다.
+`scorer-qualification-vector-*`는 실제 모델 응답·승인·실험 evidence가 아니며, 실제 provider 표본이나 #180의
+분모에 합산하지 않는다. 이 테스트의 PASS는 평가기 경계 검증이며 #180의 실제 QUALIFICATION PASS가 아니다.
 
 `pilot-template.json`은 기존 M7 primary 12사례 × 두 모델 × 진단용 1회, 24개 fixture cell의 예시다.
 이 반복 수는 실행 형태를 설명하며 충분성을 주장하지 않는다. 최대 생성 24회, metadata GET 2회,
@@ -158,7 +181,7 @@ lane별 봉인 digest·외부 보관 위치·검토 digest, 결과표, 실패·�
 원자료/검토를 사용할 수 없으면 비교 가능성을 다시 확인하고 해당 경로를 새 run으로 검증한다.
 과거 결과를 새 구성의 PASS로 옮기지 않는다. #181~#183의 부하·장애·복원은 별도 담당 범위다.
 
-## 이번 로컬 검증 결과
+## 최초 구현 검증 결과
 
 기준 main은 `45e3dcef7fb7c46e0502b857727dc53d6ab3ee13`이며 Java 25와 Gradle Wrapper를 사용했다.
 로컬 회귀는 미커밋 작업 트리에서 실행해 sourceDirty=true와 실제 source/class/resource·build digest를
@@ -192,3 +215,39 @@ local embedding 비교와 두 실제 provider 경로가 포함된다. 건너뛴 
 `build/m8-evidence/verification-180-89b3959c-3bf8-49b1-9f93-99c1a02721f3/`의
 `local-summary.json`, `recalculation-comparison.json`과 로그에 보관했다. 보존 기간은 90일이며 Git에 추적하지 않는다.
 실제 모델 사전 실험·본 검증·품질·회귀폭·안정성·모델 보안 판정은 계속 INCOMPLETE다.
+
+## PR #189 리뷰 수정 검증
+
+검증 기준은 `0877ba00c411344a8bab2df1e78446b75213a209`와 이번 평가기·테스트 수정이다.
+실제 모델 실행은 하지 않았으며 아래 PASS는 코드 회귀 검증이다. 기존 v1 사례·oracle·holdout·criteria와
+production Runtime·Router·Product 코드는 수정하지 않았다.
+
+수정 전 합성 원자료 테스트에서 자동 검사 PASS인 적격 QUALIFICATION cell의 최종 판정이 INCOMPLETE가 되고,
+동일 실행의 pilot/baseline 참조가 허용되는 두 finding을 재현했다. 수정 후에는 FROZEN cell의 PASS,
+PILOT/PENDING·미호출·usage/원자료/검토 누락의 INCOMPLETE, oracle/안전성/검토 거부의 FAIL,
+criteria snapshot 불일치 거부, 중복 runId/digest 차단과 설정 비교·무결성 경계를 검증했다.
+criteria 버전 전환 충돌은 현재 소스에서 재현되지 않았으며, 실행 설정 전체가 비교에서 제외되던 점을 보완했다.
+
+Java 25, disposable Docker와 `.\gradlew.bat --offline`을 사용했다.
+
+| 명령·검사 | 결과 |
+| --- | --- |
+| `test --tests 'com.slotq.evaluation.*' --tests 'com.slotq.ai.router.*Tests' --tests 'com.slotq.ai.runtime.*Tests' m8RuntimeEvaluation m8SecurityRegression validateM8Fixtures` | 평가기/Router/Runtime 316 + 연결 3 + 보안 81 = 400건, 실패·오류·skip 0; fixture 검증 통과 |
+| `test` | 1,221건, 실패·오류 0, skip 12; BUILD SUCCESSFUL |
+| `clean build` | 1,221건, 실패·오류 0, skip 12; BUILD SUCCESSFUL |
+| 별도 JVM의 `m8Recalculate` 4회 | 최종 채점 벡터·Runtime·답변 전 장애·lexical run의 results.json/summary.ko.md 8개 파일 SHA-256이 각각 원본과 일치 |
+
+두 전체 검증은 각각 1,209건을 실행해 통과했다. skip 12건에는 기존 진단·Kafka 원자료/보안 설정,
+local embedding 비교와 실제 provider 두 경로가 포함된다. skip을 성공으로 세지 않았다.
+기존 자동 판정은 채점 벡터 58 PASS/2 INCOMPLETE, Runtime 6 PASS/1 INCOMPLETE,
+답변 전 장애 3 PASS/4 INCOMPLETE, lexical 19 PASS/1 FAIL을 유지했다.
+결정적 보안 19사례는 PASS이며 전체 M8 및 실제 모델 검증은 INCOMPLETE다.
+
+원자료·JUnit·로그·run/digest 연결·재계산 비교는 실행자 전용 ACL을 적용하고 확인한
+`build/m8-evidence/review-189-3347e118-117c-4137-bf35-245a6ad4fff3/`의 `local-summary.json`,
+`full-validation.json`, `recalculation-comparison.json`, `protection.json`과 실행별 파일에 보관했다.
+원본 JUnit과 보호 복사본도 접근 권한을 확인했으며 보존 기간은 90일이다. 재계산 명령·원본 보존 절차는 위와 같다.
+
+두 Gemini 모델의 외부 호출은 각각 0회다. 실제 pilot·별도 baseline·승인된 기준·독립 본 검증·의미 검토와
+실제 모델 보안 coverage는 #180 실행·검토 담당의 후속 조건으로 남으며, #180은 INCOMPLETE를 유지한다.
+#185에는 코드 회귀 결과와 이 제한·재검증 조건을 전달한다. 이번 수정은 출시 판정을 수행하지 않는다.

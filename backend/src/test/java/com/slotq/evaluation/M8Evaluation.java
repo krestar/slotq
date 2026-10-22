@@ -116,6 +116,7 @@ public final class M8Evaluation {
         sourceBuild.put("promptDigest", digest(classBytes(com.slotq.ai.flow.RepresentativeContext.class)));
         sourceBuild.put("schemaDigest", digest(com.slotq.ai.router.ProviderProtocol.SCHEMA_JSON.getBytes(StandardCharsets.UTF_8)));
         sourceBuild.put("configDigest", digest(JSON.writeValueAsBytes(manifest)));
+        sourceBuild.put("executionConfigDigest", M8ModelQualification.executionConfigDigest(manifest));
         snapshots.set("source-build", writeArtifact("snapshots/source-build.json", JSON.writeValueAsBytes(sourceBuild)));
         if (qualification != null) {
             M8ModelQualification.verifyIdentity(qualification, sourceBuild, snapshots);
@@ -330,8 +331,12 @@ public final class M8Evaluation {
             catch (IOException e) { throw invalid("missing legacy snapshot"); }
         });
         M8RunContract.validateCriteria(criteria); validateRubric(snapshotValues.get("review-rubric.json"));
+        require(criteria.path("version").equals(manifest.path("versions").path("criteria")), "criteria snapshot/manifest version mismatch");
+        boolean frozenCriteria = array(criteria, "thresholds").stream().filter(t -> Set.of("quality", "security").contains(text(t, "id")))
+            .allMatch(t -> t.path("state").asString().equals("FROZEN"));
         JsonNode qualification = snapshotValues.get("qualification");
         if (qualification != null) {
+            require(criteria.equals(qualification.path("criteria")), "qualification criteria snapshot mismatch");
             var planned = array(plan, "cells").stream().map(c -> JSON.treeToValue(c, Cell.class)).toList();
             M8ModelQualification.preflight(qualification, manifest, planned, Instant.parse(text(plan, "frozenAt")));
             M8ModelQualification.verifyIdentity(qualification, snapshotValues.get("source-build"), snapshots);
@@ -342,6 +347,7 @@ public final class M8Evaluation {
         var source = snapshotValues.get("source-build");
         require(digest(JSON.writeValueAsBytes(source.path("code"))).equals(source.path("scorerDigest").asString()), "scorer identity mismatch");
         require(source.path("configDigest").equals(snapshots.path("manifest").path("digest")), "configuration identity mismatch");
+        require(source.path("executionConfigDigest").asString().equals(M8ModelQualification.executionConfigDigest(manifest)), "execution configuration identity mismatch");
         for (var entry : source.path("classes").properties()) {
             JsonNode ref = entry.getValue();
             byte[] bytes = Files.readAllBytes(M8ProtectedFiles.resolve(root, ref.path("path").asString()));
@@ -419,7 +425,7 @@ public final class M8Evaluation {
                         boolean flow = cell.lane().equals("ACTUAL_PROVIDER_FLOW");
                         boolean kind = raw.getOrDefault("result", JSON.createObjectNode()).path("observationKind").asString()
                             .equals(flow ? "ACTUAL_PROVIDER_PRODUCTION_RUNTIME" : "ACTUAL_PROVIDER_SYNTHETIC_FIXTURE");
-                        if (!kind) marks.put("evidence_lane", new M8Scorer.Mark("INCOMPLETE", "실제 호출 lane의 관측 종류 미확보"));
+                        marks.put("evidence_lane", new M8Scorer.Mark(kind ? "PASS" : "INCOMPLETE", kind ? "실제 호출 lane의 관측 종류 일치" : "실제 호출 lane의 관측 종류 미확보"));
                         if (flow) {
                             var runtime = raw.getOrDefault("result", JSON.createObjectNode()).path("runtime");
                             boolean replay = runtime.path("providers").isArray() && !runtime.path("providers").isEmpty()
@@ -475,14 +481,17 @@ public final class M8Evaluation {
             row.set("axisResults", axisResults(marks));
             marks.forEach((name, mark) -> { if (!mark.status().equals("PASS")) reasons.add(name + ": " + mark.reason()); });
             var statuses = new ArrayList<>(marks.values().stream().map(M8Scorer.Mark::status).toList());
-            statuses.add("INCOMPLETE"); reasons.add("M8 본 검증 기준 미확정; 결정적 회귀는 출시 PASS가 아님");
+            if (qualification == null || !qualification.path("phase").asString().equals("QUALIFICATION") || !frozenCriteria) {
+                statuses.add("INCOMPLETE"); reasons.add("본 검증 기준 미확정 또는 본 검증 이외의 실행");
+            }
             String status = !gates.isEmpty() ? "FAIL" : M8Scorer.combine(statuses);
             row.put("status", status); rows.add(row); index++;
             row.set("record", contractRecord(plan, cell, item, row, source, snapshots, criteria, index - 1));
         }
         var result = JSON.createObjectNode();
         result.put("scorer", SCORER).put("runId", text(plan, "runId")).put("evidenceDigest", expectedDigest)
-            .put("criteriaState", "PENDING").put("plannedCells", rows.size()).put("releaseQualification", false);
+            .put("criteriaState", frozenCriteria ? "FROZEN" : "PENDING").put("plannedCells", rows.size()).put("releaseQualification", false);
+        result.putArray("criteriaThresholdIds").add("quality").add("security");
         result.put("reviewDigest", reviewDigest);
         result.set("rows", rows); result.set("cohorts", aggregate(rows));
         String status = M8Scorer.combine(rows.valueStream().map(r -> r.path("status").asString()).toList());
@@ -612,7 +621,7 @@ public final class M8Evaluation {
         Files.createDirectories(destination);
         writeNew(destination.resolve("results.json"), JSON.writerWithDefaultPrettyPrinter().writeValueAsBytes(results));
         StringBuilder summary = new StringBuilder("M8 공통 평가 결과: " + results.path("status").asString() + "\n\n계획 cell: " + results.path("plannedCells").asInt()
-            + " / 기준: PENDING / 출시 판정: 수행하지 않음\n\n| 사례 | 반복 | 모델 | lane | 자동 검사 | 최종 | 사유 |\n| --- | --- | --- | --- | --- | --- | --- |\n");
+            + " / 기준: " + results.path("criteriaState").asString() + " / 출시 판정: 수행하지 않음\n\n| 사례 | 반복 | 모델 | lane | 자동 검사 | 최종 | 사유 |\n| --- | --- | --- | --- | --- | --- | --- |\n");
         for (var row : results.path("rows")) {
             var cell = row.path("cell"); summary.append("| ").append(cell.path("caseId").asString()).append(" | ").append(cell.path("repeat").asInt())
                 .append(" | ").append(cell.path("model").asString()).append(" | ").append(cell.path("lane").asString()).append(" | ")
