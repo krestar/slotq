@@ -20,7 +20,7 @@ oracle로 구성한 테스트 입력이며 실제 모델·독립 DB·의미 검�
 API 키·Docker·외부 네트워크가 필요 없다. `model=scorer-test-vector`, `lane=DETERMINISTIC`,
 `observationKind=SCORER_TEST_VECTOR`를 기록하며 의미 검토를 자동 승인하지 않는다.
 
-`m8RuntimeEvaluation`은 기존 두 통합 테스트의 disposable MySQL 8.4를 사용한다.
+`m8RuntimeEvaluation`은 기존 통합 경로의 disposable MySQL 8.4를 사용한다.
 기존 Router/Runtime/MCP/인증된 Product HTTPS/Knowledge를 실제로 실행하고 provider만 결정적으로 주입한다.
 연결된 HOLD proposal/answer, Management, Ops, 업무 규칙 거부, 승인 누락 강제 거부,
 commit 후 응답 유실과 exact GET을 연결한다.
@@ -29,6 +29,9 @@ Ops 합성 projection의 시각은 실행 기준 시각에 고정해 DB 현재 �
 canonical M6 18개와 M8 문서 삭제/검색 holdout 2개는 현재 lexical 검색으로 실행한다.
 실제 검색의 oracle 불일치도 FAIL로 보존하며 검색 방식이나 fixture를 조정하지 않는다.
 이 자료는 실제 외부 모델 표본이나 #184의 보안 coverage 검증이 아니다.
+최종 provider 호출 전 장애 회귀도 별도 결정적 run으로 실행한다. 이미 관측한 Product 효과·독립 DB 상태를
+유지하고, 초기 HOLD 제안을 미호출 최종 답변으로 재사용하지 않는다. 이 run의 pointer는
+`latest-runtime-answer-fault-run.txt`이며 일반 Runtime·실제 provider 자료와 합산하지 않는다.
 
 매번 새 runId를 만들고 저장소 루트의 ignored `build/m8-evidence/<runId>/`에 보관한다.
 `latest-scorer-run.txt`, `latest-runtime-run.txt`, `latest-retrieval-run.txt`는 마지막 runId와
@@ -99,8 +102,8 @@ oracle 자체를 신뢰할 수 없으면 재계산을 거부한다. 사례 자�
 결과표의 사례별 사유와 전체 integrity에 남긴다.
 
 새 실행에는 새 runId를 사용한다. process-local Run을 재시작해 이어가거나 실패 표본을 교체하지 않는다.
-#180의 실제 provider 수집은 기존 `modelComparison`/`representativeFlowEvidence`의 opt-in,
-무료 tier·약관·한도 계약을 유지하는 별도 작업이다. 이 실행 CLI는 실제 provider를 호출하지 않는다.
+#180의 [실제 provider 반복 수집](m8-model-repetition.md)은 기존 `modelComparison`/`representativeFlowEvidence`의 opt-in,
+무료 tier·약관·한도 계약을 유지한다. `m8Evaluate`와 `m8RuntimeEvaluation`은 실제 provider를 호출하지 않는다.
 과거 summary나 결정적 자료로 actual-provider lane의 누락을 채우지 않는다.
 
 ## 채점·결과표
