@@ -172,9 +172,39 @@ public final class M8ModelQualification {
     static String executionConfigDigest(JsonNode manifest) {
         var execution = (ObjectNode) manifest.deepCopy();
         ((ObjectNode) execution.path("versions")).remove("criteria");
-        // Approval/version metadata changes between the pilot and qualification; execution settings do not.
-        ((ObjectNode) execution.path("provider")).remove("termsCheckedAt");
+        // Whole-run collection caps may differ with the schedule. Each sealed plan still enforces its
+        // own cap, reservations and stop policy; per-Run Runtime limits remain in configuration.
+        ((ObjectNode) execution.path("provider")).remove(List.of("termsCheckedAt", "maximumCalls"));
+        normalizeDisposablePorts(execution);
         return digest(JSON.writeValueAsBytes(canonical(execution)));
+    }
+
+    private static void normalizeDisposablePorts(ObjectNode execution) {
+        var environment = (ObjectNode) execution.path("environment");
+        var ingress = (ObjectNode) execution.path("ingress");
+        // Only the existing mutation harness checks this disposable MySQL/loopback TLS profile
+        // against a live target before collection and each cell. This projection is not authorization.
+        if (!execution.path("kind").asString().equals("EXECUTION")
+                || !execution.path("profile").asString().equals("SYNTHETIC_REGRESSION")
+                || !execution.path("features").path("productWrite").asBoolean()
+                || !environment.path("measured").asBoolean() || !environment.path("disposable").asBoolean()
+                || environment.path("publicExposure").asBoolean()
+                || !environment.path("dbPasswordSource").asString().equals("ENV_REF:TESTCONTAINERS_EPHEMERAL")
+                || !environment.path("network").asString().equals("loopback-and-disposable-container-network")
+                || !environment.path("storage").asString().matches(".*; (?:docker.io/library/)?mysql:8\\.4(?:\\.[0-9]+)?; image=sha256:[a-f0-9]{64}")
+                || !ingress.path("tlsEnabled").asBoolean()
+                || !ingress.path("mcpOrigin").equals(ingress.path("productOrigin"))) return;
+        String loopback = "(?:localhost|127[.]0[.]0[.]1|\\[::1\\])";
+        var jdbc = java.util.regex.Pattern.compile("^(jdbc:mysql://" + loopback + "):([0-9]{1,5})(/[^?#]+(?:\\?[^#]*)?)$")
+            .matcher(environment.path("dbHost").asString());
+        var https = java.util.regex.Pattern.compile("^(https://" + loopback + "):([0-9]{1,5})$")
+            .matcher(ingress.path("productOrigin").asString());
+        if (!jdbc.matches() || !https.matches()) return;
+        int dbPort = Integer.parseInt(jdbc.group(2)), tlsPort = Integer.parseInt(https.group(2));
+        if (dbPort < 1 || dbPort > 65535 || tlsPort < 1 || tlsPort > 65535) return;
+        // Preserve host, database, JDBC options and the co-located origin relation byte for byte.
+        environment.put("dbHost", jdbc.group(1) + ":0" + jdbc.group(3));
+        ingress.put("mcpOrigin", https.group(1) + ":0").put("productOrigin", https.group(1) + ":0");
     }
 
     private static void distinctReferences(JsonNode plan) {

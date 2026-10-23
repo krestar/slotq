@@ -183,23 +183,8 @@ class M8QualificationVerdictTests {
 
     // Promote a fabricated PILOT archive only inside this scorer test; never publish a latest-model pointer.
     static Archive archive() throws Exception {
-        String runId = "scorer-qualification-vector-" + UUID.randomUUID();
         var pilotPlan = plan(List.of(CELL));
-        var session = new M8Evaluation(runId, List.of(CELL), manifest(pilotPlan), M8ModelQualification.budget(pilotPlan),
-            c -> M8Bindings.create(c, runId, M8EvaluationTests.BASE, Map.of()), null, pilotPlan);
-        session.execute((cell, input, recorder) -> {
-            var raw = M8EvaluationTests.vector(M8Evaluation.item(cell.caseId()), recorder.binding());
-            ((ObjectNode) raw.get("result")).put("observationKind", "ACTUAL_PROVIDER_SYNTHETIC_FIXTURE");
-            raw.put("provider-call-a", journal("", true));
-            raw.forEach((id, value) -> M8EvaluationTests.put(recorder, id, value));
-            var review = JSON.createObjectNode().put("runId", runId).put("rubricVersion", "m8-answer-v1")
-                .put("state", "APPROVED").put("reviewer", "synthetic-scorer-test-only").put("reviewedAt", Instant.now().toString())
-                .put("requestDigest", digest(JSON.writeValueAsBytes(raw.get("request"))))
-                .put("answerDigest", digest(JSON.writeValueAsBytes(raw.get("answer"))));
-            review.set("cell", JSON.valueToTree(cell)); var findings = review.putObject("findings");
-            for (String name : strings(read("review-rubric.json"), "required")) findings.put(name, true);
-            recorder.put("review", review);
-        });
+        var session = pilotArchive(pilotPlan, manifest(pilotPlan));
         Path root = session.directory(); var frozen = readNode(root, "plan.json");
         var snapshots = (ObjectNode) frozen.path("snapshots"); var qualification = qualificationPlan();
         qualification.withObject("providerPreflight").set("checkedAt", pilotPlan.path("providerPreflight").path("checkedAt"));
@@ -216,6 +201,26 @@ class M8QualificationVerdictTests {
         }
         frozen.put("phase", "QUALIFICATION"); Files.write(root.resolve("plan.json"), JSON.writeValueAsBytes(frozen));
         return new Archive(root, frozen, qualification, source);
+    }
+
+    static M8Evaluation pilotArchive(ObjectNode pilotPlan, ObjectNode manifest) throws Exception {
+        String runId = "scorer-qualification-vector-" + UUID.randomUUID();
+        var session = new M8Evaluation(runId, List.of(CELL), manifest, M8ModelQualification.budget(pilotPlan),
+            c -> M8Bindings.create(c, runId, M8EvaluationTests.BASE, Map.of()), null, pilotPlan);
+        session.execute((cell, input, recorder) -> {
+            var raw = M8EvaluationTests.vector(M8Evaluation.item(cell.caseId()), recorder.binding());
+            ((ObjectNode) raw.get("result")).put("observationKind", "ACTUAL_PROVIDER_SYNTHETIC_FIXTURE");
+            raw.put("provider-call-a", journal("", true));
+            raw.forEach((id, value) -> M8EvaluationTests.put(recorder, id, value));
+            var review = JSON.createObjectNode().put("runId", runId).put("rubricVersion", "m8-answer-v1")
+                .put("state", "APPROVED").put("reviewer", "synthetic-scorer-test-only").put("reviewedAt", Instant.now().toString())
+                .put("requestDigest", digest(JSON.writeValueAsBytes(raw.get("request"))))
+                .put("answerDigest", digest(JSON.writeValueAsBytes(raw.get("answer"))));
+            review.set("cell", JSON.valueToTree(cell)); var findings = review.putObject("findings");
+            for (String name : strings(read("review-rubric.json"), "required")) findings.put(name, true);
+            recorder.put("review", review);
+        });
+        return session;
     }
 
     static ObjectNode referenceVector(JsonNode ref, JsonNode source, JsonNode snapshots) {

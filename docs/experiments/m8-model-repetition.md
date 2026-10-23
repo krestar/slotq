@@ -64,17 +64,34 @@ PASS가 가능하다. 확인된 oracle·hard gate 위반은 FAIL이다. cell 또
 정상 actual-provider 관측 종류에도 `evidence_lane=PASS`를 명시해 참조 검증에서 이 검사를 확인할 수 있게 한다.
 이 값은 lane 종류의 일치 검사다. 새 실제 호출·usage·모델 버전 미확보는 별도 검사에서 INCOMPLETE로 남는다.
 
-현재 소스의 기존 `comparisonIdentity()`는 `configDigest` 전체를 제외하고 있었다. 따라서 criteria 버전이
-`configDigest`에 포함되어 정상 전환이 거부된다는 finding은 현재 코드에서 재현되지 않았다. 대신 실질적인
-설정 변경도 비교에서 누락되므로 `executionConfigDigest`를 추가했다. 비교용 digest는 manifest에서
-`versions.criteria`와 `provider.termsCheckedAt`만 제외한 canonical 값이다. 모델/API·prompt/schema/support 버전,
-Runtime·예산·provider 정책과 다른 설정은 비교에 남으며 prompt/schema/scorer bytes 및 Router profile도 별도로
-확인한다. 원본 manifest·criteria와 전체 `configDigest`의 snapshot/digest 및 qualification의 고정 identity는
+최초 `comparisonIdentity()`는 `configDigest` 전체를 제외하고 있었다. 따라서 criteria 버전이
+`configDigest`에 포함되어 정상 전환이 거부된다는 최초 finding은 재현되지 않았다. 실질적인 설정 변경의
+누락을 보완한 `949ed7a`의 `executionConfigDigest`에서는 반대로 실행별 호출 상한과 임시 포트 차이도
+비교를 거부했다. 독립 snapshot 생성·봉인·참조 재계산으로 호출 상한 차이의 거부를 재현했다.
+
+비교용 digest는 manifest의 canonical 값에서 아래 차이만 처리한다. 그 외 필드는 모두 비교에 남는다.
+
+| 값 | 비교 의미와 근거 |
+| --- | --- |
+| `versions.criteria`, `provider.termsCheckedAt` | 사전 실험 후 승인 버전·호출 전 재확인 시각은 달라진다. 원본 criteria와 승인·적용 순서는 별도 검증한다. |
+| `provider.maximumCalls` | #180의 계획 표본·반복에 따른 전체 수집 상한으로 직접 일치를 요구하지 않는다. 각 실행의 manifest/plan 상한 일치, 1~1000 한도, 예약·quota 확인, 중단 정책은 유지한다. 작은 예산으로 미실행된 cell도 분모에 남으며 INCOMPLETE를 PASS로 바꾸지 않는다. |
+| `environment.dbHost`, `ingress.productOrigin/mcpOrigin`의 포트 | 기존 `M8MutationTarget`이 수집 전·cell 전에 live non-reused MySQL 8.4와 대조하는 합성 mutation 구성에 한한다. measured/disposable/비공개, Testcontainers 임시 credential 참조, 기존 loopback/container network, 정확한 MySQL image digest, 동일한 두 loopback HTTPS origin이 있어야 포트만 정규화한다. host·DB명·JDBC 옵션과 TLS/CORS는 그대로 비교한다. 조건을 확인할 수 없으면 원래 주소 전체를 비교한다. |
+| 호스트·컨테이너 측정 정보 | OS/CPU/제한·메모리/JVM·저장소/image·용량·네트워크 측정은 timeout·수용 조건에 영향을 줄 수 있다. 현재 계약에 동등성 근거가 없어 모두 일치를 요구한다. |
+| `data` 전체 | `baseTime`은 binding의 날짜·시각과 BOOKABLE/CLOSED 상태에 쓰인다. 규모·seed·timezone도 평가 조건이므로 모두 일치를 요구한다. 단순 실행 잡음으로 제외하지 않는다. |
+
+포트 정규화는 새 접근 권한이나 환경 검증을 부여하지 않는다. 선언만으로 Product mutation을 허용하지 않는
+기존 live target 검사와 봉인 원자료 검사를 유지한다. 원격 DB/ingress, read-only fixture 구성 또는 다른
+지원 환경으로 이 규칙을 확대하지 않는다. 아직 근거가 없는 환경·시간·규모 변경은 새 비교 근거/기준선이
+필요한 제한 사항이다. 각 실행의 원본 주소와 예산은 수정하지 않고 봉인한다.
+
+모델/API·prompt/schema/support 버전, Runtime의 호출·시간·token 예산, 권한·승인·기능·provider 정책은
+계속 비교한다. prompt/schema/scorer bytes 및 Router profile도 별도로 확인한다.
+원본 manifest·criteria와 전체 `configDigest`의 snapshot/digest 및 qualification의 고정 identity는
 그대로 검증한다. 비교 가능한 별도 baseline이 없으면 비교 불가·INCOMPLETE를 유지한다.
-이 필드를 추가하려고 과거 봉인 원자료나 판정을 다시 쓰지 않는다. 과거 run은 당시 source/scorer digest로
+비교 규칙에 맞춰 과거 봉인 원자료나 판정을 다시 쓰지 않는다. 과거 run은 당시 source/scorer digest로
 재계산하고, 수정된 수집기로 확보하는 자료는 새 runId로 보존한다.
 
-`M8QualificationVerdictTests`는 이 경계를 검사하기 위해 **조작 가능한 합성 채점 원자료**만 구성한다.
+`M8QualificationVerdictTests`와 `M8ExecutionComparisonTests`는 이 경계를 검사하기 위해 **합성 채점 원자료**만 구성한다.
 `scorer-qualification-vector-*`는 실제 모델 응답·승인·실험 evidence가 아니며, 실제 provider 표본이나 #180의
 분모에 합산하지 않는다. 이 테스트의 PASS는 평가기 경계 검증이며 #180의 실제 QUALIFICATION PASS가 아니다.
 
@@ -251,3 +268,46 @@ local embedding 비교와 실제 provider 두 경로가 포함된다. skip을 �
 두 Gemini 모델의 외부 호출은 각각 0회다. 실제 pilot·별도 baseline·승인된 기준·독립 본 검증·의미 검토와
 실제 모델 보안 coverage는 #180 실행·검토 담당의 후속 조건으로 남으며, #180은 INCOMPLETE를 유지한다.
 #185에는 코드 회귀 결과와 이 제한·재검증 조건을 전달한다. 이번 수정은 출시 판정을 수행하지 않는다.
+
+## 실행 설정 비교 계약 수정 검증
+
+검토 기준은 `949ed7a41b251f3f681e0b1e6053c769fbb19166`이며, 검증은 해당 revision의 수정 작업 트리에서
+수행했다. 호출 상한·DB 포트·HTTPS 포트 각각과 이들을 함께 변경한 4개 사례가 수정 전
+`baseline/pilot profile is not directly comparable`로 거부됐다. 별도 snapshot을 생성·봉인하고 pilot과
+baseline을 재계산한 테스트에서도 호출 상한 차이로 같은 거부를 재현했다.
+criteria 버전 전환 자체는 기존에 허용됐으며 이번 오류의 원인이 아니다.
+
+`M8ExecutionComparisonTests` 39건은 허용되는 실행별 차이, 동등성 조건 누락, DB/image·TLS/CORS·권한·
+Runtime·dataset/oracle·시각/규모 변경의 거부, 원본 snapshot 변조, 예산 미충족의 INCOMPLETE를 검사한다.
+기존 합성 archive 생성 부분만 재사용해 독립 run의 snapshot → 참조 재계산 → 승인/적용 순서 확인 →
+비교 → 동일 원자료 재계산을 검증했다. 이 합성 원자료는 실제 provider pilot/baseline/qualification이 아니다.
+
+Java 25와 disposable Docker를 사용했고 실제 provider opt-in은 설정하지 않았다.
+
+| 명령·검사 | 결과 |
+| --- | --- |
+| `.\gradlew.bat --offline test --tests 'com.slotq.evaluation.*' --tests 'com.slotq.ai.router.*Tests' --tests 'com.slotq.ai.runtime.*Tests' m8RuntimeEvaluation m8SecurityRegression validateM8Fixtures` | 355 + 3 + 81 = 439건, 실패·오류·skip 0; 필수 보안 19사례와 fixture 검증 통과 |
+| `.\gradlew.bat --offline test` | 1,260건, 실패·오류 0, skip 12; BUILD SUCCESSFUL |
+| `.\gradlew.bat --offline clean build` | 1,260건, 실패·오류 0, skip 12; BUILD SUCCESSFUL |
+| 별도 JVM의 `m8Recalculate` 4회 | 최종 채점 벡터·Runtime·답변 전 장애·lexical의 results.json/summary.ko.md 8개 파일이 원본과 바이트 단위 일치 |
+
+두 전체 검증은 각각 1,248건 실행 통과이며 skip 12건의 목록도 같았다. 실제 provider 두 경로와 기존
+진단·Kafka evidence/보안 설정·local embedding 비교의 skip은 성공으로 세지 않았다.
+자동 판정은 채점 벡터 58 PASS/2 INCOMPLETE, Runtime 6 PASS/1 INCOMPLETE, 답변 전 장애
+3 PASS/4 INCOMPLETE, lexical 19 PASS/1 FAIL을 유지했다. 기존 `m6/semantic-hours` FAIL을 보존했다.
+
+전체 test와 clean build에서 생성한 **실제 disposable MySQL·loopback HTTPS + 결정적 provider**의 독립
+Runtime snapshot도 대조했다. manifest에서 달라진 필드는 `environment.dbHost`, `ingress.mcpOrigin`,
+`ingress.productOrigin`뿐이었다. 원본 `configDigest`는 달랐고 `executionConfigDigest`는 같았다.
+이 환경 확인을 실제 모델 증거로 합산하지 않는다. 호스트 측정·시각·규모가 달라졌을 때의 동등성은
+여전히 입증하지 않았으므로 상단 표대로 직접 비교를 거부한다.
+
+원자료·재현 실패·JUnit·로그·run/digest·재계산 비교와 독립 Runtime snapshot 대조는
+`build/m8-evidence/review-189-comparison-6b61d087-20a2-4186-b5fc-e5c42ffe9d4d/`에 보관했다.
+`local-summary.json`, `full-validation.json`, `recalculation-comparison.json`,
+`independent-runtime-comparison.json`, `protection.json`에서 연결을 확인할 수 있다.
+실행자 전용 ACL을 적용·확인했고 보존 기간은 90일이다. 과거 봉인 자료는 수정하지 않았다.
+
+외부 Gemini 호출은 두 모델 각각 0회이며 실제 usage·resolvedVersion·모델 품질/안정성 증거는 없다.
+#180은 INCOMPLETE다. 실행·검토 담당의 실제 pilot·독립 baseline·기준 확정·본 검증·필수 검토와
+실제 모델 보안 coverage가 후속 조건이다. #185에는 코드 회귀 근거와 이 제한을 전달하며 GO 판정은 하지 않는다.
