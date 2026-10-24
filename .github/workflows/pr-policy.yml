@@ -74,8 +74,8 @@ jobs:
               if section not in body:
                   errors.append(f"PR 본문에 필수 섹션이 없습니다: {section}")
 
-          if "Closes #" not in body and "Fixes #" not in body:
-              errors.append("PR 본문에서 관련 Issue를 'Closes #번호' 또는 'Fixes #번호'로 연결해 주세요.")
+          if not re.search(r"\b(?:Closes|Fixes|Refs) #[1-9][0-9]*\b", body):
+              errors.append("PR 본문에서 관련 Issue를 'Closes #번호', 'Fixes #번호' 또는 'Refs #번호'로 연결해 주세요.")
 
           if errors:
               print("PR policy validation failed:\n")

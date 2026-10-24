@@ -10,7 +10,7 @@ SlotQ는 `Issue → branch → Pull Request → CI → squash merge` 흐름으�
 2. Issue 성격에 맞는 작업 브랜치를 만듭니다.
 3. 한 가지 목적에 집중한 작은 단위의 commit으로 작업합니다.
 4. 로컬 검증을 수행합니다.
-5. PR을 만들고 관련 Issue를 `Closes #번호`로 연결합니다.
+5. PR을 만들고 완료된 Issue는 `Closes #번호` 또는 `Fixes #번호`, 미완료 Issue의 부분 구현은 `Refs #번호`로 연결합니다.
 6. CI와 review conversation을 확인합니다.
 7. squash merge합니다.
 8. 작업 브랜치는 merge 후 삭제합니다.
