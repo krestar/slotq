@@ -46,6 +46,16 @@ public final class M8ActualProvider implements Provider {
         adapter = com.slotq.ai.router.RepresentativeFlowEvidence.adapter(http, key, captured::add);
     }
 
+    // Deterministic tests inject an adapter without reading credentials or calling live metadata.
+    M8ActualProvider(JsonNode plan, GeminiAdapter adapter) {
+        this.plan = plan;
+        this.adapter = Objects.requireNonNull(adapter);
+        deadline = Instant.now().plusSeconds(plan.path("maximumSeconds").asLong());
+        key = "offline-injected-provider";
+        http = null;
+        metadataChecked = true;
+    }
+
     public synchronized void enter(M8Evaluation.Cell cell, M8Evaluation.Recorder recorder) {
         this.cell = cell; this.recorder = recorder; cellCalls = 0; cellTokens = 0;
         int index = M8ModelQualification.cells(plan).indexOf(cell);
@@ -95,7 +105,11 @@ public final class M8ActualProvider implements Provider {
             stopped = true; budget.end(runReservation, null); throw failure;
         }
         Long observed = result.usage().total();
-        budget.end(runReservation, result.attempts() == 0 ? 0L : observed);
+        if (result.attempts() == 0) {
+            budget.end(runReservation, 0L);
+        } else {
+            budget.end(runReservation, observed);
+        }
         calls += result.attempts();
         tokens += observed == null ? result.attempts() * reservation : observed;
         cellTokens += observed == null ? result.attempts() * reservation : observed;

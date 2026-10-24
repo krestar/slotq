@@ -5,8 +5,10 @@
 재사용한다. [공통 계약](../architecture/m8-evaluation-contract.md)과
 [#184 보안 사례](m8-security-regression.md)의 강제 기준은 변경하지 않는다.
 
-현재 #180의 판정은 **INCOMPLETE**다. 이 변경에서 외부 모델 호출은 승인받거나 실행하지 않았다.
-새 사전 실험, 품질·회귀폭·표본·반복·안정성 기준 승인, 독립 본 검증과 답변 의미 검토가 없다.
+현재 #180의 판정은 **INCOMPLETE**다. 2026-10-25에 명시적으로 승인된 제한 pilot을 실행했지만
+네 번째 cell에서 usage 누락 정산의 `NullPointerException`으로 중단됐다. 응답 journal 3건과
+1,843 tokens만 원자료로 확인되며, 중단된 시도의 HTTP 상태·usage는 복구하지 못했다.
+품질·회귀폭·표본·반복·안정성 기준 승인, 독립 기준선·본 검증과 답변 의미 검토는 남아 있다.
 기존 M7 기록이나 아래 결정적 회귀를 실제 모델 표본으로 합산하지 않는다. Issue를 닫거나
 #185의 GO/NO-GO를 판단하는 근거가 아니다.
 
@@ -186,7 +188,7 @@ $run = Get-Content ..\build\m8-evidence\latest-model-fixture-run.txt
 
 | 항목 | 현재 상태·후속 담당 |
 | --- | --- |
-| 실제 생성 호출·usage | 두 모델 모두 0회. 호출 승인·프로젝트 무료 여부·quota 확인 후 #180 실행 담당이 새 pilot 확보 |
+| 실제 생성 호출·usage | 제한 pilot의 journal 3건·1,843 tokens 확인. 네 번째 cell의 누락 시도와 미실행 20개 cell은 완료로 세지 않음 |
 | 사전 기준·baseline | PENDING. #180에서 실제 pilot 변동·실패와 전체 rubric 검토를 근거로 새 버전 승인 |
 | 본 검증·안정성 | 미실행. 실제 연결 가능한 필수 경로·표본 확장과 독립 holdout을 먼저 확정 |
 | 보안 | #184 결정적 suite와 실제 모델 평가 분리. 공격성 입력의 실제 모델+서버 coverage·필수 관측은 #180에서 추가 확보 |
@@ -197,6 +199,60 @@ lane별 봉인 digest·외부 보관 위치·검토 digest, 결과표, 실패·�
 모델/API·전송 조건·데이터셋·oracle·prompt·schema·scorer·Runtime/Router/권한·빌드 구성이 바뀌거나
 원자료/검토를 사용할 수 없으면 비교 가능성을 다시 확인하고 해당 경로를 새 run으로 검증한다.
 과거 결과를 새 구성의 PASS로 옮기지 않는다. #181~#183의 부하·장애·복원은 별도 담당 범위다.
+
+## 2026-10-25 제한 pilot과 수집 중단
+
+현재 main `34d2709c597bacf7258b8ae2ce13691d381d7bf1`의 깨끗한 소스로 실행했다.
+사용자는 무료 전용 프로젝트·충분한 quota·합성 입력/응답의 제품 개선 이용과 사람 검토 가능성을
+확인하고 이 pilot을 명시적으로 승인했다. 프로젝트·quota의 근거는 사용자 확인이며 별도의 과금 API
+검증으로 표현하지 않는다. 공식 모델·가격·약관·프로젝트별 quota 문서도 실행 전에 다시 확인했다.
+
+계획은 Customer·Owner·Manager의 정상/금지 요청 6사례 × 기존 두 모델 × 2회 반복으로 24개 fixture
+cell이다. 두 번째 반복은 모델 순서를 반대로 배치했다. 생성 최대 24회, metadata GET 2회,
+840,000 tokens, 1,800초, 호출당 35,000 token 예약, 최소 간격 7초와 USD 0을 사전에 고정했다.
+PILOT의 진단용 반복 수이며 품질·안정성 충분성 기준은 아니다. v1 dataset/oracle/holdout은 변경하지 않았다.
+
+| 관측 | 결과와 한계 |
+| --- | --- |
+| 모델 metadata | 두 GET 모두 지원 method·입출력 한도 확인. metadataVersion은 `3.1-flash-lite-05-2026`, `3.5-flash-lite-07-2026` |
+| 응답 journal | 3.1의 Customer 정상/금지 2건, 3.5의 Customer 정상 1건. 각각 HTTP 200이며 총 usage는 631/577/635 tokens |
+| resolvedVersion | 생성 응답은 각각 `gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`를 반환. metadataVersion과 구분하며 더 구체적인 버전을 추정하지 않음 |
+| 네 번째 cell | 3.5의 Customer 금지 요청에서 `INTERRUPTED_NullPointerException`. request와 binding만 남았고 provider journal·result·answer 없음 |
+| 실행 분모 | 계획 24, 시작 4, journal 확보 3, 시작하지 않은 cell 20. 중단 cell을 성공·완료 또는 호출 0회로 분류하지 않음 |
+| 원본 completion | `providerCalls=3`, `tokens=1843`, `stopPoint=INTERRUPTED`. 아래 결함 때문에 누락 시도의 호출·예약을 포함하지 못한 값이며 전체 소비 상한이나 완전한 호출 집계가 아님 |
+| 판정 | 24개 모두 INCOMPLETE. 응답 3건의 도구/인자/출처 자동 검사는 통과했지만 disclosure 관측과 필수 자연어 검토가 없음 |
+| coverage | Customer 일부만 관측. Owner/Manager·반복 변동·실제 Runtime·공격성 모델 입력/서버 관측은 미확보. fixture의 supplied Knowledge를 실제 검색으로 세지 않음 |
+
+봉인된 run은 `model-fixture-5b2d4771-39f0-4265-8e32-3464f7e12c58`, evidence digest는
+`68cc99183137b8e2351cc00e363df06bfa10984ce7958756681a52393592e5dc`다.
+계획·승인 근거·호스트 측정·로그·재현·재계산 요약은 ignored
+`build/m8-evidence/issue-180-preflight-20261025/`에 실행자 전용 ACL로 보관한다.
+원본 run의 seal·report·누락 자료를 사후 수정하거나 가짜 provider journal로 보충하지 않았다.
+
+`M8ActualProvider`는 `attempts > 0`이고 `usage.total == null`이면 `0L : observed` 삼항식에서
+boxed `Long`을 unboxing하다가 journal 작성 전에 예외를 냈다. HTTP 429/503, 설정/quota 오류,
+timeout과 형식 오류를 주입한 6개 오프라인 회귀에서 같은 중단과 journal 누락을 재현했다.
+실제 네 번째 시도의 원인 분류·HTTP 상태는 남아 있지 않아 이 주입 사례 중 하나로 단정하지 않는다.
+
+수정은 호출 전 거부의 0 tokens와 시도 후 usage 미확보의 null 정산을 명시적으로 나누는 범위다.
+unknown usage의 전체 예약 차감, 실패/HTTP 상태 journal, 후속 cell 중단과 미실행 분모를 보존한다.
+결정적 adapter 주입은 credential·metadata를 읽지 않으며 결과 종류를 `SCORER_TEST_VECTOR`로 기록한다.
+이 회귀 자료를 새 실제 모델 표본이나 실패한 pilot의 대체 기준선으로 사용하지 않는다.
+
+Java 25에서 `.\gradlew.bat --offline test --tests 'com.slotq.evaluation.*' validateM8Fixtures`를 실행했다.
+평가기 276건(새 정산 회귀 8건 포함)이 실패·오류·skip 0으로 통과했고 fixture 계약도 통과했다.
+새 회귀의 나머지 2건은 호출 전 거부의 0회/0 tokens와 형식 오류 응답의 관측 usage 보존을 확인한다.
+전체 Backend suite와 `clean build`는 이번 변경에서 반복하지 않았다.
+
+원본 run의 소스 10개와 digest를 확인한 compiled-build archive를 보호 경로에 복사해 별도 JVM으로
+오프라인 재계산했다. 원본 86개 봉인 파일과 seal digest가 일치했고 새 results.json/summary.ko.md가
+원본과 각각 바이트 단위 일치했다. 현재 수정본으로 과거 원자료를 덮어쓰거나 새 호출로 세지 않았다.
+명령·JUnit 수·재현 결과와 비교는 `local-verification.json`, `settlement-reproduction.xml`,
+`replay-comparison.json`에 기록했다.
+
+이 pilot은 중단 정책에 따라 종료했으며 외부 호출을 추가하거나 자동 재시도하지 않았다.
+독립 baseline, FROZEN 기준, 본 검증·답변 검토는 수행하지 않았다. 충분한 PASS/FAIL 결론이 없어
+완료 기준을 변경한 뒤에도 #180을 닫지 않는다. #185의 GO 조건은 계속 미충족이다.
 
 ## 최초 구현 검증 결과
 
