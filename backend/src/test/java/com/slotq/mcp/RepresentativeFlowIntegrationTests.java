@@ -515,6 +515,16 @@ class RepresentativeFlowIntegrationTests {
             Integer.class, bytes(slot))).isZero();
     }
 
+    @Test void m8PreProviderAnswerFailureKeepsProductAndDoesNotReuseInitialProposal() throws Exception {
+        new M8RuntimeEvaluation(this).rejectAnswerBeforeProvider();
+    }
+
+    @Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="slotq.m8.modelOptIn", matches="true")
+    void m8ActualProviderRepeatedRuntime() throws Exception {
+        new M8RuntimeEvaluation(this).run(com.slotq.evaluation.M8ModelQualification.load());
+    }
+
     @Test
     @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="slotq.flowEvidence.optIn", matches="true")
     void actualProviderFlows() throws Exception {

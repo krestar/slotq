@@ -17,7 +17,7 @@ public final class M8Evaluation {
     public record Budget(int maximumCells, int maximumProviderCalls, long maximumTokens, Instant deadline, boolean stopOnHardGate) { }
     @FunctionalInterface public interface Executor { void execute(Cell cell, JsonNode modelInput, Recorder recorder) throws Exception; }
     private static final List<String> CODE = List.of("M8Evaluation", "M8Scorer", "M8Bindings", "M8ProtectedFiles", "M8MutationTarget",
-        "M8RunContract", "M8EnvironmentContract", "M8FixtureValidator");
+        "M8RunContract", "M8EnvironmentContract", "M8FixtureValidator", "M8ModelQualification", "M8ActualProvider");
     private final Path root;
     private final ObjectNode plan;
     private final List<Cell> cells;
@@ -47,34 +47,51 @@ public final class M8Evaluation {
 
     public M8Evaluation(String runId, List<Cell> cells, JsonNode manifest, Budget budget,
                         Function<Cell, JsonNode> bindings, M8MutationTarget target) throws Exception {
+        this(runId, cells, manifest, budget, bindings, target, null);
+    }
+
+    public M8Evaluation(String runId, List<Cell> cells, JsonNode manifest, Budget budget,
+                        Function<Cell, JsonNode> bindings, M8MutationTarget target, JsonNode qualification) throws Exception {
         M8FixtureValidator.main(new String[0]);
         require(!cells.isEmpty() && new HashSet<>(cells).size() == cells.size(), "empty or duplicate planned cell");
         require(budget.maximumCells() > 0 && budget.maximumProviderCalls() >= 0 && budget.maximumTokens() >= 0
             && budget.deadline().isAfter(Instant.now()), "finite pre-run budget required");
         M8EnvironmentContract.validate(manifest);
         require(manifest.path("versions").path("scorer").asString().equals(SCORER), "execution scorer version");
-        require(!manifest.path("provider").path("enabled").asBoolean(), "#180 owns actual-provider execution; import observed evidence through its adapter");
+        if (qualification == null) require(!manifest.path("provider").path("enabled").asBoolean(), "actual provider requires qualification plan");
+        else M8ModelQualification.preflight(qualification, manifest, cells, Instant.now());
         for (Cell cell : cells) {
             require(cell.caseVersion().equals(text(item(cell.caseId()), "version")) && cell.repeat() > 0
                 && strings(item(cell.caseId()), "lanes").contains(cell.lane()), "invalid planned cell identity");
-            require(cell.lane().equals("DETERMINISTIC") || cell.lane().equals("FAULT_INJECTION"), "new provider evidence requires #180 adapter");
+            require(qualification != null || cell.lane().equals("DETERMINISTIC") || cell.lane().equals("FAULT_INJECTION"), "actual provider requires qualification plan");
         }
         if (manifest.path("features").path("productWrite").asBoolean()) {
             require(target != null, "mutation environment requires verified disposable MySQL target"); target.requireMatches(manifest);
         }
         this.target = target; this.cells = List.copyOf(cells); this.root = M8ProtectedFiles.root(runId);
         String access = M8ProtectedFiles.create(root);
+        Files.createDirectories(root.resolve("cells"));
         plan = JSON.createObjectNode();
         plan.put("version", "1.0.0").put("runId", runId).put("phase", "REGRESSION").put("scorer", SCORER)
             .put("frozenAt", Instant.now().toString()).put("dataClass", "SYNTHETIC");
         plan.set("cells", JSON.valueToTree(cells)); plan.set("budget", JSON.valueToTree(budget)); plan.set("manifest", manifest);
         plan.putObject("perCellReservation").put("providerCalls", budget.maximumProviderCalls() / cells.size())
             .put("tokens", budget.maximumTokens() / cells.size());
+        if (qualification != null) plan.set("cellReservations", qualification.path("cellReservations"));
         plan.set("access", JSON.valueToTree(Map.of("protectionReference", root.toString(), "checkedAt", Instant.now().toString(),
             "checkedBy", System.getProperty("user.name"), "acl", access, "retentionDays", manifest.path("evidence").path("retentionDays").asInt())));
         var snapshots = plan.putObject("snapshots");
+        if (qualification != null) {
+            plan.put("phase", qualification.path("phase").asString());
+            plan.put("parentRunId", qualification.path("parentRunId").asString()).put("parentEvidenceDigest", qualification.path("parentEvidenceDigest").asString());
+            snapshots.set("qualification", writeArtifact("snapshots/qualification.json", JSON.writeValueAsBytes(qualification)));
+            snapshots.set("security-catalog", writeArtifact("snapshots/security-catalog.json", JSON.writeValueAsBytes(M8ModelQualification.securityCatalog())));
+            snapshots.set("router-profile", writeArtifact("snapshots/router-profile.json", resource("ai/representative-router-v1.json")));
+        }
         for (String file : List.of("dataset.json", "case-history.json", "criteria.json", "review-rubric.json")) {
-            snapshots.set(file, writeArtifact("snapshots/" + file, resource(ROOT + file)));
+            byte[] bytes = file.equals("criteria.json") && qualification != null
+                ? JSON.writeValueAsBytes(qualification.path("criteria")) : resource(ROOT + file);
+            snapshots.set(file, writeArtifact("snapshots/" + file, bytes));
         }
         for (var source : read("dataset.json").path("sources")) {
             String path = source.path("path").asString(); snapshots.set(path, writeArtifact("snapshots/" + path, resource(path)));
@@ -99,7 +116,17 @@ public final class M8Evaluation {
         sourceBuild.put("promptDigest", digest(classBytes(com.slotq.ai.flow.RepresentativeContext.class)));
         sourceBuild.put("schemaDigest", digest(com.slotq.ai.router.ProviderProtocol.SCHEMA_JSON.getBytes(StandardCharsets.UTF_8)));
         sourceBuild.put("configDigest", digest(JSON.writeValueAsBytes(manifest)));
+        sourceBuild.put("executionConfigDigest", M8ModelQualification.executionConfigDigest(manifest));
         snapshots.set("source-build", writeArtifact("snapshots/source-build.json", JSON.writeValueAsBytes(sourceBuild)));
+        if (qualification != null) {
+            M8ModelQualification.verifyIdentity(qualification, sourceBuild, snapshots);
+            if (qualification.path("phase").asString().equals("QUALIFICATION")) {
+                for (String name : List.of("pilot", "baseline")) snapshots.set("reference-" + name,
+                    writeArtifact("snapshots/reference-" + name + ".json", JSON.writeValueAsBytes(M8ModelQualification.reference(qualification.path(name)))));
+                M8ModelQualification.verifyReferences(qualification, sourceBuild, snapshots,
+                    readArtifact(root, snapshots.path("reference-pilot")), readArtifact(root, snapshots.path("reference-baseline")));
+            }
+        }
         snapshots.set("manifest", writeArtifact("snapshots/manifest.json", JSON.writeValueAsBytes(manifest)));
         var bindingRefs = plan.putArray("bindings");
         var groups = new HashMap<String, JsonNode>();
@@ -160,8 +187,8 @@ public final class M8Evaluation {
         started = true;
         long calls = 0, tokens = 0; int executed = 0;
         var budget = plan.path("budget"); String stop = "COMPLETED";
-        var reservation = plan.path("perCellReservation");
         for (int i = 0; i < cells.size(); i++) {
+            var reservation = plan.has("cellReservations") ? plan.path("cellReservations").get(i) : plan.path("perCellReservation");
             if (executed >= budget.path("maximumCells").asInt() || calls >= budget.path("maximumProviderCalls").asInt()
                     && budget.path("maximumProviderCalls").asInt() > 0 || tokens > budget.path("maximumTokens").asLong()
                     || calls + reservation.path("providerCalls").asLong() > budget.path("maximumProviderCalls").asLong()
@@ -183,6 +210,13 @@ public final class M8Evaluation {
             executed++;
             var result = recorder.artifacts.getOrDefault("result", JSON.createObjectNode());
             calls += result.path("providerCalls").asLong(); tokens += result.path("tokens").asLong();
+            if (plan.path("snapshots").has("qualification")) {
+                var usage = M8ModelQualification.account(recorder.artifacts);
+                // The provider journal survives a later Runtime/answer exception.
+                calls += usage.path("calls").asLong() - result.path("providerCalls").asLong();
+                tokens += usage.path("chargedTokens").asLong() - result.path("tokens").asLong();
+                if (usage.path("stop").asBoolean()) stop = "PROVIDER_STOP";
+            }
             if (calls > budget.path("maximumProviderCalls").asLong() || tokens > budget.path("maximumTokens").asLong()
                 || result.path("providerCalls").asLong() > reservation.path("providerCalls").asLong()
                 || result.path("tokens").asLong() > reservation.path("tokens").asLong()) { stop = "BUDGET_EXCEEDED"; break; }
@@ -190,7 +224,7 @@ public final class M8Evaluation {
             try {
                 if (budget.path("stopOnHardGate").asBoolean() && !M8Scorer.score(item(cell.caseId()), raw).hardGates().isEmpty()) { stop = "HARD_GATE"; break; }
             } catch (IllegalArgumentException invalidEvidence) { stop = "INVALID_EVIDENCE"; break; }
-            if (stop.equals("INTERRUPTED")) break;
+            if (Set.of("INTERRUPTED", "PROVIDER_STOP").contains(stop)) break;
         }
         writeNew(root.resolve("completion.json"), JSON.writeValueAsBytes(Map.of("stopPoint", stop, "executed", executed,
             "providerCalls", calls, "tokens", tokens, "endedAt", Instant.now().toString())));
@@ -297,10 +331,23 @@ public final class M8Evaluation {
             catch (IOException e) { throw invalid("missing legacy snapshot"); }
         });
         M8RunContract.validateCriteria(criteria); validateRubric(snapshotValues.get("review-rubric.json"));
+        require(criteria.path("version").equals(manifest.path("versions").path("criteria")), "criteria snapshot/manifest version mismatch");
+        boolean frozenCriteria = array(criteria, "thresholds").stream().filter(t -> Set.of("quality", "security").contains(text(t, "id")))
+            .allMatch(t -> t.path("state").asString().equals("FROZEN"));
+        JsonNode qualification = snapshotValues.get("qualification");
+        if (qualification != null) {
+            require(criteria.equals(qualification.path("criteria")), "qualification criteria snapshot mismatch");
+            var planned = array(plan, "cells").stream().map(c -> JSON.treeToValue(c, Cell.class)).toList();
+            M8ModelQualification.preflight(qualification, manifest, planned, Instant.parse(text(plan, "frozenAt")));
+            M8ModelQualification.verifyIdentity(qualification, snapshotValues.get("source-build"), snapshots);
+            if (qualification.path("phase").asString().equals("QUALIFICATION")) M8ModelQualification.verifyReferences(qualification,
+                snapshotValues.get("source-build"), snapshots, snapshotValues.get("reference-pilot"), snapshotValues.get("reference-baseline"));
+        }
         require(snapshotValues.get("manifest").equals(manifest), "manifest snapshot mismatch");
         var source = snapshotValues.get("source-build");
         require(digest(JSON.writeValueAsBytes(source.path("code"))).equals(source.path("scorerDigest").asString()), "scorer identity mismatch");
         require(source.path("configDigest").equals(snapshots.path("manifest").path("digest")), "configuration identity mismatch");
+        require(source.path("executionConfigDigest").asString().equals(M8ModelQualification.executionConfigDigest(manifest)), "execution configuration identity mismatch");
         for (var entry : source.path("classes").properties()) {
             JsonNode ref = entry.getValue();
             byte[] bytes = Files.readAllBytes(M8ProtectedFiles.resolve(root, ref.path("path").asString()));
@@ -368,6 +415,27 @@ public final class M8Evaluation {
                     required.removeAll(Set.of("bindings", "manifest", "criteria", "source-build"));
                     for (String id : required) if (!raw.containsKey(id)) marks.put("artifact_" + id, new M8Scorer.Mark("INCOMPLETE", "필수 원자료 미확보"));
                     var score = M8Scorer.score(item, raw); marks.putAll(score.checks()); gates.addAll(score.hardGates());
+                    if (qualification != null) {
+                        var usage = M8ModelQualification.account(raw);
+                        row.set("providerObservation", usage);
+                        if (usage.path("calls").asInt() == 0 || usage.path("usageMissing").asBoolean() || usage.path("versionMissing").asBoolean()) {
+                            marks.put("actual_provider_observation", new M8Scorer.Mark("INCOMPLETE", "새 실제 호출 또는 usage 미확보"));
+                        }
+                        if (usage.path("failed").asInt() > 0) marks.put("provider_failure", new M8Scorer.Mark("FAIL", "provider 실패; 예정 분모 유지"));
+                        boolean flow = cell.lane().equals("ACTUAL_PROVIDER_FLOW");
+                        boolean kind = raw.getOrDefault("result", JSON.createObjectNode()).path("observationKind").asString()
+                            .equals(flow ? "ACTUAL_PROVIDER_PRODUCTION_RUNTIME" : "ACTUAL_PROVIDER_SYNTHETIC_FIXTURE");
+                        marks.put("evidence_lane", new M8Scorer.Mark(kind ? "PASS" : "INCOMPLETE", kind ? "실제 호출 lane의 관측 종류 일치" : "실제 호출 lane의 관측 종류 미확보"));
+                        if (flow) {
+                            var runtime = raw.getOrDefault("result", JSON.createObjectNode()).path("runtime");
+                            boolean replay = runtime.path("providers").isArray() && !runtime.path("providers").isEmpty()
+                                && runtime.path("providers").valueStream().allMatch(p -> {
+                                try { return new com.slotq.ai.router.ModelRouter().replay(JSON.treeToValue(p.path("routing"), com.slotq.ai.router.ModelRouter.Decision.class)); }
+                                catch (RuntimeException invalid) { return false; }
+                            });
+                            marks.put("router_replay", new M8Scorer.Mark(replay ? "PASS" : "INCOMPLETE", "실제 Runtime Router snapshot 재계산"));
+                        }
+                    }
                     if (raw.getOrDefault("result", JSON.createObjectNode()).path("usageUnknown").asBoolean()) {
                         marks.put("usage", new M8Scorer.Mark("INCOMPLETE", "usage 미관측; 예산 예약 유지"));
                     }
@@ -413,26 +481,31 @@ public final class M8Evaluation {
             row.set("axisResults", axisResults(marks));
             marks.forEach((name, mark) -> { if (!mark.status().equals("PASS")) reasons.add(name + ": " + mark.reason()); });
             var statuses = new ArrayList<>(marks.values().stream().map(M8Scorer.Mark::status).toList());
-            statuses.add("INCOMPLETE"); reasons.add("M8 본 검증 기준 미확정; 결정적 회귀는 출시 PASS가 아님");
+            if (qualification == null || !qualification.path("phase").asString().equals("QUALIFICATION") || !frozenCriteria) {
+                statuses.add("INCOMPLETE"); reasons.add("본 검증 기준 미확정 또는 본 검증 이외의 실행");
+            }
             String status = !gates.isEmpty() ? "FAIL" : M8Scorer.combine(statuses);
             row.put("status", status); rows.add(row); index++;
-            row.set("record", contractRecord(plan, cell, item, row, source, snapshots, index - 1));
+            row.set("record", contractRecord(plan, cell, item, row, source, snapshots, criteria, index - 1));
         }
         var result = JSON.createObjectNode();
         result.put("scorer", SCORER).put("runId", text(plan, "runId")).put("evidenceDigest", expectedDigest)
-            .put("criteriaState", "PENDING").put("plannedCells", rows.size()).put("releaseQualification", false);
+            .put("criteriaState", frozenCriteria ? "FROZEN" : "PENDING").put("plannedCells", rows.size()).put("releaseQualification", false);
+        result.putArray("criteriaThresholdIds").add("quality").add("security");
         result.put("reviewDigest", reviewDigest);
         result.set("rows", rows); result.set("cohorts", aggregate(rows));
         String status = M8Scorer.combine(rows.valueStream().map(r -> r.path("status").asString()).toList());
         if (integrity.containsValue("FAIL")) status = "FAIL";
         result.put("status", status); result.set("integrity", JSON.valueToTree(integrity));
+        if (qualification != null) result.set("modelQualification", M8ModelQualification.summarize(rows, qualification, source, snapshots,
+            snapshotValues.get("reference-baseline")));
         return JSON.valueToTree(canonical(result));
     }
 
-    private static JsonNode contractRecord(JsonNode plan, Cell cell, JsonNode item, JsonNode row, JsonNode source, JsonNode snapshots, int index) {
+    private static JsonNode contractRecord(JsonNode plan, Cell cell, JsonNode item, JsonNode row, JsonNode source, JsonNode snapshots, JsonNode criteria, int index) {
         var record = JSON.createObjectNode();
         record.put("version", "1.0.0").put("runId", text(plan, "runId")).put("caseId", cell.caseId()).put("caseVersion", cell.caseVersion())
-            .put("repeat", cell.repeat()).put("model", cell.model()).put("lane", cell.lane()).put("phase", "REGRESSION")
+            .put("repeat", cell.repeat()).put("model", cell.model()).put("lane", cell.lane()).put("phase", plan.path("phase").asString())
             .put("status", row.path("status").asString()).put("reason", "자동 검사·원자료·검토·사전 기준의 결합 판정")
             .put("denominatorUnit", "PLANNED_CASE_REPEAT_MODEL_LANE");
         record.putArray("exclusions"); record.set("axes", item.path("axes")); record.putArray("thresholdIds").add("quality").add("security");
@@ -446,7 +519,8 @@ public final class M8Evaluation {
         identity.set("bindingsDigest", row.path("evidence").has("bindings") ? row.path("evidence").path("bindings").path("digest") : plan.path("bindings").get(index).path("digest"));
         identity.set("startedAt", row.path("timing").has("startedAt") ? row.path("timing").path("startedAt") : plan.path("frozenAt"));
         identity.set("endedAt", row.path("timing").has("endedAt") && !row.path("timing").path("endedAt").asString().isEmpty() ? row.path("timing").path("endedAt") : identity.path("startedAt"));
-        identity.put("stopPoint", row.path("timing").path("stopPoint").asString("NOT_EXECUTED")).put("parentRunId", "").put("originalEvidenceDigest", "");
+        identity.put("stopPoint", row.path("timing").path("stopPoint").asString("NOT_EXECUTED"))
+            .put("parentRunId", plan.path("parentRunId").asString("")).put("originalEvidenceDigest", plan.path("parentEvidenceDigest").asString(""));
         var evidence = record.putObject("evidence"); evidence.set("required", JSON.valueToTree(new TreeSet<>(M8RunContract.requiredEvidence(item))));
         var provided = evidence.putArray("provided");
         var refs = new TreeMap<String, JsonNode>(); row.path("evidence").properties().forEach(e -> refs.put(e.getKey(), e.getValue()));
@@ -461,7 +535,7 @@ public final class M8Evaluation {
             review.put("state", "APPROVED");
             for (String key : List.of("requestDigest", "answerDigest", "reviewer", "reviewedAt")) review.set(key, row.path("review").path(key));
         } else if (row.path("review").path("state").asString().equals("REJECTED")) review.put("state", "REJECTED");
-        M8RunContract.validateRecord(record, item, plan.path("manifest"), read("criteria.json"));
+        M8RunContract.validateRecord(record, item, plan.path("manifest"), criteria);
         return record;
     }
 
@@ -547,12 +621,28 @@ public final class M8Evaluation {
         Files.createDirectories(destination);
         writeNew(destination.resolve("results.json"), JSON.writerWithDefaultPrettyPrinter().writeValueAsBytes(results));
         StringBuilder summary = new StringBuilder("M8 공통 평가 결과: " + results.path("status").asString() + "\n\n계획 cell: " + results.path("plannedCells").asInt()
-            + " / 기준: PENDING / 출시 판정: 수행하지 않음\n\n| 사례 | 반복 | 모델 | lane | 자동 검사 | 최종 | 사유 |\n| --- | --- | --- | --- | --- | --- | --- |\n");
+            + " / 기준: " + results.path("criteriaState").asString() + " / 출시 판정: 수행하지 않음\n\n| 사례 | 반복 | 모델 | lane | 자동 검사 | 최종 | 사유 |\n| --- | --- | --- | --- | --- | --- | --- |\n");
         for (var row : results.path("rows")) {
             var cell = row.path("cell"); summary.append("| ").append(cell.path("caseId").asString()).append(" | ").append(cell.path("repeat").asInt())
                 .append(" | ").append(cell.path("model").asString()).append(" | ").append(cell.path("lane").asString()).append(" | ")
                 .append(row.path("automaticStatus").asString()).append(" | ").append(row.path("status").asString()).append(" | ")
                 .append(JSON.writeValueAsString(row.path("reasons")).replace("|", "/")).append(" |\n");
+        }
+        if (results.has("modelQualification")) {
+            var quality = results.path("modelQualification");
+            summary.append("\n실제 모델 반복 평가: ").append(quality.path("status").asString()).append(" / phase: ")
+                .append(quality.path("phase").asString()).append("\n\n")
+                .append("| 역할·업무·분할·그룹·버전·모델·lane·축 | 계획 | 시도 | 성공 | 실패 | 불완전 | 미실행 | 품질 | 반복 범위 | 최소 표본 | 판정 |\n")
+                .append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
+            for (var cohort : quality.path("cohorts")) {
+                summary.append("| ").append(cohort.path("key").asString().replace("|", "/"));
+                for (String key : List.of("planned", "attempted", "succeeded", "failed", "incomplete", "unexecuted", "quality", "repeatRange", "minimumSampleSatisfied", "status")) {
+                    summary.append(" | ").append(cohort.path(key).asString());
+                }
+                summary.append(" |\n");
+            }
+            summary.append("\n").append(quality.path("uncertaintyLimitation").asString()).append("\n")
+                .append(quality.path("blocker").asString()).append("\n");
         }
         writeNew(destination.resolve("summary.ko.md"), summary.toString().getBytes(StandardCharsets.UTF_8));
     }

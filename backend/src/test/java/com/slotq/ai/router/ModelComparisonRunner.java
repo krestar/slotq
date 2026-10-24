@@ -135,7 +135,7 @@ public final class ModelComparisonRunner {
         if (stop || calls<maximumCalls) throw new IllegalStateException("Actual-provider comparison incomplete: account/quota/deadline blocker");
     }
 
-    private static List<Map<String,Object>> candidateMetadata(HttpClient client, String key) throws Exception {
+    public static List<Map<String,Object>> candidateMetadata(HttpClient client, String key) throws Exception {
         var metadata = new ArrayList<Map<String,Object>>();
         for (String model : GeminiAdapter.MODELS.stream().sorted().toList()) {
             var request = HttpRequest.newBuilder(URI.create(GeminiAdapter.ENDPOINT + model))
@@ -338,7 +338,7 @@ public final class ModelComparisonRunner {
             }
         }
     }
-    static ProviderProtocol.Request request(JsonNode specification,JsonNode testCase) {
+    public static ProviderProtocol.Request request(JsonNode specification,JsonNode testCase) {
         JsonNode fixture=testCase.path("fixture"); Set<String> sources=new TreeSet<>(),claims=new TreeSet<>();
         if(fixture.path("knowledge").path("source").isString()) sources.add(fixture.path("knowledge").path("source").asString());
         if(fixture.path("knowledge").path("fact").isString()) claims.add(fixture.path("knowledge").path("fact").asString());

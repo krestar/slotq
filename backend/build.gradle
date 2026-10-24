@@ -100,6 +100,41 @@ tasks.register('m8Recalculate', JavaExec) {
     systemProperty 'slotq.m8.reviewDigest', project.findProperty('m8ReviewDigest') ?: ''
 }
 
+def m8ModelProperties = { task ->
+    ['modelPlan', 'modelPlanDigest', 'modelOptIn', 'modelFreeTier', 'modelPaidCalls'].each { key ->
+        task.systemProperty "slotq.m8.${key}", project.findProperty("m8${key.capitalize()}") ?: ''
+    }
+    task.systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
+    task.systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    task.systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
+    task.doFirst {
+        if (project.findProperty('m8ModelOptIn') != 'true' || project.findProperty('m8ModelFreeTier') != 'true'
+                || project.findProperty('m8ModelPaidCalls') != 'false' || !project.hasProperty('m8ModelPlanDigest')) {
+            throw new GradleException('Explicit bounded free-only M8 provider opt-in and plan digest required')
+        }
+    }
+}
+
+tasks.register('m8ModelFixture', JavaExec) {
+    group = 'verification'
+    description = 'Opt-in M8 repeated actual-provider fixture lane using the existing single-attempt adapter and scorer.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.evaluation.M8ActualProvider'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    m8ModelProperties(delegate)
+}
+
+tasks.register('m8ModelRuntime', Test) {
+    group = 'verification'
+    description = 'Opt-in M8 repetition through existing production Runtime/MCP/Product/Knowledge; Router remains authoritative.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.m8ActualProviderRepeatedRuntime' }
+    m8ModelProperties(delegate)
+    outputs.upToDateWhen { false }
+}
+
 tasks.register('m8RuntimeEvaluation', Test) {
     group = 'verification'
     description = 'Connects deterministic M8 evaluation to the existing Runtime/MCP/Product HTTPS/MySQL and lexical retrieval fixtures.'
@@ -108,6 +143,7 @@ tasks.register('m8RuntimeEvaluation', Test) {
     useJUnitPlatform()
     filter {
         includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.m8EvaluationConnectsRuntimeProductAndIndependentMySqlObservations'
+        includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.m8PreProviderAnswerFailureKeepsProductAndDoesNotReuseInitialProposal'
         includeTestsMatching 'com.slotq.mcp.KnowledgeRetrievalIntegrationTests.m8EvaluationConnectsCanonicalLexicalRetrievalAndPublicationEvidence'
     }
     systemProperty 'jdk.httpclient.disableRetryConnect', 'true'

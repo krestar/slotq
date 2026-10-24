@@ -21,13 +21,16 @@ final class M8RunContract {
 
     static void validateCriteria(JsonNode criteria) {
         fields(criteria, "version thresholds history");
-        version(criteria, "version");
+        criteriaVersion(criteria, "version");
         var seen = new HashSet<String>();
         for (var threshold : array(criteria, "thresholds")) {
             fields(threshold, "id owner version state metrics before after denominator minimumSamples repeats stabilityMethod pilotEvidence reason approvedAt effectiveAt appliesTo");
             String id = text(threshold, "id");
             require(OWNERS.containsKey(id) && seen.add(id) && positive(threshold, "owner") == OWNERS.get(id), "threshold ownership/identity");
-            version(threshold, "version");
+            criteriaVersion(threshold, "version");
+            if (criteria.path("version").asString().equals("1.1.0") && threshold.path("state").asString().equals("FROZEN")) {
+                require(threshold.path("version").equals(criteria.path("version")), "changed criteria need a new threshold version");
+            }
             oneOf(threshold, "state", Set.of("PENDING", "FROZEN"));
             require(strings(threshold, "metrics").equals(METRICS.get(id)), "required threshold metric missing");
             text(threshold, "reason");
@@ -63,6 +66,16 @@ final class M8RunContract {
             text(change, "reason");
         }
         require(versions.contains(text(criteria, "version")), "criteria version has no history");
+        if (criteria.path("version").asString().equals("1.1.0")) {
+            var original = read("criteria.json").path("history");
+            require(original.valueStream().allMatch(old -> criteria.path("history").valueStream().anyMatch(old::equals)), "v1 criteria history must be preserved");
+            require(criteria.path("history").valueStream().anyMatch(h -> h.path("version").asString().equals("1.1.0")
+                && h.path("previous").asString().equals("1.0.0")), "criteria upgrade lineage missing");
+        }
+    }
+
+    static void criteriaVersion(JsonNode node, String key) {
+        require(Set.of("1.0.0", "1.1.0").contains(text(node, key)), "unsupported criteria version");
     }
 
     static void preflight(JsonNode manifest, JsonNode criteria, Set<String> thresholdIds, Instant startedAt) {
