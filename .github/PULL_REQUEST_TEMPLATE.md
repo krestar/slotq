@@ -22,7 +22,7 @@
 
 ## 관련 Issue
 
-- Closes #
+- Closes #번호 (Issue 완료 시) 또는 Refs #번호 (후속 작업이 남을 때)
 
 ## 보안·데이터 영향
 
