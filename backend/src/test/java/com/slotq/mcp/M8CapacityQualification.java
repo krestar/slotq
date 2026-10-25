@@ -188,7 +188,6 @@ final class M8CapacityQualification {
             for (String key : idleKeys()) idle &= sample.path(key).asLong(-1) == 0;
             for (var thread : sample.path("httpThreads")) idle &= thread.path("currentThreadsBusy").asLong(-1) == 0;
             consecutive = idle ? consecutive + 1 : 0;
-            if (consecutive == 3 && (at - end) / 1e6 <= bound) return (at - end) / 1e6;
             if (consecutive == 3) return covered ? (at - end) / 1e6 : "UNAVAILABLE";
         }
         // Complete observation of an exceeded deadline is a failure, rather than missing instrumentation.

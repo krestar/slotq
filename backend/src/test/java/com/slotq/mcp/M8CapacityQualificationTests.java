@@ -19,6 +19,47 @@ class M8CapacityQualificationTests {
         assertThat(summarize(vector()).get("verdict")).isEqualTo("PASS");
     }
 
+    @ParameterizedTest
+    @ValueSource(longs = {0L, 250_000_000L})
+    void observationGapBeforeThreeIdleSamplesCannotQualifyRecovery(long observedPrefixNanos) {
+        var raw = vector();
+        var samples = (ArrayNode) raw.path("samples");
+        for (int i = samples.size() - 1; i >= 0; i--) {
+            if (samples.get(i).path("phase").asString().equals("burst-quiet")) {
+                samples.remove(i);
+            }
+        }
+        long burstEnd = 1_000_000_000L;
+        if (observedPrefixNanos > 0) {
+            var busy = sample("burst-quiet", burstEnd + observedPrefixNanos);
+            busy.put("pending", 1);
+            samples.add(busy);
+        }
+        long firstIdle = burstEnd + observedPrefixNanos + 1_000_000_001L;
+        for (int i = 0; i < 3; i++) {
+            samples.add(sample("burst-quiet", firstIdle + i * 250_000_000L));
+        }
+
+        assertThat(M8CapacityQualification.recovery(raw)).isEqualTo("UNAVAILABLE");
+        var report = summarize(raw);
+        assertThat(report.get("supportQualification")).isEqualTo("INCOMPLETE");
+        assertThat(report.get("verdict")).isEqualTo("INCOMPLETE");
+    }
+
+    @Test void exactlyOneSecondSamplingIntervalPreservesObservedRecoveryPass() {
+        var raw = vector();
+        long at = 2_000_000_000L;
+        for (var sample : raw.path("samples")) {
+            if (sample.path("phase").asString().equals("burst-quiet")) {
+                ((ObjectNode) sample).put("nanos", at);
+                at += 250_000_000L;
+            }
+        }
+
+        assertThat(M8CapacityQualification.recovery(raw)).isEqualTo(1500.0);
+        assertThat(summarize(raw).get("verdict")).isEqualTo("PASS");
+    }
+
     @Test void gatePresentationOrderDoesNotChangeRecalculationButEveryValueAndIdentityIsRequired() {
         var original = JSON.readTree(JSON.writeValueAsString(summarize(vector())));
         var reordered = (ObjectNode) original.deepCopy();
