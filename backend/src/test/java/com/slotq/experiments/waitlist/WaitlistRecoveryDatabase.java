@@ -9,14 +9,14 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /** Read-only, tenant-scoped authoritative oracle; no synthetic effect tables or recovery writes. */
-final class WaitlistRecoveryDatabase {
+public final class WaitlistRecoveryDatabase {
     static final List<String> TABLES = List.of("event_records", "event_deliveries", "waitlist_promotion_requests",
         "waitlist_promotion_receipts", "reservations", "capacity_allocations", "waitlist_entries",
         "waitlist_offers", "waitlist_notification_requests", "slot_inventories", "waitlist_demands");
     private final JdbcTemplate db;
-    WaitlistRecoveryDatabase(JdbcTemplate db) { this.db = db; }
+    public WaitlistRecoveryDatabase(JdbcTemplate db) { this.db = db; }
 
-    Map<String,Object> snapshot(UUID tenant, Instant now) {
+    public Map<String,Object> snapshot(UUID tenant, Instant now) {
         var tx = new TransactionTemplate(new DataSourceTransactionManager(Objects.requireNonNull(db.getDataSource())));
         tx.setReadOnly(true);
         return tx.execute(status -> read(db, tenant, now));
