@@ -78,6 +78,33 @@ tasks.register('validateM8Fixtures', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
 }
 
+tasks.register('m8Capacity', JavaExec) {
+    group = 'verification'
+    description = 'Opt-in open-loop mixed capacity diagnostic on disposable MySQL and HTTPS; incomplete observations never qualify support.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.mcp.M8CapacityRunner'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    jvmArgs '-Xmx768m'
+    ['stage', 'size', 'pool', 'seed', 'output', 'criteria'].each { key ->
+        if (project.hasProperty("capacity${key.capitalize()}")) {
+            systemProperty "slotq.capacity.${key}", project.property("capacity${key.capitalize()}")
+        }
+    }
+    systemProperty 'jdk.httpclient.disableRetryConnect', 'true'
+    systemProperty 'jdk.httpclient.enableAllMethodRetry', 'false'
+    systemProperty 'jdk.httpclient.redirects.retrylimit', '1'
+}
+
+tasks.register('m8CapacityRecalculate', JavaExec) {
+    group = 'verification'
+    description = 'Verifies a mixed-load raw digest and recalculates its saved summary without Docker or provider access.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.mcp.M8CapacityEvidence'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    systemProperty 'slotq.capacity.input', project.findProperty('capacityInput') ?: ''
+    systemProperty 'slotq.capacity.digest', project.findProperty('capacityDigest') ?: ''
+}
+
 tasks.register('m8Evaluate', Test) {
     group = 'verification'
     description = 'Runs offline M8 scorer test vectors and emits a protected 60-cell report; no model or Product qualification.'

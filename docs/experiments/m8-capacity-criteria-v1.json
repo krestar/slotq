@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "slotq-m8-capacity-criteria/v1",
+  "version": "capacity-diagnostic-v1",
+  "state": "FROZEN",
+  "before": null,
+  "frozenAt": "2026-10-24T19:34:49.0473138Z",
+  "approvedAt": "2026-10-24T19:34:49.0473138Z",
+  "effectiveAt": "2026-10-24T19:34:49.0473138Z",
+  "decisionOrigin": "Issue #181에서 위임한 실험 기준 결정; 출시 승인 아님",
+  "pilotPath": "build/m8-capacity/pilot-v4-p4-s16/raw.json",
+  "pilotDigest": "b0f3d190b45c2421974f835ccbd70c2afc9bb51bdd603d1a803959938afb2a21",
+  "pool": 4,
+  "size": 16,
+  "seed": 18101,
+  "repeats": 3,
+  "supportVersion": "single-jvm-mysql84-db-direct-diagnostic-v1",
+  "datasetVersion": "capacity-fixture-v1",
+  "oracleVersion": "waitlist-recovery-snapshot-and-capacity-aggregates-v1",
+  "scorerVersion": "slotq-m8-capacity-summary/v1",
+  "m8ReleaseCriteriaState": "PENDING",
+  "reason": "pool 4/16문서 pilot의 분산 p95 608.7718ms, dispatch p99 62.4036ms, 일시적 사용 불가 2/160, 자원 회복 4963.8811ms를 근거로 별도 30초 본 검증 3회를 계획함. 2초 Auth/연결 획득 timeout보다 정상 응답의 p95가 작아야 한다는 진단 상한, 100ms 제출 지연 상한, 5% 비업무 실패 상한 및 회복 p95 1초/자원 회복 15초 상한을 적용함. adapter 주입 실패도 실패 분모에 포함함. 80/320회 과부하는 수용 용량 판정에서 제외하고 drop/거부/불명과 회복을 관측함. 전체 운영 지원 qualification은 미관측 항목 때문에 INCOMPLETE이며 이 기준은 SLA나 M8 출시 기준을 대체하지 않음.",
+  "metrics": {
+    "distributedP95Ms": 2000,
+    "distributedDispatchP99Ms": 100,
+    "unexpectedFraction": 0.05,
+    "recoveryP95Ms": 1000,
+    "recoveryBoundMs": 15000
+  },
+  "definitions": {
+    "latency": "예정 도착부터 terminal까지, 예정 전체 요청의 nearest-rank p95",
+    "dispatch": "예정 도착부터 발생기 job 시작까지의 p99",
+    "unexpectedFraction": "(UNAVAILABLE+UNKNOWN+DENIED+REJECTED+GENERATOR_REJECTED)/각 구간 예정 요청 수; SUCCESS와 BUSINESS_CONFLICT는 별도",
+    "recovery": "burst 예정 종료부터 active/pending/MCP/Runtime/in-flight/backlog/unmaterialized가 0인 연속 3 sample의 마지막 시각까지",
+    "repetition": "서로 다른 disposable MySQL에서 각 30초 분산/8초 집중/3초 burst/10초 정상 요청 회복; 반복별 결과를 보존하며 pooled 평균으로 실패를 상쇄하지 않음"
+  }
+}
