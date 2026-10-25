@@ -20,8 +20,26 @@ public final class M8CapacityEvidence {
         require(digest(root.resolve("raw.json")).equals(expected), "Raw digest mismatch");
         JsonNode raw = JSON.readTree(Files.readString(root.resolve("raw.json")));
         JsonNode calculated = JSON.readTree(JSON.writeValueAsString(summarize(raw)));
-        require(calculated.equals(JSON.readTree(Files.readString(root.resolve("summary.json")))), "Summary differs");
+        require(sameReport(calculated, JSON.readTree(Files.readString(root.resolve("summary.json")))), "Summary differs");
         System.out.println("Capacity raw digest and offline recalculation verified: " + root);
+    }
+
+    static boolean sameReport(JsonNode left, JsonNode right) {
+        return canonicalReport(left).equals(canonicalReport(right));
+    }
+
+    private static JsonNode canonicalReport(JsonNode report) {
+        if (!report.has("qualificationCriteria")) return report;
+        var copy = (tools.jackson.databind.node.ObjectNode) report.deepCopy();
+        var named = new TreeMap<String, JsonNode>();
+        for (var row : report.path("qualificationCriteria")) {
+            String name = row.path("gate").asString();
+            require(!name.isBlank() && named.putIfAbsent(name, row) == null, "Duplicate or missing gate identity");
+        }
+        // Gate rows form an identity-keyed set. Only presentation order varied with JVM hash seeds;
+        // retain every value and reject duplicate identities instead of dropping or rewriting rows.
+        copy.set("qualificationCriteria", JSON.valueToTree(named.values()));
+        return copy;
     }
 
     static Map<String, Object> summarize(JsonNode raw) {
@@ -59,7 +77,8 @@ public final class M8CapacityEvidence {
             phases.add(result);
         }
         var result = new LinkedHashMap<String, Object>();
-        result.put("schemaVersion", "slotq-m8-capacity-summary/v1");
+        result.put("schemaVersion", raw.path("schemaVersion").asString().equals("slotq-m8-capacity/v2")
+            ? "slotq-m8-capacity-summary/v2" : "slotq-m8-capacity-summary/v1");
         result.put("stage", raw.path("manifest").path("stage").asString());
         result.put("phases", phases);
         result.put("oracle", raw.path("oracle"));
@@ -70,18 +89,28 @@ public final class M8CapacityEvidence {
         result.put("diagnosticCriteria", assessment);
         boolean thresholdFailure = assessment.stream().anyMatch(a -> a.get("status").equals("FAIL"));
         result.put("diagnosticVerdict", thresholdFailure ? "FAIL" : assessment.stream().anyMatch(a -> a.get("status").equals("INCOMPLETE")) ? "INCOMPLETE" : "PASS");
-        // A diagnostic profile cannot silently qualify unobserved host IO, permit or authority invariants.
         boolean violated = raw.path("oracle").path("violations").asLong() > 0;
-        // Profile threshold failures remain visible even when broader support qualification is incomplete.
-        result.put("supportQualification", "INCOMPLETE");
-        result.put("verdict", violated || thresholdFailure ? "FAIL" : "INCOMPLETE");
+        if (!raw.path("schemaVersion").asString().equals("slotq-m8-capacity/v2")) {
+            // Preserve historical v1 reports byte-independent, including their missing-observation verdict.
+            result.put("supportQualification", "INCOMPLETE");
+            result.put("verdict", violated || thresholdFailure ? "FAIL" : "INCOMPLETE");
+            return result;
+        }
+        var qualification = M8CapacityQualification.assess(raw);
+        result.put("qualificationCriteria", qualification);
+        String coverage = M8CapacityQualification.verdict(qualification);
+        String support = violated || thresholdFailure || coverage.equals("FAIL") ? "FAIL"
+            : coverage.equals("PASS") && result.get("diagnosticVerdict").equals("PASS") ? "PASS" : "INCOMPLETE";
+        result.put("supportQualification", support);
+        result.put("verdict", violated || thresholdFailure || support.equals("FAIL") ? "FAIL"
+            : support.equals("PASS") && result.get("diagnosticVerdict").equals("PASS") ? "PASS" : "INCOMPLETE");
         return result;
     }
 
     static JsonNode validateCriteria(Path path, int pool, int size, Instant now) throws Exception {
         var frozen = JSON.readTree(Files.readString(path));
         require(frozen.path("state").asString().equals("FROZEN"), "Criteria not frozen");
-        require(frozen.path("schemaVersion").asString().equals("slotq-m8-capacity-criteria/v1"), "Criteria version mismatch");
+        require(Set.of("slotq-m8-capacity-criteria/v1", "slotq-m8-capacity-criteria/v2").contains(frozen.path("schemaVersion").asString()), "Criteria version mismatch");
         Instant freeze = Instant.parse(frozen.path("frozenAt").asString());
         require(freeze.isBefore(now), "Future criteria");
         Path pilot = Path.of(frozen.path("pilotPath").asString());
@@ -98,6 +127,7 @@ public final class M8CapacityEvidence {
             require(Double.isFinite(value) && value > 0, "Metric missing or invalid: " + name);
         }
         require(frozen.path("metrics").path("unexpectedFraction").asDouble() < 1, "Invalid fraction");
+        if (frozen.path("schemaVersion").asString().endsWith("/v2")) M8CapacityProtocol.validateV2(frozen, raw);
         return frozen;
     }
 
@@ -124,7 +154,8 @@ public final class M8CapacityEvidence {
         return result;
     }
 
-    private static Object recovery(JsonNode raw) {
+    static Object recovery(JsonNode raw) {
+        if (raw.path("schemaVersion").asString().equals("slotq-m8-capacity/v2")) return M8CapacityQualification.recovery(raw);
         long end = Long.MAX_VALUE;
         for (JsonNode phase : raw.path("phases")) if (phase.path("name").asString().equals("burst")) {
             end = phase.path("startNanos").asLong() + phase.path("seconds").asLong() * 1_000_000_000L;

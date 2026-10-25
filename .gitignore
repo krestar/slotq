@@ -1,5 +1,8 @@
 .gradle/
 build/
+# Historical #181 measurements remain local; only the reusable runner is tracked.
+/docs/experiments/m8-mixed-capacity.md
+/docs/experiments/m8-capacity-criteria-v1.json
 /backend/bin/
 
 ### Local environment ###

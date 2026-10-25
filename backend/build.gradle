@@ -85,7 +85,7 @@ tasks.register('m8Capacity', JavaExec) {
     mainClass = 'com.slotq.mcp.M8CapacityRunner'
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
     jvmArgs '-Xmx768m'
-    ['stage', 'size', 'pool', 'seed', 'output', 'criteria'].each { key ->
+    ['stage', 'size', 'pool', 'seed', 'rate', 'output', 'criteria'].each { key ->
         if (project.hasProperty("capacity${key.capitalize()}")) {
             systemProperty "slotq.capacity.${key}", project.property("capacity${key.capitalize()}")
         }
@@ -103,6 +103,17 @@ tasks.register('m8CapacityRecalculate', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
     systemProperty 'slotq.capacity.input', project.findProperty('capacityInput') ?: ''
     systemProperty 'slotq.capacity.digest', project.findProperty('capacityDigest') ?: ''
+}
+
+tasks.register('m8CapacityProtocol', JavaExec) {
+    group = 'verification'
+    description = 'Freezes local pilot criteria or audits independent capacity repetitions; never overwrites evidence.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.slotq.mcp.M8CapacityProtocol'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    ['action', 'input', 'output'].each { key ->
+        systemProperty "slotq.capacity.${key}", project.findProperty("capacity${key.capitalize()}") ?: ''
+    }
 }
 
 tasks.register('m8Evaluate', Test) {
