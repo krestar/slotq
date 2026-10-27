@@ -131,6 +131,8 @@ public final class M8CapacityRunner {
         int size = Integer.getInteger("slotq.capacity.size", 16);
         int maximum = Integer.getInteger("slotq.capacity.pool", 4);
         long seed = Long.getLong("slotq.capacity.seed", 18101L);
+        require(!M8RecoveryDrill.enabled() || seed == 18101, "Recovery seed differs from #181 handoff");
+        if (M8RecoveryDrill.enabled()) M8RecoveryDrill.validatePlan(maximum, size, Integer.getInteger("slotq.capacity.rate", 20));
         require(size >= 4 && size <= 256 && maximum >= 3 && maximum <= 32, "Bounded diagnostic settings required");
         Path output = Path.of(System.getProperty("slotq.capacity.output", "build/m8-capacity/" + UUID.randomUUID())).toAbsolutePath();
         require(output.startsWith(Path.of("build").toAbsolutePath()) && !Files.exists(output), "Use a fresh ignored build directory");
@@ -148,9 +150,11 @@ public final class M8CapacityRunner {
         try (var mysql = new MySQLContainer("mysql:8.4").withDatabaseName("m8_capacity")
                 .withEnv("MYSQL_ROOT_HOST", "%").withCommand("--log-bin-trust-function-creators=1")) {
             mysql.start();
+            M8RecoveryDrill.prepareObserver(mysql);
             int port = RepresentativeFlowIntegrationTests.PORT;
             String origin = RepresentativeFlowIntegrationTests.ORIGIN;
-            try (var context = new SpringApplicationBuilder(SlotqApplication.class, Configuration.class).run(
+            try (var context = new SpringApplicationBuilder(SlotqApplication.class, Configuration.class)
+                    .properties(M8RecoveryDrill.properties(mysql)).run(
                     "--logging.level.root=ERROR", "--spring.main.banner-mode=off", "--server.address=127.0.0.1",
                     "--server.port=" + port, "--server.ssl.enabled=true", "--server.tomcat.mbeanregistry.enabled=true",
                     "--server.ssl.key-store=" + McpHttpIntegrationTests.KEYSTORE.toUri(),
@@ -164,6 +168,7 @@ public final class M8CapacityRunner {
                     "--spring.transaction.default-timeout=10s", "--spring.jpa.properties.jakarta.persistence.query.timeout=2000",
                     "--spring.jpa.properties.hibernate.session_factory.statement_inspector=" + SqlCounter.class.getName(),
                     "--slotq.auth.dev-bootstrap-enabled=false", "--slotq.mcp.enabled=true",
+                    "--slotq.operations.recovery.enabled=" + M8RecoveryDrill.enabled(),
                     "--slotq.mcp.origin=" + origin, "--slotq.mcp.product-origin=" + origin,
                     "--slotq.mcp.handler-budget=PT5S", "--slotq.mcp.workers=8", "--slotq.mcp.ingress=8",
                     "--slotq.mcp.quota.rate=200", "--slotq.mcp.quota.burst=200", "--slotq.mcp.quota.concurrency=4",
@@ -189,7 +194,8 @@ public final class M8CapacityRunner {
                         sampler.scheduleAtFixedRate(runner::sample, 0, 250, TimeUnit.MILLISECONDS);
                         runner.calibrate();
                         runner.load("warmup", 10, 3, false);
-                        runner.load("distributed", Integer.getInteger("slotq.capacity.rate", 20), stage.equals("pilot") ? 10 : 30, false);
+                        runner.load("distributed", Integer.getInteger("slotq.capacity.rate", 20),
+                            stage.equals("pilot") && !M8RecoveryDrill.enabled() ? 10 : 30, false);
                         runner.probes.seed();
                         try (var probeClients = Executors.newSingleThreadExecutor()) {
                             var probeRun = probeClients.submit(() -> runner.probes.run());
@@ -200,6 +206,9 @@ public final class M8CapacityRunner {
                         runner.load("burst", 320, 3, false);
                         runner.quietRecovery();
                         runner.load("recovery", 5, 10, false);
+                        if (M8RecoveryDrill.enabled()) {
+                            new M8RecoveryDrill(context, runner.f, runner.observer, runner.runtime, mysql, output).run();
+                        }
                         runner.phase = "query-scale";
                         M8CapacityObservation.phase = runner.phase;
                         runner.queryScale(size);

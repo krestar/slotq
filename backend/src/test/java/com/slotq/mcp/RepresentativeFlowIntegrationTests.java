@@ -495,6 +495,10 @@ class RepresentativeFlowIntegrationTests {
         new AgentLifetimeExperiments(this).confirmationWait(waitSeconds);
     }
 
+    @Test void lifetimeRestartRevalidatesRevokedAuthorityBeforeKnownTargetGet() throws Exception {
+        new AgentLifetimeExperiments(this).terminateAndRestart(AgentLifetimeExperiments.KillPoint.AFTER_RESPONSE_LOSS, true);
+    }
+
     @Test void lifetimeProviderOnlySaturationRejectsWithoutBacklogAndAccountsLateCompletion() throws Exception {
         new AgentLifetimeExperiments(this).saturation(false);
     }

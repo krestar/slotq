@@ -80,7 +80,8 @@ public final class WaitlistProcessRecoveryRunner {
         }
         environment.put("harnessSourceSha256",hashes);
         var cases=new ArrayList<Map<String,Object>>();
-        try(var mysql=new MySQLContainer("mysql:8.4").withDatabaseName("slotq_waitlist_process_recovery")) {
+        try(var mysql=new MySQLContainer("mysql:8.4").withDatabaseName("slotq_waitlist_process_recovery")
+                .withCommand("--log-bin-trust-function-creators=1")) {
             mysql.start();
             environment.put("mysqlContainerId",mysql.getContainerId());
             environment.put("databaseName",mysql.getDatabaseName());

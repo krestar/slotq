@@ -10,6 +10,8 @@ MySQL business state와 immutable original event가 복구 source다. Kafka lag/
 intake의 진행이고 DB delivery DONE/consumer receipt는 business 완료다. 두 inventory를 따로 확인한다.
 사람의 복구 mutation은 [개인 operator runbook](operator-recovery.md)의 HTTPS, exact scope,
 state/fence/authority epoch, 같은 operation ID 재조회 절차를 따른다.
+공유 JVM 종료와 실제 Product MySQL 장애는 [DB_DIRECT Runtime 복구](runtime-recovery.md)의
+사전 기준·독립 DB oracle·재현 명령을 함께 확인한다.
 
 ## 탐지와 원인 수정
 
