@@ -242,6 +242,9 @@ final class M8CapacityProbes {
 
     static Object handlerProxy(BookingCapacityReleasedHandler target) {
         MethodInterceptor probe = invocation -> {
+            if (invocation.getMethod().getName().equals("handle") && invocation.getArguments()[0] instanceof StoredEvent event) {
+                M8RecoveryDrill.beforeHandler(event);
+            }
             Object result = invocation.proceed();
             if (invocation.getMethod().getName().equals("handle") && invocation.getArguments()[0] instanceof StoredEvent stored
                     && stored.envelope().eventId().value().equals(retryEvent)) {

@@ -24,16 +24,22 @@ final class AgentLifetimeExperiments {
     }
 
     void terminateAndRestart(KillPoint point) throws Exception {
+        terminateAndRestart(point, false);
+    }
+
+    void terminateAndRestart(KillPoint point, boolean revokeBeforeRecovery) throws Exception {
         Path directory = Files.createTempDirectory(Path.of("build").toAbsolutePath(), "agent-lifetime-" + point + "-");
         var config = configuration(directory);
         config.put("killPoint", point.name());
         JsonNode prepared;
         String knownTarget = null;
         long killedPid;
+        Instant killedAt;
         java.sql.Connection lock = null;
         try (var child = new Child(directory.resolve("original"), config)) {
             prepared = child.checkpoint("prepared");
             assertThat(prepared.path("execution").asString()).isEqualTo("WAITING_CONFIRMATION");
+            assertThat(prepared.path("providerAttempts").asInt()).isEqualTo(1);
             if (point == KillPoint.IN_PRODUCT_BEFORE_COMMIT) {
                 lock = test.db.getDataSource().getConnection();
                 lock.setAutoCommit(false);
@@ -69,6 +75,7 @@ final class AgentLifetimeExperiments {
             }
             killedPid = child.process.pid();
             child.kill();
+            killedAt = Instant.now();
         } finally {
             if (lock != null) {
                 try {
@@ -85,6 +92,14 @@ final class AgentLifetimeExperiments {
         int ledger = test.db.queryForObject("SELECT COUNT(*) FROM hold_idempotency_records WHERE slot_inventory_id=?",
             Integer.class, RepresentativeFlowIntegrationTests.bytes(test.slot));
         assertThat(ledger).isEqualTo(expected);
+        Files.writeString(directory.resolve("after-kill-db.json"), test.json.writeValueAsString(Map.of(
+            "observedAt", Instant.now().toString(), "killedAt", killedAt.toString(), "killedPid", killedPid,
+            "reservations", test.db.queryForList("SELECT HEX(id) id,state,HEX(slot_inventory_id) slot_id FROM reservations WHERE slot_inventory_id=?",
+                RepresentativeFlowIntegrationTests.bytes(test.slot)),
+            "allocations", test.db.queryForList("SELECT HEX(reservation_id) reservation_id,active,units FROM capacity_allocations WHERE slot_inventory_id=?",
+                RepresentativeFlowIntegrationTests.bytes(test.slot)),
+            "ledger", test.db.queryForList("SELECT HEX(reservation_id) reservation_id,state FROM hold_idempotency_records WHERE slot_inventory_id=?",
+                RepresentativeFlowIntegrationTests.bytes(test.slot)))));
 
         config.put("restart", true);
         config.put("oldRun", prepared.path("runId").asString());
@@ -92,26 +107,37 @@ final class AgentLifetimeExperiments {
         try (var restarted = new Child(directory.resolve("restart"), config)) {
             assertThat(restarted.process.pid()).isNotEqualTo(killedPid);
             assertThat(restarted.checkpoint("restarted").path("oldRunRejected").asBoolean()).isTrue();
+            Files.writeString(restarted.directory.resolve("readiness.json"), test.json.writeValueAsString(Map.of(
+                "clock", "parent-System.nanoTime", "parentPid", ProcessHandle.current().pid(), "childPid", restarted.process.pid(),
+                "launchedAt", restarted.launchedAt.toString(), "observedAt", Instant.now().toString(),
+                "launchNanos", restarted.launchNanos, "readyObservedNanos", System.nanoTime())));
             assertThat(Files.exists(restarted.directory.resolve("accepted.json"))).isFalse();
             assertThat(holds()).isEqualTo(expected);
-            restarted.command("recover");
+            if (revokeBeforeRecovery) test.access.revokeDelegation(test.customer.delegation().delegationId());
+            restarted.command(revokeBeforeRecovery ? "recover-revoked" : "recover");
             var recovered = restarted.checkpoint("recovered");
-            assertThat(recovered.path("outcome").asString()).isEqualTo(knownTarget == null ? "unknown" : "succeeded");
-            if (knownTarget != null) {
+            assertThat(recovered.path("outcome").asString()).isEqualTo(revokeBeforeRecovery ? "denied-current-authority"
+                : knownTarget == null ? "unknown" : "succeeded");
+            if (knownTarget != null && !revokeBeforeRecovery) {
                 assertThat(recovered.path("tool").asString()).isEqualTo("reservation.get");
+                assertThat(recovered.path("providerAttempts").asInt()).isZero();
+                assertThat(recovered.path("toolAttempts").asInt()).isEqualTo(1);
             }
             restarted.success();
             assertThat(Files.exists(restarted.directory.resolve("accepted.json"))).isFalse();
         }
         assertThat(holds()).isEqualTo(expected);
         // The old M6 approval may survive, but it is not a recovered Agent Run or retry authority.
-        var review = test.approvals.review(test.customer.original().value(), UUID.fromString(prepared.path("intentId").asString()));
-        assertThat(review.slotInventoryId()).isEqualTo(test.slot);
+        if (!revokeBeforeRecovery) {
+            var review = test.approvals.review(test.customer.original().value(), UUID.fromString(prepared.path("intentId").asString()));
+            assertThat(review.slotInventoryId()).isEqualTo(test.slot);
+        }
         Files.writeString(directory.resolve("summary.json"), test.json.writeValueAsString(Map.of(
             "evidenceKind", "forced-colocated-jvm/deterministic-provider/real-product-mysql", "killPoint", point.name(),
             "killedPid", killedPid, "oldRunRejected", true, "productHttpEntered", point != KillPoint.BEFORE_DISPATCH,
             "durableHolds", holds(), "idempotencyRecords", ledger, "automaticMutationAfterRestart", false,
-            "explicitRecovery", knownTarget == null ? "unknown-target-no-dispatch" : "known-target-exact-get")));
+            "explicitRecovery", revokeBeforeRecovery ? "denied-current-authority"
+                : knownTarget == null ? "unknown-target-no-dispatch" : "known-target-exact-get")));
     }
 
     void confirmationWait(int waitSeconds) {
@@ -244,6 +270,8 @@ final class AgentLifetimeExperiments {
         private final Path directory;
         private final Process process;
         private final BufferedWriter input;
+        private final Instant launchedAt;
+        private final long launchNanos;
 
         Child(Path directory, Map<String,Object> config) throws Exception {
             this.directory = Files.createDirectories(directory);
@@ -251,6 +279,8 @@ final class AgentLifetimeExperiments {
             String classpath = System.getProperty("slotq.test.runtime-classpath").replace('\\', '/');
             Files.writeString(arguments, "-Djdk.httpclient.disableRetryConnect=true\n-Djdk.httpclient.enableAllMethodRetry=false\n"
                 + "-Djdk.httpclient.redirects.retrylimit=1\n-cp\n\"" + classpath + "\"\n" + AgentLifetimeProcessProbe.class.getName());
+            launchedAt = Instant.now();
+            launchNanos = System.nanoTime();
             process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(), "@" + arguments)
                 .redirectErrorStream(true).redirectOutput(directory.resolve("process.log").toFile()).start();
             input = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));

@@ -44,6 +44,7 @@ final class M8CapacityObservation {
             try {
                 return counted(super.getConnection());
             } catch (SQLException failure) {
+                M8RecoveryDrill.authFailure(Objects.toString(AUTH_METHOD.get(), "none"), failure);
                 outcome = "UNAVAILABLE";
                 throw failure;
             } finally {
@@ -79,7 +80,10 @@ final class M8CapacityObservation {
 
     private static Object invoke(Method method, Object target, Object[] args) throws Throwable {
         try { return method.invoke(target, args); }
-        catch (InvocationTargetException failure) { throw failure.getCause(); }
+        catch (InvocationTargetException failure) {
+            M8RecoveryDrill.authFailure(Objects.toString(AUTH_METHOD.get(), "none"), failure.getCause());
+            throw failure.getCause();
+        }
     }
 
     static List<ToolDefinition> tools(McpRegistrations registrations) {

@@ -40,6 +40,8 @@ public final class AgentLifetimeProcessProbe {
         properties.put("spring.datasource.username", config.path("jdbcUser").asString());
         properties.put("spring.datasource.password", config.path("jdbcPassword").asString());
         properties.put("spring.datasource.hikari.connection-timeout", "2000");
+        properties.put("spring.datasource.hikari.maximum-pool-size", "4");
+        properties.put("server.tomcat.threads.max", "64");
         properties.put("spring.datasource.hikari.data-source-properties.socketTimeout", "2000");
         properties.put("spring.datasource.hikari.data-source-properties.connectTimeout", "2000");
         properties.put("spring.datasource.hikari.connection-init-sql",
@@ -57,6 +59,11 @@ public final class AgentLifetimeProcessProbe {
         properties.put("slotq.probe.point", config.path("killPoint").asString());
         properties.put("slotq.probe.venue", config.path("venue").asString());
         properties.put("slotq.mcp.handler-budget", "PT5S");
+        properties.put("slotq.mcp.workers", "8");
+        properties.put("slotq.mcp.ingress", "8");
+        properties.put("slotq.mcp.quota.rate", "200");
+        properties.put("slotq.mcp.quota.burst", "200");
+        properties.put("slotq.mcp.quota.concurrency", "4");
         properties.put("spring.main.banner-mode", "off");
         properties.put("logging.level.root", "WARN");
         var environment = new StandardEnvironment();
@@ -90,14 +97,24 @@ public final class AgentLifetimeProcessProbe {
                         }
                     }
                     checkpoint(directory, "restarted", Map.of("oldRunRejected", true, "workers", runtime.activeWorkers()));
-                    if (!"recover".equals(input.readLine())) {
+                    String recovery = input.readLine();
+                    if (!List.of("recover", "recover-revoked").contains(recovery)) {
                         throw new AssertionError("Explicit recovery required");
                     }
-                    if (config.path("knownTarget").isTextual()) {
+                    if (recovery.equals("recover-revoked")) {
+                        try {
+                            flows.customerRead(token, UUID.fromString(config.path("knownTarget").asString()), null);
+                            throw new AssertionError("Revoked authority admitted a new Run");
+                        } catch (RuntimeFailure denied) {
+                            if (!denied.getMessage().equals("AUTHORITY")) throw denied;
+                        }
+                        checkpoint(directory, "recovered", Map.of("outcome", "denied-current-authority", "dispatched", false));
+                    } else if (config.path("knownTarget").isTextual()) {
                         var read = flows.customerRead(token, UUID.fromString(config.path("knownTarget").asString()), null);
                         var result = flows.prepareReads(read, token);
                         checkpoint(directory, "recovered", Map.of("outcome", result.tools().getLast().structured().get("outcome"),
-                            "tool", result.tools().getLast().tool(), "mutationEffect", result.productEffect().name()));
+                            "tool", result.tools().getLast().tool(), "mutationEffect", result.productEffect().name(),
+                            "providerAttempts", result.budget().providerAttempts(), "toolAttempts", result.budget().toolAttempts()));
                     } else {
                         checkpoint(directory, "recovered", Map.of("outcome", "unknown", "dispatched", false));
                     }
@@ -107,7 +124,8 @@ public final class AgentLifetimeProcessProbe {
                     var review = runtime.reviewHold(flow.id(), token, config.path("original").asString());
                     runtime.approveHold(flow.id(), token, config.path("original").asString(), review);
                     checkpoint(directory, "prepared", Map.of("runId", flow.id().toString(), "intentId", review.intentId().toString(),
-                        "execution", runtime.result(flow.id(), token).execution().name()));
+                        "execution", runtime.result(flow.id(), token).execution().name(),
+                        "providerAttempts", runtime.result(flow.id(), token).budget().providerAttempts()));
                     if (!"dispatch".equals(input.readLine())) {
                         throw new AssertionError("Explicit dispatch required");
                     }
@@ -169,7 +187,11 @@ public final class AgentLifetimeProcessProbe {
 
     private static void checkpoint(Path directory, String name, Map<String,Object> value) throws IOException {
         Path temporary = directory.resolve(name + ".tmp");
-        Files.writeString(temporary, JSON.writeValueAsString(value));
+        var observation = new LinkedHashMap<>(value);
+        observation.put("at", Instant.now().toString());
+        observation.put("nanos", System.nanoTime());
+        observation.put("pid", ProcessHandle.current().pid());
+        Files.writeString(temporary, JSON.writeValueAsString(observation));
         Files.move(temporary, directory.resolve(name + ".json"), StandardCopyOption.ATOMIC_MOVE);
     }
 }

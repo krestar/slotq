@@ -85,7 +85,7 @@ tasks.register('m8Capacity', JavaExec) {
     mainClass = 'com.slotq.mcp.M8CapacityRunner'
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
     jvmArgs '-Xmx768m'
-    ['stage', 'size', 'pool', 'seed', 'rate', 'output', 'criteria'].each { key ->
+    ['stage', 'size', 'pool', 'seed', 'rate', 'output', 'criteria', 'recovery', 'recoveryPlan', 'recoveryDigest'].each { key ->
         if (project.hasProperty("capacity${key.capitalize()}")) {
             systemProperty "slotq.capacity.${key}", project.property("capacity${key.capitalize()}")
         }
