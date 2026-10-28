@@ -107,6 +107,10 @@ final class AgentLifetimeExperiments {
         try (var restarted = new Child(directory.resolve("restart"), config)) {
             assertThat(restarted.process.pid()).isNotEqualTo(killedPid);
             assertThat(restarted.checkpoint("restarted").path("oldRunRejected").asBoolean()).isTrue();
+            Files.writeString(restarted.directory.resolve("readiness.json"), test.json.writeValueAsString(Map.of(
+                "clock", "parent-System.nanoTime", "parentPid", ProcessHandle.current().pid(), "childPid", restarted.process.pid(),
+                "launchedAt", restarted.launchedAt.toString(), "observedAt", Instant.now().toString(),
+                "launchNanos", restarted.launchNanos, "readyObservedNanos", System.nanoTime())));
             assertThat(Files.exists(restarted.directory.resolve("accepted.json"))).isFalse();
             assertThat(holds()).isEqualTo(expected);
             if (revokeBeforeRecovery) test.access.revokeDelegation(test.customer.delegation().delegationId());
@@ -266,6 +270,8 @@ final class AgentLifetimeExperiments {
         private final Path directory;
         private final Process process;
         private final BufferedWriter input;
+        private final Instant launchedAt;
+        private final long launchNanos;
 
         Child(Path directory, Map<String,Object> config) throws Exception {
             this.directory = Files.createDirectories(directory);
@@ -273,6 +279,8 @@ final class AgentLifetimeExperiments {
             String classpath = System.getProperty("slotq.test.runtime-classpath").replace('\\', '/');
             Files.writeString(arguments, "-Djdk.httpclient.disableRetryConnect=true\n-Djdk.httpclient.enableAllMethodRetry=false\n"
                 + "-Djdk.httpclient.redirects.retrylimit=1\n-cp\n\"" + classpath + "\"\n" + AgentLifetimeProcessProbe.class.getName());
+            launchedAt = Instant.now();
+            launchNanos = System.nanoTime();
             process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(), "@" + arguments)
                 .redirectErrorStream(true).redirectOutput(directory.resolve("process.log").toFile()).start();
             input = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));

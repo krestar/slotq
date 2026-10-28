@@ -70,6 +70,7 @@ public final class EventProcessRecoveryRunner {
     private static final int DATABASE_OUTAGE_EXIT = 90;
     private static final int BACKLOG_SIZE = 8;
     private static final int BATCH_SIZE = 3;
+    private static final List<Map<String, Object>> PROCESS_READINESS = new ArrayList<>();
 
     private EventProcessRecoveryRunner() { }
 
@@ -88,6 +89,7 @@ public final class EventProcessRecoveryRunner {
         String revision = git("rev-parse", "HEAD");
         String branch = git("branch", "--show-current");
         boolean dirty = !git("status", "--porcelain").isBlank();
+        Map<String, String> sourceDigests = sourceDigests();
         List<Map<String, Object>> cases = new ArrayList<>();
 
         try (var mysql = new MySQLContainer(DockerImageName.parse("mysql:8.4"))
@@ -121,10 +123,13 @@ public final class EventProcessRecoveryRunner {
             require(database != null, "Unknown recovery scenario");
 
             Map<String, Object> environment = environment(mysql, database, runId, revision, branch, dirty);
+            require(sourceDigests.equals(sourceDigests()), "Source changed during process recovery execution");
+            environment.put("sourceDigests", sourceDigests);
             Map<String, Object> report = new LinkedHashMap<>();
             report.put("schemaVersion", SCHEMA);
             report.put("environment", environment);
             report.put("cases", cases);
+            report.put("processReadiness", PROCESS_READINESS);
             report.put("summary", Map.of(
                 "faultCases", cases.size(),
                 "passed", cases.stream().filter(row -> "PASS".equals(row.get("outcome"))).count(),
@@ -363,6 +368,7 @@ public final class EventProcessRecoveryRunner {
                 context.getBean(DeliveryTransactions.class), context.getBean(DeliveryPolicy.class),
                 context.getBean(EventHandlers.class), context.getBean(EventCanonicalizer.class),
                 context.getBean(jakarta.persistence.EntityManagerFactory.class), scope);
+            Files.createFile(Path.of(requiredEnvironment("EVENT_RECOVERY_READY")));
             switch (command) {
                 case "SEED" -> seed(context, scenario, Integer.parseInt(args[2]));
                 case "HALT_BEFORE_MATERIALIZE" -> Runtime.getRuntime().halt(CRASH_EXIT);
@@ -529,7 +535,26 @@ public final class EventProcessRecoveryRunner {
         builder.environment().put("EVENT_RECOVERY_DB_USER", mysql.getUsername());
         builder.environment().put("EVENT_RECOVERY_DB_PASSWORD", mysql.getPassword());
         builder.environment().put("EVENT_RECOVERY_FAULT", arguments[0]);
-        return new RunningChild(builder.start(), argumentFile, log);
+        Path ready = Files.createTempFile("slotq-event-recovery-ready-", ".gate");
+        Files.delete(ready);
+        builder.environment().put("EVENT_RECOVERY_READY", ready.toString());
+        Instant launchedAt = Instant.now();
+        long launchNanos = System.nanoTime();
+        var child = new RunningChild(builder.start(), argumentFile, log);
+        try {
+            awaitFile(ready, Duration.ofSeconds(65));
+            long observedNanos = System.nanoTime();
+            PROCESS_READINESS.add(Map.of("scenario", arguments[1], "command", arguments[0],
+                "clock", "parent-System.nanoTime", "parentPid", ProcessHandle.current().pid(),
+                "childPid", child.process.pid(), "launchedAt", launchedAt.toString(),
+                "observedAt", Instant.now().toString(), "launchNanos", launchNanos, "readyObservedNanos", observedNanos));
+            return child;
+        } catch (Exception failure) {
+            child.close();
+            throw failure;
+        } finally {
+            Files.deleteIfExists(ready);
+        }
     }
 
     private static Map<String, Object> environment(MySQLContainer mysql, RecoveryDatabase db, String runId,
@@ -557,6 +582,18 @@ public final class EventProcessRecoveryRunner {
             "batchSize", BATCH_SIZE, "retryDelays", List.of("PT0S", "PT0S"),
             "productionSlo", false));
         return environment;
+    }
+
+    private static Map<String, String> sourceDigests() throws Exception {
+        var hashes = new java.util.TreeMap<String, String>();
+        var sha256 = java.security.MessageDigest.getInstance("SHA-256");
+        try (var paths = Files.walk(Path.of("src"))) {
+            for (Path path : paths.filter(Files::isRegularFile).sorted().toList()) {
+                hashes.put(path.toString(), java.util.HexFormat.of().formatHex(sha256.digest(Files.readAllBytes(path))));
+            }
+        }
+        hashes.put("build.gradle", java.util.HexFormat.of().formatHex(sha256.digest(Files.readAllBytes(Path.of("build.gradle")))));
+        return hashes;
     }
 
     private static Map<String, Object> caseRow(String name, String faultPoint, String termination, int exitCode,

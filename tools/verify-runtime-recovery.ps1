@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory)][string]$EvidenceRoot,
     [Parameter(Mandatory)][string]$Plan,
     [Parameter(Mandatory)][string]$PlanDigest,
-    [Parameter(Mandatory)][string]$Output
+    [Parameter(Mandatory)][string]$Output,
+    [string]$ProcessIndexDigest
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path -LiteralPath $Output) { throw '판정 파일은 새 경로를 사용해야 합니다.' }
@@ -25,6 +26,74 @@ function Phase($Run, [string]$Name) { return @($Run.timeline | Where-Object phas
 function Milliseconds($Start, $End) {
     if ($null -eq $Start.nanos -or $null -eq $End.nanos) { return $null }
     return ($End.nanos - $Start.nanos) / 1000000.0
+}
+$processIndex = Read-Evidence 'process-index.json'
+$indexObserved = $null -ne $processIndex -and $ProcessIndexDigest -match '^[a-fA-F0-9]{64}$'
+$indexValid = $indexObserved -and $hashes['process-index.json'] -ieq $ProcessIndexDigest -and
+    $processIndex.schemaVersion -eq 'slotq-m8-recovery-process-index/v1' -and $processIndex.planDigest -ieq $PlanDigest
+Check 'process-index' $indexObserved $indexValid '별도로 보관한 process index digest와 원본 report/checkpoint 연결'
+function Evidence-Time($Value) {
+    if ($Value -is [DateTimeOffset]) { return $Value }
+    if ($Value -is [DateTime]) {
+        if ($Value.Kind -eq [DateTimeKind]::Unspecified) { return [DateTimeOffset][DateTime]::SpecifyKind($Value, [DateTimeKind]::Utc) }
+        return [DateTimeOffset]$Value
+    }
+    $parsed = [DateTimeOffset]::MinValue
+    # Waitlist's UTC_TIMESTAMP(6) has no offset. ConvertFrom-Json can also return an already typed UTC DateTime.
+    if ([DateTimeOffset]::TryParse([string]$Value, [Globalization.CultureInfo]::InvariantCulture,
+        [Globalization.DateTimeStyles]::AssumeUniversal, [ref]$parsed)) { return $parsed }
+    return $null
+}
+function Process-Identity([string]$Kind, $Report, [string]$Relative, [string]$Schema) {
+    $entry = $processIndex.reports.$Kind
+    $env = $Report.environment
+    $at = Evidence-Time $env.recordedAt
+    $observed = $null -ne $Report -and $null -ne $entry -and $null -ne $at -and
+        ![string]::IsNullOrWhiteSpace($env.runId) -and ![string]::IsNullOrWhiteSpace($env.applicationRevision) -and $indexObserved
+    $valid = $observed -and $indexValid -and $Report.schemaVersion -eq $Schema -and
+        $entry.reportSha256 -ieq $hashes[$Relative] -and $entry.runId -ceq $env.runId -and
+        $entry.applicationRevision -ceq $env.applicationRevision -and $entry.recordedAt -ceq $env.recordedAt -and
+        $at -gt [DateTimeOffset]$protocol.frozenAt -and $at -le [DateTimeOffset]::UtcNow
+    foreach ($case in $Report.cases) {
+        $first = Evidence-Time $case.firstAuthoritativeState.databaseNow
+        $last = Evidence-Time $case.recoveryAuthoritativeState.databaseNow
+        if ($null -eq $first -or $null -eq $last) { $observed = $false; continue }
+        $valid = $valid -and $first -gt [DateTimeOffset]$protocol.frozenAt -and $last -ge $first -and $last -le [DateTimeOffset]::UtcNow
+        # Event metadata is recorded at completion; Waitlist metadata is recorded before its cases.
+        if ($Kind -eq 'events') { $valid = $valid -and $last -le $at } else { $valid = $valid -and $first -ge $at }
+    }
+    Check "$Kind-identity" $observed $valid '고정한 원본 hash/run/revision/시각 및 FROZEN 이후 독립 DB 관측; 과거 report 재사용 차단'
+    $digests = @($env.sourceDigests.PSObject.Properties)
+    $sourceObserved = $null -ne $env.sourceDigests -and $digests.Count -gt 0
+    $sourceValid = $sourceObserved
+    $backendRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'backend'
+    $expected = @(Get-ChildItem (Join-Path $backendRoot 'src') -File -Recurse | ForEach-Object { [IO.Path]::GetRelativePath($backendRoot, $_.FullName) }) + @('build.gradle')
+    $sourceValid = $sourceValid -and $digests.Count -eq $expected.Count
+    foreach ($path in $expected) {
+        $sourceValid = $sourceValid -and $null -ne $env.sourceDigests.$path -and
+            (Get-FileHash -LiteralPath (Join-Path $backendRoot $path)).Hash -ieq $env.sourceDigests.$path
+    }
+    Check "$Kind-source" $sourceObserved $sourceValid '실행 당시 전체 Backend source/resource/build digest와 현재 내용 대조'
+}
+function Restart-Ready([string]$Id, $Rows, [int]$Minimum=1) {
+    $rowsArray = @($Rows | Where-Object { $null -ne $_ })
+    $observed = $rowsArray.Count -ge $Minimum -and $null -ne $protocol.gates.restartReadyMillis
+    $valid = $true
+    $durations = @()
+    foreach ($row in $rowsArray) {
+        $launch = Evidence-Time $row.launchedAt; $ready = Evidence-Time $row.observedAt
+        if ($null -eq $row.launchNanos -or $null -eq $row.readyObservedNanos -or $null -eq $launch -or $null -eq $ready -or
+            $null -eq $row.clock -or $null -eq $row.parentPid -or $null -eq $row.childPid) {
+            $observed = $false
+            continue
+        }
+        $ms = ($row.readyObservedNanos - $row.launchNanos) / 1000000.0
+        $durations += $ms
+        $valid = $valid -and $row.clock -eq 'parent-System.nanoTime' -and $row.parentPid -gt 0 -and
+            $row.childPid -gt 0 -and $row.childPid -ne $row.parentPid -and $ms -ge 0 -and $ms -le $protocol.gates.restartReadyMillis -and
+            $launch -gt [DateTimeOffset]$protocol.frozenAt -and $ready -ge $launch -and $ready -le [DateTimeOffset]::UtcNow
+    }
+    Check $Id $observed $valid @{millis=$durations; meaning='동일 부모 monotonic clock의 launch 직전부터 ready checkpoint 관측까지; effect/DONE 수렴 시간과 별도'}
 }
 foreach ($size in @(16,64)) {
     $run = Read-Evidence "capacity/s$size/recovery.json"
@@ -96,6 +165,12 @@ foreach ($size in @(16,64)) {
     Check "profile-$size-durable" ($null -ne $final) $valid '독립 MySQL 최종 불변식; HTTP 성공과 분리'
 }
 $events = Read-Evidence 'events/raw/report.json'
+Process-Identity 'events' $events 'events/raw/report.json' 'slotq-event-process-recovery/v1'
+Restart-Ready 'events-restart-ready' $events.processReadiness 8
+foreach ($scenario in @('materialization','claim','effect-crash','commit-unknown','stale-owner','exhaustion','db-unavailable','backlog')) {
+    $rows = @($events.processReadiness | Where-Object { $_.scenario -eq $scenario -and $_.command -in @('DRAIN','PROCESS_ONE','REPLAY_DRAIN') })
+    Check "events-$scenario-readiness-coverage" ($rows.Count -gt 0) ($rows.Count -gt 0) '필수 시나리오의 실제 child 준비 관측'
+}
 $expectedEvents = @('MATERIALIZATION_BEFORE_PROCESS_EXIT','CLAIM_COMMIT_THEN_PROCESS_EXIT','EFFECT_TRANSACTION_PROCESS_EXIT','EFFECT_AND_DONE_COMMIT_OUTCOME_UNKNOWN','STALE_OWNER_AFTER_NEW_OWNER_DONE','CLAIM_CRASH_EXHAUSTION','TRUSTED_INTERNAL_REPLAY_AFTER_CRASH_EXHAUSTION','DATABASE_UNAVAILABLE_AND_RECOVERY','BACKLOG_LARGER_THAN_BATCH_RESTART_DRAIN')
 foreach ($name in $expectedEvents) {
     $case = @($events.cases | Where-Object name -eq $name)
@@ -107,9 +182,11 @@ foreach ($name in $expectedEvents) {
     Check "event-$name" ($case.Count -eq 1) $valid 'synthetic consumer protocol 회귀와 DB 수렴 시각; 개인 운영자 복구를 대체하지 않음'
 }
 $waitlist = Read-Evidence 'waitlist/report.json'
+Process-Identity 'waitlist' $waitlist 'waitlist/report.json' 'slotq-waitlist-process-recovery/v1'
 foreach ($name in @('RELEASE_CRASH','EFFECT_CRASH','COMMIT_CRASH','BACKLOG_SEED','OUTAGE_SEED')) {
     $case = @($waitlist.cases | Where-Object name -eq $name)
     Check "waitlist-$name" ($case.Count -eq 1) ($case.Count -eq 1 -and $case[0].outcome -eq 'PASS' -and $case[0].recoveryLaunchToObservationMillis -le $protocol.gates.durableConvergenceMillis) '실제 production scheduler 및 독립 DB oracle'
+    Restart-Ready "waitlist-$name-restart-ready" $case.recoveryReadiness
 }
 $junit = Join-Path $EvidenceRoot 'junit/TEST-com.slotq.mcp.RepresentativeFlowIntegrationTests.xml'
 if (Test-Path -LiteralPath $junit) {
@@ -125,7 +202,50 @@ if (Test-Path -LiteralPath $junit) {
         Check "agent-$name" ($cases.Count -gt 0) $valid '실제 child 종료, 별도 DB 조회 또는 명시적 cancellation/late outcome 회귀'
     }
 } else { Check 'agent-junit' $false $false 'fresh JUnit 누락' }
+$agentEntries = @($processIndex.agent.cases | Where-Object { $null -ne $_ })
+Check 'agent-process-index' ($indexObserved -and $agentEntries.Count -gt 0) ($indexValid -and $agentEntries.Count -eq 5 -and $processIndex.agent.junitSha256 -ieq $hashes['junit/TEST-com.slotq.mcp.RepresentativeFlowIntegrationTests.xml']) 'fresh JUnit과 5개 실제 재기동 checkpoint 원본 hash 연결'
+$agentNames = @()
+$suiteStart = Evidence-Time $xml.testsuite.timestamp
+$suiteEnd = if ($null -ne $suiteStart -and $null -ne $xml.testsuite.time) { $suiteStart.AddSeconds([double]$xml.testsuite.time) } else { $null }
+foreach ($entry in $agentEntries) {
+    $folder = $entry.directory
+    if ($folder -notmatch '^agent/[a-zA-Z0-9_-]+$') { Check 'agent-checkpoint-path' $true $false $folder; continue }
+    $summary = Read-Evidence "$folder/summary.json"
+    $prepared = Read-Evidence "$folder/original/prepared.json"
+    $restarted = Read-Evidence "$folder/restart/restarted.json"
+    $readiness = Read-Evidence "$folder/restart/readiness.json"
+    $name = if ($summary.explicitRecovery -eq 'denied-current-authority') {'REVOKED_AUTHORITY'} else {$summary.killPoint}
+    $agentNames += $name
+    $observed = $indexObserved -and $null -ne $summary -and $null -ne $prepared -and $null -ne $restarted -and $null -ne $readiness -and $null -ne $suiteEnd
+    $valid = $indexValid -and $entry.summarySha256 -ieq $hashes["$folder/summary.json"] -and
+        $entry.preparedSha256 -ieq $hashes["$folder/original/prepared.json"] -and $entry.restartedSha256 -ieq $hashes["$folder/restart/restarted.json"] -and
+        $entry.readinessSha256 -ieq $hashes["$folder/restart/readiness.json"] -and $summary.automaticMutationAfterRestart -eq $false -and
+        $restarted.oldRunRejected -eq $true -and $restarted.workers -eq 0 -and $prepared.pid -eq $summary.killedPid -and
+        $restarted.pid -eq $readiness.childPid -and $restarted.pid -ne $summary.killedPid -and
+        (Evidence-Time $prepared.at) -gt [DateTimeOffset]$protocol.frozenAt -and (Evidence-Time $prepared.at) -ge $suiteStart -and
+        (Evidence-Time $restarted.at) -ge (Evidence-Time $prepared.at) -and (Evidence-Time $readiness.observedAt) -le $suiteEnd -and
+        (Evidence-Time $readiness.launchedAt) -ge (Evidence-Time $prepared.at) -and (Evidence-Time $readiness.observedAt) -ge (Evidence-Time $restarted.at)
+    Check "agent-$name-checkpoint-identity" $observed $valid '원본 prepared/restarted/summary/readiness와 종료·재시작 PID 연결'
+    Restart-Ready "agent-$name-restart-ready" $readiness
+}
+foreach ($name in @('BEFORE_DISPATCH','IN_PRODUCT_BEFORE_COMMIT','AFTER_COMMIT','AFTER_RESPONSE_LOSS','REVOKED_AUTHORITY')) {
+    $count = @($agentNames | Where-Object { $_ -eq $name }).Count
+    Check "agent-$name-readiness-coverage" ($count -gt 0) ($count -eq 1) '필수 실제 재기동 case의 중복·누락 검사'
+}
 $status = if (@($checks | Where-Object status -eq 'FAIL').Count) {'FAIL'} elseif (@($checks | Where-Object status -eq 'INCOMPLETE').Count) {'INCOMPLETE'} else {'PASS'}
-[ordered]@{schemaVersion='slotq-m8-recovery-review/v1'; status=$status; planDigest=$PlanDigest; reviewerSha256=(Get-FileHash -LiteralPath $PSCommandPath).Hash.ToLowerInvariant(); checks=$checks; sha256=$hashes; reviewedAt=[DateTimeOffset]::UtcNow.ToString('o'); scope='Issue #182의 단일 호스트 DB_DIRECT 검증; #183 복원 및 #185 GO 판정 제외'} | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Output -Encoding utf8
+[ordered]@{
+    schemaVersion='slotq-m8-recovery-review/v1'
+    kind='EVIDENCE_REVIEW'
+    status=$status
+    planDigest=$PlanDigest
+    processIndexDigest=$ProcessIndexDigest
+    executionIdentity=$processIndex.reports
+    agentJUnitTimestamp=$xml.testsuite.timestamp
+    reviewerSha256=(Get-FileHash -LiteralPath $PSCommandPath).Hash.ToLowerInvariant()
+    checks=$checks
+    sha256=$hashes
+    reviewedAt=[DateTimeOffset]::UtcNow.ToString('o')
+    scope='기존 실행 자료의 대조이며 새 장애 실험이 아님; Issue #182 단일 호스트 DB_DIRECT 범위; #183 복원 및 #185 GO 판정 제외'
+} | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Output -Encoding utf8
 Write-Output "복구 검증 자료 대조: $status"
 if ($status -ne 'PASS') { exit 1 }

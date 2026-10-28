@@ -28,6 +28,14 @@ Run·누적 예산·취소·late result는 [ADR-0011](../adr/0011-m7-process-loc
 `duplicateEffects=0`, `capacityViolations=0`, `fifoViolations=0`, `missingAudit=0`,
 `automaticMutationAfterRestart=0`이다. 기준을 바꾸려면 새 프로토콜·새 계획과 새로운 실행이 필요하다.
 
+`restartReadyMillis`는 부모 프로세스의 같은 `System.nanoTime` clock으로 launch 직전부터
+ready checkpoint를 관측할 때까지 측정한다. Event는 Spring context와 scoped worker 구성,
+Waitlist는 production activation과 recovery scheduler 시작, Agent는 새 Runtime 구성과 이전 Run 거부가
+각 ready 경계다. Agent의 새 exact GET이나 effect/receipt/DONE의 최종 수렴은 그 뒤에 별도로 확인한다.
+서로 다른 JVM의 `nanoTime`을 빼거나 `recoveryLaunchToObservationMillis`를 준비 시간으로 읽지 않는다.
+후자는 startup·lease·scheduler batch·독립 DB 최종 관측을 포함하는 수렴 상한이다.
+준비가 60초 이하여도 수렴이 90초를 넘으면 FAIL이며, 준비 관측이 없으면 수렴 성공만으로 PASS가 되지 않는다.
+
 ## 장애 발생 시
 
 1. incident ID와 장애 전 마지막 정상 scrape·DB snapshot, 대상 Tenant/consumer/event/registration,
@@ -86,12 +94,26 @@ Backend 수정 뒤에는 사용자 요청에 따라 전체 `test`, `clean build`
 GitHub CI는 사용자가 확인하며 Codex는 추적하지 않는다.
 
 보존 디렉터리를 `capacity/s16/`, `capacity/s64/`, `events/raw/report.json`, `waitlist/report.json`,
-`junit/` 구조로 구성한 뒤 저장소 루트에서 다음과 같이 대조한다. 실제 실행을 생략하는 명령이 아니다.
+`junit/`, `agent/<실행 디렉터리>/` 구조로 구성한다. Agent는 선택한 JUnit 실행 구간 안의 실제 재기동
+5건만 복사하며 `summary.json`, `original/prepared.json`, `restart/restarted.json`,
+`restart/readiness.json`을 보존한다. 과거 checkpoint를 새 JUnit에 연결하지 않는다.
+Event/Waitlist report에는 실행 중 기록한 run ID·revision·recordedAt와 전체 Backend source/resource/build digest가 있어야 한다.
+이 필드가 없는 과거 report에 현재 digest나 재기동 시간을 덧붙이지 않는다. 해당 판정은 INCOMPLETE다.
+
+판정·index·회귀 명령은 PowerShell 7(`pwsh`)에서 실행한다.
+새 evidence 디렉터리에서 index를 한 번 만들고 출력된 digest를 원자료와 별도로 보관한 뒤 다음과 같이 대조한다.
+Index는 선택한 report/run/시각과 checkpoint 원본 hash를 고정한다. 원자료 교체 후 index를 재생성해 같은 실행으로
+취급하지 않는다. Index는 독립적인 실행 증명 서명이 아니며, 실제 실행 로그와 원본 보존의 신뢰를 전제로 한다.
+실제 실행을 생략하는 명령이 아니다.
 source/resource/build digest, 필수 시나리오, Product SQL 실패, 경보 전이, 수렴 시간과 fresh JUnit을 검사하며
 누락은 INCOMPLETE로 남긴다. 원본 report/summary를 덮어쓰지 않는다.
+출력은 `kind=EVIDENCE_REVIEW`이며 `executionIdentity`의 원래 run/revision/시각과 `reviewedAt`을 구분한다.
+보존 자료를 다시 대조한 시각을 새로운 장애 실험의 실행 시각으로 사용하지 않는다.
 
 ```powershell
-./tools/verify-runtime-recovery.ps1 -EvidenceRoot $evidence -Plan $plan -PlanDigest $digest -Output $newReviewFile
+$indexDigest = ./tools/new-runtime-recovery-index.ps1 -EvidenceRoot $evidence -PlanDigest $digest
+./tools/verify-runtime-recovery.ps1 -EvidenceRoot $evidence -Plan $plan -PlanDigest $digest -ProcessIndexDigest $indexDigest -Output $newReviewFile
+pwsh -NoProfile -File ./tools/tests/verify-runtime-recovery.tests.ps1
 ```
 
 독립 DB 확인에는 승인된 SELECT 연결에서 아래 조회를 사용한다. `:tenant`, `:event`, `:registration`,

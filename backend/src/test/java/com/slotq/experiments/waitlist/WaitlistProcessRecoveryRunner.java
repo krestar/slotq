@@ -59,6 +59,7 @@ public final class WaitlistProcessRecoveryRunner {
         Path output=Path.of(System.getProperty("slotq.waitlist.recovery.output","build/reports/experiments/waitlist-recovery" )).toAbsolutePath();
         Files.createDirectories(output);
         var environment=new LinkedHashMap<String,Object>();
+        environment.put("runId",UUID.randomUUID().toString());
         environment.put("applicationRevision",git("rev-parse","HEAD"));
         environment.put("branch",git("branch","--show-current"));
         environment.put("dirty",!git("status","--porcelain").isBlank());
@@ -79,6 +80,14 @@ public final class WaitlistProcessRecoveryRunner {
                 hashes.put(source.getFileName().toString(),HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(source))));
         }
         environment.put("harnessSourceSha256",hashes);
+        var sourceDigests=new TreeMap<String,String>();
+        try(var paths=Files.walk(Path.of("src"))) {
+            for(Path path:paths.filter(Files::isRegularFile).sorted().toList()) {
+                sourceDigests.put(path.toString(),HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path))));
+            }
+        }
+        sourceDigests.put("build.gradle",HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(Path.of("build.gradle")))));
+        environment.put("sourceDigests",sourceDigests);
         var cases=new ArrayList<Map<String,Object>>();
         try(var mysql=new MySQLContainer("mysql:8.4").withDatabaseName("slotq_waitlist_process_recovery")
                 .withCommand("--log-bin-trust-function-creators=1")) {
@@ -157,10 +166,14 @@ public final class WaitlistProcessRecoveryRunner {
             for(String table:TABLES) require(first.get(table).equals(after.get(table)),"outage changed durable "+table);
             row.put("afterOutageAuthoritativeState",after);row.put("childExitCode",90);
         } else row.put("childExitCode",seedExit);
+        Instant recoveryLaunchedAt=Instant.now();
         long recoveryStart=System.nanoTime();
         Map<String,Object> recovered;
         try(var child=start(mysql,backlog?"RECOVER_BACKLOG":"RECOVER_SINGLE",folder,recoveryNow)) {
             awaitFile(folder.resolve("recovery-ready"),child);
+            row.put("recoveryReadiness",Map.of("clock","parent-System.nanoTime","parentPid",ProcessHandle.current().pid(),
+                "childPid",child.process().pid(),"launchedAt",recoveryLaunchedAt.toString(),"observedAt",Instant.now().toString(),
+                "launchNanos",recoveryStart,"readyObservedNanos",System.nanoTime()));
             if(backlog) {
                 var middle=awaitState(db,tenant,recoveryNow,s->drained(s)&&stat(s,"waitlist_offers")==12&&stat(s,"pendingOffers")==9
                     &&stat(s,"offered")==9&&stat(s,"dueWaiting")==0&&stat(s,"dueHeld")==0,child);
