@@ -137,6 +137,8 @@ final class M8RecoveryDrill {
         }
     }
 
+    static void backupFailureTarget(UUID target) { poisonSlot = target; }
+
     void run() throws Exception {
         boolean complete = false;
         record("started", Map.of("supportPool", application.getBean(HikariDataSource.class).getMaximumPoolSize(),

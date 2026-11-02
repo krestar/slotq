@@ -59,7 +59,7 @@ Waitlist는 production activation과 recovery scheduler 시작, Agent는 새 Run
 
 현재 권한을 확인할 수 없거나 DB가 미복구인 경우, 재기동 반복·DEAD 재발, stale fence/epoch,
 receipt/DONE·감사 불일치, 정합성 위반, 관측 누락·잘림, 사전 시간 초과가 있으면 서비스 재개를 중단하고
-incident 책임자에게 exact inventory와 근거를 전달한다. 데이터 유실·백업 복원·이전 binary는 #183의 절차로 인계한다.
+incident 책임자에게 exact inventory와 근거를 전달한다. 데이터 유실·백업 복원·이전 binary는 [#183 백업 복구 절차](backup-recovery.md)로 인계한다.
 
 ## 합성 환경에서 재현
 

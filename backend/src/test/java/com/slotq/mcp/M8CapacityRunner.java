@@ -126,6 +126,7 @@ public final class M8CapacityRunner {
     }
 
     public static void main(String[] args) throws Exception {
+        M8BackupDrill.preflight();
         String stage = System.getProperty("slotq.capacity.stage", "pilot");
         require(Set.of("pilot", "verification").contains(stage), "Unknown stage");
         int size = Integer.getInteger("slotq.capacity.size", 16);
@@ -151,33 +152,7 @@ public final class M8CapacityRunner {
                 .withEnv("MYSQL_ROOT_HOST", "%").withCommand("--log-bin-trust-function-creators=1")) {
             mysql.start();
             M8RecoveryDrill.prepareObserver(mysql);
-            int port = RepresentativeFlowIntegrationTests.PORT;
-            String origin = RepresentativeFlowIntegrationTests.ORIGIN;
-            try (var context = new SpringApplicationBuilder(SlotqApplication.class, Configuration.class)
-                    .properties(M8RecoveryDrill.properties(mysql)).run(
-                    "--logging.level.root=ERROR", "--spring.main.banner-mode=off", "--server.address=127.0.0.1",
-                    "--server.port=" + port, "--server.ssl.enabled=true", "--server.tomcat.mbeanregistry.enabled=true",
-                    "--server.ssl.key-store=" + McpHttpIntegrationTests.KEYSTORE.toUri(),
-                    "--server.ssl.key-store-password=" + McpHttpIntegrationTests.PASSWORD, "--server.ssl.key-store-type=PKCS12",
-                    "--spring.datasource.url=" + mysql.getJdbcUrl(), "--spring.datasource.username=" + mysql.getUsername(),
-                    "--spring.datasource.password=" + mysql.getPassword(), "--spring.datasource.hikari.maximum-pool-size=" + maximum,
-                    "--spring.datasource.hikari.minimum-idle=" + maximum, "--spring.datasource.hikari.connection-timeout=2000",
-                    "--spring.datasource.hikari.data-source-properties.socketTimeout=2000",
-                    "--spring.datasource.hikari.data-source-properties.connectTimeout=2000",
-                    "--spring.datasource.hikari.connection-init-sql=SET SESSION innodb_lock_wait_timeout=2, lock_wait_timeout=2, wait_timeout=5, max_execution_time=2000",
-                    "--spring.transaction.default-timeout=10s", "--spring.jpa.properties.jakarta.persistence.query.timeout=2000",
-                    "--spring.jpa.properties.hibernate.session_factory.statement_inspector=" + SqlCounter.class.getName(),
-                    "--slotq.auth.dev-bootstrap-enabled=false", "--slotq.mcp.enabled=true",
-                    "--slotq.operations.recovery.enabled=" + M8RecoveryDrill.enabled(),
-                    "--slotq.mcp.origin=" + origin, "--slotq.mcp.product-origin=" + origin,
-                    "--slotq.mcp.handler-budget=PT5S", "--slotq.mcp.workers=8", "--slotq.mcp.ingress=8",
-                    "--slotq.mcp.quota.rate=200", "--slotq.mcp.quota.burst=200", "--slotq.mcp.quota.concurrency=4",
-                    "--spring.task.scheduling.pool.size=2", "--slotq.waitlist.promotion.enabled=true",
-                    "--slotq.waitlist.promotion.maintenance-enabled=true", "--slotq.waitlist.promotion.maintenance-interval=PT1S",
-                    "--slotq.events.delivery.scheduler-enabled=true", "--slotq.events.delivery.poll-interval=PT0.2S",
-                    "--slotq.events.delivery.batch-size=2", "--slotq.operations.observation.enabled=true",
-                    "--slotq.waitlist.promotion.maintenance-batch-size=8",
-                    "--slotq.waitlist.promotion.discovery-batch-size=8")) {
+            try (var context = startContext(mysql, maximum)) {
                 var runner = new M8CapacityRunner(context, mysql, seed);
                 try {
                     runner.seed(size);
@@ -248,9 +223,44 @@ public final class M8CapacityRunner {
                     write(output.resolve("summary.json"), summarize(JSON.valueToTree(raw)));
                     Files.writeString(output.resolve("raw.sha256"), digest(output.resolve("raw.json")) + "\n");
                     System.out.println("M8 capacity evidence written: " + output);
+                    if (Boolean.getBoolean("slotq.capacity.backup")) {
+                        runner.resources.close();
+                        runner.runtime.close();
+                        new M8BackupDrill(context, runner.f, mysql, output).run();
+                    }
                 } finally { runner.resources.close(); runner.runtime.close(); }
             }
         }
+    }
+
+    static ConfigurableApplicationContext startContext(MySQLContainer mysql, int maximum) {
+        int port = RepresentativeFlowIntegrationTests.PORT;
+        String origin = RepresentativeFlowIntegrationTests.ORIGIN;
+        return new SpringApplicationBuilder(SlotqApplication.class, Configuration.class)
+                    .properties(M8RecoveryDrill.properties(mysql)).run(
+                    "--logging.level.root=ERROR", "--spring.main.banner-mode=off", "--server.address=127.0.0.1",
+                    "--server.port=" + port, "--server.ssl.enabled=true", "--server.tomcat.mbeanregistry.enabled=true",
+                    "--server.ssl.key-store=" + McpHttpIntegrationTests.KEYSTORE.toUri(),
+                    "--server.ssl.key-store-password=" + McpHttpIntegrationTests.PASSWORD, "--server.ssl.key-store-type=PKCS12",
+                    "--spring.datasource.url=" + mysql.getJdbcUrl(), "--spring.datasource.username=" + mysql.getUsername(),
+                    "--spring.datasource.password=" + mysql.getPassword(), "--spring.datasource.hikari.maximum-pool-size=" + maximum,
+                    "--spring.datasource.hikari.minimum-idle=" + maximum, "--spring.datasource.hikari.connection-timeout=2000",
+                    "--spring.datasource.hikari.data-source-properties.socketTimeout=2000",
+                    "--spring.datasource.hikari.data-source-properties.connectTimeout=2000",
+                    "--spring.datasource.hikari.connection-init-sql=SET SESSION innodb_lock_wait_timeout=2, lock_wait_timeout=2, wait_timeout=5, max_execution_time=2000",
+                    "--spring.transaction.default-timeout=10s", "--spring.jpa.properties.jakarta.persistence.query.timeout=2000",
+                    "--spring.jpa.properties.hibernate.session_factory.statement_inspector=" + SqlCounter.class.getName(),
+                    "--slotq.auth.dev-bootstrap-enabled=false", "--slotq.mcp.enabled=true",
+                    "--slotq.operations.recovery.enabled=" + M8RecoveryDrill.enabled(),
+                    "--slotq.mcp.origin=" + origin, "--slotq.mcp.product-origin=" + origin,
+                    "--slotq.mcp.handler-budget=PT5S", "--slotq.mcp.workers=8", "--slotq.mcp.ingress=8",
+                    "--slotq.mcp.quota.rate=200", "--slotq.mcp.quota.burst=200", "--slotq.mcp.quota.concurrency=4",
+                    "--spring.task.scheduling.pool.size=2", "--slotq.waitlist.promotion.enabled=true",
+                    "--slotq.waitlist.promotion.maintenance-enabled=true", "--slotq.waitlist.promotion.maintenance-interval=PT1S",
+                    "--slotq.events.delivery.scheduler-enabled=true", "--slotq.events.delivery.poll-interval=PT0.2S",
+                    "--slotq.events.delivery.batch-size=2", "--slotq.operations.observation.enabled=true",
+                    "--slotq.waitlist.promotion.maintenance-batch-size=8",
+                    "--slotq.waitlist.promotion.discovery-batch-size=8");
     }
 
     private void seed(int size) throws Exception {

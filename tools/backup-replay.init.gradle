@@ -1,0 +1,17 @@
+// Opt-in supplemental fixture, outside the frozen capacity runner source set.
+allprojects {
+    plugins.withId('java') {
+        def probe = sourceSets.create('backupReplayProbe') {
+            java.srcDir(new File(rootDir, '../tools/backup-replay'))
+            compileClasspath = sourceSets.test.runtimeClasspath
+            runtimeClasspath = output + compileClasspath
+        }
+        tasks.register('verifyBackupReplayHistory', JavaExec) {
+            dependsOn probe.classesTaskName
+            classpath = probe.runtimeClasspath
+            mainClass = 'com.slotq.mcp.BackupReplayHistoryProbe'
+            args(providers.gradleProperty('backupResult').get(), providers.gradleProperty('backupResultDigest').get(),
+                providers.gradleProperty('backupReplayOutput').get())
+        }
+    }
+}
