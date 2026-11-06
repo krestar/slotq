@@ -1,5 +1,9 @@
 # M8 실제 모델 반복 평가 연결
 
+실제 평가의 후속 담당은 [#193](https://github.com/krestar/slotq/issues/193)이다.
+최신 진행·검증과 남은 조건은 [#193 평가 기록](m8-issue-193-evaluation.md)을 따른다.
+아래 과거 실행의 INCOMPLETE·분모·봉인 identity는 그대로 보존한다.
+
 [#180](https://github.com/krestar/slotq/issues/180)의 테스트 전용 수집 연결과 반복 결과표다.
 [#179 평가기](m8-evaluator.md)의 계획 cell, 보호 원자료, 다섯 축 채점, 의미 검토와 재계산을
 재사용한다. [공통 계약](../architecture/m8-evaluation-contract.md)과
