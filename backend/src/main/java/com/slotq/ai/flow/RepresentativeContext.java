@@ -18,7 +18,8 @@ public final class RepresentativeContext implements PlanContextSource {
         + "|\\bnot\\s+confirmed\\b");
     private static final Pattern CONFIRMED_HOLD = Pattern.compile("(?i)예약\\s*(?:이|은|가)?\\s*(?:최종\\s*)?확정"
         + "(?:되었습니다|되었|됐|했|합니다|된\\s*상태|입니다)|\\bconfirmed\\b");
-    private static final Pattern ABSENCE_LIMITATION = Pattern.compile("(?:사건|이벤트)(?:이|가)?\\s*없었다고\\s*단정할\\s*수\\s*없습니다");
+    private static final Pattern ABSENCE_LIMITATION = Pattern.compile("(?:사건|이벤트)(?:이|가)?\\s*없었다고\\s*단정할\\s*수\\s*없습니다"
+        + "|(?:사건|이벤트)(?:이|가)?\\s*없음을\\s*의미하지\\s*않(?:습니다|으며|는다)");
     private static final Pattern EVENT_ABSENCE = Pattern.compile("(?i)(?:사건|이벤트)(?:은|는|이|가)?\\s*"
         + "(?:없(?:습니다|었습니다|었다|음)|발생하지\\s*않(?:았습니다|았다))|no\\s+(?:events|incidents)\\s+(?:occurred|happened)");
     private static final Pattern DELIVERY_COMPLETE = Pattern.compile("(?i)(?:전달|delivery)(?:은|는|이|가)?\\s*(?:상태(?:는|가)?\\s*)?"

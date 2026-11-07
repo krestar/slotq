@@ -182,6 +182,7 @@ tasks.register('m8RuntimeEvaluation', Test) {
     filter {
         includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.m8EvaluationConnectsRuntimeProductAndIndependentMySqlObservations'
         includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.m8PreProviderAnswerFailureKeepsProductAndDoesNotReuseInitialProposal'
+        includeTestsMatching 'com.slotq.mcp.RepresentativeFlowIntegrationTests.m8AllRequiredRuntimeCasesKeepActualAuthorityAndIndependentDatabaseObservations'
         includeTestsMatching 'com.slotq.mcp.KnowledgeRetrievalIntegrationTests.m8EvaluationConnectsCanonicalLexicalRetrievalAndPublicationEvidence'
     }
     systemProperty 'jdk.httpclient.disableRetryConnect', 'true'

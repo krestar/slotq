@@ -1,5 +1,10 @@
 # M8 실제 모델 반복 평가 연결
 
+실제 평가의 후속 담당은 [#193](https://github.com/krestar/slotq/issues/193)이다.
+최신 코드 보완·검증은 [#193 오프라인 보완](m8-issue-193-offline-fixes.md), 실제 수집 원본은
+[#193 평가 기록](m8-issue-193-evaluation.md)을 따른다.
+아래 과거 실행의 INCOMPLETE·분모·봉인 identity는 그대로 보존한다.
+
 [#180](https://github.com/krestar/slotq/issues/180)의 테스트 전용 수집 연결과 반복 결과표다.
 [#179 평가기](m8-evaluator.md)의 계획 cell, 보호 원자료, 다섯 축 채점, 의미 검토와 재계산을
 재사용한다. [공통 계약](../architecture/m8-evaluation-contract.md)과
@@ -133,13 +138,14 @@ Runtime 명세는 기존 disposable MySQL과 loopback HTTPS 대상의 실제 man
 | lane | 실제 실행과 해석 |
 | --- | --- |
 | `ACTUAL_PROVIDER_FIXTURE` | 기존 M7 prompt 조립과 M8의 allowlist 입력 projection 사용. supplied Knowledge는 실제 lexical 검색이 아니며, 도구 제안은 dispatch/권한/DB 성공이 아님 |
-| `ACTUAL_PROVIDER_FLOW` | 기존 `M8RuntimeEvaluation`의 7개 연결 사례 재사용: Customer proposal/answer, Owner 관리 조회, Manager Ops, 업무 거부, 승인 누락, commit 후 응답 유실·exact GET |
+| `ACTUAL_PROVIDER_FLOW` | `M8RuntimeEvaluation`의 v1 필수 18사례 연결. 기존 7사례와 추가 11사례의 실제 경로·관측은 [#193 보완 기록](m8-issue-193-offline-fixes.md) 참조 |
 | 실제 lexical | 기존 `m8RuntimeEvaluation`의 별도 검색 run. 실제 모델 호출 표본에 합산하지 않음 |
 | 결정적·fault | 기존 scorer/runtime/security suite. 새 provider 표본이나 자연어 의미 검토를 대신하지 않음 |
 | historical·recalculation | 원래 lane과 원자료 identity 유지. 새 호출·독립 반복 수는 증가하지 않음 |
 
-현재 실제 Runtime 연결은 위 7개 시나리오에 한정한다. 다른 필수 사례와 #184 공격성 입력의 실제 모델·서버 통합
-coverage를 이 7개 또는 보안 ID mapping만으로 채웠다고 주장하지 않는다. 미연결 선택은 provider 호출 전에 거부한다.
+현재 Runtime 수집기는 v1의 필수 18사례를 지원한다. 연결 회귀는 결정적 provider를 사용하며,
+이를 실제 모델·#184 공격성 입력 전체 coverage 완료로 간주하지 않는다. 사전 권한 거부의 provider 0회와
+실제 모델 응답을 구분하며, 지원하지 않는 사례·lane 선택은 provider 호출 전에 거부한다.
 보안 corpus의 Actor/credential/범위/기대 결과·테스트는 `security-v1/cases.json`을 참조한다.
 snapshot에는 민감 artifact 검사를 약화하지 않도록 credential 설명 필드 대신 원본 catalog digest와
 사례 ID·관측·기대 결과·test selector를 저장한다.

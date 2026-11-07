@@ -151,6 +151,8 @@ class RepresentativeContextTests {
                 assertThat(context.acceptsAnswer(plan, facts, answer(text, claims))).as(text).isFalse();
             }
             assertThat(context.acceptsAnswer(plan, facts, answer("조회 범위의 관측을 확인할 수 없으며 사건이 없었다고 단정할 수 없습니다.", claims))).isTrue();
+            assertThat(context.acceptsAnswer(plan, facts, answer("관측 없음이 사건 없음을 의미하지 않으며 부분적 한계가 있습니다.", claims))).isTrue();
+            assertThat(context.acceptsAnswer(plan, facts, answer("관측 없음이 사건 없음을 의미하지 않으며, 사건은 없습니다.", claims))).isFalse();
         }
     }
 

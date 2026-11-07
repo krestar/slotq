@@ -529,6 +529,10 @@ class RepresentativeFlowIntegrationTests {
         new M8RuntimeEvaluation(this).run(com.slotq.evaluation.M8ModelQualification.load());
     }
 
+    @Test void m8AllRequiredRuntimeCasesKeepActualAuthorityAndIndependentDatabaseObservations() throws Exception {
+        new M8RuntimeEvaluation(this).extended();
+    }
+
     @Test
     @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="slotq.flowEvidence.optIn", matches="true")
     void actualProviderFlows() throws Exception {

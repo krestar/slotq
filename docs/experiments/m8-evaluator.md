@@ -24,6 +24,8 @@ API 키·Docker·외부 네트워크가 필요 없다. `model=scorer-test-vector
 기존 Router/Runtime/MCP/인증된 Product HTTPS/Knowledge를 실제로 실행하고 provider만 결정적으로 주입한다.
 연결된 HOLD proposal/answer, Management, Ops, 업무 규칙 거부, 승인 누락 강제 거부,
 commit 후 응답 유실과 exact GET을 연결한다.
+[#193 보완](m8-issue-193-offline-fixes.md)은 같은 task에서 v1 Runtime 필수 18사례의 추가 연결 회귀도 실행한다.
+추가 회귀의 pointer는 `latest-runtime-extended-run.txt`이며 기존 7사례·검색·실제 provider 자료와 분리한다.
 Ops 합성 projection의 시각은 실행 기준 시각에 고정해 DB 현재 시각이 fixture 조회 구간을 벗어나지 않게 한다.
 원래 Runtime 도구 관측과 실제 Product HTTP 응답 관측을 함께 기록한다.
 canonical M6 18개와 M8 문서 삭제/검색 holdout 2개는 현재 lexical 검색으로 실행한다.

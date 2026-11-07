@@ -210,6 +210,7 @@ class M8QualificationVerdictTests {
         session.execute((cell, input, recorder) -> {
             var raw = M8EvaluationTests.vector(M8Evaluation.item(cell.caseId()), recorder.binding());
             ((ObjectNode) raw.get("result")).put("observationKind", "ACTUAL_PROVIDER_SYNTHETIC_FIXTURE");
+            raw.put("disclosure", M8ActualProvider.fixtureDisclosure(raw.get("request"), raw.get("result").path("proposal"), M8Evaluation.item(cell.caseId())));
             raw.put("provider-call-a", journal("", true));
             raw.forEach((id, value) -> M8EvaluationTests.put(recorder, id, value));
             var review = JSON.createObjectNode().put("runId", runId).put("rubricVersion", "m8-answer-v1")
