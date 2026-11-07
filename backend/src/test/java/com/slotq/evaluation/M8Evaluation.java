@@ -241,7 +241,8 @@ public final class M8Evaluation {
 
     private ObjectNode writeArtifact(String relative, byte[] bytes) throws IOException {
         Path file = M8ProtectedFiles.resolve(root, relative); writeNew(file, bytes);
-        return (ObjectNode) JSON.valueToTree(Map.of("path", relative, "digest", digest(bytes), "bytes", bytes.length));
+        // This descriptor is part of scorer identity. Map.of iteration order varies between JVMs.
+        return JSON.createObjectNode().put("path", relative).put("digest", digest(bytes)).put("bytes", bytes.length);
     }
     private static void writeNew(Path file, byte[] bytes) throws IOException {
         Files.createDirectories(file.getParent()); Files.write(file, bytes, StandardOpenOption.CREATE_NEW);
@@ -430,7 +431,7 @@ public final class M8Evaluation {
                             var runtime = raw.getOrDefault("result", JSON.createObjectNode()).path("runtime");
                             boolean replay = runtime.path("providers").isArray() && !runtime.path("providers").isEmpty()
                                 && runtime.path("providers").valueStream().allMatch(p -> {
-                                try { return new com.slotq.ai.router.ModelRouter().replay(JSON.treeToValue(p.path("routing"), com.slotq.ai.router.ModelRouter.Decision.class)); }
+                                try { return routerReplay(p.path("routing")); }
                                 catch (RuntimeException invalid) { return false; }
                             });
                             marks.put("router_replay", new M8Scorer.Mark(replay ? "PASS" : "INCOMPLETE", "실제 Runtime Router snapshot 재계산"));
@@ -500,6 +501,28 @@ public final class M8Evaluation {
         if (qualification != null) result.set("modelQualification", M8ModelQualification.summarize(rows, qualification, source, snapshots,
             snapshotValues.get("reference-baseline")));
         return JSON.valueToTree(canonical(result));
+    }
+
+    static boolean routerReplay(JsonNode recorded) {
+        var decision = JSON.treeToValue(recorded, com.slotq.ai.router.ModelRouter.Decision.class);
+        var replayed = new com.slotq.ai.router.ModelRouter().route(decision.snapshot());
+        return sameJsonNumbers(JSON.valueToTree(replayed), recorded);
+    }
+
+    private static boolean sameJsonNumbers(JsonNode left, JsonNode right) {
+        if (left.isNumber() && right.isNumber()) {
+            return new java.math.BigDecimal(left.asString()).compareTo(new java.math.BigDecimal(right.asString())) == 0;
+        }
+        if (left.isObject() && right.isObject()) {
+            return left.propertyNames().equals(right.propertyNames()) && left.properties().stream()
+                .allMatch(e -> sameJsonNumbers(e.getValue(), right.path(e.getKey())));
+        }
+        if (left.isArray() && right.isArray()) {
+            if (left.size() != right.size()) return false;
+            for (int i = 0; i < left.size(); i++) if (!sameJsonNumbers(left.get(i), right.get(i))) return false;
+            return true;
+        }
+        return left.equals(right);
     }
 
     private static JsonNode contractRecord(JsonNode plan, Cell cell, JsonNode item, JsonNode row, JsonNode source, JsonNode snapshots, JsonNode criteria, int index) {

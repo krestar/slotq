@@ -12,6 +12,28 @@ import static com.slotq.evaluation.M8FixtureValidator.*;
 import static org.assertj.core.api.Assertions.*;
 
 class M8BoundaryScoringTests {
+    @ParameterizedTest
+    @ValueSource(strings = {"observed", "no-response", "no-admission", "wrong-status", "wrong-target"})
+    void deniedProductReadNeedsActualResponseAndNeverCountsAsReadSuccess(String defect) {
+        var item = M8Evaluation.item("m8/cross-customer");
+        var raw = vector(item, M8Bindings.create(cell(text(item, "id")), "test", BASE, Map.of()));
+        var result = (ObjectNode) raw.get("result"); result.remove("proposal");
+        result.putObject("boundaryRejection").put("observed", true).put("layer", "PRODUCT").put("stage", "BEFORE_PROVIDER")
+            .put("reason", "AUTHORITY").put("disposition", "REJECT").put("tool", "none");
+        var reads = JSON.createObjectNode(); reads.putObject("reservation.get").put("reservationId", UUID.randomUUID().toString());
+        var plan = JSON.createObjectNode(); plan.set("reads", reads); raw.put("flow-plan", plan);
+        var tool = result.putObject("runtime").putArray("tools").addObject().put("tool", "reservation.get").put("invocation", "RESPONSE_OBSERVED");
+        tool.putObject("structured").put("outcome", "rejected");
+        var wire = ((ObjectNode) raw.get("tool-transmissions")).withArray("attempts").addObject().put("tool", "reservation.get")
+            .put("sent", true).put("authorized", !defect.equals("no-admission")).put("responseObserved", !defect.equals("no-response"))
+            .put("status", defect.equals("wrong-status") ? 200 : 404);
+        wire.set("arguments", reads.path("reservation.get"));
+        if (defect.equals("wrong-target")) wire.putObject("arguments").put("reservationId", UUID.randomUUID().toString());
+        var score = M8Scorer.score(item, raw);
+        assertThat(score.checks().get("read_authority_denial_reservation.get").status()).isEqualTo(defect.equals("observed") ? "PASS" : "INCOMPLETE");
+        assertThat(score.checks().get("read_execution_reservation.get").status()).isEqualTo("INCOMPLETE");
+    }
+
     @Test
     void atomicHoldCannotHideChangesToOtherObservedBusinessTables() {
         var item = M8Evaluation.item("m8/customer-held");

@@ -144,25 +144,38 @@ public final class M8ActualProvider implements Provider {
             M8Bindings.group(M8Evaluation.item(c.caseId())) + c.repeat() + c.model() + c.lane(),
             ignored -> M8Bindings.create(c, runId, Instant.parse(manifest.path("data").path("baseTime").asString()), Map.of())), null, plan);
         var provider = new M8ActualProvider(plan);
-        var specification = JSON.readTree(resource("model-router/comparison-v3.json"));
-        session.execute((cell, input, recorder) -> {
-            provider.enter(cell, recorder);
+        session.execute(provider::collectFixture);
+        Files.writeString(Path.of("../build/m8-evidence/latest-model-fixture-run.txt"), runId + "\n" + session.evidenceDigest());
+    }
+
+    void collectFixture(M8Evaluation.Cell cell, JsonNode input, M8Evaluation.Recorder recorder) throws Exception {
+            enter(cell, recorder);
+            var specification = JSON.readTree(resource("model-router/comparison-v3.json"));
             var testCase = JSON.createObjectNode(); testCase.set("input", input.path("input")); testCase.set("fixture", input.path("facts"));
             testCase.set("workload", M8Evaluation.item(cell.caseId()).path("workload"));
             var request = ModelComparisonRunner.request(specification, testCase);
             var projected = (ObjectNode) input.deepCopy();
             projected.setAll((ObjectNode) JSON.valueToTree(request)); recorder.put("request", projected);
             var classification = new ModelRouter.Classification(ModelRouter.DataClass.SYNTHETIC, true, true, null, null, 40000, 1024);
-            var response = provider.generate(cell.model(), classification, request,
+            var response = generate(cell.model(), classification, request,
                 new ProviderBudget(Clock.systemUTC(), Instant.now().plusSeconds(45), 1, plan.path("reservationTokens").asLong()));
-            var raw = JSON.createObjectNode(); raw.put("observationKind", "ACTUAL_PROVIDER_SYNTHETIC_FIXTURE")
+            var raw = JSON.createObjectNode(); raw.put("observationKind", http == null ? "SCORER_TEST_VECTOR" : "ACTUAL_PROVIDER_SYNTHETIC_FIXTURE")
                 .put("providerCalls", response.attempts()).put("tokens", response.usage().total() == null ? 0 : response.usage().total())
                 .put("usageUnknown", response.attempts() > 0 && response.usage().total() == null)
                 .put("failure", response.failure() == null ? "" : response.failure().name());
             raw.set("proposal", JSON.valueToTree(response.output())); recorder.put("result", raw);
             if (response.output() != null) recorder.put("answer", response.output());
+            recorder.put("disclosure", fixtureDisclosure(projected, JSON.valueToTree(response.output()), M8Evaluation.item(cell.caseId())));
             // Fixture proposals cannot establish server dispatch, authority or independent DB effects.
-        });
-        Files.writeString(Path.of("../build/m8-evidence/latest-model-fixture-run.txt"), runId + "\n" + session.evidenceDigest());
+    }
+
+    static ObjectNode fixtureDisclosure(JsonNode request, JsonNode answer, JsonNode item) {
+        var observed = JSON.createObjectNode().put("kind", "PROVIDER_FIXTURE_INPUT_OUTPUT")
+            .put("observed", request.isObject() && answer.isObject());
+        var content = observed.putObject("content"); content.set("request", request); content.set("answer", answer);
+        observed.putArray("references");
+        var forbidden = observed.putArray("forbiddenValues").add("synthetic-private-sentinel");
+        if (item.path("fixture").path("sentinel").isString()) forbidden.add(item.path("fixture").path("sentinel"));
+        return observed;
     }
 }
