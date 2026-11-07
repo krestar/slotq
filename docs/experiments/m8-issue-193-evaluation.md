@@ -1,5 +1,8 @@
 # M8 실제 모델 평가 #193
 
+이 문서는 2026-11-07 실제 수집 당시의 기록이다. 이후 코드 보완과 독립 원인 진단은
+[오프라인 보완 기록](m8-issue-193-offline-fixes.md)을 따른다. 아래 원자료와 판정은 수정하지 않는다.
+
 [#193](https://github.com/krestar/slotq/issues/193)은 #180에서 이관한 실제 모델 평가를 담당한다.
 [평가 계약](../architecture/m8-evaluation-contract.md), [수집·재계산 절차](m8-model-repetition.md),
 [#184 보안 사례](m8-security-regression.md)를 유지한다. #185의 출시 판정은 이 문서의 범위가 아니다.

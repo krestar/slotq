@@ -649,9 +649,10 @@ class ProductToolsIntegrationTests {
     static byte[] bytes(UUID id){return McpHttpIntegrationTests.bytes(id);}static UUID HoldApprovalsUuid(byte[] b){var x=java.nio.ByteBuffer.wrap(b);return new UUID(x.getLong(),x.getLong());}
     static class TestClock extends Clock {volatile Instant now=Instant.now();public ZoneId getZone(){return ZoneOffset.UTC;}public Clock withZone(ZoneId zone){return this;}public Instant instant(){return now;}}
     static class ResponseFault implements Filter {
-        volatile String path="";volatile boolean known,holdOpen;volatile CountDownLatch entered=new CountDownLatch(0),release=new CountDownLatch(0);
-        void reset(){release.countDown();path="";known=false;holdOpen=false;entered=new CountDownLatch(0);release=new CountDownLatch(0);}
-        void arm(VenueId venue,boolean known,boolean holdOpen){this.path="/api/v1/venues/"+venue.value()+"/reservations/holds";this.known=known;this.holdOpen=holdOpen;entered=new CountDownLatch(1);release=new CountDownLatch(1);}
+        volatile String path="";volatile boolean known,holdOpen;volatile UUID locationTarget;volatile CountDownLatch entered=new CountDownLatch(0),release=new CountDownLatch(0);
+        void reset(){release.countDown();path="";known=false;holdOpen=false;locationTarget=null;entered=new CountDownLatch(0);release=new CountDownLatch(0);}
+        void arm(VenueId venue,boolean known,boolean holdOpen){this.path="/api/v1/venues/"+venue.value()+"/reservations/holds";this.known=known;this.holdOpen=holdOpen;locationTarget=null;entered=new CountDownLatch(1);release=new CountDownLatch(1);}
+        void armUnknownLocation(VenueId venue, UUID target){arm(venue,true,false);locationTarget=target;}
         @Override public void doFilter(ServletRequest r,ServletResponse s,FilterChain chain) throws IOException,ServletException {
             HttpServletRequest request=(HttpServletRequest)r;HttpServletResponse response=(HttpServletResponse)s;
             if(!request.getRequestURI().equals(path)){chain.doFilter(r,s);return;}
@@ -660,6 +661,7 @@ class ProductToolsIntegrationTests {
             if(buffered.getStatus()!=201){buffered.copyBodyToResponse();return;}
             entered.countDown();if(holdOpen)try{if(!release.await(10,TimeUnit.SECONDS))throw new AssertionError("Fault not released");}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IOException(e);}
             if(!known){response.setHeader("Location",null);response.setHeader("X-Request-ID",null);}
+            else if(locationTarget!=null)response.setHeader("Location",path.substring(0,path.length()-"holds".length())+locationTarget);
             response.setContentLength(1024);response.getOutputStream().write('{');response.flushBuffer();
             // Servlet OutputStream.close() can leave a keep-alive socket waiting for the declared body.
             // Abort the real Tomcat connection after flushed headers/partial body, strictly after COMMIT.

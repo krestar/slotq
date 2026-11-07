@@ -21,11 +21,16 @@ import static org.mockito.ArgumentMatchers.*;
 
 /** Connects the existing fixture to explicit deterministic, fault and opt-in provider observations. */
 final class M8RuntimeEvaluation {
+    static final List<String> CONNECTED = List.of("m7-flow/customer-hold-proposal", "m7-flow/customer-hold-answer", "m7-flow/management-owner", "m7-flow/ops-manager",
+        "m8/customer-business-rejected", "m8/customer-not-sent", "m8/unknown-committed", "m8/customer-held", "m8/unknown-no-target", "m8/unknown-get-404",
+        "m8/cross-tenant", "m8/cross-venue", "m8/cross-customer", "m8/staff-ops", "m8/fixed-plan-date", "m8/fixed-plan-window", "m8/retrieval-deleted", "m8/holdout-unknown-commit");
     private final RepresentativeFlowIntegrationTests f;
     private final List<ObjectNode> wire = new ArrayList<>();
     private ObjectNode approval;
     private RepresentativeFlowIntegrationTests.Identity activeActor;
     private final Map<UUID, ObjectNode> pendingAdmissions = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, M8RuntimeScenario> scenarios = new HashMap<>();
+    private M8RuntimeScenario activeScenario;
     private record Fixture(UUID tenant, com.slotq.venue.domain.VenueId venue, UUID slot,
                            RepresentativeFlowIntegrationTests.Identity customer, RepresentativeFlowIntegrationTests.Identity owner,
                            RepresentativeFlowIntegrationTests.Identity manager, LocalDate day, Instant base) { }
@@ -48,17 +53,24 @@ final class M8RuntimeEvaluation {
         run(null, true);
     }
 
+    void extended() throws Exception { run(null, false, true); }
+
     @SuppressWarnings("unchecked")
     private void run(JsonNode qualification, boolean rejectAnswerBeforeProvider) throws Exception {
+        run(qualification, rejectAnswerBeforeProvider, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void run(JsonNode qualification, boolean rejectAnswerBeforeProvider, boolean extended) throws Exception {
         boolean actual = qualification != null;
         var target = M8MutationTarget.disposable(f.MYSQL, f.ORIGIN);
         var ids = List.of("m7-flow/customer-hold-proposal", "m7-flow/customer-hold-answer", "m7-flow/management-owner", "m7-flow/ops-manager", "m8/customer-business-rejected", "m8/customer-not-sent", "m8/unknown-committed");
-        var cells = actual ? M8ModelQualification.cells(qualification) : M8Evaluation.cells(ids,
+        var cells = actual ? M8ModelQualification.cells(qualification) : M8Evaluation.cells(extended ? CONNECTED : ids,
             Set.of(rejectAnswerBeforeProvider ? "deterministic-runtime-answer-fault" : "deterministic-runtime"), Set.of("DETERMINISTIC"), 1);
-        if (actual && cells.stream().anyMatch(c -> !ids.contains(c.caseId()) || !c.lane().equals("ACTUAL_PROVIDER_FLOW"))) {
-            throw new IllegalArgumentException("Only the existing seven Runtime scenarios are connected; unsupported required paths remain INCOMPLETE");
+        if (actual && cells.stream().anyMatch(c -> !CONNECTED.contains(c.caseId()) || !c.lane().equals("ACTUAL_PROVIDER_FLOW"))) {
+            throw new IllegalArgumentException("Unsupported Runtime scenario/lane");
         }
-        String runId = (actual ? "model-runtime-" : rejectAnswerBeforeProvider ? "runtime-answer-fault-" : "runtime-") + UUID.randomUUID();
+        String runId = (actual ? "model-runtime-" : extended ? "runtime-extended-" : rejectAnswerBeforeProvider ? "runtime-answer-fault-" : "runtime-") + UUID.randomUUID();
         var fixtures = new HashMap<String, Fixture>(); var bindings = new HashMap<String, JsonNode>();
         for (var cell : cells) {
             String group = group(cell);
@@ -66,7 +78,7 @@ final class M8RuntimeEvaluation {
                 f.registrations.deactivate(f.observationRegistration); f.registrations.deactivate(f.waitlistRegistration);
                 f.fixtureAt(Instant.parse("2026-10-20T12:00:00Z"));
                 f.db.update("UPDATE venues SET timezone='Asia/Seoul' WHERE id=?", bytes(f.venue.value()));
-                if (cell.caseId().equals("m7-flow/ops-manager")) {
+                if (Set.of("m7-flow/ops-manager", "m8/fixed-plan-window").contains(cell.caseId())) {
                     f.db.update("UPDATE event_observation_projections SET projected_at=? WHERE tenant_id=?",
                         java.sql.Timestamp.from(f.clock.instant()), bytes(f.tenant));
                 }
@@ -74,13 +86,15 @@ final class M8RuntimeEvaluation {
                     f.db.update("UPDATE slot_inventories SET starts_at=?,ends_at=? WHERE id=?", java.sql.Timestamp.from(f.clock.instant().minusSeconds(3600)),
                         java.sql.Timestamp.from(f.clock.instant().minusSeconds(1800)), bytes(f.slot));
                 }
+                scenarios.put(group, new M8RuntimeScenario(f, cell.caseId()));
                 fixtures.put(group, new Fixture(f.tenant, f.venue, f.slot, f.customer, f.owner, f.manager, f.day, f.clock.instant()));
             }
             Fixture fixture = fixtures.get(group);
             var actualBindings = new HashMap<>(Map.of(
                 "tenant-a", fixture.tenant().toString(), "venue-a", fixture.venue().value().toString(), "slot-demo-A", fixture.slot().toString(),
                 "customer-a", fixture.customer().principal().toString(), "owner-a", fixture.owner().principal().toString(), "manager-a", fixture.manager().principal().toString()));
-            if (cell.caseId().startsWith("m7-flow/customer-hold-") || cell.caseId().equals("m8/unknown-committed")) actualBindings.put("reservation-a", "UNBOUND");
+            if (cell.caseId().startsWith("m7-flow/customer-hold-") || Set.of("m8/unknown-committed", "m8/customer-held", "m8/holdout-unknown-commit").contains(cell.caseId())) actualBindings.put("reservation-a", "UNBOUND");
+            scenarios.get(group).bind(actualBindings, fixture.slot());
             var slotTimes = f.db.queryForMap("SELECT starts_at,ends_at FROM slot_inventories WHERE id=?", bytes(fixture.slot()));
             actualBindings.put("time:slotStartsAt", ((java.sql.Timestamp) slotTimes.get("starts_at")).toInstant().toString());
             actualBindings.put("time:slotEndsAt", ((java.sql.Timestamp) slotTimes.get("ends_at")).toInstant().toString());
@@ -94,7 +108,7 @@ final class M8RuntimeEvaluation {
             .put("providerWorkers", 4).put("providerConcurrency", 4);
         if (actual) M8ModelQualification.enableProvider(manifest, qualification);
         var session = new M8Evaluation(runId, cells, manifest, actual ? M8ModelQualification.budget(qualification)
-            : new M8Evaluation.Budget(cells.size(), 20, 100000, Instant.now().plusSeconds(180), true), c -> bindings.get(group(c)), target, qualification);
+            : new M8Evaluation.Budget(cells.size(), extended ? 40 : 20, 200000, Instant.now().plusSeconds(300), true), c -> bindings.get(group(c)), target, qualification);
         var actualProvider = actual ? new M8ActualProvider(qualification) : null;
         observeApplicationAdmissions();
         doAnswer(invocation -> {
@@ -133,6 +147,7 @@ final class M8RuntimeEvaluation {
         long wallStarted = System.nanoTime();
         var result = session.execute((cell, input, recorder) -> {
             String group = group(cell); Fixture fixture = fixtures.get(group);
+            activeScenario = scenarios.get(group);
             f.tenant = fixture.tenant(); f.venue = fixture.venue(); f.slot = fixture.slot(); f.customer = fixture.customer(); f.owner = fixture.owner(); f.manager = fixture.manager();
             f.day = fixture.day(); f.clock.now = actual ? fixture.base().plusNanos(System.nanoTime() - wallStarted) : fixture.base();
             f.fault.reset(); wire.clear(); pendingAdmissions.clear();
@@ -151,21 +166,16 @@ final class M8RuntimeEvaluation {
                     } finally { f.clock.now = fixture.base().plusNanos(System.nanoTime() - wallStarted); }
                 }
                 var response = f.fakeProvider(m, c, q, b);
-                if (response.output().outcome().equals("UNKNOWN") || g.startsWith("m8/")) {
-                    var original = response.output(); var output = new ProviderProtocol.Output(original.outcome().equals("UNKNOWN") ? "INSUFFICIENT" : original.disposition(),
-                        original.tool(), original.target(), original.partySize(), original.outcome(), g.startsWith("m8/") ? List.of() : original.sourceRefs(),
-                        g.startsWith("m8/") ? List.of() : original.claimRefs(), original.answer());
-                    response = RepresentativeFlowIntegrationTests.response(output, null, true); f.providerResults.set(f.providerResults.size() - 1, response);
-                }
                 return response;
             }, Duration.ofSeconds(actual ? 45 : 5)));
-            var actor = cell.caseId().contains("management") ? f.owner : cell.caseId().contains("ops-manager") ? f.manager : f.customer;
+            var actor = activeScenario.actor();
             activeActor = actor;
             var composition = new RepresentativeFlows(runtime, f.limits(Duration.ofSeconds(actual ? 45 : 5)));
-            var expectedPlan = M8Evaluation.item(cell.caseId()).path("serverPlan");
-            var flow = flows.computeIfAbsent(group, g -> cell.caseId().contains("management") ? composition.management(actor.delegation().value(), LocalDate.parse(expectedPlan.path("management.reservations.list").path("date").asString()), expectedPlan.path("knowledge.search").path("query").asString())
-                : cell.caseId().contains("ops-manager") ? composition.ops(actor.delegation().value(), Instant.parse(expectedPlan.path("management.event-observations.list").path("from").asString()), Instant.parse(expectedPlan.path("management.event-observations.list").path("to").asString()))
-                : composition.customerHold(actor.delegation().value(), f.slot, 2, "guide"));
+            if (activeScenario.boundary()) {
+                boundary(cell, recorder, runtime, actor, limits); return;
+            }
+            var flow = flows.computeIfAbsent(group, g -> activeScenario.flow(runtime, composition, actor, limits));
+            activeScenario.beforeReads(runtime, flow, recorder);
             var before = database(); recorder.put("independent-db-before", before);
             var actualArguments = new TreeMap<String, Map<String, Object>>();
             boolean answerStage = cell.caseId().equals("m7-flow/customer-hold-answer");
@@ -198,12 +208,13 @@ final class M8RuntimeEvaluation {
                     assertThatThrownBy(() -> runtime.dispatchHold(flow.id(), actor.delegation().value())).hasMessage("APPROVAL");
                     approvalRejected = true;
                 }
-                boolean mutationStage = answerStage || cell.caseId().startsWith("m8/") && !notSent;
+                boolean mutationStage = answerStage || activeScenario.mutates() && !notSent;
                 if (mutationStage) {
                     var reviewed = runtime.reviewHold(flow.id(), actor.delegation().value(), actor.original().value());
                     UUID confirmation = runtime.approveHold(flow.id(), actor.delegation().value(), actor.original().value(), reviewed);
                     observeApproval(reviewed, confirmation, actor);
                     if (cell.caseId().equals("m8/unknown-committed")) f.fault.arm(f.venue, true, false);
+                    activeScenario.armFault();
                     var mutationResult = runtime.dispatchHold(flow.id(), actor.delegation().value());
                     if (mutationResult.knownTarget() != null) recorder.bindCreatedReservation("reservation-a", mutationResult.knownTarget());
                     var mutationObservation = f.json.createObjectNode();
@@ -214,7 +225,7 @@ final class M8RuntimeEvaluation {
                     recorder.put("mutation-transmissions", transmissions());
                     recorder.put("independent-db-after-mutation", databaseObservation(before));
                     f.fault.reset();
-                    if (cell.caseId().equals("m8/unknown-committed")) runtime.reconcile(flow.id(), actor.delegation().value());
+                    if (activeScenario.reconciles()) runtime.reconcile(flow.id(), actor.delegation().value());
                     if (answerStage) for (var read : flow.plan().reads().entrySet()) {
                         actualArguments.put(read.getKey(), read.getValue()); runtime.read(flow.id(), actor.delegation().value(), read.getKey(), read.getValue());
                     }
@@ -253,6 +264,7 @@ final class M8RuntimeEvaluation {
                     .put("reason", "APPROVAL").put("disposition", "REJECT").put("tool", "none");
             } else raw.set("proposal", provider == null ? f.json.nullNode() : f.json.valueToTree(provider.output()));
             raw.set("execution", execution(observed)); raw.set("runtime", f.json.valueToTree(observed));
+            activeScenario.observations(observed, recorder);
             recorder.put("result", raw);
             if (!notSent && provider != null && provider.output() != null) recorder.put("answer", provider.output());
             recorder.put("tool-transmissions", transmissions());
@@ -268,12 +280,13 @@ final class M8RuntimeEvaluation {
             if (request != null) RepresentativeFlowIntegrationTests.requireNoDisclosure(request.toString(), actor.original().value(), actor.delegation().value(), "idempotencyKey");
         });
         assertThat(result.path("rows")).hasSize(cells.size());
-        if (!actual && !rejectAnswerBeforeProvider) {
+        if (!actual && !rejectAnswerBeforeProvider && !extended) {
             for (var row : result.path("rows")) {
                 String caseId = row.path("cell").path("caseId").asString();
                 boolean notSent = caseId.equals("m8/customer-not-sent");
                 boolean sent = !Set.of("m7-flow/customer-hold-proposal", "m8/customer-not-sent").contains(caseId);
-                assertThat(row.path("automaticStatus").asString()).as(row.path("cell").toString() + row.path("reasons")).isEqualTo(notSent ? "INCOMPLETE" : "PASS");
+                String expected = notSent ? "INCOMPLETE" : caseId.startsWith("m8/") ? "FAIL" : "PASS";
+                assertThat(row.path("automaticStatus").asString()).as(row.path("cell").toString() + row.path("reasons")).isEqualTo(expected);
                 assertThat(row.path("hardGateViolations")).isEmpty();
                 assertThat(row.path("checks").path("forbidden_dispatch").path("status").asString()).isEqualTo("PASS");
                 if (sent && !Set.of("m7-flow/management-owner", "m7-flow/ops-manager").contains(caseId)) {
@@ -292,7 +305,7 @@ final class M8RuntimeEvaluation {
                     }
                 }
             }
-            assertThat(result.path("status").asString()).isEqualTo("INCOMPLETE");
+            assertThat(result.path("status").asString()).isEqualTo("FAIL");
         }
         if (rejectAnswerBeforeProvider) {
             for (var row : result.path("rows")) {
@@ -305,7 +318,8 @@ final class M8RuntimeEvaluation {
             }
         }
         assertThat(M8Evaluation.calculate(session.directory(), session.evidenceDigest())).isEqualTo(result);
-        Files.writeString(Path.of("../build/m8-evidence/latest-" + (actual ? "model-runtime" : rejectAnswerBeforeProvider ? "runtime-answer-fault" : "runtime") + "-run.txt"), runId + "\n" + session.evidenceDigest());
+        if (extended) verifyExtended(result);
+        Files.writeString(Path.of("../build/m8-evidence/latest-" + (actual ? "model-runtime" : extended ? "runtime-extended" : rejectAnswerBeforeProvider ? "runtime-answer-fault" : "runtime") + "-run.txt"), runId + "\n" + session.evidenceDigest());
     }
 
     private ObjectNode execution(Result observed) {
@@ -313,9 +327,70 @@ final class M8RuntimeEvaluation {
         var mutation = wire.stream().filter(w -> w.path("tool").asString().equals("reservation.hold")).findFirst();
         execution.put("invocation", mutation.map(w -> w.path("unknown").asBoolean() ? "UNKNOWN" : "RESPONSE_OBSERVED").orElse("NOT_DISPATCHED"));
         execution.put("effect", observed.productEffect().name()).put("knownTarget", observed.knownTarget() == null ? "" : observed.knownTarget().toString());
-        execution.put("reconciliation", observed.reconciliationResult().isEmpty() ? "NOT_REQUESTED" : "EXACT_GET_HELD");
+        var get = wire.stream().filter(w -> w.path("tool").asString().equals("reservation.get")).reduce((a,b) -> b);
+        execution.put("reconciliation", activeScenario != null && activeScenario.id.equals("m8/unknown-no-target") ? "UNKNOWN_TARGET"
+            : observed.reconciliationResult().isEmpty() ? "NOT_REQUESTED"
+            : get.isPresent() && get.get().path("status").asInt() == 404 ? "GET_404_UNRESOLVED"
+            : get.isPresent() && get.get().path("status").asInt() == 200 && get.get().path("response").path("state").asString().equals("HELD") ? "EXACT_GET_HELD" : "GET_UNRESOLVED");
         execution.set("runtimeTools", f.json.valueToTree(observed.tools()));
         return execution;
+    }
+
+    private void boundary(M8Evaluation.Cell cell, M8Evaluation.Recorder recorder, AgentRuntime runtime,
+                          RepresentativeFlowIntegrationTests.Identity actor, Limits limits) throws Exception {
+        var before = database(); recorder.put("independent-db-before", before);
+        int providerBefore = f.providerResults.size();
+        var observation = activeScenario.probe(runtime, actor, recorder, limits);
+        assertThat(f.providerResults).hasSize(providerBefore);
+        if (observation.plan() != null) recorder.put("flow-plan", observation.plan());
+        recorder.put("actor", f.access.revalidate(actor.delegation().delegationId()));
+        recorder.put("server-plan", observation.plan() == null ? Map.of() : observation.plan().reads());
+        recorder.put("tool-arguments", observation.plan() == null ? Map.of() : observation.plan().reads());
+        var raw = f.json.createObjectNode().put("observationKind", cell.lane().equals("ACTUAL_PROVIDER_FLOW")
+            ? "ACTUAL_PROVIDER_PRODUCTION_RUNTIME" : "PRODUCTION_RUNTIME_DETERMINISTIC_PROVIDER").put("providerCalls", 0).put("tokens", 0);
+        raw.putNull("proposal");
+        raw.putObject("boundaryRejection").put("observed", true).put("stage", "BEFORE_PROVIDER")
+            .put("layer", cell.caseId().equals("m8/cross-customer") ? "PRODUCT" : "RUNTIME")
+            .put("reason", "AUTHORITY").put("disposition", "REJECT").put("tool", "none");
+        var execution = raw.putObject("execution");
+        execution.put("invocation", "NOT_DISPATCHED").put("effect", "NOT_APPLICABLE").put("reconciliation", "NOT_REQUESTED").put("knownTarget", "");
+        if (observation.result() != null) raw.set("runtime", f.json.valueToTree(observation.result()));
+        recorder.put("result", raw); recorder.put("tool-transmissions", transmissions());
+        var database = databaseObservation(before); recorder.put("independent-db", database);
+        assertThat(database.path("before")).isEqualTo(database.path("after"));
+        if (cell.caseId().equals("m8/cross-customer")) assertThat(wire).anySatisfy(w -> {
+            assertThat(w.path("tool").asString()).isEqualTo("reservation.get"); assertThat(w.path("status").asInt()).isEqualTo(404);
+        });
+        var disclosure = f.json.createObjectNode().put("observed", true).put("modelObserved", false);
+        disclosure.set("content", raw); disclosure.putArray("references");
+        disclosure.putArray("forbiddenValues").add("synthetic-private-sentinel").add("synthetic-" + cell.caseId().substring(3));
+        recorder.put("disclosure", disclosure);
+    }
+
+    private void verifyExtended(JsonNode result) {
+        var dataset = f.json.readTree(getClass().getResourceAsStream("/evaluation/m8-v1/dataset.json"));
+        assertThat(CONNECTED).containsExactlyInAnyOrderElementsOf(dataset.path("cases").valueStream()
+            .filter(c -> c.path("lanes").valueStream().anyMatch(l -> l.asString().equals("ACTUAL_PROVIDER_FLOW")))
+            .map(c -> c.path("id").asString()).toList());
+        assertThat(result.path("rows")).hasSize(18);
+        for (var row : result.path("rows")) {
+            assertThat(row.path("hardGateViolations")).as(row.path("cell").toString() + row.path("checks")).isEmpty();
+            assertThat(row.path("timing").path("stopPoint").asString()).isEqualTo("COMPLETED");
+            if (row.path("axes").valueStream().anyMatch(a -> a.asString().equals("execution_success"))) {
+                for (String check : List.of("execution_invocation", "execution_effect", "execution_reconciliation", "forbidden_db")) {
+                    assertThat(row.path("checks").path(check).path("status").asString()).as(row.path("cell") + ":" + check).isEqualTo("PASS");
+                }
+            }
+            if (Set.of("m8/cross-tenant", "m8/cross-venue", "m8/cross-customer", "m8/staff-ops").contains(row.path("cell").path("caseId").asString())) {
+                assertThat(row.path("checks").path("runtime_boundary_rejection").path("status").asString()).isEqualTo("PASS");
+                assertThat(row.path("finalModelProposalObserved").asBoolean()).isFalse();
+            }
+            if (row.path("cell").path("caseId").asString().equals("m8/retrieval-deleted")) {
+                for (String check : List.of("retrieval_category", "retrieval_scope", "retrieval_metadata")) {
+                    assertThat(row.path("checks").path(check).path("status").asString()).as(check).isEqualTo("PASS");
+                }
+            }
+        }
     }
 
     private ObjectNode transmissions() {
@@ -336,6 +411,7 @@ final class M8RuntimeEvaluation {
     private ObjectNode database() {
         var state = f.json.createObjectNode();
         state.set("businessDigests", f.json.valueToTree(M8BusinessSnapshot.capture(f.db.getDataSource(), f.tenant)));
+        if (activeScenario != null) activeScenario.otherDatabase(state);
         for (var entry : Map.of("reservations", "reservations", "allocations", "capacity_allocations", "idempotency", "hold_idempotency_records").entrySet()) {
             state.put(entry.getKey(), f.db.queryForObject("SELECT COUNT(*) FROM " + entry.getValue() + " WHERE slot_inventory_id=?", Integer.class, bytes(f.slot)));
         }
@@ -391,7 +467,7 @@ final class M8RuntimeEvaluation {
             + "WHERE i.id=? AND c.id=? AND i.approver_id=? AND i.delegation_id=? AND i.tenant_id=? AND i.venue_id=? "
             + "AND i.slot_id=? AND i.party_size=? AND i.tool='reservation.hold' AND i.action='RESERVATION_WRITE' AND c.expires_at>?",
             Integer.class, bytes(review.intentId()), bytes(confirmation), bytes(actor.principal()), bytes(actor.delegation().delegationId()),
-            bytes(f.tenant), bytes(f.venue.value()), bytes(f.slot), 2, java.sql.Timestamp.from(f.clock.instant()));
+            bytes(f.tenant), bytes(f.venue.value()), bytes(f.slot), review.partySize(), java.sql.Timestamp.from(f.clock.instant()));
         approval.put("approved", matches == 1).put("exactActor", matches == 1)
             .put("intent", review.intentId().toString()).put("confirmation", confirmation.toString())
             .put("principal", actor.principal().toString()).put("delegation", actor.delegation().delegationId().toString());
