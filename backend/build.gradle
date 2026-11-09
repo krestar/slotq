@@ -70,6 +70,14 @@ tasks.named('test') {
     }
 }
 
+// A worker selects one immutable dataset profile; omitted selection keeps all v1 regressions unchanged.
+tasks.withType(Test).configureEach {
+    systemProperty 'slotq.m8.datasetVersion', project.findProperty('m8DatasetVersion') ?: '1.0.0'
+}
+tasks.withType(JavaExec).configureEach {
+    systemProperty 'slotq.m8.datasetVersion', project.findProperty('m8DatasetVersion') ?: '1.0.0'
+}
+
 tasks.register('validateM8Fixtures', JavaExec) {
     group = 'verification'
     description = 'Validates M8 synthetic fixtures and execution contracts offline; does not run or score evaluations.'

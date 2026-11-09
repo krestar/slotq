@@ -125,6 +125,15 @@ public final class M8Bindings {
         return node;
     }
 
+    static boolean sameRequest(JsonNode left, JsonNode right) {
+        if (!left.isObject() || !right.isObject()) return false;
+        boolean sets = strings(left, "knownSources").equals(strings(right, "knownSources"))
+            && strings(left, "knownClaims").equals(strings(right, "knownClaims"));
+        var a = (ObjectNode) left.deepCopy(); var b = (ObjectNode) right.deepCopy();
+        a.remove(List.of("knownSources", "knownClaims")); b.remove(List.of("knownSources", "knownClaims"));
+        return sets && a.equals(b);
+    }
+
     static boolean verifiesRequest(JsonNode item, Map<String, JsonNode> raw) {
         var request = raw.get("request"); var binding = raw.get("bindings");
         if (request == null || binding == null) return false;

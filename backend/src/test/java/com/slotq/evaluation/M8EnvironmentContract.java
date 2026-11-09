@@ -108,7 +108,7 @@ final class M8EnvironmentContract {
             "HA_SLA", "KAFKA_QUALIFICATION", "REAL_CUSTOMER_AI_DATA")), "unsupported scope exclusions required");
         var versions = manifest.path("versions");
         fields(versions, "dataset oracle criteria prompt schema plan context scorer support");
-        for (String key : Set.of("dataset", "oracle")) version(versions, key);
+        for (String key : Set.of("dataset", "oracle")) equal(versions, key, DATASET_VERSION);
         M8RunContract.criteriaVersion(versions, "criteria");
         for (String key : Set.of("prompt", "schema", "plan", "context", "scorer", "support")) text(versions, key);
         require(strings(manifest, "captureBeforeRun").equals(Set.of("sourceRevision", "sourceDirty", "buildDigest", "configDigest",

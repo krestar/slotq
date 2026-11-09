@@ -1,10 +1,12 @@
 # #193 oracle v2 상세 변경안
 
-상태: **`issue193-oracle-v2-draft-1` / DRAFT / 미적용**.
-사용자는 2026-11-07에 정정 방향과 상세안 작성을 승인했다.
-아래 상세안의 최종 승인은 아직 없으며, 코드·실행 resource 변경과 신규 Gemini 호출은 하지 않았다.
+상태: **`issue193-oracle-v2-draft-1` / 최종 승인**.
+사용자는 2026-11-07에 PR #198 커밋 `7460ba7`의 이 상세안을 최종 승인하고 최소 구현·검증을 지시했다.
+아래 본문은 승인 당시의 상세 계획이며 적용·검증 결과는 [구현 기록](m8-issue-193-oracle-v2-implementation.md)을 따른다.
+신규 Gemini 호출은 승인 범위에 없으며 수행하지 않는다.
 [필드별 before/after JSON](m8-issue-193-oracle-v2-proposal.json)이 이 문서의 구체적인 변경 대상이다.
-해당 JSON은 `docs/experiments/`의 검토 자료이며 수집기·검증기에서 읽는 실행 설정이 아니다.
+해당 JSON은 승인 당시 DRAFT 원본으로 보존하며 실행 설정이 아니다. 적용된 승인 이력은
+`evaluation/m8-v2/oracle-change.json`으로 별도 보존한다.
 
 ## 정정 근거와 범위
 
@@ -124,7 +126,7 @@ request 밖 출처·주장, 누락된 필수 Product reference, 근거 없는 cl
 request/answer digest·runId·case version·model·repeat·lane·rubric·검토자·시각을 연결한다.
 필수 Product claim은 있어도 자연어에서 최초 UNKNOWN을 생략했다면 사람 검토에서 REJECTED다.
 
-## 예상 코드 영향 — 아직 구현하지 않음
+## 승인 당시의 코드 영향 계획
 
 | 위치 | 최소 변경과 제한 |
 | --- | --- |
@@ -176,7 +178,7 @@ HOLDOUT의 oracle을 이번 두 사례에 맞춰 바꾸거나 알려진 실패�
 현재 #193은 계속 INCOMPLETE다. 이 상세안 승인은 기준 FROZEN·출시 GO·사람 검토 승인과 다르다.
 실제 호출 계획과 환경 확인은 [재개 기록](m8-issue-193-resumption.md)을 따른다.
 
-## 이번 상세안의 문서 검증
+## 상세안 작성 당시의 문서 검증
 
 검토용 JSON을 읽어 두 대상의 before oracle/history가 현재 v1과 같고,
 before/after의 canonical 사례 SHA-256이 각 history entry와 일치함을 확인했다.

@@ -1,0 +1,153 @@
+{
+  "version": "1.0.0",
+  "thresholds": [
+    {
+      "id": "quality",
+      "owner": 180,
+      "version": "1.0.0",
+      "state": "PENDING",
+      "metrics": [
+        "tool_selection",
+        "parameter_extraction",
+        "retrieval_quality",
+        "execution_success",
+        "forbidden_action",
+        "absolute_floor",
+        "regression_margin",
+        "minimum_samples",
+        "repeats",
+        "stability"
+      ],
+      "before": null,
+      "after": null,
+      "denominator": null,
+      "minimumSamples": null,
+      "repeats": null,
+      "stabilityMethod": null,
+      "pilotEvidence": null,
+      "reason": "담당 Issue의 사전 실험과 검토 필요",
+      "approvedAt": null,
+      "effectiveAt": null,
+      "appliesTo": null
+    },
+    {
+      "id": "capacity",
+      "owner": 181,
+      "version": "1.0.0",
+      "state": "PENDING",
+      "metrics": [
+        "latency",
+        "throughput",
+        "error_rate",
+        "db_headroom",
+        "data_size",
+        "recovery_after_load"
+      ],
+      "before": null,
+      "after": null,
+      "denominator": null,
+      "minimumSamples": null,
+      "repeats": null,
+      "stabilityMethod": null,
+      "pilotEvidence": null,
+      "reason": "담당 Issue의 사전 실험과 검토 필요",
+      "approvedAt": null,
+      "effectiveAt": null,
+      "appliesTo": null
+    },
+    {
+      "id": "failure",
+      "owner": 182,
+      "version": "1.0.0",
+      "state": "PENDING",
+      "metrics": [
+        "detection_time",
+        "restart_time",
+        "convergence_time"
+      ],
+      "before": null,
+      "after": null,
+      "denominator": null,
+      "minimumSamples": null,
+      "repeats": null,
+      "stabilityMethod": null,
+      "pilotEvidence": null,
+      "reason": "담당 Issue의 사전 실험과 검토 필요",
+      "approvedAt": null,
+      "effectiveAt": null,
+      "appliesTo": null
+    },
+    {
+      "id": "restore",
+      "owner": 183,
+      "version": "1.0.0",
+      "state": "PENDING",
+      "metrics": [
+        "RPO",
+        "RTO",
+        "rollback_compatibility"
+      ],
+      "before": null,
+      "after": null,
+      "denominator": null,
+      "minimumSamples": null,
+      "repeats": null,
+      "stabilityMethod": null,
+      "pilotEvidence": null,
+      "reason": "담당 Issue의 사전 실험과 검토 필요",
+      "approvedAt": null,
+      "effectiveAt": null,
+      "appliesTo": null
+    },
+    {
+      "id": "security",
+      "owner": 184,
+      "version": "1.0.0",
+      "state": "PENDING",
+      "metrics": [
+        "permission_cases",
+        "zero_mandatory_violations"
+      ],
+      "before": null,
+      "after": null,
+      "denominator": null,
+      "minimumSamples": null,
+      "repeats": null,
+      "stabilityMethod": null,
+      "pilotEvidence": null,
+      "reason": "담당 Issue의 사전 실험과 검토 필요",
+      "approvedAt": null,
+      "effectiveAt": null,
+      "appliesTo": null
+    },
+    {
+      "id": "release",
+      "owner": 185,
+      "version": "1.0.0",
+      "state": "PENDING",
+      "metrics": [
+        "freshness",
+        "compatibility",
+        "required_paths"
+      ],
+      "before": null,
+      "after": null,
+      "denominator": null,
+      "minimumSamples": null,
+      "repeats": null,
+      "stabilityMethod": null,
+      "pilotEvidence": null,
+      "reason": "담당 Issue의 사전 실험과 검토 필요",
+      "approvedAt": null,
+      "effectiveAt": null,
+      "appliesTo": null
+    }
+  ],
+  "history": [
+    {
+      "version": "1.0.0",
+      "reason": "공통 등록 형식 확정; 출시 수치 미확정",
+      "previous": null
+    }
+  ]
+}

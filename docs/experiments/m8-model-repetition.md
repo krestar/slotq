@@ -1,5 +1,10 @@
 # M8 실제 모델 반복 평가 연결
 
+#193의 승인된 두 REGRESSION oracle 정정은 [v2 구현 기록](m8-issue-193-oracle-v2-implementation.md)을 따른다.
+기본 선택은 v1이며 v2 수집·검증·재계산에는 `-Pm8DatasetVersion=2.0.0`을 명시한다
+(PowerShell에서는 인자 전체를 따옴표로 감싼다). 과거 run은 당시 소스·빌드·버전을 사용한다.
+이 버전 선택은 실제 API 호출 승인이 아니며 기존 opt-in·무료 전용·명세/예산 게이트는 유지한다.
+
 실제 평가의 후속 담당은 [#193](https://github.com/krestar/slotq/issues/193)이다.
 최신 코드 보완·검증은 [#193 오프라인 보완](m8-issue-193-offline-fixes.md), 실제 수집 원본은
 [#193 평가 기록](m8-issue-193-evaluation.md)을 따른다.

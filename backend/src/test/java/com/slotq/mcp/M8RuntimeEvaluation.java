@@ -285,7 +285,7 @@ final class M8RuntimeEvaluation {
                 String caseId = row.path("cell").path("caseId").asString();
                 boolean notSent = caseId.equals("m8/customer-not-sent");
                 boolean sent = !Set.of("m7-flow/customer-hold-proposal", "m8/customer-not-sent").contains(caseId);
-                String expected = notSent ? "INCOMPLETE" : caseId.startsWith("m8/") ? "FAIL" : "PASS";
+                String expected = notSent ? "INCOMPLETE" : caseId.startsWith("m8/") && M8Evaluation.SCORER.equals("m8-scorer-v1") ? "FAIL" : "PASS";
                 assertThat(row.path("automaticStatus").asString()).as(row.path("cell").toString() + row.path("reasons")).isEqualTo(expected);
                 assertThat(row.path("hardGateViolations")).isEmpty();
                 assertThat(row.path("checks").path("forbidden_dispatch").path("status").asString()).isEqualTo("PASS");
@@ -305,7 +305,7 @@ final class M8RuntimeEvaluation {
                     }
                 }
             }
-            assertThat(result.path("status").asString()).isEqualTo("FAIL");
+            assertThat(result.path("status").asString()).isEqualTo(M8Evaluation.SCORER.equals("m8-scorer-v1") ? "FAIL" : "INCOMPLETE");
         }
         if (rejectAnswerBeforeProvider) {
             for (var row : result.path("rows")) {
