@@ -16,7 +16,14 @@ public final class M8FixtureValidator {
     static final JsonMapper JSON = JsonMapper.builder()
         .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
         .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
-    static final String ROOT = "evaluation/m8-v1/";
+    static final String DATASET_VERSION = selectedVersion(System.getProperty("slotq.m8.datasetVersion", "1.0.0"));
+    static final String ROOT = "evaluation/m8-v" + (DATASET_VERSION.equals("2.0.0") ? "2/" : "1/");
+    static final Set<String> CORRECTED = Set.of("m8/customer-business-rejected", "m8/unknown-committed");
+
+    static String selectedVersion(String value) {
+        require(Set.of("1.0.0", "2.0.0").contains(value), "unsupported dataset version");
+        return value;
+    }
     static final Set<String> AXES = Set.of("tool_selection", "parameter_extraction", "retrieval_quality",
         "execution_success", "forbidden_action");
     static final Set<String> SPLITS = Set.of("CALIBRATION", "REGRESSION", "HISTORICAL_HOLDOUT", "HOLDOUT");
@@ -60,8 +67,8 @@ public final class M8FixtureValidator {
 
     public static void validateDataset(JsonNode dataset, JsonNode history, Function<String, byte[]> resources) {
         fields(dataset, "version oracleVersion dataClass sources scope cases denominators bindings");
-        version(dataset, "version");
-        version(dataset, "oracleVersion");
+        String datasetVersion = selectedVersion(text(dataset, "version"));
+        equal(dataset, "oracleVersion", datasetVersion);
         equal(dataset, "dataClass", "SYNTHETIC");
         fields(dataset.path("bindings"), "uuid time");
         text(dataset.path("bindings"), "uuid");
@@ -96,7 +103,7 @@ public final class M8FixtureValidator {
         var usedImports = new HashSet<String>();
         var cases = array(dataset, "cases");
         for (var item : cases) {
-            validateCase(item, dataset.path("scope"));
+            validateCase(item, dataset.path("scope"), datasetVersion);
             String id = text(item, "id");
             require(ids.add(id), "duplicate case ID: " + id);
             JsonNode origin = item.path("origin");
@@ -111,7 +118,8 @@ public final class M8FixtureValidator {
             }
         }
         require(usedImports.equals(imported.keySet()), "mandatory legacy cases missing");
-        validateHistory(history, cases);
+        validateHistory(history, cases, datasetVersion);
+        if (datasetVersion.equals("2.0.0")) validateV2(dataset, history, JSON.readTree(resource("evaluation/m8-v2/oracle-change.json")));
         JsonNode denominators = dataset.path("denominators");
         require(denominators.propertyNames().equals(SPLITS), "split denominator missing");
         for (String split : SPLITS) {
@@ -157,10 +165,10 @@ public final class M8FixtureValidator {
         }
     }
 
-    private static void validateCase(JsonNode item, JsonNode registry) {
+    private static void validateCase(JsonNode item, JsonNode registry, String datasetVersion) {
         fields(item, "id version origin split required workload scope input axes parameterOrigin lanes oracle serverPlan humanReview rubric basis fixture");
         require(text(item, "id").matches("[a-z0-9/-]+"), "invalid case ID");
-        version(item, "version");
+        equal(item, "version", datasetVersion.equals("2.0.0") && CORRECTED.contains(text(item, "id")) ? "2.0.0" : "1.0.0");
         oneOf(item, "split", SPLITS);
         require(bool(item, "required"), "v1 mandatory case disabled");
         oneOf(item, "workload", Set.of("customer", "management", "ops"));
@@ -361,13 +369,13 @@ public final class M8FixtureValidator {
         if (!source.equals("m6")) equal(item, "workload", original.path("workload").asString());
     }
 
-    private static void validateHistory(JsonNode history, List<JsonNode> cases) {
+    private static void validateHistory(JsonNode history, List<JsonNode> cases, String datasetVersion) {
         fields(history, "version entries changes");
-        version(history, "version");
+        equal(history, "version", datasetVersion);
         var entries = new HashMap<String, JsonNode>();
         for (var entry : array(history, "entries")) {
             fields(entry, "id version split everCalibrated required fixtureSha256");
-            version(entry, "version");
+            equal(entry, "version", datasetVersion.equals("2.0.0") && CORRECTED.contains(text(entry, "id")) ? "2.0.0" : "1.0.0");
             require(entries.put(text(entry, "id"), entry) == null, "duplicate history case");
             boolean tuned = bool(entry, "everCalibrated");
             require(!entry.path("split").asString().equals("CALIBRATION") || tuned, "calibration usage cannot disappear from history");
@@ -384,9 +392,64 @@ public final class M8FixtureValidator {
         require(!array(history, "changes").isEmpty(), "change history required");
         for (var change : array(history, "changes")) {
             fields(change, "version previous reason");
-            version(change, "version");
+            require(List.of("1.0.0", datasetVersion).contains(text(change, "version")), "unsupported history version");
             text(change, "reason");
         }
+    }
+
+    static void validateV2(JsonNode dataset, JsonNode history, JsonNode change) {
+        var original = JSON.readTree(resource("evaluation/m8-v1/dataset.json"));
+        var oldHistory = JSON.readTree(resource("evaluation/m8-v1/case-history.json"));
+        var expected = (tools.jackson.databind.node.ObjectNode) original.deepCopy();
+        expected.put("version", "2.0.0").put("oracleVersion", "2.0.0");
+        var expectedHistory = (tools.jackson.databind.node.ObjectNode) oldHistory.deepCopy();
+        expectedHistory.put("version", "2.0.0");
+        equal(change, "proposalId", "issue193-oracle-v2-draft-1");
+        equal(change, "status", "APPROVED");
+        equal(change, "approvalReference", "USER_APPROVAL:PR198:7460ba7e8491de150c5535a73bf1fc9b3eaae0d6:issue193-oracle-v2-draft-1");
+        equal(change, "approvedProposalDigest", "c3be818ec7d9e5e52efc41b2d1e61d93dad5001d0e43f67ee876ebc91aa06c72");
+        var proposal = (tools.jackson.databind.node.ObjectNode) change.deepCopy();
+        proposal.remove(List.of("approvedAtBasis", "approvedProposalDigest", "reason", "rerunScope"));
+        proposal.put("status", "DRAFT_NOT_APPLIED");
+        for (String key : List.of("approvedAt", "approvalReference", "effectiveAt")) proposal.putNull(key);
+        require(digest(JSON.writeValueAsBytes(canonical(proposal))).equals("6fafff87c6a3495dad6773d19b9a153439d533b2e46ddf4540b951befe5dbb38"),
+            "approved oracle proposal changed");
+        Instant approved = Instant.parse(text(change, "approvedAt")), effective = Instant.parse(text(change, "effectiveAt"));
+        require(!effective.isBefore(approved) && !effective.isAfter(Instant.now()), "oracle approval/application order");
+        var registered = new HashMap<String, JsonNode>();
+        for (var entry : array(change, "changes")) require(registered.put(text(entry, "caseId"), entry) == null, "duplicate oracle change");
+        require(registered.keySet().equals(CORRECTED), "oracle change scope");
+        for (var item : expected.path("cases")) {
+            String id = text(item, "id");
+            if (!CORRECTED.contains(id)) continue;
+            var entry = registered.get(id);
+            require(entry.path("before").path("oracle").equals(item.path("oracle")), "oracle before mismatch");
+            ((tools.jackson.databind.node.ObjectNode) item).put("version", "2.0.0");
+            var oracle = (tools.jackson.databind.node.ObjectNode) item.path("oracle");
+            var attribution = oracle.putObject("attribution");
+            attribution.put("allowedSetOrigin", "REQUEST_CONTEXT");
+            attribution.putArray("allowedSources"); attribution.putArray("allowedClaims");
+            var sources = attribution.putArray("requiredSources"); var claims = attribution.putArray("requiredClaims");
+            var links = attribution.putObject("claimSources");
+            for (String ref : id.equals("m8/unknown-committed") ? List.of("product:mutation", "product:current") : List.of("product:mutation")) {
+                sources.add(ref); claims.add(ref); links.putArray(ref).add(ref);
+            }
+            if (id.equals("m8/unknown-committed")) ((tools.jackson.databind.node.ObjectNode) oracle.path("proposal")).put("disposition", "ANSWER");
+            require(entry.path("after").path("oracle").equals(oracle), "oracle after mismatch");
+            for (var historyEntry : expectedHistory.path("entries")) if (id.equals(text(historyEntry, "id"))) {
+                require(entry.path("before").path("historyEntry").equals(historyEntry), "oracle previous history mismatch");
+                ((tools.jackson.databind.node.ObjectNode) historyEntry).put("version", "2.0.0").put("everCalibrated", true)
+                    .put("fixtureSha256", digest(JSON.writeValueAsBytes(canonical(item))));
+                require(entry.path("after").path("historyEntry").equals(historyEntry), "oracle new history mismatch");
+            }
+        }
+        require(expected.equals(dataset), "v2 differs outside approved two-case correction");
+        var changes = array(history, "changes");
+        require(changes.size() == array(oldHistory, "changes").size() + 1, "v2 history chain");
+        for (int i = 0; i < changes.size() - 1; i++) require(changes.get(i).equals(oldHistory.path("changes").get(i)), "v1 history rewritten");
+        var last = changes.getLast(); equal(last, "version", "2.0.0"); equal(last, "previous", "1.0.0");
+        ((tools.jackson.databind.node.ArrayNode) expectedHistory.path("changes")).add(last);
+        require(expectedHistory.equals(history), "v2 history outside approved scope");
     }
 
     static void validateRubric(JsonNode rubric) {

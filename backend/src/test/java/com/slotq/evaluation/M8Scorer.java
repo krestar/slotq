@@ -26,7 +26,15 @@ final class M8Scorer {
         }
         if (axes.contains("tool_selection")) {
             if (proposal.isObject()) {
-                compare(checks, "tool_selection", proposal, oracle.path("proposal"), "tool", "disposition");
+                if (correctedUnknown(item)) {
+                    var basis = unknownAnswerBasis(raw);
+                    checks.put("answer_observation_basis", basis);
+                    compare(checks, "tool_selection", proposal, oracle.path("proposal"), "tool");
+                    if (basis.status().equals("PASS")) compare(checks, "tool_selection", proposal, oracle.path("proposal"), "tool", "disposition");
+                    else if (!checks.get("tool_selection").status().equals("FAIL")) {
+                        checks.put("tool_selection", new Mark("INCOMPLETE", "정확한 GET과 고정 요청 근거 미충족; disposition 조건 미적용"));
+                    }
+                } else compare(checks, "tool_selection", proposal, oracle.path("proposal"), "tool", "disposition");
                 checks.put("model_tool_selection", checks.get("tool_selection"));
                 compare(checks, "proposal_outcome", proposal, oracle.path("proposal"), "outcome");
                 try {
@@ -62,7 +70,31 @@ final class M8Scorer {
             ((tools.jackson.databind.node.ObjectNode) expected).put("target", bound);
             compare(checks, "parameter_extraction", proposal, expected, "target", "partySize");
         }
-        if (proposal.isObject()) attribution(checks, proposal, request, oracle.path("attribution"));
+        boolean corrected = item.path("version").asString().equals("2.0.0") && CORRECTED.contains(item.path("id").asString());
+        if (proposal.isObject()) attribution(checks, proposal, request, oracle.path("attribution"), corrected);
+        if (corrected && proposal.isObject()) {
+            if (List.of("prompt", "knownSources", "knownClaims", "context", "claimSources").stream()
+                    .anyMatch(k -> !request.has(k) || request.path(k).isNull())) missing(checks, "request_attribution_context");
+            else try {
+                var protocol = (tools.jackson.databind.node.ObjectNode) request.deepCopy();
+                protocol.remove(List.of("context", "claimSources"));
+                var projected = M8Bindings.request(JSON.treeToValue(protocol, ProviderProtocol.Request.class));
+                // Parse only the protocol fields; the archived context/mapping must equal the projection of that exact prompt.
+                mark(checks, "request_attribution_context", M8Bindings.sameRequest(projected, request)
+                    && strings(request, "knownClaims").equals(request.path("claimSources").propertyNames())
+                    && strings(request, "knownSources").equals(request.path("claimSources").valueStream()
+                        .flatMap(v -> v.valueStream()).map(JsonNode::asString).collect(java.util.stream.Collectors.toSet())));
+            } catch (IllegalArgumentException malformed) { mark(checks, "request_attribution_context", false); }
+        }
+        if (item.path("version").asString().equals("2.0.0") && CORRECTED.contains(item.path("id").asString())
+                && result.path("observationKind").asString().equals("ACTUAL_PROVIDER_PRODUCTION_RUNTIME")) {
+            var journal = raw.entrySet().stream().filter(e -> e.getKey().matches("provider-call-[a-z]"))
+                .max(Map.Entry.comparingByKey()).map(Map.Entry::getValue).orElse(null);
+            if (journal == null || !journal.path("request").isObject()) missing(checks, "request_provider_identity");
+            else try {
+                mark(checks, "request_provider_identity", M8Bindings.sameRequest(M8Bindings.request(JSON.treeToValue(journal.path("request"), ProviderProtocol.Request.class)), request));
+            } catch (IllegalArgumentException invalid) { mark(checks, "request_provider_identity", false); }
+        }
         if (proposal.isObject() && result.path("runtime").isObject()) {
             var runtime = result.path("runtime");
             if (runtime.path("failure").asString("").startsWith("answer_")) mark(checks, "answer_runtime_acceptance", false);
@@ -146,6 +178,8 @@ final class M8Scorer {
 
     static Set<String> requiredChecks(JsonNode item) {
         var required = new TreeSet<String>(); var axes = strings(item, "axes");
+        if (correctedUnknown(item)) required.add("answer_observation_basis");
+        if (item.path("version").asString().equals("2.0.0") && CORRECTED.contains(item.path("id").asString())) required.add("request_attribution_context");
         if (axes.contains("tool_selection")) required.addAll(Set.of("tool_selection", "model_tool_selection", "proposal_schema", "proposal_outcome", "answer_sources", "answer_claims", "answer_claim_sources"));
         if (axes.contains("parameter_extraction")) required.add("parameter_extraction");
         if (axes.contains("retrieval_quality")) {
@@ -162,6 +196,54 @@ final class M8Scorer {
         return required;
     }
 
+    private static boolean correctedUnknown(JsonNode item) {
+        return item.path("id").asString().equals("m8/unknown-committed") && item.path("version").asString().equals("2.0.0");
+    }
+
+    private static Mark unknownAnswerBasis(Map<String, JsonNode> raw) {
+        var statuses = new ArrayList<String>();
+        var execution = raw.getOrDefault("result", JSON.createObjectNode()).path("execution");
+        var request = raw.getOrDefault("request", JSON.createObjectNode()); var context = request.path("context");
+        statuses.add(unknownGetBasis(raw).status());
+        for (String field : List.of("invocation", "effect")) observedBasis(statuses, execution.path(field), JSON.valueToTree("UNKNOWN"));
+        observedBasis(statuses, context.path("mutationOutcome"), JSON.valueToTree("UNKNOWN"));
+        observedBasis(statuses, context.path("productMutation").path("readOrProductOutcome"), JSON.valueToTree("outcome_unknown"));
+        observedBasis(statuses, context.path("currentExactGet").path("readOrProductOutcome"), JSON.valueToTree("succeeded"));
+        observedBasis(statuses, context.path("currentExactGet").path("facts").path("state"), JSON.valueToTree("HELD"));
+        for (String ref : List.of("product:mutation", "product:current")) {
+            var evidence = context.path(ref.equals("product:mutation") ? "productMutation" : "currentExactGet");
+            observedBasis(statuses, evidence.path("sourceRef"), JSON.valueToTree(ref));
+            observedBasis(statuses, evidence.path("claimRef"), JSON.valueToTree(ref));
+            observedBasis(statuses, request.path("claimSources").path(ref), JSON.valueToTree(List.of(ref)));
+            for (String field : List.of("knownSources", "knownClaims")) {
+                if (!request.path(field).isArray()) statuses.add("INCOMPLETE");
+                else try { statuses.add(strings(request, field).contains(ref) ? "PASS" : "FAIL"); }
+                catch (IllegalArgumentException malformed) { statuses.add("FAIL"); }
+            }
+        }
+        return new Mark(combine(statuses), "최초 UNKNOWN·정확한 GET HELD·전송 전 고정 요청 근거");
+    }
+
+    private static Mark unknownGetBasis(Map<String, JsonNode> raw) {
+        var statuses = new ArrayList<String>();
+        var execution = raw.getOrDefault("result", JSON.createObjectNode()).path("execution");
+        var get = raw.getOrDefault("tool-transmissions", JSON.createObjectNode()).path("exactGet");
+        observedBasis(statuses, execution.path("reconciliation"), JSON.valueToTree("EXACT_GET_HELD"));
+        observedBasis(statuses, get.path("sent"), JSON.valueToTree(true));
+        observedBasis(statuses, get.path("status"), JSON.valueToTree(200));
+        observedBasis(statuses, get.path("state"), JSON.valueToTree("HELD"));
+        observedBasis(statuses, get.path("target"), execution.path("knownTarget"));
+        var target = raw.getOrDefault("bindings", JSON.createObjectNode()).path("symbols").path("reservation-a");
+        if (!target.isString() || target.asString().isBlank() || target.asString().equals("UNBOUND")) statuses.add("INCOMPLETE");
+        else observedBasis(statuses, get.path("target"), target);
+        return new Mark(combine(statuses), "실제 exact GET의 target·HTTP 200·HELD 관측");
+    }
+
+    private static void observedBasis(List<String> statuses, JsonNode actual, JsonNode expected) {
+        statuses.add(actual.isMissingNode() || actual.isNull() || expected.isMissingNode() || expected.isNull()
+            ? "INCOMPLETE" : actual.equals(expected) ? "PASS" : "FAIL");
+    }
+
     private static boolean containsPlan(JsonNode planned, JsonNode expected) {
         for (var entry : expected.properties()) {
             if (!planned.path(entry.getKey()).equals(entry.getValue())) return false;
@@ -169,7 +251,7 @@ final class M8Scorer {
         return true;
     }
 
-    private static void attribution(Map<String, Mark> checks, JsonNode output, JsonNode request, JsonNode oracle) {
+    private static void attribution(Map<String, Mark> checks, JsonNode output, JsonNode request, JsonNode oracle, boolean corrected) {
         try {
             Set<String> sources = strings(output, "sourceRefs"), claims = strings(output, "claimRefs");
             boolean dynamic = oracle.path("allowedSetOrigin").asString().equals("REQUEST_CONTEXT");
@@ -178,12 +260,18 @@ final class M8Scorer {
             mark(checks, "answer_sources", sources.containsAll(strings(oracle, "requiredSources")) && allowedSources.containsAll(sources));
             mark(checks, "answer_claims", claims.containsAll(strings(oracle, "requiredClaims")) && allowedClaims.containsAll(claims));
             JsonNode mapping = dynamic ? request.path("claimSources") : oracle.path("claimSources");
-            boolean linked = mapping.isObject();
+            boolean linked = corrected || mapping.isObject();
+            boolean missingMapping = !mapping.isObject();
             for (String claim : claims) {
                 if (mapping.has(claim)) linked &= sources.containsAll(strings(mapping, claim));
-                else if (dynamic) linked = false;
+                else if (dynamic) { if (corrected) missingMapping = true; else linked = false; }
             }
-            mark(checks, "answer_claim_sources", linked);
+            if (corrected) for (var required : oracle.path("claimSources").properties()) {
+                if (!mapping.has(required.getKey())) missingMapping = true;
+                else linked &= mapping.path(required.getKey()).equals(required.getValue());
+            }
+            if (corrected && linked && missingMapping) missing(checks, "answer_claim_sources");
+            else mark(checks, "answer_claim_sources", linked);
         } catch (IllegalArgumentException malformed) {
             checks.put("answer_attribution", new Mark("INCOMPLETE", "출처/주장 집합 또는 고정 context 누락"));
         }
@@ -289,6 +377,10 @@ final class M8Scorer {
             else mark(checks, "execution_db", atomicHold(observed) && (expectedParty(item) == 0 || observed.path("after").path("partySize").asInt() == expectedParty(item)));
         }
         String reconciliation = result.path("reconciliation").asString();
+        if (correctedUnknown(item)) {
+            checks.put("execution_exact_get", unknownGetBasis(raw));
+            return;
+        }
         if (Set.of("EXACT_GET_HELD", "GET_404_UNRESOLVED").contains(reconciliation)) {
             var get = raw.getOrDefault("tool-transmissions", JSON.createObjectNode()).path("exactGet");
             boolean exact = get.path("sent").asBoolean() && get.path("target").isString()

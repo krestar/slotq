@@ -159,6 +159,7 @@ public final class M8ModelQualification {
         var observed = JSON.createObjectNode();
         for (String key : List.of("sourceRevision", "sourceDirty", "buildDigest", "configDigest", "promptDigest", "schemaDigest", "scorerDigest")) observed.set(key, source.path(key));
         for (String key : List.of("dataset.json", "case-history.json", "criteria.json", "security-catalog", "router-profile")) observed.set(key, snapshots.path(key).path("digest"));
+        if (snapshots.has("oracle-change.json")) observed.set("oracle-change.json", snapshots.path("oracle-change.json").path("digest"));
         return observed;
     }
 

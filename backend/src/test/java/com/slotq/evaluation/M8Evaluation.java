@@ -12,7 +12,7 @@ import static com.slotq.evaluation.M8FixtureValidator.*;
 
 /** Test-only planned execution and offline grading. No provider credentials, HTTP client or DB writer. */
 public final class M8Evaluation {
-    public static final String SCORER = "m8-scorer-v1";
+    public static final String SCORER = DATASET_VERSION.equals("2.0.0") ? "m8-scorer-v2" : "m8-scorer-v1";
     public record Cell(String caseId, String caseVersion, int repeat, String model, String lane) { }
     public record Budget(int maximumCells, int maximumProviderCalls, long maximumTokens, Instant deadline, boolean stopOnHardGate) { }
     @FunctionalInterface public interface Executor { void execute(Cell cell, JsonNode modelInput, Recorder recorder) throws Exception; }
@@ -93,6 +93,8 @@ public final class M8Evaluation {
                 ? JSON.writeValueAsBytes(qualification.path("criteria")) : resource(ROOT + file);
             snapshots.set(file, writeArtifact("snapshots/" + file, bytes));
         }
+        if (DATASET_VERSION.equals("2.0.0")) snapshots.set("oracle-change.json",
+            writeArtifact("snapshots/oracle-change.json", resource(ROOT + "oracle-change.json")));
         for (var source : read("dataset.json").path("sources")) {
             String path = source.path("path").asString(); snapshots.set(path, writeArtifact("snapshots/" + path, resource(path)));
         }
@@ -327,6 +329,15 @@ public final class M8Evaluation {
         var snapshots = plan.path("snapshots"); var snapshotValues = new HashMap<String, JsonNode>();
         for (var e : snapshots.properties()) snapshotValues.put(e.getKey(), readArtifact(root, e.getValue()));
         var dataset = snapshotValues.get("dataset.json"); var criteria = snapshotValues.get("criteria.json");
+        require(dataset.equals(read("dataset.json")), "selected dataset differs from sealed snapshot");
+        require(manifest.path("versions").path("dataset").equals(dataset.path("version"))
+            && manifest.path("versions").path("oracle").equals(dataset.path("oracleVersion")), "dataset/oracle manifest mismatch");
+        if (DATASET_VERSION.equals("2.0.0")) {
+            var change = snapshotValues.get("oracle-change.json");
+            require(change != null && change.equals(read("oracle-change.json")), "oracle change snapshot mismatch");
+            require(!Instant.parse(text(change, "effectiveAt")).isAfter(Instant.parse(text(plan, "frozenAt"))),
+                "oracle approval/application must precede the frozen execution");
+        } else require(!snapshotValues.containsKey("oracle-change.json"), "v1 cannot carry v2 oracle change");
         validateDataset(dataset, snapshotValues.get("case-history.json"), path -> {
             try { return Files.readAllBytes(M8ProtectedFiles.resolve(root, snapshots.path(path).path("path").asString())); }
             catch (IOException e) { throw invalid("missing legacy snapshot"); }
