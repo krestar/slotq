@@ -62,6 +62,12 @@ public final class M8ActualProvider implements Provider {
         require(index >= 0, "provider cell outside frozen schedule"); cellReservation = plan.path("cellReservations").get(index);
     }
 
+    static long spacingDelayMillis(Instant now, Instant previousCall, long minimumSpacingMillis) {
+        var remaining = Duration.between(now, previousCall.plusMillis(minimumSpacingMillis));
+        if (remaining.isNegative() || remaining.isZero()) return 0;
+        return remaining.toMillis() + (remaining.getNano() % 1_000_000 == 0 ? 0 : 1);
+    }
+
     @Override public synchronized GeminiAdapter.Result generate(String model, ModelRouter.Classification classification,
             ProviderProtocol.Request request, ProviderBudget budget) {
         require(recorder != null && model.equals(cell.model()), "Router selected a different model; never override Router");
@@ -83,8 +89,8 @@ public final class M8ActualProvider implements Provider {
             }
         }
         if (lastCall != null) {
-            long millis = Duration.between(Instant.now(), lastCall.plusMillis(plan.path("minimumSpacingMillis").asLong())).toMillis();
-            if (millis > 0) {
+            long millis;
+            while ((millis = spacingDelayMillis(Instant.now(), lastCall, plan.path("minimumSpacingMillis").asLong())) > 0) {
                 require(Instant.now().plusMillis(millis).isBefore(deadline), "provider spacing exceeds deadline");
                 try { Thread.sleep(millis); } catch (InterruptedException interrupted) {
                     Thread.currentThread().interrupt(); throw invalid("provider spacing interrupted");

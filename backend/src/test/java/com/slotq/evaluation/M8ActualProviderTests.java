@@ -14,12 +14,25 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import static com.slotq.evaluation.M8FixtureValidator.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class M8ActualProviderTests {
+    @ParameterizedTest
+    @CsvSource({"10000000,10", "1000001,2", "1000000,1", "534000,1", "1,1", "0,0", "-1,0"})
+    void fractionalWaitCannotStartTheNextCallBeforeTheApprovedSpacing(long remainingNanos, long expectedMillis) {
+        var previous = Instant.parse("2026-11-11T12:57:08Z");
+        var earliest = previous.plusMillis(10000);
+        var now = earliest.minusNanos(remainingNanos);
+        long delay = M8ActualProvider.spacingDelayMillis(now, previous, 10000);
+        assertThat(delay).isEqualTo(expectedMillis);
+        assertThat(now.plusMillis(delay)).isAfterOrEqualTo(earliest);
+        if (delay > 0) assertThat(now.plusMillis(delay - 1)).isBefore(earliest);
+    }
+
     @ParameterizedTest
     @EnumSource(value = GeminiAdapter.Failure.class, names = {
         "RATE_LIMIT", "TEMPORARY_OVERLOAD", "AUTH_CONFIGURATION", "ACCOUNT_QUOTA",
