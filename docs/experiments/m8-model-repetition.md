@@ -1,5 +1,9 @@
 # M8 실제 모델 반복 평가 연결
 
+#193의 새 실행 준비는 [v3 구현·검증 기록](m8-issue-193-v3-implementation.md)을 따른다.
+`-Pm8DatasetVersion=3.0.0`은 기존 phase 안에서 P/G/B/Q의 수집 목적을 사전에 고정한다.
+신규 BASELINE phase는 없다. v1/v2 원본과 과거 판정은 보존하며, 이 선택 자체는 외부 호출 승인이 아니다.
+
 #193의 승인된 두 REGRESSION oracle 정정은 [v2 구현 기록](m8-issue-193-oracle-v2-implementation.md)을 따른다.
 기본 선택은 v1이며 v2 수집·검증·재계산에는 `-Pm8DatasetVersion=2.0.0`을 명시한다
 (PowerShell에서는 인자 전체를 따옴표로 감싼다). 과거 run은 당시 소스·빌드·버전을 사용한다.

@@ -113,7 +113,8 @@ public final class M8ActualProvider implements Provider {
         calls += result.attempts();
         tokens += observed == null ? result.attempts() * reservation : observed;
         cellTokens += observed == null ? result.attempts() * reservation : observed;
-        boolean versionMismatch = plan.path("phase").asString().equals("QUALIFICATION") && result.attempts() > 0
+        boolean versionMismatch = (plan.path("phase").asString().equals("QUALIFICATION")
+            || M8ModelQualification.v3() && !plan.path("purpose").asString().equals("PILOT")) && result.attempts() > 0
             && !Objects.equals(result.resolvedVersion(), plan.path("providerPreflight").path("modelVersions").path(model).asString());
         stopped = result.failure() != null || result.attempts() > 0 && (observed == null || observed > reservation || result.resolvedVersion() == null)
             || versionMismatch || tokens > plan.path("maximumTokens").asLong();
