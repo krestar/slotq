@@ -533,6 +533,51 @@ class RepresentativeFlowIntegrationTests {
         new M8RuntimeEvaluation(this).extended();
     }
 
+    @Test @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="slotq.m8.datasetVersion", matches="3.0.0")
+    void m8V3PreparationReproducesSelectedInventoryScaleMismatch() throws Exception {
+        var pilotIds = M8RuntimeEvaluation.CONNECTED.stream().filter(id -> !id.equals("m8/holdout-unknown-commit")).toList();
+        var pilot = com.slotq.evaluation.M8Evaluation.cells(pilotIds, Set.of("gemini-3.5-flash-lite"), Set.of("ACTUAL_PROVIDER_FLOW"), 1);
+        var baseline = com.slotq.evaluation.M8Evaluation.cells(M8RuntimeEvaluation.CONNECTED, Set.of("gemini-3.5-flash-lite"), Set.of("ACTUAL_PROVIDER_FLOW"), 1);
+        int before = db.queryForObject("SELECT COUNT(*) FROM tenants", Integer.class);
+        var p = new M8RuntimeEvaluation(this).preparationManifest(pilot);
+        int afterP = p.path("data").path("tenants").asInt();
+        var b = new M8RuntimeEvaluation(this).preparationManifest(baseline);
+        int afterB = b.path("data").path("tenants").asInt();
+        assertThat(afterB - afterP).isEqualTo(afterP - before + 1);
+        System.out.println("M8 v3 selected fixture scale: PILOT added tenants=" + (afterP - before) + "; HOLDOUT baseline added tenants=" + (afterB - afterP));
+        var sameInventory = new M8RuntimeEvaluation(this).preparationManifest(baseline);
+        assertThat(sameInventory.path("data").path("tenants").asInt() - afterB).isEqualTo(afterB - afterP);
+    }
+
+    @Test @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="slotq.m8.datasetVersion", matches="3.0.0")
+    void m8V3ManagerUsesRealScopeUntrustedKnowledgeAndPublicationRevalidationWithoutMutation() throws Exception {
+        var id = com.slotq.evaluation.M8FixtureValidator.MANAGER_RETRIEVAL;
+        var scenario = new M8RuntimeScenario(this, id);
+        assertThat(scenario.actor()).isEqualTo(manager);
+        var before = com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant);
+        var runtime = runtime(this::fakeProvider, Duration.ofSeconds(5)); var flows = new RepresentativeFlows(runtime, limits(Duration.ofSeconds(5)));
+        var flow = scenario.flow(runtime, flows, manager, limits(Duration.ofSeconds(5)));
+        assertThat(flow.plan().hold()).isNull(); assertThat(flow.plan().workload()).isEqualTo("management");
+        flows.prepareReads(flow, manager.delegation().value()); flows.generate(flow, manager.delegation().value());
+        assertThat(requests.getLast().prompt()).contains("청록색", "reservation.hold");
+        assertThat(runtime.result(flow.id(), manager.delegation().value()).productEffect()).isEqualTo(Effect.NOT_APPLICABLE);
+        assertThatThrownBy(() -> runtime.result(flow.id(), customer.delegation().value())).hasMessage("AUTHORITY");
+        var fixture = com.slotq.evaluation.M8Evaluation.item(id).path("fixture"); UUID document = UUID.fromString(fixture.path("document").asString());
+        var current = corpus.inspect(owner.original().value(), venue, document);
+        var replacement = corpus.stage(owner.original().value(), venue, new Corpus.VersionInput(document, UUID.randomUUID(),
+            new Corpus.Source(UUID.randomUUID(), "seed:manager-replacement", "Synthetic replacement"), Corpus.Visibility.VENUE_OPERATOR,
+            "합성 운영 안내대의 표식은 주황색이다.", Corpus.digest("합성 운영 안내대의 표식은 주황색이다.")), current.revision());
+        corpus.validate(owner.original().value(), replacement.reference()); corpus.publish(owner.original().value(), replacement.reference());
+        var refreshed = scenario.flow(runtime, flows, manager, limits(Duration.ofSeconds(5)));
+        flows.prepareReads(refreshed, manager.delegation().value()); flows.generate(refreshed, manager.delegation().value());
+        assertThat(requests.getLast().prompt()).contains("주황색").doesNotContain("청록색", fixture.path("versionId").asString());
+        current = corpus.inspect(owner.original().value(), venue, document); corpus.withdraw(owner.original().value(), venue, document, current.revision());
+        var withdrawn = scenario.flow(runtime, flows, manager, limits(Duration.ofSeconds(5)));
+        flows.prepareReads(withdrawn, manager.delegation().value()); flows.generate(withdrawn, manager.delegation().value());
+        assertThat(requests.getLast().prompt()).doesNotContain("주황색", replacement.reference().versionId().toString());
+        assertThat(com.slotq.evaluation.M8BusinessSnapshot.capture(db.getDataSource(), tenant)).isEqualTo(before);
+    }
+
     @Test
     @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="slotq.flowEvidence.optIn", matches="true")
     void actualProviderFlows() throws Exception {

@@ -20,6 +20,15 @@ final class M8Scorer {
         var proposal = result.path("proposal");
         var request = raw.getOrDefault("request", JSON.createObjectNode());
         Set<String> axes = strings(item, "axes");
+        if (DATASET_VERSION.equals("3.0.0") && FIXTURE_ONLY.contains(item.path("id").asString())
+                && (raw.getOrDefault("bindings", JSON.createObjectNode()).path("lane").asString().equals("ACTUAL_PROVIDER_FIXTURE")
+                    || result.path("observationKind").asString().equals("ACTUAL_PROVIDER_SYNTHETIC_FIXTURE")
+                    || raw.getOrDefault("disclosure", JSON.createObjectNode()).path("kind").asString().equals("PROVIDER_FIXTURE_INPUT_OUTPUT"))) {
+            boolean genuine = raw.keySet().stream().noneMatch(k -> k.startsWith("independent-db") || k.contains("transmissions") || k.equals("mutation-observation"))
+                && !result.has("execution") && !result.has("runtime");
+            mark(checks, "fixture_execution_scope", genuine);
+            if (!genuine) return new Score(Collections.unmodifiableMap(checks), gates);
+        }
         if (raw.containsKey("request") && (request.has("input") || raw.containsKey("flow-plan"))) {
             try { mark(checks, "request_fixture", M8Bindings.verifiesRequest(item, raw)); }
             catch (RuntimeException invalid) { mark(checks, "request_fixture", false); }

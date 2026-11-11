@@ -29,12 +29,22 @@ final class M8RuntimeScenario {
     private RepresentativeFlowIntegrationTests.Identity other, staff;
     private UUID otherTenant, foreignReservation, reportedTarget;
     private VenueId otherVenue;
-    private Corpus.PublishedVersion deleted;
+    private Corpus.PublishedVersion deleted, managerGuide;
     private final List<Corpus.PublishedVersion> candidatesObserved = new ArrayList<>(), finalObserved = new ArrayList<>();
 
     M8RuntimeScenario(RepresentativeFlowIntegrationTests f, String id) throws Exception {
         this.f = f; this.id = id;
-        if (Set.of("m8/cross-tenant", "m8/cross-venue").contains(id)) {
+        if (id.equals(M8FixtureValidator.MANAGER_RETRIEVAL)) {
+            var fixture = M8Evaluation.item(id).path("fixture");
+            var content = fixture.path("content").asString();
+            var staged = f.corpus.stage(f.owner.original().value(), f.venue, new Corpus.VersionInput(
+                UUID.fromString(fixture.path("document").asString()), UUID.fromString(fixture.path("versionId").asString()),
+                new Corpus.Source(UUID.fromString(fixture.path("sourceId").asString()), fixture.path("sourceReference").asString(), fixture.path("sourceTitle").asString()),
+                Corpus.Visibility.VENUE_OPERATOR, content, Corpus.digest(content)), 0);
+            f.corpus.validate(f.owner.original().value(), staged.reference()); f.corpus.publish(f.owner.original().value(), staged.reference());
+            managerGuide = f.catalog.publications(f.manager.delegation().delegationId(), f.venue).stream()
+                .filter(p -> p.metadata().reference().equals(staged.reference())).findFirst().orElseThrow();
+        } else if (Set.of("m8/cross-tenant", "m8/cross-venue").contains(id)) {
             otherTenant = id.equals("m8/cross-tenant") ? f.tenants.createTenant().id().value() : f.tenant;
             otherVenue = f.createVenue(otherTenant);
             other = f.identity(id.equals("m8/cross-tenant") ? "OWNER" : "MANAGER", otherTenant, otherVenue);
@@ -78,6 +88,7 @@ final class M8RuntimeScenario {
     }
 
     RepresentativeFlowIntegrationTests.Identity actor() {
+        if (id.equals(M8FixtureValidator.MANAGER_RETRIEVAL)) return f.manager;
         if (id.equals("m8/staff-ops")) return staff;
         if (id.equals("m7-flow/management-owner") || id.equals("m8/cross-tenant")) return f.owner;
         if (Set.of("m7-flow/ops-manager", "m8/cross-venue", "m8/fixed-plan-date", "m8/fixed-plan-window").contains(id)) return f.manager;
@@ -90,6 +101,11 @@ final class M8RuntimeScenario {
 
     RepresentativeFlows.Flow flow(AgentRuntime runtime, RepresentativeFlows flows, RepresentativeFlowIntegrationTests.Identity actor, Limits limits) {
         var plan = M8Evaluation.item(id).path("serverPlan");
+        if (id.equals(M8FixtureValidator.MANAGER_RETRIEVAL)) {
+            var actual = new Plan("m7-flow-v1", "management", limits, null,
+                Map.of("knowledge.search", Map.of("query", plan.path("knowledge.search").path("query").asString(), "limit", 1)));
+            return new RepresentativeFlows.Flow(runtime.start(actor.delegation().value(), actual), actual);
+        }
         if (id.equals("m7-flow/management-owner") || id.equals("m8/fixed-plan-date")) return flows.management(actor.delegation().value(),
             LocalDate.parse(plan.path("management.reservations.list").path("date").asString()), plan.path("knowledge.search").path("query").asString());
         if (id.equals("m7-flow/ops-manager") || id.equals("m8/fixed-plan-window")) return flows.ops(actor.delegation().value(),
@@ -103,12 +119,14 @@ final class M8RuntimeScenario {
     }
 
     void beforeReads(AgentRuntime runtime, RepresentativeFlows.Flow flow, M8Evaluation.Recorder recorder) throws Exception {
-        if (deleted == null) return;
-        runtime.readPlanned(flow.id(), actor().delegation().value(), "knowledge.search");
-        recorder.put("deleted-publication", reference(deleted));
-        var withdrawn = f.corpus.withdraw(f.owner.original().value(), f.venue, deleted.metadata().reference().document().documentId(), deleted.documentRevision());
-        assertThat(withdrawn.state()).isEqualTo(Corpus.DocumentState.WITHDRAWN);
-        assertThat(f.corpus.cleanup(f.owner.original().value(), f.venue, deleted.metadata().reference().document().documentId()).localPayloadsRemoved()).isEqualTo(1);
+        if (deleted == null && managerGuide == null) return;
+        if (deleted != null) {
+            runtime.readPlanned(flow.id(), actor().delegation().value(), "knowledge.search");
+            recorder.put("deleted-publication", reference(deleted));
+            var withdrawn = f.corpus.withdraw(f.owner.original().value(), f.venue, deleted.metadata().reference().document().documentId(), deleted.documentRevision());
+            assertThat(withdrawn.state()).isEqualTo(Corpus.DocumentState.WITHDRAWN);
+            assertThat(f.corpus.cleanup(f.owner.original().value(), f.venue, deleted.metadata().reference().document().documentId()).localPayloadsRemoved()).isEqualTo(1);
+        }
         doAnswer(call -> {
             @SuppressWarnings("unchecked") var observed = (List<Corpus.PublishedVersion>) call.callRealMethod();
             candidatesObserved.clear(); candidatesObserved.addAll(observed); return observed;
@@ -132,16 +150,31 @@ final class M8RuntimeScenario {
             recorder.put("fault-injection", Map.of("kind", "POST_COMMIT_RESPONSE_LOSS_WITH_UNKNOWN_LOCATION",
                 "reportedTarget", result.knownTarget().toString(), "exactGetObservation", result.reconciliationResult()));
         }
-        if (deleted == null) return;
+        if (deleted == null && managerGuide == null) return;
         var last = result.tools().stream().filter(t -> t.tool().equals("knowledge.search")).reduce((a,b) -> b).orElseThrow();
-        assertThat(last.structured().get("category")).isEqualTo("no_answer");
-        assertThat(candidatesObserved).noneMatch(p -> p.metadata().reference().equals(deleted.metadata().reference()));
+        assertThat(last.structured().get("category")).isEqualTo(deleted == null ? "evidence" : "no_answer");
+        if (deleted != null) assertThat(candidatesObserved).noneMatch(p -> p.metadata().reference().equals(deleted.metadata().reference()));
         var candidates = f.json.createObjectNode().put("category", String.valueOf(last.structured().get("category"))); candidates.putArray("results");
+        if (managerGuide != null) {
+            var reference = managerGuide.metadata().reference();
+            assertThat(actor()).isEqualTo(f.manager);
+            assertThat(f.access.revalidate(f.manager.delegation().delegationId()).original().principalId().value()).isEqualTo(f.manager.principal());
+            assertThat(candidatesObserved).allMatch(p -> p.metadata().reference().document().tenantId().value().equals(f.tenant)
+                && p.metadata().reference().document().venueId().equals(f.venue));
+            assertThat(finalObserved).anyMatch(p -> p.metadata().reference().equals(reference));
+            assertThat(f.requests.getLast().prompt()).contains("청록색", "reservation.hold");
+            var hits = f.json.valueToTree(last.structured().get("results"));
+            assertThat(hits.valueStream().anyMatch(hit -> hit.path("documentId").asString().equals(reference.document().documentId().toString())
+                && hit.path("versionId").asString().equals(reference.versionId().toString())
+                && hit.path("sourceId").asString().equals(managerGuide.metadata().source().sourceId().toString()))).isTrue();
+            candidates.withArray("results").add(reference(managerGuide));
+        }
         recorder.put("retrieval-candidates", candidates);
         var metadata = f.json.createObjectNode();
         metadata.set("beforeCandidates", f.json.valueToTree(candidatesObserved.stream().map(this::reference).toList()));
-        metadata.putArray("modelInputs"); metadata.set("atFinal", f.json.valueToTree(finalObserved.stream().map(this::reference).toList()));
-        metadata.putArray("residualBeforeDeletion").add(reference(deleted)); recorder.put("publication-metadata", metadata);
+        var inputs = metadata.putArray("modelInputs"); if (managerGuide != null) inputs.add(reference(managerGuide));
+        metadata.set("atFinal", f.json.valueToTree(finalObserved.stream().map(this::reference).toList()));
+        var residual = metadata.putArray("residualBeforeDeletion"); if (deleted != null) residual.add(reference(deleted)); recorder.put("publication-metadata", metadata);
     }
 
     record Boundary(Plan plan, Result result) { }

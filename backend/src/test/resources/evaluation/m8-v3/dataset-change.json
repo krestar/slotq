@@ -1,0 +1,104 @@
+{
+  "version": "3.0.0",
+  "previous": "2.0.0",
+  "status": "APPLIED",
+  "authorizationReference": "USER_INSTRUCTION:ISSUE193:2026-11-11:MINIMAL_V3_IMPLEMENTATION",
+  "authorizationRecordedAt": "2026-11-10T22:49:16.260207Z",
+  "authorizationBasis": "현재 사용자 지시의 계약 범위 승인 기록 시각. 실제 모델 호출·FROZEN 수치·답변 사람 검토 승인이 아님",
+  "effectiveAt": "2026-11-10T23:10:27.993879Z",
+  "parentDigests": {
+    "dataset.json": "e385c67ecfe1351c826eb272bbaaf79ebc676ae7309fb3cfa02f04cde901473e",
+    "case-history.json": "4daf969580cec2d154963e7924b0f3568390f0e3895f203b8d3210e08d14eeed",
+    "oracle-change.json": "86fe8c2128770cbe1679a8bc69c8cc92c969121a405c215f2f41704dd610dc91"
+  },
+  "changes": [
+    {
+      "caseId": "m8/attribution-two-sources",
+      "reason": "fixture-only 모델 관측은 실제 Product 전송·DB 실행 표본이 아니므로 execution_success 축만 제거. NOT_DISPATCHED/NOT_APPLICABLE 기대값과 모델·금지 행동 검사는 보존",
+      "before": {
+        "caseVersion": "1.0.0",
+        "axes": [
+          "tool_selection",
+          "execution_success",
+          "forbidden_action"
+        ],
+        "caseDigest": "f9cedea2bec0cd7054d84d6f5b26c67859bfdb56d2c62820a1d62bf8df5bde58",
+        "historyDigest": "c8da83dfaafd394b84438e3454e43852475be6356b77fab3087c7fcbaefc38c2"
+      },
+      "after": {
+        "caseVersion": "2.0.0",
+        "axes": [
+          "tool_selection",
+          "forbidden_action"
+        ],
+        "caseDigest": "3c035efd7ec24ce73f43939a68480beb40480107c9fedb9b194f483bcf4565e7",
+        "historyDigest": "64941e35cddc1dc8a3862eaa96d392257ea1628ff027dc30e214d34467b1db62"
+      }
+    },
+    {
+      "caseId": "m8/customer-invalid-party",
+      "reason": "fixture-only 모델 관측은 실제 Product 전송·DB 실행 표본이 아니므로 execution_success 축만 제거. NOT_DISPATCHED/NOT_APPLICABLE 기대값과 모델·금지 행동 검사는 보존",
+      "before": {
+        "caseVersion": "1.0.0",
+        "axes": [
+          "tool_selection",
+          "parameter_extraction",
+          "execution_success",
+          "forbidden_action"
+        ],
+        "caseDigest": "8905362ea2e40525c2ec58ef32ecfe6df85b4127c62914f61fbc9a0190665f42",
+        "historyDigest": "28aa207739c35a44923953217c74b8ef1bad9dfdc9084224cf84471ebe671841"
+      },
+      "after": {
+        "caseVersion": "2.0.0",
+        "axes": [
+          "tool_selection",
+          "parameter_extraction",
+          "forbidden_action"
+        ],
+        "caseDigest": "b29fe7f8b2a5b82448ba0610c132b6a5c05d1be782ab1c0d3a151529b5bd13b4",
+        "historyDigest": "b869c3cd53a3e86a788e969421a3a3ff75170793d32e8b1032832769c03d1f5c"
+      }
+    }
+  ],
+  "addedCase": {
+    "caseId": "m8/manager-retrieval-evidence",
+    "caseVersion": "1.0.0",
+    "caseDigest": "b4904186b654a9a735762020ed1c7d08273e28da8cb46f832cb4618786249d0f",
+    "historyDigest": "477c753d68acf5be3f446ae0b0a606d1e1e5fe85c20b9c910445832df534332a"
+  },
+  "rerunScope": [
+    "신규 identity의 실제 P/G/B/Q",
+    "v1/v2/v3 fixture·채점 회귀",
+    "Manager Runtime·검색·권한·독립 DB",
+    "봉인·별도 JVM 재계산"
+  ],
+  "collectionOrder": [
+    "P:REGRESSION_PILOT",
+    "G:REGRESSION_SEED_BASELINE",
+    "USER_FROZEN_APPROVAL_AND_EFFECT",
+    "B:PREDECLARED_HOLDOUT_BASELINE_QUALIFICATION",
+    "Q:INDEPENDENT_FINAL_QUALIFICATION"
+  ],
+  "denominatorChanges": {
+    "REGRESSION": {
+      "tool_selection": {
+        "before": 30,
+        "after": 31
+      },
+      "retrieval_quality": {
+        "before": 19,
+        "after": 20
+      },
+      "execution_success": {
+        "before": 18,
+        "after": 16
+      },
+      "forbidden_action": {
+        "before": 49,
+        "after": 50
+      }
+    }
+  },
+  "parentDigestEncoding": "UTF8_LF"
+}

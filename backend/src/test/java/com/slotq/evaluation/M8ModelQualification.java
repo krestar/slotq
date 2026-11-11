@@ -13,6 +13,13 @@ public final class M8ModelQualification {
     public static final String VERSION = "m8-model-repetition-v1";
     private static final Set<String> ACTUAL = Set.of("ACTUAL_PROVIDER_FIXTURE", "ACTUAL_PROVIDER_FLOW");
     private static final List<String> AXES = List.of("tool_selection", "parameter_extraction", "retrieval_quality", "execution_success", "forbidden_action");
+    static final Set<String> PURPOSES = Set.of("PILOT", "REGRESSION_SEED_BASELINE", "HOLDOUT_BASELINE", "FINAL_QUALIFICATION");
+
+    static boolean v3() { return DATASET_VERSION.equals("3.0.0"); }
+    static boolean baselineCollection(JsonNode plan) { return v3() && plan.path("purpose").asString().equals("HOLDOUT_BASELINE"); }
+    static boolean finalQualification(JsonNode plan) {
+        return plan.path("phase").asString().equals("QUALIFICATION") && (!v3() || plan.path("purpose").asString().equals("FINAL_QUALIFICATION"));
+    }
 
     public static JsonNode load() throws Exception {
         Path path = Path.of(System.getProperty("slotq.m8.modelPlan", "" )).toAbsolutePath().normalize();
@@ -33,11 +40,34 @@ public final class M8ModelQualification {
         return selected;
     }
 
+    public static List<M8Evaluation.Cell> runtimeFixtureCells(JsonNode plan) {
+        if (!v3()) return cells(plan);
+        var inventory = array(plan, "fixtureCells").stream().map(c -> JSON.treeToValue(c, M8Evaluation.Cell.class)).toList();
+        require(!inventory.isEmpty() && inventory.size() <= 1000 && new HashSet<>(inventory).size() == inventory.size()
+            && inventory.containsAll(cells(plan)), "bounded Runtime fixture inventory must contain every collection cell");
+        var models = cells(plan).stream().map(M8Evaluation.Cell::model).collect(java.util.stream.Collectors.toSet());
+        for (var cell : inventory) {
+            var item = M8Evaluation.item(cell.caseId());
+            require(cell.lane().equals("ACTUAL_PROVIDER_FLOW") && strings(item, "lanes").contains(cell.lane())
+                && cell.caseVersion().equals(text(item, "version")) && models.contains(cell.model()) && cell.repeat() > 0 && cell.repeat() <= 1000,
+                "Runtime fixture inventory identity mismatch");
+        }
+        return inventory;
+    }
+
     public static void preflight(JsonNode plan, JsonNode manifest, List<M8Evaluation.Cell> cells, Instant now) {
         equal(plan, "version", VERSION);
         equal(plan, "kind", "EXECUTION");
         oneOf(plan, "phase", Set.of("PILOT", "QUALIFICATION"));
+        if (v3()) {
+            oneOf(plan, "purpose", PURPOSES);
+            require(plan.path("phase").asString().equals(Set.of("PILOT", "REGRESSION_SEED_BASELINE").contains(text(plan, "purpose")) ? "PILOT" : "QUALIFICATION"), "collection purpose/phase mismatch");
+        }
         require(cells.equals(cells(plan)), "planned cells/order mismatch");
+        if (v3()) {
+            if (cells.stream().anyMatch(c -> c.lane().equals("ACTUAL_PROVIDER_FLOW"))) runtimeFixtureCells(plan);
+            else require(!plan.has("fixtureCells"), "Runtime fixture inventory cannot be attached to the fixture lane");
+        }
         require(manifest.path("provider").path("enabled").asBoolean(), "actual provider manifest required");
         equal(manifest, "kind", "EXECUTION");
         require(plan.path("maximumCalls").isIntegralNumber() && positive(plan, "maximumCalls") <= 1000, "finite call budget required");
@@ -82,9 +112,14 @@ public final class M8ModelQualification {
             if (strings(item, "axes").contains("forbidden_action")) require(links.has(cell.caseId()), "security mapping missing for mandatory cell");
             if (plan.path("phase").asString().equals("PILOT")) {
                 require(!text(item, "split").equals("HOLDOUT"), "independent holdout cannot be consumed by pilot");
+                if (v3()) equal(item, "split", "REGRESSION");
             } else {
                 require(!Set.of("CALIBRATION", "HISTORICAL_HOLDOUT").contains(text(item, "split")), "calibration/historical holdout is not qualification");
             }
+        }
+        if (v3() && !plan.path("purpose").asString().equals("PILOT")) {
+            for (var cell : cells) require(plan.path("providerPreflight").path("modelVersions").path(cell.model()).asString()
+                .matches("[a-zA-Z0-9._-]{1,100}"), "seed/baseline/qualification model version must be pinned");
         }
         require(!plan.path("parentRunId").asString().equals(plan.path("runId").asString()) || plan.path("parentRunId").asString().isEmpty(), "new runId required for rerun");
         require(plan.path("parentRunId").isString() && plan.path("parentEvidenceDigest").isString(), "rerun lineage required");
@@ -146,6 +181,7 @@ public final class M8ModelQualification {
         var provider = (ObjectNode) manifest.path("provider");
         provider.put("enabled", true).put("credentialSource", "ENV_REF:GEMINI_API_KEY").put("freeTierAttested", true)
             .put("termsCheckedAt", plan.path("providerPreflight").path("checkedAt").asString()).put("maximumCalls", plan.path("maximumCalls").asInt());
+        if (v3()) ((ObjectNode) manifest.path("versions")).set("criteria", plan.path("criteria").path("version"));
     }
 
     static void verifyIdentity(JsonNode plan, JsonNode source, JsonNode snapshots) {
@@ -158,8 +194,14 @@ public final class M8ModelQualification {
     static ObjectNode identity(JsonNode source, JsonNode snapshots) {
         var observed = JSON.createObjectNode();
         for (String key : List.of("sourceRevision", "sourceDirty", "buildDigest", "configDigest", "promptDigest", "schemaDigest", "scorerDigest")) observed.set(key, source.path(key));
+        if (v3() && snapshots.has("fixture-inventory")) {
+            M8RunContract.sha(source, "runtimeFreezeConfigDigest");
+            observed.set("configDigest", source.path("runtimeFreezeConfigDigest"));
+        }
         for (String key : List.of("dataset.json", "case-history.json", "criteria.json", "security-catalog", "router-profile")) observed.set(key, snapshots.path(key).path("digest"));
         if (snapshots.has("oracle-change.json")) observed.set("oracle-change.json", snapshots.path("oracle-change.json").path("digest"));
+        if (snapshots.has("dataset-change.json")) observed.set("dataset-change.json", snapshots.path("dataset-change.json").path("digest"));
+        if (snapshots.has("fixture-inventory")) observed.set("fixture-inventory", snapshots.path("fixture-inventory").path("digest"));
         return observed;
     }
 
@@ -176,6 +218,14 @@ public final class M8ModelQualification {
         // Whole-run collection caps may differ with the schedule. Each sealed plan still enforces its
         // own cap, reservations and stop policy; per-Run Runtime limits remain in configuration.
         ((ObjectNode) execution.path("provider")).remove(List.of("termsCheckedAt", "maximumCalls"));
+        normalizeDisposablePorts(execution);
+        return digest(JSON.writeValueAsBytes(canonical(execution)));
+    }
+
+    static String runtimeFreezeConfigDigest(JsonNode manifest) {
+        var execution = (ObjectNode) manifest.deepCopy();
+        // Only the already verified disposable port equivalence applies to a frozen execution.
+        // Criteria, terms time, call caps and every other field remain bound here.
         normalizeDisposablePorts(execution);
         return digest(JSON.writeValueAsBytes(canonical(execution)));
     }
@@ -223,6 +273,10 @@ public final class M8ModelQualification {
     }
 
     static void verifyReferences(JsonNode plan, JsonNode source, JsonNode snapshots, JsonNode pilot, JsonNode baseline) {
+        verifyReferences(plan, source, snapshots, pilot, baseline, Instant.now());
+    }
+
+    static void verifyReferences(JsonNode plan, JsonNode source, JsonNode snapshots, JsonNode pilot, JsonNode baseline, Instant startedAt) {
         require(pilot != null && baseline != null, "pilot/baseline evidence required");
         distinctReferences(plan);
         for (var entry : Map.of("pilot", pilot, "baseline", baseline).entrySet()) {
@@ -241,12 +295,70 @@ public final class M8ModelQualification {
                 || Set.of("PASS", "FAIL").contains(r.path("checks").path("human_review").path("status").asString())), "baseline semantic review incomplete");
         }
         equal(pilot.path("results").path("modelQualification"), "phase", "PILOT");
+        if (v3()) {
+            for (var reference : List.of(pilot, baseline)) {
+                var completion = reference.path("completion");
+                equal(completion, "stopPoint", "COMPLETED");
+                require(completion.path("executed").asInt() == reference.path("results").path("plannedCells").asInt()
+                    && completion.path("executed").asInt() > 0, "reference planned cells incomplete");
+                require(!Instant.parse(text(completion, "endedAt")).isAfter(startedAt), "reference must complete before collection");
+            }
+            require(!Instant.parse(text(pilot.path("completion"), "endedAt")).isAfter(referenceStart(baseline.path("results"))), "seed/baseline must follow pilot completion");
+            verifyV3References(plan, pilot.path("results"), baseline.path("results"));
+        }
         for (var threshold : plan.path("criteria").path("thresholds")) {
             if (!Set.of("quality", "security").contains(threshold.path("id").asString())) continue;
             require(threshold.path("pilotEvidence").path("runId").equals(plan.path("pilot").path("runId"))
                 && threshold.path("pilotEvidence").path("digest").equals(plan.path("pilot").path("digest"))
                 && threshold.path("pilotEvidence").path("completedAt").equals(pilot.path("completion").path("endedAt")), "criteria pilot provenance mismatch");
         }
+    }
+
+    private static Instant referenceStart(JsonNode results) {
+        return results.path("rows").valueStream().map(r -> Instant.parse(text(r.path("timing"), "startedAt"))).min(Comparator.naturalOrder()).orElseThrow();
+    }
+
+    private static String cohortKey(JsonNode row, JsonNode plan, String axis) {
+        var cell = row.path("cell");
+        return String.join("|", row.path("role").asString(), row.path("workload").asString(), row.path("split").asString(),
+            cell.path("caseId").asString().split("/")[0], cell.path("caseVersion").asString(), cell.path("model").asString(),
+            plan.path("providerPreflight").path("modelVersions").path(cell.path("model").asString()).asString("DISCOVER_IN_PILOT"), cell.path("lane").asString(), axis);
+    }
+
+    private static Set<String> plannedCohorts(JsonNode plan) {
+        var keys = new TreeSet<String>();
+        for (var cell : cells(plan)) {
+            var item = M8Evaluation.item(cell.caseId());
+            var row = JSON.createObjectNode(); row.set("cell", JSON.valueToTree(cell)); row.set("workload", item.path("workload")); row.set("split", item.path("split"));
+            row.set("role", read("dataset.json").path("scope").path("actors").path(item.path("scope").path("actor").asString()).path("role"));
+            for (String axis : strings(item, "axes")) keys.add(cohortKey(row, plan, axis));
+        }
+        return keys;
+    }
+
+    private static void verifyV3References(JsonNode plan, JsonNode pilot, JsonNode baseline) {
+        equal(pilot.path("modelQualification"), "purpose", "PILOT");
+        equal(baseline.path("modelQualification"), "purpose", baselineCollection(plan) ? "REGRESSION_SEED_BASELINE" : "HOLDOUT_BASELINE");
+        equal(baseline.path("modelQualification"), "phase", baselineCollection(plan) ? "PILOT" : "QUALIFICATION");
+        if (!baselineCollection(plan)) require(baseline.path("modelQualification").path("pilotReference").equals(plan.path("pilot")), "final qualification must retain B's pilot reference");
+        var baselineKeys = new TreeSet<String>();
+        baseline.path("modelQualification").path("cohorts").forEach(c -> baselineKeys.add(c.path("key").asString()));
+        if (!baselineCollection(plan)) require(baselineKeys.equals(plannedCohorts(plan)), "baseline cohort mismatch; split/model/lane/version cannot substitute");
+        for (var results : List.of(pilot, baseline)) for (var row : results.path("rows")) {
+            var usage = row.path("providerObservation");
+            if (usage.path("calls").asInt() == 0) {
+                require(row.path("cell").path("lane").asString().equals("ACTUAL_PROVIDER_FLOW")
+                    && row.path("checks").path("runtime_boundary_rejection").path("status").asString().equals("PASS"), "reference model response missing; only observed server denial may have zero calls");
+                continue;
+            }
+            require(!usage.path("usageMissing").asBoolean() && !usage.path("versionMissing").asBoolean(), "reference provider usage/version missing");
+            String model = row.path("cell").path("model").asString();
+            String expectedVersion = plan.path("providerPreflight").path("modelVersions").path(model).asString();
+            require(!expectedVersion.isEmpty() && strings(usage, "resolvedVersions").equals(Set.of(expectedVersion)), "reference resolved model version mismatch");
+            if (M8Evaluation.item(row.path("cell").path("caseId").asString()).path("humanReview").asBoolean()
+                    && row.path("finalModelProposalObserved").asBoolean()) require(Set.of("PASS", "FAIL").contains(row.path("checks").path("human_review").path("status").asString()), "reference semantic review incomplete");
+        }
+        if (baselineCollection(plan)) require(baseline.path("rows").valueStream().allMatch(r -> r.path("split").asString().equals("REGRESSION")), "seed baseline cannot contain HOLDOUT");
     }
 
     /** Charges an unknown attempt's full reservation and prevents any subsequent call. */
@@ -282,6 +394,7 @@ public final class M8ModelQualification {
     static JsonNode summarize(JsonNode rows, JsonNode plan, JsonNode source, JsonNode snapshots, JsonNode baseline) {
         var result = JSON.createObjectNode(); result.put("version", VERSION).put("phase", plan.path("phase").asString())
             .put("criteriaDigest", digest(JSON.writeValueAsBytes(plan.path("criteria")))).put("status", "INCOMPLETE").put("releaseQualification", false);
+        if (v3()) { result.set("purpose", plan.path("purpose")); result.set("pilotReference", plan.path("pilot")); }
         result.put("stabilityMethod", "PLANNED_RATE_REPEAT_RANGE_WILSON95_DESCRIPTIVE");
         result.set("comparisonIdentity", comparisonIdentity(source, snapshots));
         result.put("uncertaintyLimitation", "Wilson95 is descriptive; repeated synthetic cases are correlated, not independent population samples");
@@ -289,9 +402,7 @@ public final class M8ModelQualification {
         for (var row : rows) for (String axis : AXES) {
             if (!strings(row, "axes").contains(axis)) continue;
             var cell = row.path("cell");
-            String key = String.join("|", row.path("role").asString(), row.path("workload").asString(), row.path("split").asString(),
-                cell.path("caseId").asString().split("/")[0], cell.path("caseVersion").asString(), cell.path("model").asString(),
-                plan.path("providerPreflight").path("modelVersions").path(cell.path("model").asString()).asString("DISCOVER_IN_PILOT"), cell.path("lane").asString(), axis);
+            String key = cohortKey(row, plan, axis);
             groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(row);
         }
         var cohorts = result.putArray("cohorts");
@@ -351,9 +462,10 @@ public final class M8ModelQualification {
             boolean comparable = previous.path("quality").isNumber();
             double delta = comparable ? rate - previous.path("quality").asDouble() : 0;
             group.put("baselineComparable", comparable); if (comparable) group.put("qualityDelta", delta);
-            boolean violation = frozen && (rate < floor || comparable && delta < -margin || group.path("repeatRange").asDouble() > stability);
+            boolean violation = frozen && (!v3() || finalQualification(plan))
+                && (rate < floor || comparable && delta < -margin || group.path("repeatRange").asDouble() > stability);
             group.put("status", fail > 0 || violation ? "FAIL" : frozen && minimum && incomplete == 0 && comparable
-                && plan.path("phase").asString().equals("QUALIFICATION") ? "PASS" : "INCOMPLETE");
+                && finalQualification(plan) ? "PASS" : "INCOMPLETE");
         }
         result.put("qualityStatus", M8Scorer.combine(cohorts.valueStream().map(c -> c.path("status").asString()).toList()));
         var coverage = result.putArray("requiredRoleAxes");

@@ -12,7 +12,7 @@ import static com.slotq.evaluation.M8FixtureValidator.*;
 
 /** Test-only planned execution and offline grading. No provider credentials, HTTP client or DB writer. */
 public final class M8Evaluation {
-    public static final String SCORER = DATASET_VERSION.equals("2.0.0") ? "m8-scorer-v2" : "m8-scorer-v1";
+    public static final String SCORER = "m8-scorer-v" + DATASET_VERSION.charAt(0);
     public record Cell(String caseId, String caseVersion, int repeat, String model, String lane) { }
     public record Budget(int maximumCells, int maximumProviderCalls, long maximumTokens, Instant deadline, boolean stopOnHardGate) { }
     @FunctionalInterface public interface Executor { void execute(Cell cell, JsonNode modelInput, Recorder recorder) throws Exception; }
@@ -87,6 +87,8 @@ public final class M8Evaluation {
             snapshots.set("qualification", writeArtifact("snapshots/qualification.json", JSON.writeValueAsBytes(qualification)));
             snapshots.set("security-catalog", writeArtifact("snapshots/security-catalog.json", JSON.writeValueAsBytes(M8ModelQualification.securityCatalog())));
             snapshots.set("router-profile", writeArtifact("snapshots/router-profile.json", resource("ai/representative-router-v1.json")));
+            if (DATASET_VERSION.equals("3.0.0") && qualification.has("fixtureCells")) snapshots.set("fixture-inventory",
+                writeArtifact("snapshots/runtime-fixtures.json", JSON.writeValueAsBytes(qualification.path("fixtureCells"))));
         }
         for (String file : List.of("dataset.json", "case-history.json", "criteria.json", "review-rubric.json")) {
             byte[] bytes = file.equals("criteria.json") && qualification != null
@@ -95,6 +97,9 @@ public final class M8Evaluation {
         }
         if (DATASET_VERSION.equals("2.0.0")) snapshots.set("oracle-change.json",
             writeArtifact("snapshots/oracle-change.json", resource(ROOT + "oracle-change.json")));
+        if (DATASET_VERSION.equals("3.0.0")) {
+            for (String name : List.of("oracle-change.json", "dataset-change.json")) snapshots.set(name, writeArtifact("snapshots/" + name, resource(ROOT + name)));
+        }
         for (var source : read("dataset.json").path("sources")) {
             String path = source.path("path").asString(); snapshots.set(path, writeArtifact("snapshots/" + path, resource(path)));
         }
@@ -119,6 +124,7 @@ public final class M8Evaluation {
         sourceBuild.put("schemaDigest", digest(com.slotq.ai.router.ProviderProtocol.SCHEMA_JSON.getBytes(StandardCharsets.UTF_8)));
         sourceBuild.put("configDigest", digest(JSON.writeValueAsBytes(manifest)));
         sourceBuild.put("executionConfigDigest", M8ModelQualification.executionConfigDigest(manifest));
+        if (DATASET_VERSION.equals("3.0.0") && snapshots.has("fixture-inventory")) sourceBuild.put("runtimeFreezeConfigDigest", M8ModelQualification.runtimeFreezeConfigDigest(manifest));
         snapshots.set("source-build", writeArtifact("snapshots/source-build.json", JSON.writeValueAsBytes(sourceBuild)));
         if (qualification != null) {
             M8ModelQualification.verifyIdentity(qualification, sourceBuild, snapshots);
@@ -126,7 +132,7 @@ public final class M8Evaluation {
                 for (String name : List.of("pilot", "baseline")) snapshots.set("reference-" + name,
                     writeArtifact("snapshots/reference-" + name + ".json", JSON.writeValueAsBytes(M8ModelQualification.reference(qualification.path(name)))));
                 M8ModelQualification.verifyReferences(qualification, sourceBuild, snapshots,
-                    readArtifact(root, snapshots.path("reference-pilot")), readArtifact(root, snapshots.path("reference-baseline")));
+                    readArtifact(root, snapshots.path("reference-pilot")), readArtifact(root, snapshots.path("reference-baseline")), Instant.parse(text(plan, "frozenAt")));
             }
         }
         snapshots.set("manifest", writeArtifact("snapshots/manifest.json", JSON.writeValueAsBytes(manifest)));
@@ -332,12 +338,17 @@ public final class M8Evaluation {
         require(dataset.equals(read("dataset.json")), "selected dataset differs from sealed snapshot");
         require(manifest.path("versions").path("dataset").equals(dataset.path("version"))
             && manifest.path("versions").path("oracle").equals(dataset.path("oracleVersion")), "dataset/oracle manifest mismatch");
-        if (DATASET_VERSION.equals("2.0.0")) {
+        if (!DATASET_VERSION.equals("1.0.0")) {
             var change = snapshotValues.get("oracle-change.json");
             require(change != null && change.equals(read("oracle-change.json")), "oracle change snapshot mismatch");
             require(!Instant.parse(text(change, "effectiveAt")).isAfter(Instant.parse(text(plan, "frozenAt"))),
                 "oracle approval/application must precede the frozen execution");
         } else require(!snapshotValues.containsKey("oracle-change.json"), "v1 cannot carry v2 oracle change");
+        if (DATASET_VERSION.equals("3.0.0")) {
+            var change = snapshotValues.get("dataset-change.json");
+            require(change != null && change.equals(read("dataset-change.json")), "v3 change snapshot mismatch");
+            require(!Instant.parse(text(change, "effectiveAt")).isAfter(Instant.parse(text(plan, "frozenAt"))), "v3 application must precede execution");
+        } else require(!snapshotValues.containsKey("dataset-change.json"), "legacy run cannot carry v3 changes");
         validateDataset(dataset, snapshotValues.get("case-history.json"), path -> {
             try { return Files.readAllBytes(M8ProtectedFiles.resolve(root, snapshots.path(path).path("path").asString())); }
             catch (IOException e) { throw invalid("missing legacy snapshot"); }
@@ -349,17 +360,20 @@ public final class M8Evaluation {
         JsonNode qualification = snapshotValues.get("qualification");
         if (qualification != null) {
             require(criteria.equals(qualification.path("criteria")), "qualification criteria snapshot mismatch");
+            if (DATASET_VERSION.equals("3.0.0") && qualification.has("fixtureCells")) require(qualification.path("fixtureCells").equals(snapshotValues.get("fixture-inventory")), "Runtime fixture inventory snapshot mismatch");
             var planned = array(plan, "cells").stream().map(c -> JSON.treeToValue(c, Cell.class)).toList();
             M8ModelQualification.preflight(qualification, manifest, planned, Instant.parse(text(plan, "frozenAt")));
             M8ModelQualification.verifyIdentity(qualification, snapshotValues.get("source-build"), snapshots);
             if (qualification.path("phase").asString().equals("QUALIFICATION")) M8ModelQualification.verifyReferences(qualification,
-                snapshotValues.get("source-build"), snapshots, snapshotValues.get("reference-pilot"), snapshotValues.get("reference-baseline"));
+                snapshotValues.get("source-build"), snapshots, snapshotValues.get("reference-pilot"), snapshotValues.get("reference-baseline"), Instant.parse(text(plan, "frozenAt")));
         }
         require(snapshotValues.get("manifest").equals(manifest), "manifest snapshot mismatch");
         var source = snapshotValues.get("source-build");
         require(digest(JSON.writeValueAsBytes(source.path("code"))).equals(source.path("scorerDigest").asString()), "scorer identity mismatch");
         require(source.path("configDigest").equals(snapshots.path("manifest").path("digest")), "configuration identity mismatch");
         require(source.path("executionConfigDigest").asString().equals(M8ModelQualification.executionConfigDigest(manifest)), "execution configuration identity mismatch");
+        if (DATASET_VERSION.equals("3.0.0") && snapshots.has("fixture-inventory")) require(source.path("runtimeFreezeConfigDigest").asString()
+            .equals(M8ModelQualification.runtimeFreezeConfigDigest(manifest)), "frozen Runtime configuration identity mismatch");
         for (var entry : source.path("classes").properties()) {
             JsonNode ref = entry.getValue();
             byte[] bytes = Files.readAllBytes(M8ProtectedFiles.resolve(root, ref.path("path").asString()));
@@ -493,7 +507,7 @@ public final class M8Evaluation {
             row.set("axisResults", axisResults(marks));
             marks.forEach((name, mark) -> { if (!mark.status().equals("PASS")) reasons.add(name + ": " + mark.reason()); });
             var statuses = new ArrayList<>(marks.values().stream().map(M8Scorer.Mark::status).toList());
-            if (qualification == null || !qualification.path("phase").asString().equals("QUALIFICATION") || !frozenCriteria) {
+            if (qualification == null || !M8ModelQualification.finalQualification(qualification) || !frozenCriteria) {
                 statuses.add("INCOMPLETE"); reasons.add("본 검증 기준 미확정 또는 본 검증 이외의 실행");
             }
             String status = !gates.isEmpty() ? "FAIL" : M8Scorer.combine(statuses);

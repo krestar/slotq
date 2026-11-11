@@ -21,9 +21,11 @@ import static org.mockito.ArgumentMatchers.*;
 
 /** Connects the existing fixture to explicit deterministic, fault and opt-in provider observations. */
 final class M8RuntimeEvaluation {
-    static final List<String> CONNECTED = List.of("m7-flow/customer-hold-proposal", "m7-flow/customer-hold-answer", "m7-flow/management-owner", "m7-flow/ops-manager",
+    private static final List<String> LEGACY_CONNECTED = List.of("m7-flow/customer-hold-proposal", "m7-flow/customer-hold-answer", "m7-flow/management-owner", "m7-flow/ops-manager",
         "m8/customer-business-rejected", "m8/customer-not-sent", "m8/unknown-committed", "m8/customer-held", "m8/unknown-no-target", "m8/unknown-get-404",
         "m8/cross-tenant", "m8/cross-venue", "m8/cross-customer", "m8/staff-ops", "m8/fixed-plan-date", "m8/fixed-plan-window", "m8/retrieval-deleted", "m8/holdout-unknown-commit");
+    static final List<String> CONNECTED = java.util.stream.Stream.concat(LEGACY_CONNECTED.stream(),
+        M8Evaluation.SCORER.equals("m8-scorer-v3") ? java.util.stream.Stream.of(M8FixtureValidator.MANAGER_RETRIEVAL) : java.util.stream.Stream.empty()).toList();
     private final RepresentativeFlowIntegrationTests f;
     private final List<ObjectNode> wire = new ArrayList<>();
     private ObjectNode approval;
@@ -38,6 +40,46 @@ final class M8RuntimeEvaluation {
 
     private static String group(M8Evaluation.Cell cell) {
         return (cell.caseId().startsWith("m7-flow/customer-hold-") ? "customer" : cell.caseId()) + ":" + cell.repeat() + ":" + cell.model();
+    }
+
+    private record Preparation(Map<String, Fixture> fixtures, Map<String, JsonNode> bindings, ObjectNode manifest) { }
+
+    ObjectNode preparationManifest(List<M8Evaluation.Cell> cells) throws Exception {
+        return prepare(cells, "synthetic-preparation-only", M8MutationTarget.disposable(f.MYSQL, f.ORIGIN)).manifest();
+    }
+
+    private Preparation prepare(List<M8Evaluation.Cell> cells, String runId, M8MutationTarget target) throws Exception {
+        var fixtures = new HashMap<String, Fixture>(); var bindings = new HashMap<String, JsonNode>();
+        for (var cell : cells) {
+            String group = group(cell);
+            if (!fixtures.containsKey(group)) {
+                f.registrations.deactivate(f.observationRegistration); f.registrations.deactivate(f.waitlistRegistration);
+                f.fixtureAt(Instant.parse("2026-10-20T12:00:00Z"));
+                f.db.update("UPDATE venues SET timezone='Asia/Seoul' WHERE id=?", bytes(f.venue.value()));
+                if (Set.of("m7-flow/ops-manager", "m8/fixed-plan-window").contains(cell.caseId())) {
+                    f.db.update("UPDATE event_observation_projections SET projected_at=? WHERE tenant_id=?",
+                        java.sql.Timestamp.from(f.clock.instant()), bytes(f.tenant));
+                }
+                if (cell.caseId().equals("m8/customer-business-rejected")) {
+                    f.db.update("UPDATE slot_inventories SET starts_at=?,ends_at=? WHERE id=?", java.sql.Timestamp.from(f.clock.instant().minusSeconds(3600)),
+                        java.sql.Timestamp.from(f.clock.instant().minusSeconds(1800)), bytes(f.slot));
+                }
+                scenarios.put(group, new M8RuntimeScenario(f, cell.caseId()));
+                fixtures.put(group, new Fixture(f.tenant, f.venue, f.slot, f.customer, f.owner, f.manager, f.day, f.clock.instant()));
+            }
+            Fixture fixture = fixtures.get(group);
+            var actualBindings = new HashMap<>(Map.of(
+                "tenant-a", fixture.tenant().toString(), "venue-a", fixture.venue().value().toString(), "slot-demo-A", fixture.slot().toString(),
+                "customer-a", fixture.customer().principal().toString(), "owner-a", fixture.owner().principal().toString(), "manager-a", fixture.manager().principal().toString()));
+            if (cell.caseId().startsWith("m7-flow/customer-hold-") || Set.of("m8/unknown-committed", "m8/customer-held", "m8/holdout-unknown-commit").contains(cell.caseId())) actualBindings.put("reservation-a", "UNBOUND");
+            scenarios.get(group).bind(actualBindings, fixture.slot());
+            var slotTimes = f.db.queryForMap("SELECT starts_at,ends_at FROM slot_inventories WHERE id=?", bytes(fixture.slot()));
+            actualBindings.put("time:slotStartsAt", ((java.sql.Timestamp) slotTimes.get("starts_at")).toInstant().toString());
+            actualBindings.put("time:slotEndsAt", ((java.sql.Timestamp) slotTimes.get("ends_at")).toInstant().toString());
+            bindings.computeIfAbsent(group, g -> M8Bindings.create(cell, runId, fixture.base(), actualBindings));
+        }
+        var manifest = target.manifest(fixtures.values().iterator().next().base(), true, f.db);
+        return new Preparation(fixtures, bindings, manifest);
     }
 
     @SuppressWarnings("unchecked")
@@ -71,36 +113,8 @@ final class M8RuntimeEvaluation {
             throw new IllegalArgumentException("Unsupported Runtime scenario/lane");
         }
         String runId = (actual ? "model-runtime-" : extended ? "runtime-extended-" : rejectAnswerBeforeProvider ? "runtime-answer-fault-" : "runtime-") + UUID.randomUUID();
-        var fixtures = new HashMap<String, Fixture>(); var bindings = new HashMap<String, JsonNode>();
-        for (var cell : cells) {
-            String group = group(cell);
-            if (!fixtures.containsKey(group)) {
-                f.registrations.deactivate(f.observationRegistration); f.registrations.deactivate(f.waitlistRegistration);
-                f.fixtureAt(Instant.parse("2026-10-20T12:00:00Z"));
-                f.db.update("UPDATE venues SET timezone='Asia/Seoul' WHERE id=?", bytes(f.venue.value()));
-                if (Set.of("m7-flow/ops-manager", "m8/fixed-plan-window").contains(cell.caseId())) {
-                    f.db.update("UPDATE event_observation_projections SET projected_at=? WHERE tenant_id=?",
-                        java.sql.Timestamp.from(f.clock.instant()), bytes(f.tenant));
-                }
-                if (cell.caseId().equals("m8/customer-business-rejected")) {
-                    f.db.update("UPDATE slot_inventories SET starts_at=?,ends_at=? WHERE id=?", java.sql.Timestamp.from(f.clock.instant().minusSeconds(3600)),
-                        java.sql.Timestamp.from(f.clock.instant().minusSeconds(1800)), bytes(f.slot));
-                }
-                scenarios.put(group, new M8RuntimeScenario(f, cell.caseId()));
-                fixtures.put(group, new Fixture(f.tenant, f.venue, f.slot, f.customer, f.owner, f.manager, f.day, f.clock.instant()));
-            }
-            Fixture fixture = fixtures.get(group);
-            var actualBindings = new HashMap<>(Map.of(
-                "tenant-a", fixture.tenant().toString(), "venue-a", fixture.venue().value().toString(), "slot-demo-A", fixture.slot().toString(),
-                "customer-a", fixture.customer().principal().toString(), "owner-a", fixture.owner().principal().toString(), "manager-a", fixture.manager().principal().toString()));
-            if (cell.caseId().startsWith("m7-flow/customer-hold-") || Set.of("m8/unknown-committed", "m8/customer-held", "m8/holdout-unknown-commit").contains(cell.caseId())) actualBindings.put("reservation-a", "UNBOUND");
-            scenarios.get(group).bind(actualBindings, fixture.slot());
-            var slotTimes = f.db.queryForMap("SELECT starts_at,ends_at FROM slot_inventories WHERE id=?", bytes(fixture.slot()));
-            actualBindings.put("time:slotStartsAt", ((java.sql.Timestamp) slotTimes.get("starts_at")).toInstant().toString());
-            actualBindings.put("time:slotEndsAt", ((java.sql.Timestamp) slotTimes.get("ends_at")).toInstant().toString());
-            bindings.computeIfAbsent(group, g -> M8Bindings.create(cell, runId, fixture.base(), actualBindings));
-        }
-        var manifest = target.manifest(fixtures.values().iterator().next().base(), true, f.db);
+        var fixtureSetup = prepare(actual ? M8ModelQualification.runtimeFixtureCells(qualification) : cells, runId, target);
+        var fixtures = fixtureSetup.fixtures(); var bindings = fixtureSetup.bindings(); var manifest = fixtureSetup.manifest();
         var limits = f.limits(Duration.ofSeconds(actual ? 45 : 5));
         ((ObjectNode) manifest.path("configuration")).put("runtimeSteps", limits.steps()).put("runtimeProviderAttempts", limits.providerAttempts())
             .put("runtimeToolAttempts", limits.toolAttempts()).put("runtimeTokens", limits.tokens()).put("runtimeOutputTokens", limits.outputTokens())
@@ -368,14 +382,20 @@ final class M8RuntimeEvaluation {
     }
 
     private void verifyExtended(JsonNode result) {
-        var dataset = f.json.readTree(getClass().getResourceAsStream("/evaluation/m8-v1/dataset.json"));
+        var dataset = M8FixtureValidator.read("dataset.json");
         assertThat(CONNECTED).containsExactlyInAnyOrderElementsOf(dataset.path("cases").valueStream()
             .filter(c -> c.path("lanes").valueStream().anyMatch(l -> l.asString().equals("ACTUAL_PROVIDER_FLOW")))
             .map(c -> c.path("id").asString()).toList());
-        assertThat(result.path("rows")).hasSize(18);
+        assertThat(result.path("rows")).hasSize(CONNECTED.size());
         for (var row : result.path("rows")) {
             assertThat(row.path("hardGateViolations")).as(row.path("cell").toString() + row.path("checks")).isEmpty();
             assertThat(row.path("timing").path("stopPoint").asString()).isEqualTo("COMPLETED");
+            if (row.path("cell").path("caseId").asString().equals(M8FixtureValidator.MANAGER_RETRIEVAL)) {
+                for (String name : List.of("tool_selection", "retrieval_category", "retrieval_scope", "retrieval_source_version", "retrieval_metadata", "forbidden_db", "forbidden_dispatch", "server_plan_preservation")) {
+                    assertThat(row.path("checks").path(name).path("status").asString()).as(name).isEqualTo("PASS");
+                }
+                assertThat(row.path("checks").path("human_review").path("status").asString()).isEqualTo("INCOMPLETE");
+            }
             if (row.path("axes").valueStream().anyMatch(a -> a.asString().equals("execution_success"))) {
                 for (String check : List.of("execution_invocation", "execution_effect", "execution_reconciliation", "forbidden_db")) {
                     assertThat(row.path("checks").path(check).path("status").asString()).as(row.path("cell") + ":" + check).isEqualTo("PASS");
